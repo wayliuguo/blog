@@ -1,0 +1,41 @@
+{
+    "name": "blog",
+    "version": "1.0.0",
+    "description": "{**When you're done, you can delete the content in this README and update the file with details for others getting started with your repository**}",
+    "main": "index.js",
+    "scripts": {
+        "dev": "vitepress dev .",
+        "lint": "npx eslint .",
+        "prepare": "husky install",
+        "commit": "git-cz"
+    },
+    "lint-staged": {
+        "src/**/*.{js,jsx,ts,tsx}": [
+            "prettier --write",
+            "eslint --fix"
+        ]
+    },
+    "config": {
+        "commitizen": {
+            "path": "cz-conventional-changelog"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://gitee.com/wayliuhaha/blog"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "vitepress": "^1.0.0-beta.6"
+    },
+    "devDependencies": {
+        "commitizen": "^4.3.0",
+        "cz-conventional-changelog": "^3.3.0",
+        "eslint": "^8.45.0",
+        "eslint-config-prettier": "^8.8.0",
+        "eslint-plugin-prettier": "^5.0.0",
+        "husky": "^8.0.3",
+        "prettier": "^3.0.0"
+    }
+}
