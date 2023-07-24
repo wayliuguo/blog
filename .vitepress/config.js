@@ -27,19 +27,34 @@ module.exports = {
                 text: '面试',
                 link: '/interview/css',
                 activeMatch: '/interview/'
+            },
+            {
+                text: '算法',
+                link: '/alg/array',
+                activeMatch: '/alg/'
             }
         ],
         sidebar: {
             '/guide/': [
                 {
                     text: '指南',
-                    items: [{ text: '快速开始', link: '/guide/quickStart' }]
+                    items: [
+                        {
+                            text: '快速开始',
+                            link: '/guide/quickStart'
+                        }
+                    ]
                 }
             ],
             '/article/': [
                 {
                     text: '文档',
-                    items: [{ text: '项目配置', link: '/article/projectConfig' }]
+                    items: [
+                        {
+                            text: '项目配置',
+                            link: '/article/projectConfig'
+                        }
+                    ]
                 }
             ],
             '/interview': [
@@ -57,6 +72,21 @@ module.exports = {
                         {
                             text: 'javascript',
                             link: '/interview/javascript'
+                        }
+                    ]
+                }
+            ],
+            '/alg': [
+                {
+                    text: '算法',
+                    items: [
+                        {
+                            text: '数组',
+                            link: '/alg/array'
+                        },
+                        {
+                            text: '排序算法',
+                            link: '/alg/sorting'
                         }
                     ]
                 }
