@@ -13,11 +13,20 @@ module.exports = {
             copyright: 'Copyright © 202-present WELL'
         },
         nav: [
-            { text: '指南', link: '/guide/quickStart', activeMatch: '/guide/' },
+            {
+                text: '指南',
+                link: '/guide/quickStart',
+                activeMatch: '/guide/'
+            },
             {
                 text: '文档',
                 link: '/article/projectConfig',
                 activeMatch: '/article/'
+            },
+            {
+                text: '面试',
+                link: '/interview/css',
+                activeMatch: '/interview/'
             }
         ],
         sidebar: {
@@ -31,6 +40,25 @@ module.exports = {
                 {
                     text: '文档',
                     items: [{ text: '项目配置', link: '/article/projectConfig' }]
+                }
+            ],
+            '/interview': [
+                {
+                    text: '面试',
+                    items: [
+                        {
+                            text: 'css',
+                            link: '/interview/css'
+                        },
+                        {
+                            text: 'html',
+                            link: '/interview/html'
+                        },
+                        {
+                            text: 'javascript',
+                            link: '/interview/javascript'
+                        }
+                    ]
                 }
             ]
         }
