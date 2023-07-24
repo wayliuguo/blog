@@ -20,7 +20,7 @@ module.exports = {
             },
             {
                 text: '文档',
-                link: '/article/projectConfig',
+                link: '/article/project/normalizeConfig',
                 activeMatch: '/article/'
             },
             {
@@ -51,8 +51,17 @@ module.exports = {
                     text: '文档',
                     items: [
                         {
-                            text: '项目配置',
-                            link: '/article/projectConfig'
+                            text: '项目工程化',
+                            items: [
+                                {
+                                    text: '规范化配置',
+                                    link: '/article/project/normalizeConfig'
+                                },
+                                {
+                                    text: '打包工具-webpack',
+                                    link: '/article/project/webpackConfig'
+                                }
+                            ]
                         }
                     ]
                 }
@@ -72,6 +81,10 @@ module.exports = {
                         {
                             text: 'javascript',
                             link: '/interview/javascript'
+                        },
+                        {
+                            text: 'typescript',
+                            link: '/interview/typescript'
                         }
                     ]
                 }
