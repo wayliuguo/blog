@@ -174,7 +174,7 @@ npm install lint-staged --save-dev
 
 是Commitizen的一个适配器，它实现了符合约定式提交（Conventional Commits）规范的提交消息。该规范定义了提交消息的格式和结构，并推荐了一些常用的提交类型和范围。
 
-## 安装和使用步骤：
+## 安装和使用步骤
 
 1. 安装
 
