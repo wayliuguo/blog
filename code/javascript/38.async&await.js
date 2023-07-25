@@ -7,18 +7,18 @@ console.log('async 返回值>>>', result) // Promise { 'hello world' }
 result.then(res => console.log(res)) // hello world
 
 // await 在等待什么？
-function getSomething () {
+function getSomething() {
     console.log('await 会阻塞后面的代码，执行外面的同步代码')
     return 'something'
 }
-async function asyncFn () {
+async function asyncFn() {
     return new Promise(resolve => {
         setTimeout(() => {
             resolve('hello async')
         }, 3000)
     })
 }
-async function test () {
+async function test() {
     const v1 = await getSomething()
     const v2 = await asyncFn()
     console.log('await 等到非Promise>>>', v1) // await 等到非Promise>>> something

@@ -3,10 +3,10 @@ let bar = {
     a: 1,
     b: 2
 }
-console.log({...bar}) // { a: 1, b: 2 }
+console.log({ ...bar }) // { a: 1, b: 2 }
 
 // 数组的扩展运算符
-const arr = [1,2,3]
+const arr = [1, 2, 3]
 console.log(...arr) // 1,2,3
 // 作用——复制数组
 const arrCopy = [...arr]

@@ -1,6 +1,6 @@
 const foo = {
     a: 1,
-    fn (x, y) {
+    fn(x, y) {
         console.log(this.a, x, y)
     }
 }

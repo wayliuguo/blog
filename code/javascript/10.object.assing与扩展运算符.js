@@ -1,7 +1,7 @@
 let outObj = {
-    inObj: {a: 1, b: 2}
+    inObj: { a: 1, b: 2 }
 }
-let newObj = {...outObj}
+let newObj = { ...outObj }
 let newObjAs = Object.assign({}, outObj)
 newObj.inObj.a = 2
 newObjAs.inObj.b = 5
