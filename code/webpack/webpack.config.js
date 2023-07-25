@@ -10,13 +10,43 @@ module.exports = {
         // 输出文件
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].[hash:4].bundle.js'
+        // publicPath: 'www.baidu.com'
     },
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname)
+        },
+        extensions: ['.js', '.css', '.json']
+    },
+    devServer: {
+        port: 1000,
+        hot: true,
+        proxy: {
+            '/': {
+                target: 'http://localhost:3000'
+            }
+        }
+    },
+    devtool: 'source-map',
     optimization: {
-        // splitChunks: {
-        //     chunks: 'all',
-        //     minChunks: 1,
-        //     maxSize: 0
-        // }
+        splitChunks: {
+            chunks: 'all',
+            minChunks: 1,
+            minSize: 0,
+            // 单独定义分隔规则（单独打包第三方库）
+            cacheGroups: {
+                vendor: {
+                    test: /[\\/]node_modules[\\/]/,
+                    filename: 'vendor.js',
+                    chunks: 'all',
+                    minChunks: 1
+                }
+            }
+        },
+        // 运行时的代码打包成一个文件
+        runtimeChunk: {
+            name: 'runtime'
+        }
     },
     module: {
         rules: [
@@ -57,7 +87,7 @@ module.exports = {
                     }
                 },
                 generator: {
-                    filename: '[name].[hash][ext]'
+                    filename: './img/[name].[hash][ext]'
                 }
             }
             /* {
@@ -73,7 +103,7 @@ module.exports = {
     },
     plugins: [
         new minicss({
-            filename: 'test.bundle.css'
+            filename: './css/test.bundle.css'
         }),
         new minimizer(),
         new htmlwebpackplugin({
