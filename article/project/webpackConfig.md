@@ -243,3 +243,139 @@ new htmlwebpackplugin({
 - 如果文件全打包在一个文件里，会导致文件过大，首屏加载慢
 - 如果分割过多会导致http请求数量过多
 - 需要分割的应该是文件特别大而且首屏不需要的
+- splitChunks
+  - async：异步代码
+  - initial：同步代码
+  - all：两者
+- minChunks: 1 :被引用次数大于多少才分隔
+- minSize: 0 ：多大的才分隔
+- maxSize: 超过多大继续分
+
+```
+optimization: {
+	splitChunks: {
+        chunks: 'all',
+        minChunks: 1,
+        minSize: 0,
+        // 单独定义分隔规则（单独打包第三方库）
+    	cacheGroups: {
+            vendor: {
+                test: /[\\/]node_modules[\\/]/,
+                filename: 'vendor.js',
+                chunks: 'all',
+                minChunks: 1
+            }
+		}
+	},
+    // 运行时的代码打包成一个文件
+    runtimeChunk: {
+        name: 'runtime'
+    }
+}
+```
+
+## 技巧性配置
+
+- hash 值的意义
+
+  - 避免浏览器缓存没有变更
+
+- resolve
+
+  - alias: 别名，提供路由简写
+
+  - Extensions: 扩展省略，定义可省略的扩展名
+
+    ```
+    resolve: {
+    	alias: {
+    		'@': path.resolve(__dirname)
+    	},
+    	extensions: ['.js', '.css', '.json']
+    }
+    ```
+
+- require.context
+
+  - 批量引入指定文件夹下的所有文件
+
+    ```
+    // index.js
+    // 批量引入 (路径,是否引入子文件,匹配规则)
+    let _all = 0
+    const r = require.context('@/total', false, /.js/)
+    r.keys().forEach(item => {
+        console.log(r(item).default)
+        _all += r(item).default
+    })
+    console.log(_all)
+    ```
+
+- filename
+
+  - 可以指定输出的文件夹， 有filename这个选项的都可以
+
+    ```
+    new minicss({
+       filename: './css/test.bundle.css'
+    })
+    
+    // 添加路径 './css'
+    new minicss({
+       filename: './css/test.bundle.css'
+    }),
+    ```
+
+- publicPath
+
+  - 用于在html引入的时候作为前缀，一般作为cdn使用
+
+  - 其打包出来的html引用会加上
+
+    ```
+    output: {
+        publicPath: 'www.baidu.com'
+    }
+    ```
+
+## 开发模式
+
+- mode
+- devServer
+- source-map
+
+**配置**
+
+```
+devServer: {
+	port: 1000,
+	hot: true,
+	proxy: {
+		'/': {
+			target: 'http://localhost:3000'
+		}
+	}
+}
+```
+
+**服务器**
+
+```
+// express.js
+const express = require('express')
+const app = new express()
+
+app.get('/api/getNum', (req, res) => {
+    res.status(200).end('hello world')
+})
+
+app.listen(3000)
+```
+
+**请求**
+
+```
+import axios from 'axios'
+axios.get('/api/getNum').then(res => console.log(res))
+```
+
