@@ -1,10 +1,11 @@
-function myInstanceof (left, right) {
+function myInstanceof(left, right) {
     // 获取对象的原型
     let proto = Object.getPrototypeOf(left)
     // 获取构造函数的 prototype 对象
     let prototype = right.prototype
 
     // 判断构造函数的 prototype 对象是否在对象的原型链上
+    // eslint-disable-next-line no-constant-condition
     while (true) {
         if (!proto) return false
         if (proto === prototype) return true

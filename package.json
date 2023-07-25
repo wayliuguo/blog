@@ -8,6 +8,8 @@
         "serve": "vitepress serve",
         "build": "vitepress build",
         "lint": "npx eslint .",
+        "lint:fix": "pnpm run lint --fix",
+        "prettier": "prettier --write .",
         "prepare": "husky install",
         "commit": "git-cz"
     },

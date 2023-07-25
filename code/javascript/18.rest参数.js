@@ -6,4 +6,4 @@ const mutiple = (...args) => {
     return result
 }
 
-console.log(mutiple(1,2,3,4)) // 24
+console.log(mutiple(1, 2, 3, 4)) // 24

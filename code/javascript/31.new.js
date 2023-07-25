@@ -1,4 +1,4 @@
-function objectFactory () {
+function objectFactory() {
     // 声明要创建的对象
     let newObject = null
     // 取出构造函数
@@ -22,7 +22,7 @@ function objectFactory () {
     return flag ? result : newObject
 }
 
-function Person (name, age) {
+function Person(name, age) {
     this.name = name
     this.age = age
 }

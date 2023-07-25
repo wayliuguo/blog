@@ -1,19 +1,19 @@
+// eslint-disable-next-line no-unused-vars
 const name = 'well'
 const age = 25
 
-function showName () {
+function showName() {
     const name = 'liuguowei'
     return function () {
         return name
-    } 
+    }
 }
 console.log(showName()()) // liuguowei
 
-function myAge () {
+function myAge() {
     return age
 }
-function showAge (fn) {
-    const age = 18
+function showAge(fn) {
     return fn()
 }
 console.log(showAge(myAge)) // 25

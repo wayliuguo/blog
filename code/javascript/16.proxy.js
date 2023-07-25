@@ -5,11 +5,11 @@
  */
 let onWatch = (obj, setBind, getLogger) => {
     let handler = {
-        set (target, property, value, receiver) {
+        set(target, property, value, receiver) {
             setBind(target, property, value, receiver)
             return Reflect.set(target, property, value)
         },
-        get (target, property, receiver) {
+        get(target, property, receiver) {
             getLogger(target, property, receiver)
             return Reflect.get(target, property, receiver)
         }
@@ -26,7 +26,7 @@ let p = onWatch(
         console.log(target, property, value, receiver) // { a: 1 } a 2 { a: 1 }
     },
     (target, property, receiver) => {
-       console.log(target, property, receiver) // { a: 2 } a { a: 2 }
+        console.log(target, property, receiver) // { a: 2 } a { a: 2 }
     }
 )
 

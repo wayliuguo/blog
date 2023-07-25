@@ -20,7 +20,7 @@ Function.prototype.MyCall = function (context) {
 
 const foo = {
     a: 1,
-    log (x, y) {
+    log(x, y) {
         console.log(this.a, x, y)
     }
 }
