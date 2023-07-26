@@ -1,4 +1,4 @@
-export const b = 1
+export const b = 'cdefg'
 export function abc() {
-    console.log('a')
+    return 'abc'
 }

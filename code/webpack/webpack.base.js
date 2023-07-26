@@ -2,9 +2,40 @@ const path = require('path')
 const minicss = require('mini-css-extract-plugin')
 const minimizer = require('css-minimizer-webpack-plugin')
 const htmlwebpackplugin = require('html-webpack-plugin')
+const bundleanlyzer = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+const webpack = require('webpack')
+
+let pluginArr = [
+    new htmlwebpackplugin({
+        template: './index.html',
+        filename: 'index.html',
+        minify: {
+            // collapseWhitespace: true,
+            // removeComments: true,
+            // removeAttributeQuotes: true
+        }
+    }),
+    // 注入到业务代码中,需要用JSON.stringify
+    new webpack.DefinePlugin({
+        baseURL: JSON.stringify('www.baidu.com')
+    })
+    // new bundleanlyzer()
+]
+
+function hasMiniCss() {
+    if (process.env.NODE_ENV === 'production') {
+        pluginArr.push(new minimizer())
+        pluginArr.push(
+            new minicss({
+                filename: './css/test.bundle.css'
+            })
+        )
+    }
+}
+
+hasMiniCss()
 
 module.exports = {
-    mode: 'development',
     entry: './index.js',
     output: {
         // 输出文件
@@ -18,16 +49,6 @@ module.exports = {
         },
         extensions: ['.js', '.css', '.json']
     },
-    devServer: {
-        port: 1000,
-        hot: true,
-        proxy: {
-            '/': {
-                target: 'http://localhost:3000'
-            }
-        }
-    },
-    devtool: 'source-map',
     optimization: {
         splitChunks: {
             chunks: 'all',
@@ -72,11 +93,11 @@ module.exports = {
             {
                 test: /\.css$/i,
                 // use: ['style-loader', 'css-loader']
-                use: [minicss.loader, 'css-loader', './mycss-loader']
+                use: [process.env.NODE_ENV === 'production' && minicss.loader, 'css-loader', './mycss-loader']
             },
             {
                 test: /\.less/,
-                use: [minicss.loader, 'css-loader', 'less-loader']
+                use: [process.env.NODE_ENV === 'production' && minicss.loader, 'css-loader', 'less-loader']
             },
             {
                 test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -101,19 +122,5 @@ module.exports = {
             } */
         ]
     },
-    plugins: [
-        new minicss({
-            filename: './css/test.bundle.css'
-        }),
-        new minimizer(),
-        new htmlwebpackplugin({
-            template: './index.html',
-            filename: 'index.html',
-            minify: {
-                // collapseWhitespace: true,
-                // removeComments: true,
-                // removeAttributeQuotes: true
-            }
-        })
-    ]
+    plugins: pluginArr
 }

@@ -379,3 +379,128 @@ import axios from 'axios'
 axios.get('/api/getNum').then(res => console.log(res))
 ```
 
+## 实战技巧
+
+- 配置拆分
+
+  - cross-env
+
+  ```
+  npm i cross-env -D
+  ```
+
+  - package.json
+
+  ```
+  "start": "cross-env NODE_ENV=development webpack-dev-server --config ./webpack.dev.js",
+          "build": "cross-env NODE_ENV=production webpack --config ./webpack.pro.js"
+  ```
+
+  - 编程式配置
+
+  ```
+  let pluginArr = [
+      new htmlwebpackplugin({
+          template: './index.html',
+          filename: 'index.html',
+          minify: {
+              // collapseWhitespace: true,
+              // removeComments: true,
+              // removeAttributeQuotes: true
+          }
+      })
+  ]
+  
+  function hasMiniCss() {
+      if (process.env.NODE_ENV === 'production') {
+          pluginArr.push(new minimizer())
+          pluginArr.push(
+              new minicss({
+                  filename: './css/test.bundle.css'
+              })
+          )
+      }
+  }
+  
+  hasMiniCss()
+  ```
+
+  ```
+  module.exports = {
+  	plugins: pluginArr
+  }
+  ```
+
+- 打包分析
+
+  - 官方方案：--json 输出打包结果分析
+  - webpack-bundle-analyzer
+
+  ```
+  const bundleanlyzer = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+  
+  plugins: [
+  	new bundleanlyzer()
+  ]
+  ```
+
+- 提升打包速度
+
+  - 提前打包不变的包（如库）=》通知到正式打包=》Dll 处理过的不再处理
+  - webpack.dll.js
+
+  ```
+  const webpack = require('webpack')
+  
+  module.exports = {
+      mode: 'production',
+      entry: {
+          // 把axios单独打包
+          vendor: ['axios']
+      },
+      output: {
+          path: __dirname + '/dist',
+          filename: '[name].dll.js',
+          library: '[name]_library'
+      },
+      plugins: [
+          new webpack.DllPlugin({
+              // 这里会输出一个json文件
+              path: __dirname + '/[name]-manifest.json',
+              name: '[name]_library',
+              context: __dirname
+          })
+      ]
+  }
+  ```
+
+  - package.json
+
+  ```
+  "dll": "webpack --config ./webpack.dll.js"
+  ```
+
+  - webpack.pro.js
+
+  ```
+  plugins: [
+  	new webpack.DllReferencePlugin({
+  		manifest: require(__dirname + '/vendor-manifest.json')
+  	})
+  ]
+  ```
+
+  - 模板index.html
+
+  ```
+  <script src="vendor.dll.js"></script>
+  ```
+
+- tree-sharking
+
+  ```
+  optimization: {
+      usedExports: true
+  }
+  ```
+
