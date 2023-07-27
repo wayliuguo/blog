@@ -60,6 +60,10 @@ module.exports = {
                                 {
                                     text: '打包工具-webpack',
                                     link: '/article/project/webpackConfig'
+                                },
+                                {
+                                    text: 'rollup&webpack',
+                                    link: '/article/project/rollup&webpack'
                                 }
                             ]
                         }
