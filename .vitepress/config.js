@@ -63,7 +63,7 @@ module.exports = {
                                 },
                                 {
                                     text: 'rollup&webpack',
-                                    link: '/article/project/rollup&webpack'
+                                    link: '/article/project/rollup&vite'
                                 }
                             ]
                         }
