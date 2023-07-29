@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hello_react</title>
+</head>
+<body>
+    <div id="test1"></div>
+
+    <!-- 引入 react 核心库 -->
+    <script src="./js/react.development.js" type="text/javascript"></script> <!-- React 对象 -->
+    <script src="./js/react-dom.development.js" type="text/javascript"></script> <!-- ReactDOM 对象 -->
+    <script src="./js/babel.min.js" type="text/javascript"></script> <!-- babel -->
+    <script src="./js/prop-types.js" type="text/javascript"></script> <!-- PropTypes -->
+
+    <script type="text/babel">
+        class Count extends React.Component {
+            constructor(props) {
+                super(props)
+                console.log('constructor')
+                // 初始化状态
+                this.state = {
+                    count: 1
+                }
+            }
+            // 组件将要挂载的钩子
+            componentWillMount() {
+                console.log('componentWillMount')
+            }
+            // 组件挂载完毕的钩子
+            componentDidMount() {
+                console.log('componentDidMount')
+            }
+            add = () => {
+                const {count} = this.state
+                this.setState({
+                    count: count+1
+                })
+            }
+            death = () => {
+                ReactDOM.unmountComponentAtNode(document.querySelector('#test1'))
+            }
+            // 组件卸载的钩子
+            componentWillUnmount() {
+                console.log('componentWillUnmount');
+            }
+            render(){
+                console.log('render')
+                return (
+                    <div>
+                        <h2>当前求和为{this.state.count}</h2>
+                        <button onClick={this.add}>+1</button>
+                        <button onClick={this.death}>关闭</button> 
+                    </div>
+                )
+            }
+        }
+        ReactDOM.render(<Count/>, document.querySelector('#test1'))
+    </script>
+</body>
+</html>

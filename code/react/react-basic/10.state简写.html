@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hello_react</title>
+</head>
+<body>
+    <div id="test"></div>
+
+    <!-- 引入 react 核心库 -->
+    <script src="./js/react.development.js" type="text/javascript"></script>
+    <script src="./js/react-dom.development.js" type="text/javascript"></script>
+    <script src="./js/babel.min.js" type="text/javascript"></script>
+
+    <script type="text/babel">
+        class Weather extends React.Component {
+            state = {
+                isHot: false
+            }
+            render() {
+                console.log(this)
+                const {isHot} = this.state
+                return <h1 onClick={this.changeWeather}>今天天气很{isHot ? '炎热' : '凉爽'}</h1>
+            }
+            // 使用箭头函数（箭头函数this指向声明时所在的作用域下的this的值，即Weather的实例对象）
+            changeWeather = () => {
+                const isHot = this.state.isHot
+                this.setState({
+                    isHot: !isHot
+                })
+                console.log(this)
+                // Weather {props: {…}, context: {…}, refs: {…}, updater: {…}, state: {…}, …}
+                // changeWeather: ƒ ()
+                // context: {}
+                // props: {}
+                // refs: {}
+                // state: {isHot: true}
+                // updater: {isMounted: ƒ, enqueueSetState: ƒ, enqueueReplaceState: ƒ, enqueueForceUpdate: ƒ}
+                // _reactInternalInstance: {_processChildContext: ƒ}
+                // _reactInternals: FiberNode {tag: 1, key: null, stateNode: Weather, elementType: ƒ, type: ƒ, …}
+                // isMounted: (...)
+                // replaceState: (...)
+            }
+        }
+        ReactDOM.render(<Weather/>, document.querySelector('#test'))
+    </script>
+</body>
+</html>

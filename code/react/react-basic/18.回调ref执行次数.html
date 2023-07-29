@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hello_react</title>
+</head>
+<body>
+    <div id="test1"></div>
+
+    <!-- 引入 react 核心库 -->
+    <script src="./js/react.development.js" type="text/javascript"></script> <!-- React 对象 -->
+    <script src="./js/react-dom.development.js" type="text/javascript"></script> <!-- ReactDOM 对象 -->
+    <script src="./js/babel.min.js" type="text/javascript"></script> <!-- babel -->
+    <script src="./js/prop-types.js" type="text/javascript"></script> <!-- PropTypes -->
+
+    <script type="text/babel">
+        class Demo extends React.Component {
+            state = {
+                isHot: false
+            }
+            // 展示左侧输入框的数据
+            showInfo = () => {
+                const { input1 } = this
+                alert(input1.value)
+            }
+            // 切换天气
+            changeWeather = () => {
+                const {isHot} = this.state
+                this.setState({
+                    isHot: !isHot
+                })
+            }
+            saveInput = (dom) => {
+                this.input1 = dom
+            }
+            // 回调形式的ref的入参是ref的整个dom
+            // 如果ref回调函数以内联形式使用，在更新过程中会被执行两次，第一次传入的是null，第二次传入的才是对应dom
+            // 通过将ref回调函数定义成class的绑定函数的方式可以避免上述问题
+            render() {
+                const {isHot} = this.state
+                return(
+                    <div>
+                        <h2>今天天气很{isHot ? '炎热' : '凉爽'}</h2>
+                        {/*<input ref={(dom1)=>{this.input1 = dom1;console.log(dom1)}} type="text" placeholder="点击按钮提示数据"/>*/}
+                        <input ref={this.saveInput} type="text" placeholder="点击按钮提示数据"/>
+                        <button onClick={this.showInfo}>点我提示输入的数据</button>
+                        <button onClick={this.changeWeather}>点我切换天气</button>
+                    </div>
+                )
+            }
+        }
+        ReactDOM.render(<Demo/>, document.querySelector('#test1'))
+    </script>
+</body>
+</html>

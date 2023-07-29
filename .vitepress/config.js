@@ -66,6 +66,15 @@ module.exports = {
                                     link: '/article/project/rollup&vite'
                                 }
                             ]
+                        },
+                        {
+                            text: 'React',
+                            items: [
+                                {
+                                    text: 'react 基础',
+                                    link: '/article/react/reactBasic'
+                                }
+                            ]
                         }
                     ]
                 }
