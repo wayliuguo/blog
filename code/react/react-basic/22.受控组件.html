@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hello_react</title>
+</head>
+<body>
+    <div id="test1"></div>
+
+    <!-- 引入 react 核心库 -->
+    <script src="./js/react.development.js" type="text/javascript"></script> <!-- React 对象 -->
+    <script src="./js/react-dom.development.js" type="text/javascript"></script> <!-- ReactDOM 对象 -->
+    <script src="./js/babel.min.js" type="text/javascript"></script> <!-- babel -->
+    <script src="./js/prop-types.js" type="text/javascript"></script> <!-- PropTypes -->
+
+    <script type="text/babel">
+        class Login extends React.Component {
+            state = {
+                username: '',
+                password: ''
+            }
+            usernameChange = (evnet) => {
+                console.log(event.target.value)
+                this.setState({
+                    username: evnet.target.value
+                })
+            }
+            passwordChange = (event) => {
+                console.log(event.target.value)
+                this.setState({
+                    password: event.target.value
+                })
+            }
+            handleSubmit = (event) =>  {
+                event.preventDefault()
+                const {username, password} = this.state
+                alert(`你输入的用户名是:${username}，密码:${password}`)
+            }
+            render() {
+                return (
+                    <form onSubmit={this.handleSubmit}>
+                        用户名: <input type="text" onChange={this.usernameChange} name="username"/>
+                        密码: <input type="password" onChange={this.passwordChange} name="password"/>
+                        <button>登录</button>
+                    </form>
+                )
+            }
+        }
+        ReactDOM.render(<Login/>, document.querySelector('#test1'))
+    </script>
+</body>
+</html>

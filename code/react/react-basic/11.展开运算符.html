@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        let arr1 = [1,3,5,7]
+        let arr2 = [2,4,6,8]
+        console.log(...arr1) // 展开一个数组 1,3,5,7
+        let arr3 = [...arr1,...arr2]
+        console.log(arr3) // 连接数组 [1, 3, 5, 7, 2, 4, 6, 8]
+        function sum(...args) {
+            console.log(args) // [1, 2, 3, 4]
+        }
+        sum(1,2,3,4)
+
+        let person = {
+            name: 'liuguowei',
+            age: 18,
+            hobby: ['篮球','rap'],
+            school: {
+                hight: [123,456,789]
+            }
+        }
+        // console.log(...person) // Uncaught TypeError: Found non-callable @@iterator
+        // 如果外面包了{}则可以复制对象（一层的浅拷贝）
+        let person2 = {...person}
+        person.name = "小刘"
+        person.hobby = ['dance','sing']
+        person.school.hight[0] = 111111;
+        console.log(person2) // {name: 'liuguowei', age: 18,hobby: ['篮球','rap'], school: {hight: [111111，456，789]}}
+        console.log(person) // {name: '小刘', age: 18,hobby: ['dance','sing]，school: {hight: [111111，456，789]}
+    </script>
+</body>
+</html>

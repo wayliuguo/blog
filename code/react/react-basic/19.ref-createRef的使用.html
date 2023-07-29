@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hello_react</title>
+</head>
+<body>
+    <div id="test1"></div>
+
+    <!-- 引入 react 核心库 -->
+    <script src="./js/react.development.js" type="text/javascript"></script> <!-- React 对象 -->
+    <script src="./js/react-dom.development.js" type="text/javascript"></script> <!-- ReactDOM 对象 -->
+    <script src="./js/babel.min.js" type="text/javascript"></script> <!-- babel -->
+    <script src="./js/prop-types.js" type="text/javascript"></script> <!-- PropTypes -->
+
+    <script type="text/babel">
+        class Demo extends React.Component {
+            // React.createRef调用后可以返回一个容器，该容器可以存储被ref所标识的节点，该容器是“专人专用”的
+            myRef1 = React.createRef()
+            myRef2 = React.createRef()
+            // 展示左侧输入框的数据
+            showData = () => {
+                const { myRef1, myRef2 } = this
+                alert(myRef1.current.value)
+                alert(myRef2.current.value)
+            }
+            // 回调形式的ref的入参是ref的整个dom
+            render() {
+                return(
+                    <div>
+                        <input ref={this.myRef1} type="text" placeholder="点击按钮提示数据"/>
+                        <button onClick={this.showData}>点我提示左侧的数据</button>
+                        <input ref={this.myRef2} type="text" placeholder="点击按钮提示数据"/>
+                    </div>
+                )
+            }
+        }
+        ReactDOM.render(<Demo/>, document.querySelector('#test1'))
+    </script>
+</body>
+</html>
