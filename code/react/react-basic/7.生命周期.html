@@ -16,6 +16,24 @@
     <script src="./js/prop-types.js" type="text/javascript"></script> <!-- PropTypes -->
 
     <script type="text/babel">
+            class Counter extends React.Component {
+                state = {
+                    count: 100
+                }
+                add = () => {
+                    this.setState({
+                        count: ++this.state.count
+                    })
+                }
+                render() {
+                    return (
+                        <div>
+                            <button onClick={this.add}>+1</button>
+                            <Count count={this.state.count} />
+                        </div>
+                    )
+                }
+            }
         class Count extends React.Component {
             constructor(props) {
                 super(props)
@@ -73,7 +91,7 @@
                 )
             }
         }
-        ReactDOM.render(<Count count={108}/>, document.querySelector('#test1'))
+                                ReactDOM.render(<Counter />, document.querySelector('#test1'))
     </script>
 </body>
 </html>

@@ -392,3 +392,30 @@ class Demo extends React.Component {
 
 ## 生命周期
 
+![img](reactBasic.assets/1605688879048-b8d39c49-b1a1-4317-8dab-f7db088116e9.png)
+- 装载阶段(Mount): 组件第一次在DOM树中被渲染的过程
+  - constructor
+    - 如果显式调用必须super()
+  - getDerivedStateFromProps(props, state)
+    - 在接收新的`props`或者调用`setState`和`forceUpdate`时调用
+    - 当我们接收到新的属性想要修改我们的state，就可以使用
+  - render
+    - 根据`state`和`props`渲染组件
+  - componentDidMount
+    - 组件挂载后立即调用
+    - 执行依赖于DOM的操作
+    - 发送网络请求（官方建议）
+    - 添加订阅消息
+- 更新过程(Update): 组件状态发生变化，重写更新渲染的过程
+  - getDerivedStateFromProps
+  - shouldComponentUpdate
+    - setState 调用会引起子组件的重新渲染
+    - 如果子组件`state`、`props`没有变化不希望重新渲染使用这里拦截
+  - render
+  - getSnapshotBeforeUpdate(prevProps, prevState)
+  - componentDidUpdate
+- 卸载过程(Unmount): 组件从DOM树中被移除的过程
+  - componentWillUnmount
+    - 清楚timer，取消网络请求
+    - 取消在`componentDidMount`添加的订阅
+
