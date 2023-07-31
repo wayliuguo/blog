@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>hello_react</title>
 </head>
+
 <body>
     <div id="test1"></div>
 
@@ -17,31 +19,24 @@
 
     <script type="text/babel">
         class Login extends React.Component {
-            state = {
-                username: '',
-                password: ''
-            }
-            saveFormData = (dataType, event) => {
-                this.setState({
-                    [dataType] : event.target.value
-                })
-            }
-            handleSubmit = (event) =>  {
+            handleSubmit = (event) => {
                 event.preventDefault()
-                const {username, password} = this.state
-                alert(`你输入的用户名是:${username}，密码:${password}`)
+                const { usernameDom, passwordDom } = this
+                console.log(this)
+                alert(`你输入的用户名是:${usernameDom.value}，密码:${passwordDom.value}`)
             }
             render() {
                 return (
-                    <form onSubmit={this.handleSubmit}>
-                        用户名: <input type="text" onChange={event => this.saveFormData('username', event)} name="username"/>
-                        密码: <input type="password" onChange={event => this.saveFormData('password', event)} name="password"/>
+                    <form action="http://www.atguigu.com" onSubmit={this.handleSubmit}>
+                        用户名: <input type="text" ref={dom => this.usernameDom = dom} name="username" />
+                        密码: <input type="password" ref={dom => this.passwordDom = dom} name="password" />
                         <button>登录</button>
                     </form>
                 )
             }
         }
-        ReactDOM.render(<Login/>, document.querySelector('#test1'))
+        ReactDOM.render(<Login />, document.querySelector('#test1'))
     </script>
 </body>
+
 </html>

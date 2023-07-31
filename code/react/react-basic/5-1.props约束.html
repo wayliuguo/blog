@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>hello_react</title>
 </head>
+
 <body>
     <div id="test1"></div>
     <div id="test2"></div>
@@ -20,12 +22,12 @@
     <script type="text/babel">
         class Person extends React.Component {
             render() {
-                const {name, age, sex} = this.props
+                const { name, age, sex } = this.props
                 return (
                     <ul>
-                        <li>姓名：{name}</li>    
-                        <li>性别：{sex}</li> 
-                        <li>年龄：{age+1}</li>
+                        <li>姓名：{name}</li>
+                        <li>性别：{sex}</li>
+                        <li>年龄：{age + 1}</li>
                     </ul>
                 )
             }
@@ -45,15 +47,16 @@
         }
 
         // age 传的非字符串值需要使用{}
-        ReactDOM.render(<Person name="jerry" age={19} speak={speak}/>, document.querySelector('#test1'))
-        ReactDOM.render(<Person name="tom" sex="男"/>, document.querySelector('#test2'))
+        ReactDOM.render(<Person name="jerry" age={19} speak={speak} />, document.querySelector('#test1'))
+        ReactDOM.render(<Person name="tom" sex="男" />, document.querySelector('#test2'))
 
-        const p = { name: '老刘', age: 18, sex: '女'}
-        ReactDOM.render(<Person {...p}/>, document.querySelector('#test3'))
+        const p = { name: '老刘', age: 18, sex: '女' }
+        ReactDOM.render(<Person {...p} />, document.querySelector('#test3'))
 
         function speak() {
             console.log('我说话了')
         }
     </script>
 </body>
+
 </html>

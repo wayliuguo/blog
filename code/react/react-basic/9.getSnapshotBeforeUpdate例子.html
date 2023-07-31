@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -13,10 +14,12 @@
         background-color: pink;
         overflow: auto;
     }
+
     .news {
         height: 30px;
     }
 </style>
+
 <body>
     <div id="test1"></div>
 
@@ -34,7 +37,7 @@
             componentDidMount() {
                 setInterval(() => {
                     const { newsArr } = this.state
-                    const news = '新闻'+(newsArr.length+1)
+                    const news = '新闻' + (newsArr.length + 1)
                     this.setState({
                         newsArr: [news, ...newsArr]
                     })
@@ -47,18 +50,19 @@
                 this.refs.list.scrollTop += this.refs.list.scrollHeight - height
             }
             render() {
-                return(
+                return (
                     <div className="list" ref="list">
-                            {
-                                this.state.newsArr.map((item, index) => {
-                                    return <div className="news" key={index}>{item}</div>
-                                })
-                            }
+                        {
+                            this.state.newsArr.map((item, index) => {
+                                return <div className="news" key={index}>{item}</div>
+                            })
+                        }
                     </div>
                 )
             }
         }
-        ReactDOM.render(<NewsList/>, document.querySelector('#test1'))
+        ReactDOM.render(<NewsList />, document.querySelector('#test1'))
     </script>
 </body>
+
 </html>

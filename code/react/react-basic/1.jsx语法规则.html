@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hello_react</title>
+</head>
+
+<body>
+    <div id="test"></div>
+
+    <!-- 引入 react 核心库 -->
+    <script src="./js/react.development.js" type="text/javascript"></script>
+    <script src="./js/react-dom.development.js" type="text/javascript"></script>
+    <script src="./js/babel.min.js" type="text/javascript"></script>
+
+    <script type="text/babel">
+        class Weather extends React.Component {
+            constructor(props) {
+                super(props)
+                this.state = {
+                    name: 'well',
+                    age: 18,
+                    names: ['a', 'b', 'c'],
+                    test1: undefined,
+                    test2: null,
+                    test3: true,
+                    friend: {
+                        name: 'well',
+                        age: 18
+                    },
+                    style: {
+                        color: 'red',
+                        fontSize: '18px'
+                    }
+                }
+                // this.btnClick = this.btnClick.bind(this)
+            }
+            getNameAndAge() {
+                const { name, age } = this.state
+                return `姓名：${name}，年龄${age}`
+            }
+            btnClick() {
+                let { age } = this.state
+                this.setState({
+                    age: ++age
+                })
+            }
+            btnClickArrow = () => {
+                let { age } = this.state
+                this.setState({
+                    age: ++age
+                })
+            }
+            render() {
+                const { name, age, names, test1, test2, test3, friend, style } = this.state
+                return (
+                    <div>
+                        {/*
+                            number、string、array 可以渲染
+                        */}
+                        <h2>{name}</h2>
+                        <h2>{age}</h2>
+                        <h2>{names}</h2>
+                        {/*
+                            undefined、null、boolean 渲染为空
+                        */}
+                        <h2>{test1}</h2>
+                        <h2>{test2}</h2>
+                        <h2>{test3}</h2>
+                        {/*
+                            <h2>{friend}</h2> 
+                        */}
+
+                        {/*
+                           嵌入表达式
+                        */}
+                        <h2>{`姓名：${name}，年龄${age}`}</h2>
+                        <h2>{this.getNameAndAge()}</h2>
+
+                        {/*
+                           绑定属性
+                        */}
+                        <h2 className="box">绑定class</h2>
+                        <h2 style={{ ...style }}>绑定style</h2>
+                        <h2 style={style}>绑定style</h2>
+                        <h2 style={{ color: 'red', fontSize: '18px' }}>绑定style</h2>
+
+                        {/*
+                           绑定事件
+                        */}
+                        <button onClick={this.btnClick.bind(this)}>显示绑定事件</button>
+                        <button onClick={this.btnClickArrow}>箭头函数绑定事件</button>
+                        <button onClick={() => { this.btnClick() }}>箭头函数执行绑定事件</button>
+                    </div>
+                )
+            }
+        }
+        ReactDOM.render(<Weather />, document.querySelector('#test'))
+    </script>
+</body>
+
+</html>
