@@ -124,3 +124,26 @@ let arr = [1, 3, 2, 5, 4]
 console.log(quickSort(arr)) // [1, 2, 3, 4, 5]
 ```
 
+## 二分查找
+```
+function binarySearch(arr, target) {
+    let left = 0
+    let right = arr.length - 1
+    while (left <= right) {
+        let middle = Math.floor((left + right) / 2)
+        if (arr[middle] === target) {
+            return middle
+        } else if (arr[middle] < target) {
+            left = middle++
+        } else {
+            right = middle--
+        }
+    }
+    return -1
+}
+
+const array = [2, 4, 6, 8, 10]
+const targetElement = 2
+console.log(binarySearch(array, targetElement))
+```
+

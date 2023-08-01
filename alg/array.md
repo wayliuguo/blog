@@ -103,43 +103,33 @@ var threeSum = function(nums) {
 ### 思路
 
 通过大小指针降低复杂度
+- 过滤和前一个相同的
+- 前后指针记得去重
 
 ```
-var fourSum = function (nums, target) {
-    if (nums.length < 4) {
-        return [];
-    }
-    nums.sort((a, b) => a - b);
-    const result = [];
-    for (let i = 0; i < nums.length - 3; i++) {
+var fourSum = function(nums, target) {
+    nums = nums.sort((a, b) => a - b)
+    const result = []
+    for (let i=0; i<nums.length-3; i++) {
         // 过滤和前一个重复
-        if (i > 0 && nums[i] === nums[i - 1]) {
-            continue;
-        }
-        // 如果按照顺序大于target则终止
-        if (nums[i] + nums[i + 1] + nums[i + 2] + nums[i + 3] > target) {
-            break;
-        }
-        // 第二个是下标 i+1
-        for (let j = i + 1; j < nums.length - 2; j++) {
+        if (i>0 & nums[i] === nums[i-1]) continue
+        for (let j=i+1; j<nums.length-2; j++) {
             // 过滤和前一个重复
-            if (j > i + 1 && nums[j] === nums[j - 1]) {
-                continue;
-            }
-            // 前后指针
-            let left = j + 1,
-                right = nums.length - 1;
-            // 前后指针不重叠
-            while (left < right) {
-                const sum = nums[i] + nums[j] + nums[left] + nums[right];
+            if (j>i+1 && nums[j] === nums[j-1]) continue
+             // 前后指针
+            let left = j+1
+            let right = nums.length-1
+            while(left<right) {
+                const sum = nums[i] + nums[j] + nums[left] + nums[right]
                 if (sum === target) {
-                    result.push([nums[i], nums[j], nums[left], nums[right]]);
+                    result.push([nums[i], nums[j], nums[left], nums[right]])
                     // 前指针去重
-                    while(left < right && nums[left] === nums[left+1]) left++
+                    while (left<right && nums[left] === nums[left+1]) left++
                     // 后指针去重
-                    while(left<right && nums[right] === nums[right-1]) right--
-                }
-                if (sum < target) {
+                    while (left<right && nums[right] === nums[right-1]) right--
+                    left++
+                    right--
+                } else if (sum < target) {
                     left++
                 } else {
                     right--
@@ -147,7 +137,7 @@ var fourSum = function (nums, target) {
             }
         }
     }
-    return result;
+    return result
 };
 
 ```
@@ -276,3 +266,104 @@ var exchange = function(nums) {
 };
 ```
 
+## 下一个队列
+### 题目
+整数数组的一个 排列  就是将其所有成员以序列或线性顺序排列。
+例如，arr = [1,2,3] ，以下这些都可以视作 arr 的排列：[1,2,3]、[1,3,2]、[3,1,2]、[2,3,1] 。
+必须 **原地** 修改，只允许使用额外常数空间。
+
+```
+输入：nums = [1,2,3]
+输出：[1,3,2]
+
+输入：nums = [3,2,1]
+输出：[1,2,3]
+```
+### 思想
+
+- 希望下一个数比当前大，只需要将后面的【大数】与前面的【小数】交换
+- 希望下一个数增加的幅度尽可能小
+  - 在尽可能靠右的低位进行交换，需要从后往前查找
+  - 将一个尽可能小的【大数】和前面的【小数】交换，比如123465，将5和4交换
+  - 将【大数】换到前面后，对【大数】后面的所有数升序排序得到最小的排列
+
+```
+var nextPermutation = function(nums) {
+    if (nums.length <= 1) {
+        return;
+    }
+
+    let i = nums.length - 2;
+    let j = nums.length - 1;
+    let k = nums.length - 1;
+
+    // find: A[i] < A[j]
+    while (i >= 0 && nums[i] >= nums[j]) {
+        i--;
+        j--;
+    }
+
+    if (i >= 0) { // not the last permutation
+        // find: A[i] < A[k]
+        while (nums[i] >= nums[k]) {
+            k--;
+        }
+        // swap A[i], A[k]
+        [nums[i], nums[k]] = [nums[k], nums[i]];
+    }
+
+    // reverse A[j:end]
+    for (let m = j, n = nums.length - 1; m < n; m++, n--) {
+        [nums[m], nums[n]] = [nums[n], nums[m]];
+    }
+};
+```
+
+## 搜索螺旋排序数组
+### 题目
+整数数组 nums 按升序排列，数组中的值 互不相同 。
+
+在传递给函数之前，nums 在预先未知的某个下标 k（0 <= k < nums.length）上进行了 旋转，使数组变为 [nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]]（下标 从 0 开始 计数）。例如， [0,1,2,4,5,6,7] 在下标 3 处经旋转后可能变为 [4,5,6,7,0,1,2] 。
+
+给你 旋转后 的数组 nums 和一个整数 target ，如果 nums 中存在这个目标值 target ，则返回它的下标，否则返回 -1 。
+
+你必须设计一个时间复杂度为 O(log n) 的算法解决此问题。
+
+```
+输入：nums = [4,5,6,7,0,1,2], target = 0
+输出：4
+
+输入：nums = [4,5,6,7,0,1,2], target = 3
+输出：-1
+```
+
+### 思想
+- 利用二分查找的方法，确认哪一部分是有序的，从有序的之中再次进行查找
+```
+var search = function (nums, target) {
+    let left = 0
+    let right = nums.length - 1
+    while (left <= right) {
+        let middle = Math.floor((left + right) / 2)
+        if (nums[middle] === target) {
+            return middle
+        }
+        // middle 在数组的左段
+        if (nums[0] <= nums[middle]) {
+            if (nums[0] <= target && target < nums[middle]) {
+                right = middle - 1
+            } else {
+                left = middle + 1
+            }
+        } else {
+            // middle 在数组的右段
+            if (nums[middle] < target && target <= nums[nums.length - 1]) {
+                left = middle + 1
+            } else {
+                right = middle - 1
+            }
+        }
+    }
+    return -1
+}
+```
