@@ -93,3 +93,34 @@ function merge (left, right) {
 
 console.log(mergeSort([1, 3, 2, 5, 4]))
 ```
+
+## 快速排序
+- 对冒泡排序的一种改进，利用递归不断分割排序数组并单独排序达到目的
+- 在要排序的数组中找一个基准值
+- 把小于基准值的数据集中到数组的左边（升序排列），把大于基准值的数据集中到数组的右边
+- 数组的左边和右边重复上边的步骤，直到数组有序
+
+```
+function quickSort(arr) {
+    // 如果长度小于等于1直接返回数组
+    if (arr.length <= 1) return arr
+    const left = []
+    const right = []
+    const middleIndex = Math.floor(arr.length / 2)
+    const middleValue = arr[middleIndex]
+    for (let i = 0; i < arr.length; i++) {
+        // 跳过中间下标
+        if (i === middleIndex) continue
+        if (arr[i] < middleValue) {
+            left.push(arr[i])
+        } else {
+            right.push(arr[i])
+        }
+    }
+    return quickSort(left).concat(middleValue, quickSort(right))
+}
+
+let arr = [1, 3, 2, 5, 4]
+console.log(quickSort(arr)) // [1, 2, 3, 4, 5]
+```
+
