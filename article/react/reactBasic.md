@@ -419,3 +419,11 @@ class Demo extends React.Component {
     - 清楚timer，取消网络请求
     - 取消在`componentDidMount`添加的订阅
 
+## create-react-app
+```
+npm i create-react-app -g
+npx create-react-app react-ts-demo --template typescript
+
+npm create vite@latest react-demo-vite --template react-ts
+```
+
