@@ -73,6 +73,10 @@ module.exports = {
                                 {
                                     text: 'react 基础',
                                     link: '/article/react/reactBasic'
+                                },
+                                {
+                                    text: 'react hooks',
+                                    link: '/article/react/reactHooks'
                                 }
                             ]
                         }
