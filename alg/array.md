@@ -281,40 +281,39 @@ var exchange = function(nums) {
 ```
 ### 思想
 
-- 希望下一个数比当前大，只需要将后面的【大数】与前面的【小数】交换
-- 希望下一个数增加的幅度尽可能小
-  - 在尽可能靠右的低位进行交换，需要从后往前查找
-  - 将一个尽可能小的【大数】和前面的【小数】交换，比如123465，将5和4交换
-  - 将【大数】换到前面后，对【大数】后面的所有数升序排序得到最小的排列
+- 需要将左边【较小数】与右边【较大数】交换，从而让排列变大
+- 让【较小数】尽量靠右，【较大数】尽可能小
+- [4,5,2,6,3,1]
+  - 找到符合【较小数】与【较大数】为2与3
+  - 交换后为[4,5,3,6,2,1]，此时我们可以重排「较小数」右边的序列，序列变为 [4,5,3,1,2,6]
+- 算法描述
+  - 从后向前查找第一个顺序对(i, i+1), 满足`a[i]<a[i+1]`，较小数即为a[i],此时`[i+1, n)`必然是降序的
+  - 找到了顺序对，在区间`[i+1, n)` 中从后向前查找第一个元素 j 满足 a[i] < a[j],较大数为a[j]
+  - 交换a[i]与a[j],`[i+1, n)`是降序的，反转使其变为升序即可
 
 ```
 var nextPermutation = function(nums) {
-    if (nums.length <= 1) {
-        return;
+    let i = nums.length - 2
+    // 找到较小数下标
+    while(i>=0 && nums[i] >= nums[i+1]) {
+        i--
     }
-
-    let i = nums.length - 2;
-    let j = nums.length - 1;
-    let k = nums.length - 1;
-
-    // find: A[i] < A[j]
-    while (i >= 0 && nums[i] >= nums[j]) {
-        i--;
-        j--;
-    }
-
-    if (i >= 0) { // not the last permutation
-        // find: A[i] < A[k]
-        while (nums[i] >= nums[k]) {
-            k--;
+    // 找到较大数下标
+    if (i >= 0) {
+        let j = nums.length - 1
+        while(j>=0 && nums[i] >= nums[j]) {
+            j--
         }
-        // swap A[i], A[k]
-        [nums[i], nums[k]] = [nums[k], nums[i]];
+        // 交换较小较大数
+        [nums[i], nums[j]] = [nums[j], nums[i]]
     }
-
-    // reverse A[j:end]
-    for (let m = j, n = nums.length - 1; m < n; m++, n--) {
-        [nums[m], nums[n]] = [nums[n], nums[m]];
+    // 升序交换
+    let left = i+1
+    let right = nums.length - 1
+    while(left<right) {
+        [nums[left], nums[right]] = [nums[right], nums[left]]
+        left++
+        right--
     }
 };
 ```
@@ -367,3 +366,68 @@ var search = function (nums, target) {
     return -1
 }
 ```
+
+## 缺失的第一个正数
+
+### 题目
+给你一个未排序的整数数组 nums ，请你找出其中没有出现的最小的正整数。
+
+请你实现时间复杂度为 O(n) 并且只使用常数级别额外空间的解决方案。
+
+```
+输入：nums = [1,2,0]
+输出：3
+
+输入：nums = [3,4,-1,1]
+输出：2
+
+输入：nums = [7,8,9,11,12]
+输出：1
+```
+
+### 思想
+
+- 使用常量
+
+  - 构建一个数组，把源数据作为改数组下标
+  - 从1开始遍历，如果没有对应的则是最小的第一个正数
+
+- 不使用常量
+
+  ![image-20230803130609147](array.assets/image-20230803130609147.png)
+
+  - 长度为N的数组，没有出现的最小整数只能在[1, N+1]中
+  - [1, N]都出现，则是N+1,否则出现在[1, N]
+  - 对数组遍历得到当前数**x**，如果在[1, N],则将数组中**x-1**（从0开始）个位置标记
+  - 遍历结束后，如果都打了标记则是N+1,否则是最小的没有打标记的位置加1
+  - 算法过程
+    - 将数组小于等于0的数修改为N+1
+    - 遍历数组得到**x**,（可能被打了标记（负号））取`|x|`如果在[1, N]，给数组中`|x|-1`个位置添加一个负号
+    - 遍历完之后，如果每一个数都是负数，那么答案是N+1,否则第一个正数位置加1
+
+  ```
+  var firstMissingPositive = function (nums) {
+      const n = nums.length
+      // 小于等于0的修改为 n+1
+      for (let i=0; i<n; i++) {
+          if (nums[i]<=0) {
+              nums[i] = n + 1
+          }
+      }
+      // 范围内的值将其对应下标的值变为负数
+      for (let i=0; i<n; i++) {
+          const num = Math.abs(nums[i])
+          if (num <= n) {
+              nums[num-1] = -Math.abs(nums[num-1])
+          }
+      }
+      // 找到第一个不为负数的值
+      for (let i=0; i<n; i++) {
+          if (nums[i] > 0) {
+              return i+1
+          }
+      }
+      return n + 1
+  };
+  ```
+
