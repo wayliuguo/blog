@@ -623,8 +623,8 @@ obj.method(fn, 1);
 
 输出结果： 10 2 
 
-1. 第一次执行fn()，this指向window对象，输出10。
-2. 第二次执行arguments[0]()，相当于arguments调用方法，this指向arguments，而这里传了两个参数，故输出arguments长度为2。
+1. 第一次执行`fn()`，`this`指向`window`对象，输出10。
+2. 第二次执行`arguments[0]()`，相当于`arguments`调用方法，`this`指向`arguments`，而这里传了两个参数，故输出`arguments`长度为2。
 
 ### 8.对象的方法中调用方法
 
