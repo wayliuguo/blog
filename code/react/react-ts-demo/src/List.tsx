@@ -42,7 +42,8 @@ const List: FC = () => {
                             <button
                                 onClick={() => {
                                     edit(id)
-                                }}>
+                                }}
+                            >
                                 编辑问卷
                             </button>
                         </div>

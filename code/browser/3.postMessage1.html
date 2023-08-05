@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
+    <body>
+        <div>我是postMessage1</div>
+        <iframe id="iframe" src="http://127.0.0.1:8081/3.postMessage2.html" style="display: none"></iframe>
+        <script>
+            const iframe = document.getElementById('iframe')
+            iframe.onload = function () {
+                const data = {
+                    name: 'aym'
+                }
+                // 向domain2传送跨域数据
+                iframe.contentWindow.postMessage(JSON.stringify(data), 'http://127.0.0.1:8081/3.postMessage2.html')
+            }
+            // 接受domain2返回数据
+            window.addEventListener(
+                'message',
+                function (e) {
+                    console.log('data from domain2 ---> ' + e.data)
+                },
+                false
+            )
+        </script>
+    </body>
+</html>

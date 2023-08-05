@@ -104,6 +104,30 @@ module.exports = {
                             link: '/interview/typescript'
                         },
                         {
+                            text: 'vue',
+                            link: '/interview/vue'
+                        },
+                        {
+                            text: '代码输出',
+                            link: '/interview/codeconsole'
+                        },
+                        {
+                            text: '手写代码',
+                            link: '/interview/writecode'
+                        },
+                        {
+                            text: '浏览器原理',
+                            link: '/interview/browser'
+                        },
+                        {
+                            text: '计算机网络',
+                            link: '/interview/network'
+                        },
+                        {
+                            text: '计算机网络（面试）',
+                            link: '/interview/networkinterview'
+                        },
+                        {
                             text: '软技能',
                             link: '/interview/softskill'
                         }
