@@ -43,7 +43,7 @@
 
    1. 对输入框的内容进行过滤或使用转义符进行转码
    
-      ![image-20220905231056357](dodument.assets/image-20220905231056357.png)
+      ![image-20220905231056357](browser.assets/image-20220905231056357.png)
       
    2. 使用CSP，就是白名单，告诉浏览器哪些外部资源可以加载执行，让即使插入进来恶意代码的也不会执行，或者可以向哪些第三方站点提交数据。开启白名单的方式有两种：
    
@@ -161,7 +161,7 @@
 - 浏览器可以安全地下载各种网络资源，但是执行的时候就需要谨慎了。比如解析HTML、CSS、执行JS等操作，一不小心黑客就会利用这些操作对有漏洞的浏览器发起攻击
 - **需要在渲染进程和操作系统之间建一堵墙，黑客最多能获取渲染进程的操作权限，隔离操作系统和渲染进程的就是安全沙箱**
 
-![image-20220906231533779](dodument.assets/image-20220906231533779.png)
+![image-20220906231533779](browser.assets/image-20220906231533779.png)
 
 **安全沙箱怎么影响各个模块的功能**
 
@@ -222,7 +222,7 @@ DNS劫持由于涉嫌违法，已经被监管起来，现在很少会有DNS劫�
 
 ## 2. Chrome 浏览器架构
 
-![image-20220907230448024](dodument.assets/image-20220907230448024.png)
+![image-20220907230448024](browser.assets/image-20220907230448024.png)
 
 - 一个浏览器**主进程**
 - 一个**GPU进程**
@@ -337,15 +337,15 @@ function getGLNZ() {
 
 - 首次访问
 
-  ![image-20220505191925723](dodument.assets/image-20220505191925723.png)
+  ![image-20220505191925723](browser.assets/image-20220505191925723.png)
 
 - 不够一分钟，使用缓存（新开tab页验证）
 
-  ![image-20220505192258424](dodument.assets/image-20220505192258424.png)
+  ![image-20220505192258424](browser.assets/image-20220505192258424.png)
 
 - 超出一分钟，重新请求（新开tab页验证）
 
-  ![image-20220505192447017](dodument.assets/image-20220505192447017.png)
+  ![image-20220505192447017](browser.assets/image-20220505192447017.png)
 
 **存在的问题：**
 
@@ -380,15 +380,15 @@ app.get('/demo.js', (req, res) => {
 
 - 首次访问
 
-  ![image-20220505193356176](dodument.assets/image-20220505193356176.png)
+  ![image-20220505193356176](browser.assets/image-20220505193356176.png)
 
 - 不够一分钟，使用缓存（新开tab页验证）
 
-  ![image-20220505193518660](dodument.assets/image-20220505193518660.png)
+  ![image-20220505193518660](browser.assets/image-20220505193518660.png)
 
 - 超出一分钟，重新请求（新开tab页验证）
 
-  ![image-20220505193630016](dodument.assets/image-20220505193630016.png)
+  ![image-20220505193630016](browser.assets/image-20220505193630016.png)
 
 ### Progma
 
@@ -405,7 +405,7 @@ res.setHeader('Pragma', 'no-cache') //禁止缓存
 - Last-Modified和If-Modified-Since
 - ETag和If-None-Match
 
-![image-20220505194151927](dodument.assets/image-20220505194151927.png)
+![image-20220505194151927](browser.assets/image-20220505194151927.png)
 
 ### Last-Modified和If-Modified-Since
 
@@ -439,15 +439,15 @@ app.get('/demo.js', (req, res) => {
 
 - 首次访问
 
-  ![image-20220505194720177](dodument.assets/image-20220505194720177.png)
+  ![image-20220505194720177](browser.assets/image-20220505194720177.png)
 
 - 没有修改demo.js且大于5s后访问——使用缓存
 
-  ![image-20220505195206060](dodument.assets/image-20220505195206060.png)
+  ![image-20220505195206060](browser.assets/image-20220505195206060.png)
 
 - 修改 demo.js 且访问——重新请求
 
-  ![image-20220505195416776](dodument.assets/image-20220505195416776.png)
+  ![image-20220505195416776](browser.assets/image-20220505195416776.png)
 
 **缺点**
 
@@ -486,15 +486,15 @@ app.get('/demo.js',(req, res)=>{
 
 - 首次访问
 
-  ![image-20220505200105521](dodument.assets/image-20220505200105521.png)
+  ![image-20220505200105521](browser.assets/image-20220505200105521.png)
 
 - 没有修改demo.js——使用缓存
 
-  ![image-20220505200425573](dodument.assets/image-20220505200425573.png)
+  ![image-20220505200425573](browser.assets/image-20220505200425573.png)
 
 - 修改demo.js——重新请求
 
-  ![image-20220505200532489](dodument.assets/image-20220505200532489.png)
+  ![image-20220505200532489](browser.assets/image-20220505200532489.png)
 
 
 
@@ -530,7 +530,7 @@ Pragma > Cache-Control > Expires > ETag > Last-Modified
 - 当渲染对象被创建并添加到树中，它们并没有位置和大小，所以当浏览器生成渲染树以后，就会根据渲染树来进行布局（也可以叫做回流）。这一阶段浏览器要做的事情是要弄清楚各个节点在页面中的确切位置和大小。通常这一行为也被称为“自动重排”。
 - 布局阶段结束后是绘制阶段，遍历渲染树并调用渲染对象的 paint 方法将它们的内容显示在屏幕上，绘制使用 UI 基础组件。
 
-![image-20220908224953118](dodument.assets/image-20220908224953118.png)
+![image-20220908224953118](browser.assets/image-20220908224953118.png)
 
 ## 2.浏览器渲染优化
 
@@ -814,7 +814,7 @@ Access-Control-Max-Age: 1728000  // 用来指定本次预检请求的有效期�
 'Access-Control-Allow-Headers'
 ```
 
-![image-20220910104113269](dodument.assets/image-20220910104113269.png)
+![image-20220910104113269](browser.assets/image-20220910104113269.png)
 
 ##### **减少OPTIONS请求次数**
 
@@ -919,7 +919,7 @@ postMessage(data,origin)方法接受两个参数：
 - **data**： html5规范支持任意基本类型或可复制的对象，但部分浏览器只支持字符串，所以传参时最好用JSON.stringify()序列化。
 - **origin**： 协议+主机+端口号，也可以设置为"*"，表示可以传递给任意窗口，如果要指定和当前窗口同源的话设置为"/"。
 
-![image-20220910221534489](dodument.assets/image-20220910221534489.png)
+![image-20220910221534489](browser.assets/image-20220910221534489.png)
 
 - 浏览器原理/3.postMessage1.html
 
@@ -970,7 +970,7 @@ postMessage(data,origin)方法接受两个参数：
   </script>
   ```
 
-  ![image-20220910223235720](dodument.assets/image-20220910223235720.png)
+  ![image-20220910223235720](browser.assets/image-20220910223235720.png)
 
 #### 实现过程
 
@@ -1175,7 +1175,7 @@ module.exports = {
 - 任务队列可以分为宏任务队列和微任务队列，当当前执行栈中的事件执行完毕后，js 引擎首先会判断微任务队列中是否有任务可以执行，如果有就将微任务队首的事件压入栈中执行。
 - 当微任务队列中的任务都执行完成后再去执行宏任务队列中的任务。
 
-![image-20220911113037203](dodument.assets/image-20220911113037203.png)
+![image-20220911113037203](browser.assets/image-20220911113037203.png)
 
 Event Loop 执行顺序如下所示：
 
@@ -1192,7 +1192,7 @@ Event Loop 执行顺序如下所示：
 
 ## 8.nodejs 下的事件循环
 
-![image-20220119230348567](dodument.assets/image-20220119230348567-16628686543371.png)
+![image-20220119230348567](browser.assets/image-20220119230348567-16628686543371.png)
 
 nodejs 中不止是宏任务队列与微任务队列，其分为上图六个任务队列，每一个队列里存放的都是回调函数。
 
