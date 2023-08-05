@@ -102,6 +102,10 @@ module.exports = {
                         {
                             text: 'typescript',
                             link: '/interview/typescript'
+                        },
+                        {
+                            text: '软技能',
+                            link: '/interview/softskill'
                         }
                     ]
                 }
