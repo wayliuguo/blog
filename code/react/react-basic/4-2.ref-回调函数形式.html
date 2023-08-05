@@ -1,43 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>hello_react</title>
-</head>
-<body>
-    <div id="test1"></div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>hello_react</title>
+    </head>
+    <body>
+        <div id="test1"></div>
 
-    <!-- 引入 react 核心库 -->
-    <script src="./js/react.development.js" type="text/javascript"></script> <!-- React 对象 -->
-    <script src="./js/react-dom.development.js" type="text/javascript"></script> <!-- ReactDOM 对象 -->
-    <script src="./js/babel.min.js" type="text/javascript"></script> <!-- babel -->
-    <script src="./js/prop-types.js" type="text/javascript"></script> <!-- PropTypes -->
+        <!-- 引入 react 核心库 -->
+        <script src="./js/react.development.js" type="text/javascript"></script>
+        <!-- React 对象 -->
+        <script src="./js/react-dom.development.js" type="text/javascript"></script>
+        <!-- ReactDOM 对象 -->
+        <script src="./js/babel.min.js" type="text/javascript"></script>
+        <!-- babel -->
+        <script src="./js/prop-types.js" type="text/javascript"></script>
+        <!-- PropTypes -->
 
-    <script type="text/babel">
-        class Demo extends React.Component {
-            // 展示左侧输入框的数据
-            showData = () => {
-                const { input1 } = this
-                alert(input1.value)
+        <script type="text/babel">
+            class Demo extends React.Component {
+                // 展示左侧输入框的数据
+                showData = () => {
+                    const { input1 } = this
+                    alert(input1.value)
+                }
+                showData2 = () => {
+                    const { input2 } = this
+                    alert(input2.value)
+                }
+                // 回调形式的ref的入参是ref的整个dom
+                render() {
+                    return (
+                        <div>
+                            <input ref={dom => (this.input1 = dom)} type="text" placeholder="点击按钮提示数据" />
+                            <button onClick={this.showData}>点我提示左侧的数据</button>
+                            <input
+                                ref={dom => {
+                                    this.input2 = dom
+                                }}
+                                onBlur={this.showData2}
+                                type="text"
+                                placeholder="失去提示数据"
+                            />
+                        </div>
+                    )
+                }
             }
-            showData2 = () => {
-                const { input2 } = this
-                alert(input2.value)
-            }
-            // 回调形式的ref的入参是ref的整个dom
-            render() {
-                return(
-                    <div>
-                        <input ref={dom=>this.input1 = dom} type="text" placeholder="点击按钮提示数据"/>
-                        <button onClick={this.showData}>点我提示左侧的数据</button>
-                        <input ref={(dom) => {this.input2 = dom}} onBlur={this.showData2} type="text" placeholder="失去提示数据"/>
-                    </div>
-                )
-            }
-        }
-        ReactDOM.render(<Demo/>, document.querySelector('#test1'))
-    </script>
-</body>
+            ReactDOM.render(<Demo />, document.querySelector('#test1'))
+        </script>
+    </body>
 </html>
