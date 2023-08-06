@@ -128,6 +128,14 @@ module.exports = {
                             link: '/interview/networkinterview'
                         },
                         {
+                            text: '微信小程序',
+                            link: '/interview/miniwechat'
+                        },
+                        {
+                            text: '性能优化',
+                            link: '/interview/performance'
+                        },
+                        {
                             text: '软技能',
                             link: '/interview/softskill'
                         }
