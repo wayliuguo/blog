@@ -65,9 +65,9 @@ App({
 
 ## 双线程架构
 
-![img](miniwechat.assets/f59dd6330bbc47e9af27a2a7e64b9cbftplv-k3u1fbpfcp-zoom-in-crop-mark4536000.awebp)
+![image-20230806225044874](miniwechat.assets/image-20230806225044874.png)
 
-![img](miniwechat.assets/3732521a26e34229bd65497dba51f1fdtplv-k3u1fbpfcp-zoom-in-crop-mark4536000.awebp)
+![image-20230806225058581](miniwechat.assets/image-20230806225058581.png)
 
 - 渲染层
   - 使用 webview 进行渲染，有多个页面，所以存在多个webview
