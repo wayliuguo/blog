@@ -392,6 +392,23 @@ var search = function (nums, target) {
   - 构建一个数组，把源数据作为改数组下标
   - 从1开始遍历，如果没有对应的则是最小的第一个正数
 
+  ```
+  var firstMissingPositive = function (nums) {
+      let arr = []
+      for (let i = 0; i < nums.length; i++) {
+          if (nums[i] > 0) {
+              arr[nums[i]] = nums[i]
+          }
+      }
+      for (let j = 1; j < arr.length; j++) {
+          if (!arr[j]) {
+              return j
+          }
+      }
+      return arr.length ? arr[arr.length - 1] + 1 : 1
+  };
+  ```
+
 - 不使用常量
 
   ![image-20230803130609147](array.assets/image-20230803130609147.png)
@@ -430,4 +447,50 @@ var search = function (nums, target) {
       return n + 1
   };
   ```
+
+## 合并区间
+
+### 题目
+
+以数组 `intervals` 表示若干个区间的集合，其中单个区间为 `intervals[i] = [starti, endi]` 。请你合并所有重叠的区间，并返回 *一个不重叠的区间数组，该数组需恰好覆盖输入中的所有区间* 。
+
+```
+输入：intervals = [[1,3],[2,6],[8,10],[15,18]]
+输出：[[1,6],[8,10],[15,18]]
+解释：区间 [1,3] 和 [2,6] 重叠, 将它们合并为 [1,6].
+
+输入：intervals = [[1,4],[4,5]]
+输出：[[1,5]]
+解释：区间 [1,4] 和 [4,5] 可被视为重叠区间。
+```
+
+### 思想
+- 按照区间左端点升序排序，排完序的列表中，可以合并的区间一定是连续的
+- 如果当前区间的左端点在`merged`中最后一个区间的右端点后，则他们是不重合的
+- 否则是重合的，更新右端点较大值即可
+![合并区间](array.assets/合并区间.png)
+
+```
+var merge = function (intervals) {
+  if (intervals.length === 0) {
+    return [];
+  }
+  // 升序排序
+  intervals.sort((interval1, interval2) => interval1[0] - interval2[0]);
+  const merged = [];
+  for (let i = 0; i < intervals.length; i++) {
+    let [L, R] = intervals[i];
+    if (merged.length === 0 || merged[merged.length - 1][1] < L) {
+      // 如果合并数组中大值小于当前的小值,证明不属于这个区间
+      merged.push([L, R]);
+    } else {
+      // 属于这个区间，重新获取这个区间的大值
+      merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], R);
+    }
+  }
+  return merged;
+};
+```
+
+## 寻找峰值
 
