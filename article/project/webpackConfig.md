@@ -504,3 +504,31 @@ axios.get('/api/getNum').then(res => console.log(res))
   }
   ```
 
+## 优化打包总结
+- js 代码压缩
+- css 代码压缩
+- Html 文件代码压缩
+- 文件大小压缩
+- 图片压缩
+- Tree Shaking
+- split Chunks
+```
+optimization: {
+    ...
+}
+```
+- prefetch、preload
+  - Preload 是一种强制立即获取关键资源的机制，适用于当前页面加载所必需的资源。
+  - Prefetch 是一种在空闲时间异步获取非关键资源的机制，适用于提前获取可能在未来导航中使用的资源。
+  ```
+  <link rel="prefetch">
+  <link rel="preload">
+  ```
+```
+const PreloadWebpackPlugin = require("@vue/preload-webpack-plugin")
+ new PreloadWebpackPlugin({
+    rel: "preload", // preload兼容性更好
+    as: "script",
+    // rel: 'prefetch' // prefetch兼容性更差
+})
+```
