@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import QuestionCard from './components/QuestionCard'
 
 const List: FC = () => {
     const questionList = [
@@ -32,22 +33,7 @@ const List: FC = () => {
             <div>
                 {questionList.map(question => {
                     const { id, title, isPublished } = question
-                    return (
-                        <div key={id} className="list-item">
-                            <strong>{title}</strong>
-                            &nbsp;
-                            {/* 条件判断 */}
-                            {isPublished ? <span style={{ color: 'green' }}>已发布</span> : <span>未发布</span>}
-                            &nbsp;
-                            <button
-                                onClick={() => {
-                                    edit(id)
-                                }}
-                            >
-                                编辑问卷
-                            </button>
-                        </div>
-                    )
+                    return <QuestionCard key={id} id={id} title={title} isPublished={isPublished} />
                 })}
             </div>
         </div>
