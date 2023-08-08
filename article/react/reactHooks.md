@@ -119,3 +119,43 @@ export default Demo
 ```
 
 ## useState 维护状态
+```
+const [state, setState] = useState(0)
+```
+- 参数：初始化值，可以是任意类型，默认undefined
+- 返回值：数组，包含两个元素（通常通过数组解构赋值来获取）
+- 特点
+  - 两种更新方式，推荐使用函数形式
+  ```
+  setCount(count + 1)
+  setCount(count => count+1)
+  ```
+  - 异步更新，日志打印不是最新的state值（页面上的值才是最新的）
+  ```
+  setCount(count => count + 1)
+  // 日志打印不是最新的值,页面如果是1，日志则为0
+  console.log(count)
+  ```
+  - useState 使用更新函数会触发页面重新渲染，如果值不用于页面渲染，不要使用 useState， 使用 useRef
+  - 简单数据不使用函数形式可能会被合并
+  - 不可变数据（重要），其更新机制是对`state`只进行浅对比，只要**引用地址**没有变就不会重新渲染
+  ```
+  const [userInfo, setUserInfo] = useState({ name: 'well', age: 18 })
+  const changeAge = () => {
+    setUserInfo({
+        ...userInfo,
+        age: ++userInfo.age
+    })
+  }
+  ```
+  - 可以使用immer解决不可变数据需要改变引用地址
+  ```
+  npm i immer
+
+  let age = userInfo.age
+  setUserInfo(
+      produce(draft => {
+          draft.age = age + 1
+      })
+  )
+  ```
