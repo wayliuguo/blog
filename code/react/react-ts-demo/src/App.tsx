@@ -1,18 +1,21 @@
-import React from 'react'
+import React, { useState } from 'react'
 // import logo from './logo.svg'
 import './App.css'
 import List from './List'
 import Count from './components/Count'
-import MyComponent from './components/MyComponent'
-import Demo from './components/Demo'
 
 function App() {
+    const [showCountState, setCountState] = useState(true)
+    const destoryCount = () => {
+        setCountState(false)
+    }
     return (
         <>
             <List />
-            <Count />
-            <MyComponent />
-            <Demo />
+            <hr />
+            {showCountState && <Count />}
+            <hr />
+            <button onClick={destoryCount}>销毁count组件</button>
         </>
     )
 }
