@@ -159,3 +159,83 @@ const [state, setState] = useState(0)
       })
   )
   ```
+
+## useEffect：执行副作用
+- 函数式组件通过`useState`具备操控`state`的能力，修改`state`需要在适当的场景
+- 目前`useEffect`相当于`componentDidMount、componentDidUpdate、componentWillUnmount`三个周期综合，即其回调函数会在组件**挂载、更新、卸载**时执行
+- React18开始，useEffect 在开发环境下会执行两次，用于模拟组件创建、销毁再创建的完整流程，及早暴露问题
+- 使用形式
+  ```
+    useEffect(callBack, [])
+  ```
+  - callBack: 回调函数
+  - []: 依赖数组，只有渲染时数组中值发生了变化才会执行回调函数
+  - 销毁会执行返回的方法，一边用于清理操作，防止内存泄漏
+- 使用示例-有依赖项
+  - 初次渲染执行一次
+  - 依赖项更新执行一次
+  - 销毁只执行return回去的函数
+```
+useEffect(() => {
+    console.log('count值发生了变化')
+    return () => {
+        console.log('销毁')
+    }
+}, [count])
+```
+- 使用示例-没有依赖项
+  - 每次render之后都会执行一次
+```
+useEffect(() => {
+    console.log('count值发生了变化')
+    return () => {
+        console.log('销毁')
+    }
+})
+```
+- 使用示例-依赖项为空
+  - 首次执行时触发
+
+```
+useEffect(() => {
+    console.log('count值发生了变化')
+    return () => {
+        console.log('销毁')
+    }
+}, [])
+```
+
+## useRef: 共享数据
+- 在函数组件中，需要用`useRef`提供一个组件多次渲染之间共享数据的功能
+- 其返回一个可变的ref对象，其`.current`属性被初始化为传入的参数
+- 其值的更改不会触发组件的重新渲染，这是区别于`useState`的地方
+- 使用形式
+  - 绑定 DOM
+  - 保存数据
+- 绑定 DOM
+```
+const inputRef = useRef<HTMLInputElement>(null)
+const selectInput = () => {
+    const inputElem = inputRef.current
+    if (inputElem) inputElem.select()
+}
+
+<div>
+    <input type="text" ref={inputRef} defaultValue="hello world" />
+    <button onClick={selectInput}>选中input</button>
+</div>
+```
+- 保存数据(页面没有更新，ref值变化了)
+```
+const nameRef = useRef('well')
+const changeName = () => {
+    nameRef.current = 'wayliuguo'
+    console.log(nameRef.current)
+}
+<div>
+    <p>name:{nameRef.current}</p>
+    <button onClick={changeName}>change name</button>
+</div>
+```
+
+  
