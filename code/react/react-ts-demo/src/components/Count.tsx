@@ -1,6 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FC } from 'react'
 import { produce } from 'immer'
+import useTitle from '../hooks/useTitle'
+
+const set = new Set()
 
 const Count: FC = () => {
     interface UserInfo {
@@ -56,13 +59,31 @@ const Count: FC = () => {
         console.log(nameRef.current)
     }
 
+    // useMemo
+    const [num1, setNum1] = useState(10)
+    const [num2, setNum2] = useState(20)
+    const sum = useMemo(() => {
+        console.log('useMemo的依赖项变更了')
+        return num1 + num2
+    }, [num1, num2])
+
+    // useCallback
+    const callback = useCallback(() => {
+        console.log(count)
+    }, [count])
+    set.add(callback)
+
+    useTitle('react app')
+
     return (
         <>
             <div>
+                <h2>useState:</h2>
                 <button onClick={addCount}>add {count}</button>
                 <div>{JSON.stringify(userInfo)}</div>
                 <button onClick={changeAge}>change age</button>
                 <hr />
+                <h2>useRef:</h2>
                 <div>
                     <input type="text" ref={inputRef} defaultValue="hello world" />
                     <button onClick={selectInput}>选中input</button>
@@ -72,6 +93,32 @@ const Count: FC = () => {
                     <p>name:{nameRef.current}</p>
                     <button onClick={changeName}>change name</button>
                 </div>
+                <hr />
+                <h2>useMemo</h2>
+                <div>
+                    <p>{sum}</p>
+                    <p>
+                        {num1}
+                        <button
+                            onClick={() => {
+                                setNum1(num1 + 1)
+                            }}>
+                            num1+1
+                        </button>
+                    </p>
+                    <p>
+                        {num2}
+                        <button
+                            onClick={() => {
+                                setNum2(num2 + 1)
+                            }}>
+                            num2+1
+                        </button>
+                    </p>
+                </div>
+                <hr />
+                <h2>useCallback</h2>
+                <div>Set.size{set.size}</div>
             </div>
         </>
     )
