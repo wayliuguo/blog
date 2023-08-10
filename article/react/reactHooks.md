@@ -238,4 +238,47 @@ const changeName = () => {
 </div>
 ```
 
-  
+## useMemo: 缓存结果
+- 函数组件，每次更新都会重新执行函数
+- `useMemo` 可以缓存数据，不用每次执行函数都重新生成
+- 可用于计算量较大的场景，缓存提高性能
+- 使用示例
+  - 只有依赖项的值变更了才会重新执行
+```
+useMemo(callBack, [])
+```
+```
+const [num1, setNum1] = useState(10)
+const [num2, setNum2] = useState(20)
+const sum = useMemo(() => {
+    console.log('useMemo的依赖项变更了')
+    return num1 + num2
+}, [num1, num2])
+```
+
+## useCallback: 缓存回调函数
+- 当依赖的值变化后，才会生成新的函数
+```
+const set = new Set()
+...
+const callback = useCallback(() => {
+    console.log(count)
+}, [count])
+set.add(callback)
+...
+div>Set.size{set.size}</div>
+```
+
+## 自定义 hook —— useTitle
+
+```
+import { useEffect } from 'react'
+
+const useTitle = (title: string) => {
+    useEffect(() => {
+        document.title = title
+    }, [])
+}
+
+export default useTitle
+```
