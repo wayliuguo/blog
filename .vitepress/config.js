@@ -68,6 +68,15 @@ module.exports = {
                             ]
                         },
                         {
+                            text: '轮子原理',
+                            items: [
+                                {
+                                    text: '图片懒加载',
+                                    link: '/article/wheel/lazyload'
+                                }
+                            ]
+                        },
+                        {
                             text: 'React',
                             items: [
                                 {
