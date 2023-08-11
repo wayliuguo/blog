@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FC } from 'react'
 import { produce } from 'immer'
 import useTitle from '../hooks/useTitle'
+import useMouse from '../hooks/useMouse'
+import useGetInfo from '../hooks/useGetInfo'
 
 const set = new Set()
 
@@ -73,7 +75,10 @@ const Count: FC = () => {
     }, [count])
     set.add(callback)
 
+    // 自定义 hooks
     useTitle('react app')
+    const { x, y } = useMouse()
+    const { loading, info } = useGetInfo(count)
 
     return (
         <>
@@ -119,6 +124,13 @@ const Count: FC = () => {
                 <hr />
                 <h2>useCallback</h2>
                 <div>Set.size{set.size}</div>
+                <hr />
+                <h2>自定义hooks</h2>
+                <div>
+                    <p>{x}</p>
+                    <p>{y}</p>
+                    <p>{loading ? '加载中...' : info}</p>
+                </div>
             </div>
         </>
     )

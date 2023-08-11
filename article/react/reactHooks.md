@@ -282,3 +282,68 @@ const useTitle = (title: string) => {
 
 export default useTitle
 ```
+
+## 自定义 hook —— useMouse
+```
+import { useEffect, useState } from 'react'
+
+const useMouse = () => {
+    const [x, setX] = useState<number>(0)
+    const [y, setY] = useState<number>(0)
+
+    const mouseMoveHandler = (event: MouseEvent) => {
+        setX(event.clientX)
+        setY(event.clientY)
+    }
+
+    useEffect(() => {
+        // 监听鼠标事件
+        window.addEventListener('mousemove', mouseMoveHandler)
+
+        // 组件销毁时，解绑DOM事件（否则可能出现内存泄漏问题）
+        return () => {
+            window.removeEventListener('mousemove', mouseMoveHandler)
+        }
+    }, [])
+
+    return { x, y }
+}
+
+export default useMouse
+```
+
+## 自定义hook —— useGetInfo
+- 传入了依赖的值，当依赖的值变更后再次请求数据
+```
+import { useEffect, useState } from 'react'
+
+const getInfo = (): Promise<string> => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve(Date.now().toString())
+        }, 1500)
+    })
+}
+
+const useGetInfo = (count: number) => {
+    const [loading, setLoading] = useState(true)
+    const [info, setInfo] = useState('')
+
+    useEffect(() => {
+        getInfo().then(info => {
+            setLoading(false)
+            setInfo(info)
+        })
+    }, [count])
+
+    return { loading, info }
+}
+
+export default useGetInfo
+
+...
+
+const { loading, info } = useGetInfo(count)
+<p>{loading ? '加载中...' : info}</p>
+```
+
