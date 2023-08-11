@@ -84,3 +84,50 @@ export { first }
 const first = 1
 export { first as second }
 ```
+- **export default** 
+  - 导出默认输出，即用户不需要知道模块中名字，在导入的时候为其指定任意名字
+```
+export default function () {}
+```
+
+- **导入**
+```
+import { first } from './profile.js'
+
+import { lastName as surname } from './profile.js'
+
+import * as circle from './circle'
+```
+
+- **浏览器中使用ES模块**
+```
+<script type="module">
+  import module from './module'
+</script>
+
+<script nomodule>
+  alert('您的浏览器不支持 ES 模块，请先升级！')
+</script>
+```
+
+## package.json 与模块化
+## main
+- 用来指定加载的入口文件，在`browser`和`Node`环境中都可以使用
+- 我们将项目发布为`npm`包，当使用`require`导入时，返回的就是`main`字段所列出的文件的`module.exports`属性
+- 如果不指定该字段，默认就是根目录下的 `index.js`
+```
+"main": "lib/index.js"
+```
+
+## browser
+- 可以定义 npm 包在 browser 环境下的入口文件
+```
+"browser": "lib/index.js"
+```
+
+## module
+- 可以定义 npm 包的 ESM 规范入口文件
+- browser 和 node 环境均可使用
+```
+"module": "es/index.js"
+```
