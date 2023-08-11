@@ -64,6 +64,10 @@ module.exports = {
                                 {
                                     text: 'rollup&webpack',
                                     link: '/article/project/rollup&vite'
+                                },
+                                {
+                                    text: '前端模块化规范',
+                                    link: '/article/project/moduleStandard'
                                 }
                             ]
                         },
