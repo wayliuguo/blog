@@ -86,6 +86,10 @@ module.exports = {
                                 {
                                     text: 'react hooks',
                                     link: '/article/react/reactHooks'
+                                },
+                                {
+                                    text: 'react 使用ts指南',
+                                    link: '/article/react/reactUseTs'
                                 }
                             ]
                         }
