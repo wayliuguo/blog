@@ -8,20 +8,16 @@ module.exports = {
         editLinks: true,
         editLinkText: '编辑此网站',
         repo: 'https://gitee.com/wayliuhaha/blog',
-        footer: {
-            message: 'Released under the MIT License.',
-            copyright: 'Copyright © 202-present WELL'
-        },
         nav: [
-            {
-                text: '指南',
-                link: '/guide/quickStart',
-                activeMatch: '/guide/'
-            },
             {
                 text: '文档',
                 link: '/article/project/normalizeConfig',
                 activeMatch: '/article/'
+            },
+            {
+                text: 'node',
+                link: '/node/nodeBasic',
+                activeMatch: '/node/'
             },
             {
                 text: '面试',
@@ -40,8 +36,8 @@ module.exports = {
                     text: '指南',
                     items: [
                         {
-                            text: '快速开始',
-                            link: '/guide/quickStart'
+                            text: '精通node',
+                            link: '/node/nodeBasic'
                         }
                     ]
                 }
