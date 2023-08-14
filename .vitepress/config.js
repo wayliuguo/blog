@@ -35,6 +35,10 @@ module.exports = {
                 {
                     text: 'node 基础',
                     link: '/node/nodeBasic'
+                },
+                {
+                    text: 'mongoDB',
+                    link: '/node/mongoDB'
                 }
             ],
             '/article/': [
