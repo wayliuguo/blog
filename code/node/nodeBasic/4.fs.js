@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const fs = require('fs')
 const path = require('path')
 
@@ -22,11 +23,18 @@ fs.writeFile(path.resolve('data.txt'), '我不是一只程序员', options, (err
     console.log('拷贝成功')
 }) */
 
-fs.watchFile('data.txt', { interval: 20 }, (curr, prev) => {
+/* fs.watchFile('data.txt', { interval: 20 }, (curr, prev) => {
     console.log(curr)
     console.log(prev)
     if (curr.mtime !== prev.mtime) {
         console.log('文件被修改了')
         fs.unwatchFile('data.txt')
     }
+}) */
+
+fs.open(path.resolve('bigFile.txt'), 'r', (err, fd) => {
+    console.log(fd)
+    fs.close(fd, () => {
+        console.log('关闭成功')
+    })
 })

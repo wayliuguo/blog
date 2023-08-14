@@ -31,15 +31,10 @@ module.exports = {
             }
         ],
         sidebar: {
-            '/guide/': [
+            '/node/': [
                 {
-                    text: '指南',
-                    items: [
-                        {
-                            text: '精通node',
-                            link: '/node/nodeBasic'
-                        }
-                    ]
+                    text: 'node 基础',
+                    link: '/node/nodeBasic'
                 }
             ],
             '/article/': [

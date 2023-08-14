@@ -219,5 +219,86 @@
     }
   })
   ```
+- 文件打开与关闭
+  - fs.open(path, flags, mode, callback)
+    - flags: 
+      - r：只读模式
+      - w：写入模式，如果文件不存在则创建，如果存在则截断
+      - a：追加模式，如果文件不存在则创建
+  - fs.close
+  ```
+  fs.open(path.resolve('bigFile.txt'), 'r', (err, fd) => {
+    console.log(fd)
+    fs.close(fd, () => {
+        console.log('关闭成功')
+    })
+  })
+  ```
+- 目录操作API
+  - access：判断文件或目录是否具有操作权限
+  - stat：获取目录及文件信息
+  - mkdir：创建目录
+  - rmdir：删除目录
+  - readdir：读取目录中内容
+  - unlink：删除指定文件
 
--
+## 事件模块 events
+- EventEmitter
+  - nodejs 是基于事件驱动的异步操作架构，内置 events 模块
+  - events 模块提供了 EventEmitter 类
+  - nodejs 中很多内置核心模块继承了 EventEmitter
+- EventEmitter 常见API
+  - on: 添加当事件被触发时调用的回调函数
+  - emit：触发事件，按照注册的顺序同步调用每个事件监听器
+  - once：添加当事件在注册之后首次被触发时调用的回调函数
+  - off：移除特定的监听器
+  ```
+  const EventEmitter = require('events')
+  const ev = new EventEmitter()
+
+  ev.on('e1', () => {
+      console.log('e1')
+  })
+  ev.emit('e1')
+  ```
+
+## 核心模块-stream
+- 避免同步读取文件的等待时长和开销问题
+- 分类
+  - Readable（createReadStream）: 可读流，能够实现数据的读取
+  - Writeable（createWriteStream）: 可写流，能够实现数据的写操作
+  - Duplex: 双工流，既可读又可写
+  - ransform: 转换流，可读可写，还能实现数据转换
+- createReadStream 为例
+  - path：字符串，表示要读取的文件的路径
+  - options
+    - flags：字符串，指定文件打开的方式，默认为 'r'
+    - encoding：字符串，指定文件的编码，默认为 null
+    - highWaterMark：整数，指定内部缓冲区的大小（以字节为单位），用于控制每次读取的数据量，默认为 64 KB
+    - autoClose：布尔值，指示是否在读取完毕后自动关闭文件描述符，默认为 true
+    - start：整数，指定文件开始读取位置的偏移量（以字节为单位）
+    - end：整数，指定文件结束读取位置的偏移量（以字节为单位）
+    - fd：整数，指定一个已经打开的文件描述符来创建可读流，与 path 参数互斥
+    - mode：整数，指定文件的权限，仅在使用 fd 参数时有效
+- pipe 通过管道传输
+```
+const fs = require('fs')
+
+const readableStream = fs.createReadStream('readStream.txt', {
+    highWaterMark: 1024
+})
+const writeableStream = fs.createWriteStream('./writeStream.txt', {
+    highWaterMark: 10
+})
+
+readableStream.pipe(writeableStream)
+
+// 监听可读流的结束事件
+readableStream.on('end', () => {
+    console.log('File copy completed.')
+})
+// 监听可写流的结束事件
+writeableStream.on('finish', () => {
+    console.log('Data written to the file.')
+})
+```
