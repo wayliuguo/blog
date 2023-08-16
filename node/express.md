@@ -64,6 +64,10 @@ app.listen(3000, () => {
   - 内置中间件
   - 第三方中间件
 - 应用级中间件
+  - 使用`app.use()`和`app.method()`函数将应用级中间件绑定到`app对象实例`
+  - `app.use(handler)`
+  - `app.use('/user/:id', handler)`
+  - `app.post('/user/:id', handler)`
   ```
   const logTime = (req, res, next) => {
     console.log(`time：${Date.now()}`)
@@ -75,3 +79,52 @@ app.listen(3000, () => {
   })
   ```
 - 路由级中间件
+  - 工作方式与应用级中间件相同，只是绑定到`express.Router()`的实例上
+  - `const router = express.Router()`
+```
+// userRouter
+const userRouter = require('./userRouter')
+
+// userRouter.js
+const express = require('express')
+const userRouter = express.Router()
+
+userRouter.get('/:id', (req, res) => {
+  const { id } = req.params
+  res.send(id)
+})
+
+module.exports = userRouter
+
+// 访问 http://localhost:3000/user/110  >>> 110
+```
+- 错误处理中间件
+  - 总是需要四个参数，必须提供四个参数
+```
+app.get('/', (req, res, next) => {
+    try {
+        throw new Error('测试错误')
+    } catch (error) {
+        next(error)
+    }
+})
+
+// error middleware
+app.use((err, req, res, next) => {
+    res.status(500).json({
+        error: err.message
+    })
+})
+```
+- 内置中间件
+  - express.json()
+    - 解析 Content-Type 为application/json 格式的请求体
+  - express.urlencoded()
+    - 解析 Content-Type 为 www-form-urlencoded 格式的请求体
+  - express.raw()
+    - 解析 Content-Type 为 application/octet-stream 格式的请求体
+  - express.text()
+    - 解析 Content-Type 为 text/plain 格式的请求体
+  - express.static()
+    - 托管静态资源文件
+

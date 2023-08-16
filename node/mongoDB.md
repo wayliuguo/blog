@@ -157,5 +157,9 @@ db.users.updateOne({name: 'well'}, {$set: {"info.sex": 'femal'}})
 - db.inventory.deleteMany(queryObj)
 - db.inventory.deleteOne(queryObj)
 
-## node 操作[MongoDB](https://www.mongodb.com/docs/drivers/node/current/quick-start/connect-to-mongodb/)
+## [node 操作MongoDB](https://www.mongodb.com/docs/drivers/node/current/quick-start/connect-to-mongodb/)
+```
+npm install mongodb
+```
+
 
