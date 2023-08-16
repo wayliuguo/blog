@@ -39,6 +39,10 @@ module.exports = {
                 {
                     text: 'mongoDB',
                     link: '/node/mongoDB'
+                },
+                {
+                    text: 'express',
+                    link: '/node/express'
                 }
             ],
             '/article/': [
