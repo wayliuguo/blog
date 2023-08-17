@@ -161,5 +161,99 @@ db.users.updateOne({name: 'well'}, {$set: {"info.sex": 'femal'}})
 ```
 npm install mongodb
 ```
+```
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { MongoClient } = require('mongodb')
 
+const client = new MongoClient('mongodb://127.0.0.1:27017', {
+    useUnifiedTopology: true
+})
 
+async function run() {
+    try {
+        // 开始连接
+        await client.connect()
+        const personDB = client.db('myDB')
+        const usersCollection = personDB.collection('users')
+        const userDocument = {
+            name: 'well',
+            age: 18,
+            info: {
+                job: 'player',
+                sport: ['soccer', 'pingpong']
+            }
+        }
+        await usersCollection.insertOne(userDocument)
+        const ret = await usersCollection.find()
+        console.log(await ret.toArray())
+    } catch (err) {
+        // 连接失败
+        console.log('连接失败', err)
+    } finally {
+        // 关闭连接
+        await client.close()
+    }
+}
+
+run()
+```
+
+## [mongoose](http://www.mongoosejs.net/)
+```
+npm i mongoose --save
+```
+- Schema
+  - 用于定义数据库中文档结构的规范
+  - 定义了文档所包含的字段、字段类型、验证规则等信息
+- Model
+  - 通过 Schema 编译生成的构造函数，用于创建具有相同属性和行为的文档实例
+  - Model允许你操作数据库，如保存、查询、更新和删除文档等
+- Document
+  - Document是Model的实例，表示数据库中的一个文档
+```
+const mongoose = require('mongoose')
+mongoose.connect('mongodb://127.0.0.1:27017/myDB')
+
+// 使用mongoose连接数据库
+const db = mongoose.connection
+// 当连接失败的时候
+db.on('error', err => {
+    console.log('MongoDB 数据库连接失败', err)
+})
+// 当连接成功的时候
+db.once('open', function () {
+    console.log('MongoDB 数据库连接成功')
+    start()
+})
+
+// 定义 Schema
+const userSchema = new mongoose.Schema({
+    name: String,
+    age: Number,
+    info: {
+        job: String,
+        sport: Array
+    }
+})
+
+// 创建数据模型
+const users = mongoose.model('users', userSchema)
+
+const start = async () => {
+    try {
+        // const user = new users({
+        //     name: 'mike',
+        //     age: 18,
+        //     info: {
+        //         job: 'player',
+        //         sport: ['basketball']
+        //     }
+        // })
+        // await user.save()
+        const result = await users.find()
+        console.log(result)
+    } catch (error) {
+        console.error(error.message)
+    }
+}
+```

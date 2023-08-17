@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const { MongoClient } = require('mongodb')
 
 const client = new MongoClient('mongodb://127.0.0.1:27017', {
@@ -10,6 +11,15 @@ async function run() {
         await client.connect()
         const personDB = client.db('myDB')
         const usersCollection = personDB.collection('users')
+        const userDocument = {
+            name: 'well',
+            age: 18,
+            info: {
+                job: 'player',
+                sport: ['soccer', 'pingpong']
+            }
+        }
+        await usersCollection.insertOne(userDocument)
         const ret = await usersCollection.find()
         console.log(await ret.toArray())
     } catch (err) {
