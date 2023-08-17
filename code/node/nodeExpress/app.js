@@ -34,6 +34,7 @@ app.get('/', (req, res, next) => {
 })
 
 // error middleware
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err, req, res, next) => {
     res.status(500).json({
         error: err.message
