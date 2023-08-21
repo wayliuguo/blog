@@ -45,6 +45,10 @@ app.use((ctx, next) => {
     ctx.body = '6'
 })
 
-app.listen(3000, () => {
+app.on('error', err => {
+    console.log(err)
+})
+
+app.listen(8080, () => {
     console.log('server start')
 })

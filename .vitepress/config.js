@@ -43,6 +43,10 @@ module.exports = {
                 {
                     text: 'express',
                     link: '/node/express'
+                },
+                {
+                    text: 'koa',
+                    link: '/node/koa'
                 }
             ],
             '/article/': [
