@@ -84,6 +84,15 @@ module.exports = {
                             ]
                         },
                         {
+                            text: 'vant 组件库解密',
+                            items: [
+                                {
+                                    text: 'Monorepo',
+                                    link: '/article/vant/monorepo'
+                                }
+                            ]
+                        },
+                        {
                             text: 'React',
                             items: [
                                 {
