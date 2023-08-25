@@ -84,11 +84,15 @@ module.exports = {
                             ]
                         },
                         {
-                            text: 'vant 组件库解密',
+                            text: 'vue3 通用组件',
                             items: [
                                 {
                                     text: 'Monorepo',
-                                    link: '/article/vant/monorepo'
+                                    link: '/article/vueComponent/monorepo'
+                                },
+                                {
+                                    text: 'ts 类型约束',
+                                    link: '/article/vueComponent/usets '
                                 }
                             ]
                         },
