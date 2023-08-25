@@ -93,6 +93,10 @@ module.exports = {
                                 {
                                     text: 'ts 类型约束',
                                     link: '/article/vueComponent/usets '
+                                },
+                                {
+                                    text: 'BEM 规范',
+                                    link: '/article/vueComponent/bem'
                                 }
                             ]
                         },
