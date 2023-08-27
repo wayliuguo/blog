@@ -83,7 +83,7 @@ module.exports = {
                                 },
                                 {
                                     text: '虚拟滚动列表',
-                                    link: '/artile/wheel/scrollList'
+                                    link: '/article/wheel/scrollList'
                                 }
                             ]
                         },
