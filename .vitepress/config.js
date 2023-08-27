@@ -88,6 +88,23 @@ module.exports = {
                             ]
                         },
                         {
+                            text: 'vue3 通用组件',
+                            items: [
+                                {
+                                    text: 'Monorepo',
+                                    link: '/article/vueComponent/monorepo'
+                                },
+                                {
+                                    text: 'ts 类型约束',
+                                    link: '/article/vueComponent/usets '
+                                },
+                                {
+                                    text: 'BEM 规范',
+                                    link: '/article/vueComponent/bem'
+                                }
+                            ]
+                        },
+                        {
                             text: 'React',
                             items: [
                                 {
