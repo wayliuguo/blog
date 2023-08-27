@@ -80,6 +80,10 @@ module.exports = {
                                 {
                                     text: '图片懒加载',
                                     link: '/article/wheel/lazyload'
+                                },
+                                {
+                                    text: '虚拟滚动列表',
+                                    link: '/artile/whell/scrollList'
                                 }
                             ]
                         },
