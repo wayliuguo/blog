@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import './App.css'
 import List from './List'
 import Count from './components/Count'
+import ClosureTrap from './components/ClosureTrap'
 
 function App() {
     const [showCountState, setCountState] = useState(true)
@@ -16,6 +17,8 @@ function App() {
             {showCountState && <Count />}
             <hr />
             <button onClick={destoryCount}>销毁count组件</button>
+            <hr/>
+            <ClosureTrap/>
         </>
     )
 }

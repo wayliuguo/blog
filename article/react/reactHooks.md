@@ -347,3 +347,53 @@ const { loading, info } = useGetInfo(count)
 <p>{loading ? '加载中...' : info}</p>
 ```
 
+## 三条使用规则
+- 必须使用 useXxx 格式命名
+- 只能在两个地方调用 Hook（组件内，其他 Hook 内）
+- 必须保证每次的调用顺序一致（不能放在 if for 内部）
+
+## 闭包陷阱
+- 在点击一下`alertFn`到`alert`触发过程中多次点击`add`，由于`闭包陷阱`会导致`alert`显示的是旧值
+- 可以使用`useRef`解决，原因是`useState`是值类型，`useRef`是引用类型
+```
+import { FC, useState } from 'react'
+
+const ClosureTrap: FC = () => {
+    const [count, setCount] = useState(0)
+
+    const add = () => {
+        setCount(count + 1)
+    }
+    const alertFn = () => {
+        setTimeout(() => {
+            alert(count)
+        }, 3000)
+    }
+    return (
+        <>
+            <p>闭包陷阱</p>
+            <div>
+                <p>{count}</p>
+                <button onClick={add}> add</button>
+                <button onClick={alertFn}> alertFn</button>
+            </div>
+        </>
+    )
+}
+
+export default ClosureTrap
+```
+- 使用 useRef 解决闭包陷阱
+```
+// 添加 useRef 依赖 count
+const countRef = useRef(0)
+useEffect(() => {
+    countRef.current = count
+}, [count])
+
+const alertFn = () => {
+    setTimeout(() => {
+        alert(countRef.current)
+    }, 3000)
+}
+```
