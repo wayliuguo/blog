@@ -20,7 +20,7 @@ module.exports = {
                 activeMatch: '/node/'
             },
             {
-                text: '面试',
+                text: '不止于面试',
                 link: '/interview/css',
                 activeMatch: '/interview/'
             },
@@ -118,6 +118,10 @@ module.exports = {
                                 {
                                     text: 'react 使用ts指南',
                                     link: '/article/react/reactUseTs'
+                                },
+                                {
+                                    text: 'react 使用css',
+                                    link: '/article/react/reactUseCss'
                                 }
                             ]
                         }

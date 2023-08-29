@@ -1,5 +1,6 @@
-import React from 'react'
 import { FC } from 'react'
+import styles from '../style/QuestionCard.module.scss'
+import classNames from 'classnames'
 
 type PropsType = {
     id: string
@@ -24,13 +25,20 @@ const QuestionCard: FC<PropsType> = props => {
         publishQuestion(id)
     }
 
+    const listItemClass = styles['list-item']
+    const publishedClass = styles['published']
+    const itemClassName = classNames({
+        [listItemClass]: true,
+        [publishedClass]: isPublished
+    })
+
     return (
-        <div key={id} className="list-item">
+        <div key={id} className={itemClassName}>
             <strong>{title}</strong>
             &nbsp;
             {/* 条件判断 */}
             {isPublished ? (
-                <span style={{ color: 'green' }}>已发布</span>
+                <span className={styles['published-span']}>已发布</span>
             ) : (
                 <button
                     onClick={() => {
