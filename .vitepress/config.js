@@ -126,7 +126,7 @@ module.exports = {
             ],
             '/interview': [
                 {
-                    text: '面试',
+                    text: '不止于面试',
                     items: [
                         {
                             text: 'css',
