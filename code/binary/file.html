@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <input type="file" id="fileInput" multiple="multiple">
+    <div id="drop-zone">拖放上传区域</div>
+    <script>
+        // input
+        const fileInput = document.getElementById('fileInput')
+        fileInput.onchange = (e) => {
+            console.log(e.target.files)
+        }
+
+        // 文件拖放
+        const dropZone = document.getElementById('drop-zone')
+        dropZone.ondragover = e => {
+            e.preventDefault()
+        }
+        dropZone.ondrop = e => {
+            e.preventDefault()
+            const files = e.dataTransfer.files
+            console.log(files)
+        }
+    </script>
+</body>
+
+</html>

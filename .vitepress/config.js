@@ -124,6 +124,15 @@ module.exports = {
                                     link: '/article/react/reactUseCss'
                                 }
                             ]
+                        },
+                        {
+                            text: '常见需求处理',
+                            items: [
+                                {
+                                    text: '二进制',
+                                    link: '/article/requirement/binary'
+                                }
+                            ]
                         }
                     ]
                 }
@@ -183,6 +192,10 @@ module.exports = {
                         {
                             text: '软技能',
                             link: '/interview/softskill'
+                        },
+                        {
+                            text: '面经',
+                            link: '/interview/experience'
                         }
                     ]
                 }
