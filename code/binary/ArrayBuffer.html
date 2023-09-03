@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        // ArrayBuffer
+        const buffer = new ArrayBuffer(16)
+        console.log(buffer.byteLength) // 16
+        const newBuffer = buffer.slice(0, 8)
+        console.log(newBuffer) // ArrayBuffer(8)
+        console.log(ArrayBuffer.isView(buffer)) // false
+        const view = new Uint32Array(buffer)
+        console.log(ArrayBuffer.isView(view)) // true
+
+        // TypedArray
+        let viewInt8 = new Int8Array(16)
+        viewInt8[0] = 10
+        console.log(viewInt8)
+        console.log(Int8Array.BYTES_PER_ELEMENT) // 1
+        const viewInt32 = new Int32Array(viewInt8)
+        console.log(viewInt32.buffer) // ArrayBuffer(64)
+        console.log(viewInt8.slice(0, 1))
+        console.log(viewInt8.length) // 16
+        console.log(viewInt8.byteLength) // 16
+
+        // DataView
+        const dataView = new DataView(new ArrayBuffer(16))
+        console.log(dataView)
+        console.log(dataView.getUint8(0))
+    </script>
+</body>
+
+</html>
