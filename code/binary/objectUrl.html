@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <input type="file" id="fileInput" multiple="multiple">
+    <img id="preview">
+    <script>
+        const fileInput = document.getElementById('fileInput')
+        const preview = document.getElementById('preview')
+
+        fileInput.onchange = e => {
+            objectUrl = URL.createObjectURL(e.target.files[0])
+            preview.src = objectUrl
+            console.log(preview.src)
+            // URL.revokeObjectURL(objectUrl)
+        }
+    </script>
+</body>
+</html>
