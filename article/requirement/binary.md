@@ -286,12 +286,36 @@ javaScript 提供了一些 API 来处理文件或原始数据，例如
 
 ## Object URL
 
-1. 定义
-2. createObjectURL
-3. revokeObjectURL
-
 - 定义
 
   - 用来表示File Object 或 Blob Object 的 URL
 
-    
+
+```
+<input type="file" id="fileInput" multiple="multiple">
+<img id="preview">
+<script>
+    const fileInput = document.getElementById('fileInput')
+    const preview = document.getElementById('preview')
+
+    fileInput.onchange = e => {
+        objectUrl = URL.createObjectURL(e.target.files[0])
+        preview.src = objectUrl
+        console.log(preview.src)
+        // URL.revokeObjectURL(objectUrl)
+    }
+</script>
+```
+
+## Base64
+
+- 一种基于64个可打印字符来表示二进制数据的表示方法
+- 两个函数
+  - `atob()`：解码，解码一个Base64字符串
+  - `btoa()`：编码，从一个字符串或者二进制数据编码一个Base64字符串
+
+```
+btoa('javascript') // 'amF2YXNjcmlwdA=='
+atob('amF2YXNjcmlwdA==') // 'javascript'
+```
+
