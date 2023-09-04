@@ -131,6 +131,10 @@ module.exports = {
                                 {
                                     text: '二进制',
                                     link: '/article/requirement/binary'
+                                },
+                                {
+                                    text: '文件上传',
+                                    link: '/article/requirement/upload'
                                 }
                             ]
                         }
