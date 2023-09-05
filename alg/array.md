@@ -520,3 +520,22 @@ var merge = function (intervals) {
  - `nums[i−1]<nums[i]<nums[i+1]`：i 处于上坡，往右走
  - `nums[i−1]>nums[i]>nums[i+1]`：i 处于下坡，往左走
  - `nums[i−1]>nums[i]<nums[i+1]`：i处于山谷，两侧都是上坡，任意方向走，我们规定往右
+
+```
+var findPeakElement = function(nums) {
+    let left = 0
+    let right = nums.length - 1
+    while(left<right) {
+        // 中间值
+        const mid = Math.floor((left+right) / 2)
+        if (nums[mid] > nums[mid+1]) {
+            // 当前元素大于右侧相邻元素，峰值可能在左侧
+            right = mid
+        } else {
+            // 当前元素小于右侧相邻元素，峰值可能在右侧
+            left = mid+1
+        }
+    }
+    return left
+}
+```
