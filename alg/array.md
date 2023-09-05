@@ -539,3 +539,97 @@ var findPeakElement = function(nums) {
     return left
 }
 ```
+
+## 合并两个有序数组
+### 题目
+给你两个按 非递减顺序 排列的整数数组 nums1 和 nums2，另有两个整数 m 和 n ，分别表示 nums1 和 nums2 中的元素数目。
+
+请你 合并 nums2 到 nums1 中，使合并后的数组同样按 非递减顺序 排列。
+
+注意：最终，合并后数组不应由函数返回，而是存储在数组 nums1 中。为了应对这种情况，nums1 的初始长度为 m + n，其中前 m 个元素表示应合并的元素，后 n 个元素为 0 ，应忽略。nums2 的长度为 n 。
+```
+输入：nums1 = [1,2,3,0,0,0], m = 3, nums2 = [2,5,6], n = 3
+输出：[1,2,2,3,5,6]
+解释：需要合并 [1,2,3] 和 [2,5,6] 。
+合并结果是 [1,2,2,3,5,6] ，其中斜体加粗标注的为 nums1 中的元素。
+```
+
+### 题解
+1. 直接合并后排序
+
+2. 双指针
+   - 利用双指针每次比较两者中较大的放入公共空间
+   
+   ![1](array.assets/1.gif)
+
+3. 逆向双指针
+
+   - 把两者中较大的值放到数组的末尾
+
+   ```
+   var merge = function (nums1, m, nums2, n) {
+     let l = m - 1;
+     let r = n - 1;
+     let tail = m + n - 1;
+     let cur;
+     while (l >= 0 || r >= 0) {
+       if (l === -1) {
+         cur = nums2[r--];
+       } else if (r === -1) {
+         cur = nums1[l--];
+       } else if (nums1[l] > nums2[r]) {
+         cur = nums1[l--];
+       } else {
+         cur = nums2[r--];
+       }
+       nums1[tail--] = cur;
+     }
+   };
+   ```
+
+## 移除元素
+### 题目
+给你一个数组 nums 和一个值 val，你需要 原地 移除所有数值等于 val 的元素，并返回移除后数组的新长度。
+
+不要使用额外的数组空间，你必须仅使用 O(1) 额外空间并 原地 修改输入数组。
+
+元素的顺序可以改变。你不需要考虑数组中超出新长度后面的元素。
+
+### 题解
+1. 拷贝覆盖
+   - 设置下标 ans，遍历数组，当遍历元素不等于 val，则ans自增1，则得到新的数组长度
+   ```
+   var removeElement = function (nums, val) {
+    let ans = 0;
+    for (const num of nums) {
+        if (num != val) {
+        nums[ans] = num;
+        ans++;
+        }
+    }
+    return ans;
+    };
+   ```
+   
+2. 双指针原地移除
+
+   - 如果左指针 left 指向的元素等于val，此时将右指针 right 指向的元素复制到左指针left 的位置，然后右指针 right 左移一位
+   - 如果赋值过来的元素恰好也等于 val，可以继续把右指针right 指向的元素的值赋值过来（左指针 left 指向的等于val 的元素的位置继续被覆盖），直到左指针指向的元素的值不等于val 为止
+
+   ```
+   var removeElement = function (nums, val) {
+     let left = 0;
+     let right = nums.length;
+     while (left < right) {
+       if (nums[left] === val) {
+         nums[left] = nums[right - 1];
+         right--;
+       } else {
+         left++;
+       }
+     }
+     return left;
+   };
+   ```
+
+   

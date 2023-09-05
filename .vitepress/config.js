@@ -209,7 +209,7 @@ module.exports = {
                     text: '算法',
                     items: [
                         {
-                            text: '数组',
+                            text: '数组/字符串',
                             link: '/alg/array'
                         },
                         {
