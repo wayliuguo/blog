@@ -361,7 +361,7 @@ const stu = {
 const { name } = stu
 ```
 
-## 18. 
+## 18. 扩展运算符
 
 扩展运算符被用在函数形参上时，**它还可以把一个分离的参数序列整合成一个数组**
 
@@ -1144,7 +1144,7 @@ console.log('end')
 - 如果它等到的不是一个 Promise 对象，那 await 表达式的运算结果就是它等到的东西。
 - 如果它等到的是一个 Promise 对象，await 就忙起来了，它会阻塞后面的代码，等着 Promise 对象 resolve，然后得到 resolve 的值，作为 await 表达式的运算结果。
 
-## 40.async await 魔鬼细节
+## 39.async await 魔鬼细节
 
 ```
 async function async1 () {
@@ -1799,3 +1799,152 @@ console.log('11')
 - 接`Promise`类型(有确定的返回值)，会立即向微任务队列添加一个微任务`then`，**但不需等待**
 
 - - TC 39 对`await` 后面是 `promise` 的情况如何处理进行了一次修改，**移除**了额外的两个微任务，在**早期版本**，依然会等待两个 `then` 的时
+
+
+# 八、面向对象
+## 40.js 创建对象的6种方式
+1. Object 构造函数创建
+2. 对象字面量创建
+3. 工厂模式创建
+4. 构造函数创建
+5. 原型模式创建
+6. 组合使用构造函数模式和原型模式创建
+   - 构造函数每个实例对象都会复制构造函数内部的方法，造成内存浪费
+   - 可以结合原型模式来共享同一个方法达到节省内存
+```
+// Object 构造函数
+/* const Person = new Object()
+Person.type = 1 */
+
+// 字面量
+/* const Person = {}
+Person.type = 2 */
+
+// 工厂模式
+/* function createPerson(name, age, job) {
+    var o = new Object()
+    o.name = name
+    o.age = age
+    o.job = job
+    o.sayName = function () {
+        alert(this.name)
+    }
+    return o
+}
+const person = createPerson('Nike', 29, 'teacher')
+console.log(person.age) */
+
+// 构造函数
+/* function Person(name, age, job) {
+    this.name = name
+    this.age = age
+    this.job = job
+}
+const person = new Person('Nike', 29, 'teacher')
+console.log(person.age) */
+
+// 原型模式
+/* function Person() {}
+Person.prototype.name = 'Nike'
+Person.prototype.age = 20
+Person.prototype.job = 'teacher'
+const person = new Person('Nike', 29, 'teacher')
+console.log(person.age) */
+
+// 构造函数与原型组合
+function Person (name) {
+    this.name = name
+}
+Person.prototype.sayName = function() {
+    console.log(this.name)
+}
+const mike = new Person('mike')
+mike.sayName()
+```
+
+## 41.js的6种继承方式
+1. 原型链继承
+   - 特点：所有实例对象共用同一个原型对象的属性和方法
+   - 缺点：
+     - 所有实例对象共享原型对象属性和方法，如果是引用类型，一个实例修改，其他地方也会修改
+     - 实例化时不能向 Parent 传参
+     - 子类的原型上多了不需要的父类属性，存在内存上的浪费 
+    ```
+    // 原型继承
+    function Parent() {
+        this.info = {
+            balance: 10000
+        }
+    }
+    Parent.prototype.useMoney = function (number) {
+        this.info.balance -= number
+        console.log(`花了${number}块`)
+        console.log(`余额${this.info.balance}块`)
+    }
+    function Child() {}
+
+    Child.prototype = new Parent()
+    const child1 = new Child()
+    const child2 = new Child()
+    console.log(child1.info.balance) // 10000
+    child1.useMoney(500)
+    // child1 花了500块
+    // child1 余额9500块
+    console.log(child2.info.balance) // child2 也只剩9500
+    ```
+2. 盗用构造函数继承（利用call、apply）
+   - 特点：利用call、apply 使 parent 指向 child，从而获得对应的属性
+   - 缺点
+     -  无法继承 parent 的方法
+    ```
+    function Parent() {
+        this.info = {
+            balance: 10000
+        }
+    }
+    Parent.prototype.useMoney = function (number) {
+        this.info.balance -= number
+        console.log(`花了${number}块`)
+        console.log(`余额${this.info.balance}块`)
+    }
+    function Child() {
+        Parent.call(this)
+    }
+
+    const child1 = new Child()
+    console.log(child1.info.balance) // 10000
+    child1.useMoney(500) // 报错
+    ```
+3. 组合继承
+  - 特点：兼顾盗用构造继承特点，同时解决无法继承方法
+    ```
+    function Parent() {
+    this.info = {
+        balance: 10000
+    }
+    }
+    Parent.prototype.useMoney = function (number) {
+    this.info.balance -= number
+    console.log(`花了${number}块`)
+    console.log(`余额${this.info.balance}块`)
+    }
+    function Child() {
+    Parent.call(this)
+    }
+    Child.prototype = new Parent()
+    // 更正 Child 原型对象的构造函数，不加则为 Parent
+    Child.prototype.constructor = Child
+
+    Child.prototype = new Parent()
+    const child1 = new Child()
+    const child2 = new Child()
+    console.log(child1.info.balance) // 10000
+    child1.useMoney(500)
+    // child1 花了500块
+    // child1 余额9500块
+    console.log(child2.info.balance) // 10000
+    ```
+4. 原型式继承
+5. 寄生式继承
+6. 寄生组合式继承
+
