@@ -213,6 +213,10 @@ module.exports = {
                             link: '/alg/array'
                         },
                         {
+                            text: '滑动窗口',
+                            link: '/alg/slidewindow'
+                        },
+                        {
                             text: '排序算法',
                             link: '/alg/sorting'
                         }
