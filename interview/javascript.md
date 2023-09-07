@@ -1919,17 +1919,17 @@ mike.sayName()
   - 特点：兼顾盗用构造继承特点，同时解决无法继承方法
     ```
     function Parent() {
-    this.info = {
-        balance: 10000
-    }
+        this.info = {
+            balance: 10000
+        }
     }
     Parent.prototype.useMoney = function (number) {
-    this.info.balance -= number
-    console.log(`花了${number}块`)
-    console.log(`余额${this.info.balance}块`)
+        this.info.balance -= number
+        console.log(`花了${number}块`)
+        console.log(`余额${this.info.balance}块`)
     }
     function Child() {
-    Parent.call(this)
+        Parent.call(this)
     }
     Child.prototype = new Parent()
     // 更正 Child 原型对象的构造函数，不加则为 Parent
@@ -1945,6 +1945,97 @@ mike.sayName()
     console.log(child2.info.balance) // 10000
     ```
 4. 原型式继承
+   - 跟原型链继承类似，只是把继承的改为传参的方式
+    ```
+    function Parent() {
+        this.info = {
+            balance: 10000
+        }
+    }
+
+    Parent.prototype.useMoney = function (number) {
+        this.info.balance -= number
+        console.log(`花了${number}块`)
+        console.log(`余额${this.info.balance}块`)
+    }
+
+    function createObj(Parent) {
+        // 接受的式一个实例对象，即Parent的实例对象parent
+        function Child() {}
+        Child.prototype = Parent
+        return new Child()
+    }
+    const parent = new Parent()
+    const child1 = createObj(parent)
+    const child2 = createObj(parent)
+    console.log(child1.info.balance) // 10000
+    child1.useMoney(500)
+    // child1 花了500块
+    // child1 余额9500块
+    console.log(child2.info.balance) // 9500
+    ```
 5. 寄生式继承
+   - 在原型式继承的基础上，再利用函数中定义方法
+    ```
+    function object(Parent) {
+        function Child(){}
+        Child.prototype = Parent
+        return new Child()
+    }
+    function createAnother(Parent) {
+        let Child = object(Parent)
+        Child.sayHi = function() {
+            console.log('hi')
+        }
+        return Child
+    }
+    function Parent() {
+        this.info = {
+            balance: 10000
+        }
+    }
+    const parent = new Parent()
+    const child = createAnother(parent)
+
+    console.log(child.info.balance) // 10000
+    child.sayHi() // hi
+    ```
 6. 寄生组合式继承
+```
+function Parent() {
+    this.balance = 10000
+}
+
+Parent.prototype.useMoney = function (number) {
+    this.balance -= number
+    console.log(`花了${number}块`)
+    console.log(`余额${this.balance}块`)
+}
+
+function Child() {
+    Parent.call(this)
+}
+
+function object(o) {
+    function F() {}
+    F.prototype = o
+    return new F()
+}
+
+function inheritPrototype(Child, Parent) {
+    var prototype = object(Parent.prototype) // 创建一个prototype对象，prototype对象的原型对象为Parent.prototype
+    prototype.constructor = Child // prototype对象的constructor指向Child
+    Child.prototype = prototype // 将Child的原型对象替换成我们创建好的新的prototype对象
+}
+
+inheritPrototype(Child, Parent) // 继承
+
+const child1 = new Child() 
+const child2 = new Child() 
+console.log(child1.balance) // 10000
+child1.useMoney(500)
+// 花了500块
+// 余额9500块
+console.log(child2.balance)  // 10000
+```
 
