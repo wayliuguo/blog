@@ -88,13 +88,64 @@
         while(end<n) {
             sum += nums[end]
             while(sum >= target) {
-            ans = ans ? Math.min(ans, end-start+1) : end-start+1
-            sum -= nums[start]
-            start++
+                ans = ans ? Math.min(ans, end-start+1) : end-start+1
+                sum -= nums[start]
+                start++
             }
             end++
         }
         return ans
     };
     ```
-## 
+## 给定一个字符串 s ，请你找出其中不含有重复字符的 最长子串 的长度。
+### 题目
+```
+输入: s = "abcabcbb"
+输出: 3 
+解释: 因为无重复字符的最长子串是 "abc"，所以其长度为 3。
+
+输入: s = "bbbbb"
+输出: 1
+解释: 因为无重复字符的最长子串是 "b"，所以其长度为 1。
+
+输入: s = "pwwkew"
+输出: 3
+解释: 因为无重复字符的最长子串是 "wke"，所以其长度为 3。
+     请注意，你的答案必须是 子串 的长度，"pwke" 是一个子序列，不是子串。
+```
+
+### 思想
+我们不妨以示例一中的字符串 abcabcbb 为例，找出从每一个字符开始的，不包含重复字符的最长子串，那么其中最长的那个字符串即为答案。对于示例一中的字符串，我们列举出这些结果，其中括号中表示选中的字符以及最长的字符串：
+- 以 (a)bcabcbb 开始的最长字符串为 (abc)abcbb；
+- 以 a(b)cabcbb开始的最长字符串为 a(bca)bcbb；
+- 以 ab(c)abcbb 开始的最长字符串为 ab(cab)cbb；
+- 以 abc(a)bcbb 开始的最长字符串为 abc(abc)bb；
+- 以 abca(b)cbb 开始的最长字符串为 abca(bc)bb；
+- 以 abcab(c)bb 开始的最长字符串为 abcab(cb)b；
+- 以 abcabc(b)b 开始的最长字符串为 abcabc(b)b；
+- 以 abcabcb(b) 开始的最长字符串为 abcabcb(b);
+```
+var lengthOfLongestSubstring = function(s) {
+    const n = s.length
+    let start = 0
+    let end = 0
+    let set = new Set()
+    let ans =  0
+    while(end < n) {
+        // 当set中存在相同的，则从头一直移除
+        while(set.has(s[end])) {
+            // 删除 start 下标值
+            set.delete(s[start])
+            // start 右移
+            start++
+        }
+        // 添加到set
+        set.add(s[end])
+        // 获取最大连续值
+        ans = Math.max(ans, set.size)
+        // end 右移
+        end++
+    }
+    return ans
+};
+```
