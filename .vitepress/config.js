@@ -217,6 +217,10 @@ module.exports = {
                             link: '/alg/slidewindow'
                         },
                         {
+                            text: '哈希表',
+                            link: '/alg/hash'
+                        },
+                        {
                             text: '排序算法',
                             link: '/alg/sorting'
                         }
