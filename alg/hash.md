@@ -254,5 +254,176 @@ var isAnagram = function (s, t) {
   }
   ```
 
-  
+## 存在重复元素 II
+### 题目
+给你一个整数数组 nums 和一个整数 k ，判断数组中是否存在两个 不同的索引 i 和 j ，满足 nums[i] == nums[j] 且 abs(i - j) <= k 。如果存在，返回 true ；否则，返回 false 。
+```
+输入：nums = [1,2,3,1], k = 3
+输出：true
 
+输入：nums = [1,0,1,1], k = 1
+输出：true
+
+输入：nums = [1,2,3,1,2,3], k = 2
+输出：false
+```
+### 思想
+
+- 只要存在两个相同的值且索引的差值在k的范围内即可
+
+- 可以使用 map 记录每个值的索引
+
+  - 如果map记录过，则比较索引差值
+    - 如果索引差值在范围内，则符合
+    - 否则更新map记录的索引
+  - 否则记录
+
+  ```
+  var containsNearbyDuplicate = function(nums, k) {
+      const map = new Map()
+      for (let i=0; i<nums.length; i++) {
+          const cur = nums[i]
+          if (map.has(cur)) {
+              if(i - map.get(cur) <= k) {
+                  return true
+              } else {
+                  map.set(cur, i)
+              }
+          } else {
+              map.set(cur, i)
+          }
+      }
+      return false
+  };
+  ```
+
+## 字母异位词分组（中等）
+### 题目
+给你一个字符串数组，请你将 字母异位词 组合在一起。可以按任意顺序返回结果列表。
+
+字母异位词 是由重新排列源单词的所有字母得到的一个新单词。
+```
+输入: strs = ["eat", "tea", "tan", "ate", "nat", "bat"]
+输出: [["bat"],["nat","tan"],["ate","eat","tea"]]
+
+输入: strs = [""]
+输出: [[""]]
+
+输入: strs = ["a"]
+输出: [["a"]]
+```
+
+### 思想
+1. 排序
+2. 计数
+
+- 排序
+
+  - 第一种写法
+  
+  ```
+  var groupAnagrams = function (strs) {
+      const map = new Map()
+      const result = []
+      let index = 0
+      for (let i = 0; i < strs.length; i++) {
+          // 对字符串排序
+          const cur = strs[i].split('').sort().join('')
+          if (map.has(cur)) {
+              // 如果map已经存在这个key，则获取下标加入结果集
+              const index = map.get(cur)
+              result[index].push(strs[i])
+          } else {
+              map.set(cur, index)
+              result.push([strs[i]])
+              index++
+          }
+      }
+      return result
+  }
+  ```
+  
+  - 第二种写法
+  
+  ```
+  var groupAnagrams = function (strs) {
+      const map = new Map()
+      for (let str of strs) {
+          // 转成数组进行排序
+          let array = Array.from(str)
+          array.sort()
+          // 转成字符串
+          let key = array.toString()
+          // 如果map存在key对应的值则使用否则新建数组
+          let list = map.get(key) ? map.get(key) : new Array()
+          list.push(str)
+          map.set(key, list)
+      }
+      // map 转成数组即可
+      return Array.from(map.values())
+  }
+  ```
+  
+- 计数
+
+  - js 中使用 `charCodeAt()` 方法用于返回指定索引处字符的 Unicode 码点值
+  - 使用数组配合 `charCodeAt()` 记录下标位置，这样的话即使是不一样的排序，其数组都是相同的
+
+  ```
+  var groupAnagrams = function (strs) {
+      const map = {}
+      for (let str of strs) {
+          const count = new Array(26).fill(0)
+          for (let c of str) {
+              // 减去 a的差值减少长度，记录下标出现个数
+              count[c.charCodeAt() - 'a'.charCodeAt()]++
+          }
+          map[count] ? map[count].push(str) : map[count] = [str]
+      }
+      // 对象转成数组
+      return Object.values(map)
+  }
+  ```
+
+
+
+## 最长连续序列
+### 题目
+给定一个未排序的整数数组 nums ，找出数字连续的最长序列（不要求序列元素在原数组中连续）的长度。
+
+请你设计并实现时间复杂度为 **O(n)** 的算法解决此问题。
+```
+输入：nums = [100,4,200,1,3,2]
+输出：4
+解释：最长数字连续序列是 [1, 2, 3, 4]。它的长度为 4。
+
+输入：nums = [0,3,7,2,5,8,4,6,0,1]
+输出：9
+```
+
+### 思想
+- 枚举数组中每个数 x, 不断尝试 x+1,x+2... 是否存在，即以升序的方式查找是否连续，更新连续长度即可
+```
+var longestConsecutive = function(nums) {
+    // 使用set存储nums，也可以使用数组的方式通过存储，后续通过下标判断是否存在即可
+    const set = new Set()
+    for (const num of nums) {
+        set.add(num)
+    }
+    let longestStreak = 0
+    for (const num of nums) {
+        // 优化：即如果其前一个存在，则可以跳过，因为我们以升序的方式查找一定会找到
+        if (!set.has(num - 1)) {
+            let currentStreak = 1
+            let currentNum = num
+            // 以升序的方式查找，更新当前连续值
+            while(set.has(currentNum+1)) {
+                currentNum++
+                currentStreak++
+            }
+            longestStreak = Math.max(longestStreak, currentStreak)
+        }
+    }
+    return longestStreak
+};
+```
