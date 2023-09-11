@@ -297,7 +297,49 @@ var isAnagram = function (s, t) {
   };
   ```
 
+## 两数之和
+
+### 题目
+
+给定一个整数数组 `nums` 和一个整数目标值 `target`，请你在该数组中找出 **和为目标值** *`target`* 的那 **两个** 整数，并返回它们的数组下标。
+
+你可以假设每种输入只会对应一个答案。但是，数组中同一个元素在答案里不能重复出现。
+
+你可以按任意顺序返回答案。
+
+```
+输入：nums = [2,7,11,15], target = 9
+输出：[0,1]
+解释：因为 nums[0] + nums[1] == 9 ，返回 [0, 1] 。
+
+输入：nums = [3,2,4], target = 6
+输出：[1,2]
+
+输入：nums = [3,3], target = 6
+输出：[0,1]
+```
+
+### 思想
+
+- 遍历数组，如果map中存在target-item 的值，则获取其下标返回
+- 否则，存储item与对应的下标
+
+```
+var twoSum = function(nums, target) {
+    const map = new Map()
+    for (let i=0; i<nums.length; i++) {
+        const num = nums[i]
+        if (map.has(target - num)) {
+            return [i, map.get(target-num)]
+        } else {
+            map.set(num, i)
+        }
+    }
+};
+```
+
 ## 字母异位词分组（中等）
+
 ### 题目
 给你一个字符串数组，请你将 字母异位词 组合在一起。可以按任意顺序返回结果列表。
 
@@ -387,7 +429,7 @@ var isAnagram = function (s, t) {
 
 
 
-## 最长连续序列
+## 最长连续序列(中等)
 ### 题目
 给定一个未排序的整数数组 nums ，找出数字连续的最长序列（不要求序列元素在原数组中连续）的长度。
 

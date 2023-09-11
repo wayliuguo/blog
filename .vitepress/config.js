@@ -221,6 +221,10 @@ module.exports = {
                             link: '/alg/hash'
                         },
                         {
+                            text: '双指针',
+                            link: '/alg/dobulePointer'
+                        },
+                        {
                             text: '排序算法',
                             link: '/alg/sorting'
                         }
