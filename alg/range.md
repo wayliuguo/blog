@@ -82,3 +82,81 @@ var merge = function(intervals) {
     return merged
 };
 ```
+
+## 插入区间
+### 题目
+给你一个 无重叠的 ，按照区间起始端点排序的区间列表。
+
+在列表中插入一个新的区间，你需要确保列表中的区间仍然有序且不重叠（如果有必要的话，可以合并区间）。
+```
+输入：intervals = [[1,3],[6,9]], newInterval = [2,5]
+输出：[[1,5],[6,9]]
+
+输入：intervals = [[1,2],[3,5],[6,7],[8,10],[12,16]], newInterval = [4,8]
+输出：[[1,2],[3,10],[12,16]]
+解释：这是因为新的区间 [4,8] 与 [3,5],[6,7],[8,10] 重叠。
+
+输入：intervals = [], newInterval = [5,7]
+输出：[[5,7]]
+
+输入：intervals = [[1,5]], newInterval = [2,3]
+输出：[[1,5]]
+
+输入：intervals = [[1,5]], newInterval = [2,7]
+输出：[[1,7]]
+```
+### 思想
+- 合并区间
+  - 把新的区间加到到老区间中，就可以直接用上面合并区间的解法
+```
+var insert = function(intervals, newInterval) {
+    const list = [...intervals, newInterval].sort((interval1, interval2) => interval1[0] - interval2[0])
+    const merged = []
+    for (let i=0; i<list.length; i++) {
+        const [L, R] = list[i]
+        if (merged.length === 0 || merged[merged.length-1][1] < L) {
+            merged.push([L, R])
+        } else {
+            merged[merged.length-1][1] = Math.max(merged[merged.length-1][1], R)
+        }
+    }
+    return merged
+};
+```
+- 模拟
+对于区间`S1=[l1,r1]`和区间`S2=[l2,r2]`，如果他们之间没有重叠（没有交集），此时有两种情况
+  - S1在S2的左侧，此时 `r1 < l2`
+  - S1在S2的右侧，此时 `r2 < l1`
+  - 两者没满足，S1与S2有一定有交集，交集为[max(l1,l2), min(r1, r2)],并集为[min(l1,l2),max(r1,r2)]
+```
+var insert = function(intervals, newInterval) {
+  let left = newInterval[0];
+  let right = newInterval[1];
+  let placed = false;
+  let ansList = [];
+  
+  for (let interval of intervals) {
+    if (interval[0] > right) {
+      // 在插入区间的右侧且无交集
+      if (!placed) {
+        ansList.push([left, right]);
+        placed = true;
+      }
+      ansList.push(interval);
+    } else if (interval[1] < left) {
+      // 在插入区间的左侧且无交集
+      ansList.push(interval);
+    } else {
+      // 与插入区间有交集，计算它们的并集
+      left = Math.min(left, interval[0]);
+      right = Math.max(right, interval[1]);
+    }
+  }
+  
+  if (!placed) {
+    ansList.push([left, right]);
+  }
+  
+  return ansList;
+};
+```
