@@ -225,6 +225,14 @@ module.exports = {
                             link: '/alg/dobulePointer'
                         },
                         {
+                            text: '栈',
+                            link: '/alg/stack'
+                        },
+                        {
+                            text: '区间',
+                            link: '/alg/range'
+                        },
+                        {
                             text: '排序算法',
                             link: '/alg/sorting'
                         }

@@ -76,7 +76,6 @@ function debounce(fn, wait) {
     return (...args) => {
     	if (timer) {
             clearTimeout(timer)
-            timer = null
         }
         timer = setTimeout(() => {
         	fn.apply(this, args)
