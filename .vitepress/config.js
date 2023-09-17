@@ -194,6 +194,10 @@ module.exports = {
                             link: '/interview/performance'
                         },
                         {
+                            text: '监控平台',
+                            link: '/interview/monitor'
+                        },
+                        {
                             text: '软技能',
                             link: '/interview/softskill'
                         },
