@@ -64,7 +64,6 @@
   })
   ```
   
-
 - 其他技术栈——vue.js
 
   Vue 项目中有自带的错误不错机制：Vue.config.errorHandler(errorCaptured)，这里可以通过劫持Vue.config.errorHandler,当发生错误时，进行上报
@@ -123,7 +122,7 @@
 
      - 性能指标
 
-       ![image.png](monitor.assets/a4fb89fb064d463989518f2331e34d4ftplv-k3u1fbpfcp-zoom-in-crop-mark1512000.awebp)
+       ![image-20230917214740454](monitor.assets/image-20230917214740454.png)
 
 3. 错误信息
    - 错误类型（type）：错误的类型，如JavaScript错误、网络请求错误等。
