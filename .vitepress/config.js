@@ -198,6 +198,10 @@ module.exports = {
                             link: '/interview/monitor'
                         },
                         {
+                            text: '难点亮点',
+                            link: '/interview/lightspot'
+                        },
+                        {
                             text: '软技能',
                             link: '/interview/softskill'
                         },
