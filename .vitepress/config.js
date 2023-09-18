@@ -237,6 +237,10 @@ module.exports = {
                             link: '/alg/range'
                         },
                         {
+                            text: '链表',
+                            link: '/alg/linkedList'
+                        },
+                        {
                             text: '排序算法',
                             link: '/alg/sorting'
                         }
