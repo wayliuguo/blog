@@ -198,6 +198,10 @@ module.exports = {
                             link: '/interview/monitor'
                         },
                         {
+                            text: '难点亮点',
+                            link: '/interview/lightspot'
+                        },
+                        {
                             text: '软技能',
                             link: '/interview/softskill'
                         },
@@ -235,6 +239,10 @@ module.exports = {
                         {
                             text: '区间',
                             link: '/alg/range'
+                        },
+                        {
+                            text: '链表',
+                            link: '/alg/linkedList'
                         },
                         {
                             text: '排序算法',
