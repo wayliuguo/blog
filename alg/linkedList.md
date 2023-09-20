@@ -100,4 +100,55 @@
   };
   ```
 
-  
+ ## 两数相加（中等）
+ ### 题目
+ 给你两个 非空 的链表，表示两个非负的整数。它们每位数字都是按照 逆序 的方式存储的，并且每个节点只能存储 一位 数字。
+
+请你将两个数相加，并以相同形式返回一个表示和的链表。
+
+你可以假设除了数字 0 之外，这两个数都不会以 0 开头。 
+
+![image-20230920215158714](linkedList.assets/image-20230920215158714.png)
+
+```
+输入：l1 = [2,4,3], l2 = [5,6,4]
+输出：[7,0,8]
+解释：342 + 465 = 807.
+```
+
+### 思想
+
+- 创建一个头节点
+- 两两节点相加，保存进位数给到下一次使用
+- 可能最后一次的进一是链表末尾相加得到的，所以这里需要特殊处理
+
+```
+var addTwoNumbers = function(l1, l2) {
+	// 头节点
+    let prehead = new ListNode(-1)
+    let prev = prehead
+    let carry = 0
+    while(l1 || l2) {
+    	// 收集两两节点和进位数的值
+        const num1 = l1 ? l1.val : 0
+        const num2 = l2 ? l2.val : 0
+        const sum = num1 + num2 + carry
+        // prev 后移
+        prev.next = new ListNode(sum % 10)
+        prev = prev.next
+        // 进位数
+        carry = Math.floor(sum / 10)
+        if (l1) {
+            l1 = l1.next
+        }
+        if (l2) {
+            l2 = l2.next
+        }
+    }
+    if (carry>0) {
+        prev.next = new ListNode(carry)
+    }
+    return prehead.next
+};
+```
+
