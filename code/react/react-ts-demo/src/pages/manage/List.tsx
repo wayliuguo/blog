@@ -1,6 +1,7 @@
 import { FC, useState } from 'react'
-import styles from '../style/List.module.scss'
-import QuestionCard from '../components/QuestionCard'
+import styles from '../../style/List.module.scss'
+import QuestionCard from '../../components/QuestionCard'
+import { useSearchParams } from 'react-router-dom'
 
 type questionProps = {
     _id: string
@@ -13,6 +14,8 @@ type questionProps = {
 type questionListProps = questionProps[]
 
 const List: FC = () => {
+    const [searchParams] = useSearchParams()
+    console.log('keyword', searchParams.get('keyword'))
     const [questionList, setQuestionList] = useState<questionListProps>([
         {
             _id: 'q1',
@@ -98,7 +101,7 @@ const List: FC = () => {
                     )
                 })}
             </div>
-            <div className={styles.footer}>footer</div>
+            <div className={styles.footer}>list page footer</div>
         </>
     )
 }
