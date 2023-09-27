@@ -122,6 +122,10 @@ module.exports = {
                                 {
                                     text: 'react 使用css',
                                     link: '/article/react/reactUseCss'
+                                },
+                                {
+                                    text: 'reactRouter',
+                                    link: '/article/react/reactRouter'
                                 }
                             ]
                         },
