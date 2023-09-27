@@ -1,4 +1,4 @@
-import{_ as s,o as a,c as n,U as l}from"./chunks/framework.9adb0f96.js";const e="/blog/assets/image-20230918110141189.be8f956c.png",p="/blog/assets/image-20230918143305143.f7010525.png",D=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"alg/linkedList.md","filePath":"alg/linkedList.md","lastUpdated":1695025447000}'),t={name:"alg/linkedList.md"},o=l('<h2 id="环形链表" tabindex="-1">环形链表 <a class="header-anchor" href="#环形链表" aria-label="Permalink to &quot;环形链表&quot;">​</a></h2><h3 id="题目" tabindex="-1">题目 <a class="header-anchor" href="#题目" aria-label="Permalink to &quot;题目&quot;">​</a></h3><p>给你一个链表的头节点 head ，判断链表中是否有环。</p><p>如果链表中有某个节点，可以通过连续跟踪 next 指针再次到达，则链表中存在环。 为了表示给定链表中的环，评测系统内部使用整数 pos 来表示链表尾连接到链表中的位置（索引从 0 开始）。注意：pos 不作为参数进行传递 。仅仅是为了标识链表的实际情况。</p><p>如果链表中存在环 ，则返回 true 。 否则，返回 false 。</p><p><img src="'+e+`" alt="image-20230918110141189"></p><div class="language-"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki material-theme-palenight"><code><span class="line"><span style="color:#A6ACCD;">输入：head = [3,2,0,-4], pos = 1</span></span>
+import{_ as s,o as a,c as n,U as l}from"./chunks/framework.9adb0f96.js";const e="/blog/assets/image-20230918110141189.be8f956c.png",p="/blog/assets/image-20230918143305143.f7010525.png",t="/blog/assets/image-20230920215158714.e47faae7.png",m=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"alg/linkedList.md","filePath":"alg/linkedList.md","lastUpdated":1695218549000}'),o={name:"alg/linkedList.md"},c=l('<h2 id="环形链表" tabindex="-1">环形链表 <a class="header-anchor" href="#环形链表" aria-label="Permalink to &quot;环形链表&quot;">​</a></h2><h3 id="题目" tabindex="-1">题目 <a class="header-anchor" href="#题目" aria-label="Permalink to &quot;题目&quot;">​</a></h3><p>给你一个链表的头节点 head ，判断链表中是否有环。</p><p>如果链表中有某个节点，可以通过连续跟踪 next 指针再次到达，则链表中存在环。 为了表示给定链表中的环，评测系统内部使用整数 pos 来表示链表尾连接到链表中的位置（索引从 0 开始）。注意：pos 不作为参数进行传递 。仅仅是为了标识链表的实际情况。</p><p>如果链表中存在环 ，则返回 true 。 否则，返回 false 。</p><p><img src="'+e+`" alt="image-20230918110141189"></p><div class="language-"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki material-theme-palenight"><code><span class="line"><span style="color:#A6ACCD;">输入：head = [3,2,0,-4], pos = 1</span></span>
 <span class="line"><span style="color:#A6ACCD;">输出：true</span></span>
 <span class="line"><span style="color:#A6ACCD;">解释：链表中有一个环，其尾部连接到第二个节点。</span></span></code></pre></div><h3 id="思想" tabindex="-1">思想 <a class="header-anchor" href="#思想" aria-label="Permalink to &quot;思想&quot;">​</a></h3><ul><li><p>哈希</p><ul><li>遍历一遍记录是否出现过</li></ul><div class="language-"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki material-theme-palenight"><code><span class="line"><span style="color:#A6ACCD;">var hasCycle = function(head) {</span></span>
 <span class="line"><span style="color:#A6ACCD;">    const set = new Set()</span></span>
@@ -44,4 +44,32 @@ import{_ as s,o as a,c as n,U as l}from"./chunks/framework.9adb0f96.js";const e=
 <span class="line"><span style="color:#A6ACCD;">    // 剩下其中一条没有遍历完的</span></span>
 <span class="line"><span style="color:#A6ACCD;">    prev.next = list1 === null ? list2 : list1</span></span>
 <span class="line"><span style="color:#A6ACCD;">    return prehead.next</span></span>
-<span class="line"><span style="color:#A6ACCD;">};</span></span></code></pre></div></li></ul>`,16),i=[o];function c(r,C,A,d,h,u){return a(),n("div",null,i)}const g=s(t,[["render",c]]);export{D as __pageData,g as default};
+<span class="line"><span style="color:#A6ACCD;">};</span></span></code></pre></div></li></ul><h2 id="两数相加-中等" tabindex="-1">两数相加（中等） <a class="header-anchor" href="#两数相加-中等" aria-label="Permalink to &quot;两数相加（中等）&quot;">​</a></h2><h3 id="题目-2" tabindex="-1">题目 <a class="header-anchor" href="#题目-2" aria-label="Permalink to &quot;题目&quot;">​</a></h3><p>给你两个 非空 的链表，表示两个非负的整数。它们每位数字都是按照 逆序 的方式存储的，并且每个节点只能存储 一位 数字。</p><p>请你将两个数相加，并以相同形式返回一个表示和的链表。</p><p>你可以假设除了数字 0 之外，这两个数都不会以 0 开头。</p><p><img src="`+t+`" alt="image-20230920215158714"></p><div class="language-"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki material-theme-palenight"><code><span class="line"><span style="color:#A6ACCD;">输入：l1 = [2,4,3], l2 = [5,6,4]</span></span>
+<span class="line"><span style="color:#A6ACCD;">输出：[7,0,8]</span></span>
+<span class="line"><span style="color:#A6ACCD;">解释：342 + 465 = 807.</span></span></code></pre></div><h3 id="思想-2" tabindex="-1">思想 <a class="header-anchor" href="#思想-2" aria-label="Permalink to &quot;思想&quot;">​</a></h3><ul><li>创建一个头节点</li><li>两两节点相加，保存进位数给到下一次使用</li><li>可能最后一次的进一是链表末尾相加得到的，所以这里需要特殊处理</li></ul><div class="language-"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki material-theme-palenight"><code><span class="line"><span style="color:#A6ACCD;">var addTwoNumbers = function(l1, l2) {</span></span>
+<span class="line"><span style="color:#A6ACCD;">	// 头节点</span></span>
+<span class="line"><span style="color:#A6ACCD;">    let prehead = new ListNode(-1)</span></span>
+<span class="line"><span style="color:#A6ACCD;">    let prev = prehead</span></span>
+<span class="line"><span style="color:#A6ACCD;">    let carry = 0</span></span>
+<span class="line"><span style="color:#A6ACCD;">    while(l1 || l2) {</span></span>
+<span class="line"><span style="color:#A6ACCD;">    	// 收集两两节点和进位数的值</span></span>
+<span class="line"><span style="color:#A6ACCD;">        const num1 = l1 ? l1.val : 0</span></span>
+<span class="line"><span style="color:#A6ACCD;">        const num2 = l2 ? l2.val : 0</span></span>
+<span class="line"><span style="color:#A6ACCD;">        const sum = num1 + num2 + carry</span></span>
+<span class="line"><span style="color:#A6ACCD;">        // prev 后移</span></span>
+<span class="line"><span style="color:#A6ACCD;">        prev.next = new ListNode(sum % 10)</span></span>
+<span class="line"><span style="color:#A6ACCD;">        prev = prev.next</span></span>
+<span class="line"><span style="color:#A6ACCD;">        // 进位数</span></span>
+<span class="line"><span style="color:#A6ACCD;">        carry = Math.floor(sum / 10)</span></span>
+<span class="line"><span style="color:#A6ACCD;">        if (l1) {</span></span>
+<span class="line"><span style="color:#A6ACCD;">            l1 = l1.next</span></span>
+<span class="line"><span style="color:#A6ACCD;">        }</span></span>
+<span class="line"><span style="color:#A6ACCD;">        if (l2) {</span></span>
+<span class="line"><span style="color:#A6ACCD;">            l2 = l2.next</span></span>
+<span class="line"><span style="color:#A6ACCD;">        }</span></span>
+<span class="line"><span style="color:#A6ACCD;">    }</span></span>
+<span class="line"><span style="color:#A6ACCD;">    if (carry&gt;0) {</span></span>
+<span class="line"><span style="color:#A6ACCD;">        prev.next = new ListNode(carry)</span></span>
+<span class="line"><span style="color:#A6ACCD;">    }</span></span>
+<span class="line"><span style="color:#A6ACCD;">    return prehead.next</span></span>
+<span class="line"><span style="color:#A6ACCD;">};</span></span></code></pre></div>`,26),i=[c];function r(C,A,d,y,h,u){return a(),n("div",null,i)}const g=s(o,[["render",r]]);export{m as __pageData,g as default};
