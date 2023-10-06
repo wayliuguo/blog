@@ -17,6 +17,7 @@ const Login: FC = () => {
             username,
             password
         })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const USERNAME_KEY = 'USERNAME'
