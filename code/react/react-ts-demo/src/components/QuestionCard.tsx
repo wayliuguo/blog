@@ -19,7 +19,6 @@ type PropsType = {
     answerCount: number | string
     createAt: number | string
     deleteQuestion: (id: string) => void
-    publishQuestion: (id: string) => void
 }
 
 const { confirm } = Modal
@@ -27,14 +26,10 @@ const { confirm } = Modal
 const QuestionCard: FC<PropsType> = props => {
     const nav = useNavigate()
 
-    const { _id, title, isStar, createAt, isPublished, answerCount, deleteQuestion, publishQuestion } = props
+    const { _id, title, isStar, createAt, isPublished, answerCount, deleteQuestion } = props
 
     const duplicate = () => {
         message.info('执行复制')
-    }
-
-    const edit = (id: string) => {
-        console.log('edit', id)
     }
 
     const del = (id: string) => {
@@ -45,10 +40,6 @@ const QuestionCard: FC<PropsType> = props => {
                 deleteQuestion(id)
             }
         })
-    }
-
-    const publish = (id: string) => {
-        publishQuestion(id)
     }
 
     return (
