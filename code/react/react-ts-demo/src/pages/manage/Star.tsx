@@ -5,6 +5,7 @@ import { Empty, Spin, Typography } from 'antd'
 import ListSearch from '../../components/ListSearch'
 import styles from '../../style/common.module.scss'
 import useLoadQuestionListData from '../../hooks/useLoadQuestionListData'
+import ListPage from '../../components/ListPage'
 
 const { Title } = Typography
 
@@ -12,7 +13,7 @@ const Star: FC = () => {
     useTitle('问卷网-星标问卷')
 
     const { data = {}, loading } = useLoadQuestionListData({ isStar: true })
-    const { list = [] } = data
+    const { list = [], total } = data
 
     return (
         <>
@@ -37,7 +38,9 @@ const Star: FC = () => {
                         return <QuestionCard key={_id} {...q} />
                     })}
             </div>
-            <div className={styles.footer}>分页</div>
+            <div className={styles.footer}>
+                <ListPage total={total} />
+            </div>
         </>
     )
 }
