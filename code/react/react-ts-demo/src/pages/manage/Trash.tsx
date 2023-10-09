@@ -1,10 +1,11 @@
 import { FC, useState } from 'react'
-import { useTitle } from 'ahooks'
-import { Empty, Typography, Table, Tag, Space, Button, Modal, Spin } from 'antd'
+import { useRequest, useTitle } from 'ahooks'
+import { Empty, Typography, Table, Tag, Space, Button, Modal, Spin, message } from 'antd'
 import ListSearch from '../../components/ListSearch'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import styles from '../../style/common.module.scss'
 import useLoadQuestionListData from '../../hooks/useLoadQuestionListData'
+import { updateQuestionService } from '../../services/question'
 
 const { Title } = Typography
 const { confirm } = Modal
@@ -12,7 +13,7 @@ const { confirm } = Modal
 const Trash: FC = () => {
     useTitle('问卷网-回收站')
 
-    const { data = {}, loading } = useLoadQuestionListData({ isDeleted: true })
+    const { data = {}, loading, refresh } = useLoadQuestionListData({ isDeleted: true })
     const { list = [] } = data
 
     const tableColumns = [
@@ -39,6 +40,23 @@ const Trash: FC = () => {
 
     const [selectedIds, setSelectedIds] = useState<string[]>([])
 
+    // 恢复
+    const { run: recover } = useRequest(
+        async () => {
+            for await (const id of selectedIds) {
+                await updateQuestionService(id, { isDeleted: false })
+            }
+        },
+        {
+            manual: true,
+            debounceWait: 500, // 防抖
+            onSuccess() {
+                message.success('恢复成功!')
+                refresh() // 手动刷新列表
+            }
+        }
+    )
+
     const del = () => {
         confirm({
             title: '确认彻底 删除该问卷？',
@@ -52,7 +70,9 @@ const Trash: FC = () => {
         <>
             <div style={{ marginBottom: '16px' }}>
                 <Space>
-                    <Button disabled={selectedIds.length === 0}>恢复</Button>
+                    <Button disabled={selectedIds.length === 0} onClick={recover}>
+                        恢复
+                    </Button>
                     <Button danger disabled={selectedIds.length === 0} onClick={del}>
                         删除
                     </Button>
