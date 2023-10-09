@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons'
 import { useNavigate, Link } from 'react-router-dom'
 import styles from '../style/QuestionCard.module.scss'
-import { updateQuestionService } from '../services/question'
+import { duplicateQuestionService, updateQuestionService } from '../services/question'
 import { useRequest } from 'ahooks'
 
 type PropsType = {
@@ -45,9 +45,20 @@ const QuestionCard: FC<PropsType> = props => {
         }
     )
 
-    const duplicate = () => {
-        message.info('执行复制')
-    }
+    // 复制
+    const { loading: duplicateLoading, run: duplicate } = useRequest(
+        async () => {
+            const data = await duplicateQuestionService(_id)
+            return data
+        },
+        {
+            manual: true,
+            onSuccess(result) {
+                message.success('复制成功')
+                nav(`/question/edit/${result.id}`)
+            }
+        }
+    )
 
     const del = (id: string) => {
         confirm({
@@ -110,7 +121,7 @@ const QuestionCard: FC<PropsType> = props => {
                             {isStarState ? '取消标星' : '标星'}
                         </Button>
                         <Popconfirm title="确认复制该问卷？" okText="确定" cancelText="取消" onConfirm={duplicate}>
-                            <Button type="text" icon={<CopyOutlined />} size="small">
+                            <Button disabled={duplicateLoading} type="text" icon={<CopyOutlined />} size="small">
                                 复制
                             </Button>
                         </Popconfirm>
