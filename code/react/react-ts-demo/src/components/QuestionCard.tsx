@@ -20,7 +20,6 @@ type PropsType = {
     isStar: boolean
     answerCount: number | string
     createAt: number | string
-    deleteQuestion: (id: string) => void
 }
 
 const { confirm } = Modal
@@ -28,7 +27,7 @@ const { confirm } = Modal
 const QuestionCard: FC<PropsType> = props => {
     const nav = useNavigate()
 
-    const { _id, title, isStar, createAt, isPublished, answerCount, deleteQuestion } = props
+    const { _id, title, isStar, createAt, isPublished, answerCount } = props
 
     // 修改标星
     const [isStarState, setIsStarState] = useState(isStar)
@@ -60,15 +59,28 @@ const QuestionCard: FC<PropsType> = props => {
         }
     )
 
+    // 删除
+    const [isDeletedState, setIsDeletedState] = useState(false)
+    const { loading: deleteLoading, run: deleteQuestion } = useRequest(
+        async () => await updateQuestionService(_id, { isDeleted: true }),
+        {
+            manual: true,
+            onSuccess() {
+                message.success('删除成功！')
+                setIsDeletedState(true)
+            }
+        }
+    )
     const del = (id: string) => {
         confirm({
             title: '确认删除该问卷？',
             icon: <ExceptionOutlined />,
-            onOk: () => {
-                deleteQuestion(id)
-            }
+            onOk: deleteQuestion
         })
     }
+
+    // 如果已经删除的问卷，则不再渲染卡片
+    if (isDeletedState) return null
 
     return (
         <div className={styles.container}>
@@ -125,7 +137,12 @@ const QuestionCard: FC<PropsType> = props => {
                                 复制
                             </Button>
                         </Popconfirm>
-                        <Button type="text" icon={<DeleteOutlined />} size="small" onClick={() => del(_id)}>
+                        <Button
+                            type="text"
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            disabled={deleteLoading}
+                            onClick={() => del(_id)}>
                             删除
                         </Button>
                     </Space>
