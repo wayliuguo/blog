@@ -1,13 +1,17 @@
 import { FC, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Button, Checkbox, Form, Input, Space, Typography } from 'antd'
+import { Link, useNavigate } from 'react-router-dom'
+import { Button, Checkbox, Form, Input, Space, Typography, message } from 'antd'
 import { UserAddOutlined } from '@ant-design/icons'
 import styles from '../style/Login.module.scss'
-import { REGISTER_PATHNAME } from '../router'
+import { MANAGE_INDEX_PATHNAME, REGISTER_PATHNAME } from '../router'
+import { useRequest } from 'ahooks'
+import { loginService } from '../services/user'
 
 const { Title } = Typography
 
 const Login: FC = () => {
+    const nav = useNavigate()
+
     // Form 提供的hooks，与定义处进行关联
     const [form] = Form.useForm()
 
@@ -37,8 +41,24 @@ const Login: FC = () => {
         }
     }
 
+    // 登录
+    const { run } = useRequest(
+        async (username, password) => {
+            const data = await loginService(username, password)
+            return data
+        },
+        {
+            manual: true,
+            onSuccess(result) {
+                message.success('登录成功！')
+                nav(MANAGE_INDEX_PATHNAME)
+            }
+        }
+    )
+
     const onFinish = (values: any) => {
         const { username, password, remember } = values || {}
+        run(username, password)
         if (remember) {
             rememberUser(username, password)
         } else {
