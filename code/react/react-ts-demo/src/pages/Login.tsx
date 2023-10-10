@@ -6,6 +6,7 @@ import styles from '../style/Login.module.scss'
 import { MANAGE_INDEX_PATHNAME, REGISTER_PATHNAME } from '../router'
 import { useRequest } from 'ahooks'
 import { loginService } from '../services/user'
+import { setToken } from '../utils/user-token'
 
 const { Title } = Typography
 
@@ -50,6 +51,9 @@ const Login: FC = () => {
         {
             manual: true,
             onSuccess(result) {
+                const { token = '' } = result
+                setToken(token)
+
                 message.success('登录成功！')
                 nav(MANAGE_INDEX_PATHNAME)
             }
