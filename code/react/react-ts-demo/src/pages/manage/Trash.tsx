@@ -5,7 +5,7 @@ import ListSearch from '../../components/ListSearch'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import styles from '../../style/common.module.scss'
 import useLoadQuestionListData from '../../hooks/useLoadQuestionListData'
-import { updateQuestionService } from '../../services/question'
+import { deleteQuestionsService, updateQuestionService } from '../../services/question'
 
 const { Title } = Typography
 const { confirm } = Modal
@@ -53,6 +53,20 @@ const Trash: FC = () => {
             onSuccess() {
                 message.success('恢复成功!')
                 refresh() // 手动刷新列表
+                setSelectedIds([])
+            }
+        }
+    )
+
+    // 删除
+    const { run: deleteQuestion } = useRequest(
+        async () => await deleteQuestionsService(selectedIds),
+        {
+            manual: true,
+            onSuccess() {
+                message.success('删除成功')
+                refresh()
+                setSelectedIds([])
             }
         }
     )
@@ -62,7 +76,7 @@ const Trash: FC = () => {
             title: '确认彻底 删除该问卷？',
             icon: <ExclamationCircleOutlined />,
             content: '删除以后不可以找回',
-            onOk: () => alert(`删除${JSON.stringify(selectedIds)}`)
+            onOk: deleteQuestion
         })
     }
 
