@@ -195,4 +195,144 @@ var addTwoNumbers = function(l1, l2) {
   };
   ```
   
+
+## 反转链表
+
+### 题目
+
+给你单链表的头节点 `head` ，请你反转链表，并返回反转后的链表。
+
+![image-20231011113832025](linkedList.assets/image-20231011113832025.png)
+
+```
+输入：head = [1,2,3,4,5]
+输出：[5,4,3,2,1]
+```
+
+### 思想
+
+- 迭代
+
+  假设链表为 1→2→3→∅，我们想要把它改成 ∅←1←2←3。
+
+  - 在遍历链表时，将当前节点的 **next** 指针改为指向前一个节点。
+  - 由于节点没有引用其前一个节点，因此必须事先存储其前一个节点。
+  - 在更改引用之前，还需要存储后一个节点。最后返回新的头引用。
+
+```
+var reverseList = function(head) {
+    // 前一个节点
+    let prev = null
+    // 当前节点
+    let curr = head
+    while(curr) {
+        // 获取下一个节点next
+        const next = curr.next
+        // 将当前节点指向前一个节点（反转）
+        curr.next = prev
+        // 存储当前节点与下一节点，继续反转
+        prev = curr
+        curr = next
+    }
+    return prev
+};
+```
+
+- 递归
+
+  - 假设链表为： n1→…→nk−1→nk→nk+1→…→nm→∅
+  - 若从节点 nk+1 到 nm 已经被反转，而我们正处于 nk，*n*1→…→nk*−1→*nk*→*nk+1←…←nm
+  - 我们希望nk+1的下一个节点指向nk，所以nk.next.next = nk
+
+  ```
+  var reverseList = function(head) {
+      // 终止条件：当链表为空或只有一个节点时，直接返回该节点
+      if (head === null || head.next == null) return head
+      
+      // 递归反转剩余部分
+      const newHead = reverseList(head.next)
   
+      // 将当前节点的下一个节点的 next 指针指向当前节点，实现反转
+      head.next.next = head
+      head.next = null
+  
+      // 返回反转后的链表头节点
+      return newHead
+  };
+  ```
+
+## 反转链表II(中等)
+
+### 题目
+
+给你单链表的头指针 `head` 和两个整数 `left` 和 `right` ，其中 `left <= right` 。请你反转从位置 `left` 到位置 `right` 的链表节点，返回 **反转后的链表** 。
+
+![image-20231011172335743](linkedList.assets/image-20231011172335743.png)
+
+```
+输入：head = [1,2,3,4,5], left = 2, right = 4
+输出：[1,4,3,2,5]
+```
+
+### 思想
+
+- 穿针引线
+
+  ![image-20231011172849429](linkedList.assets/image-20231011172849429.png)
+
+  使用上面《反转链表》的解法，反转left到right部分以后，再拼接起来，我们还需要记录一个left的前一个prev和right的后一个节点succ
+
+  ![image-20231011173333131](linkedList.assets/image-20231011173333131.png)
+
+  ```
+  var reverseBetween = function(head, left, right) {
+      // 因为头节点有可能发生变化，使用虚拟头节点可以避免复杂的分类讨论
+      const dummyNode = new ListNode(null)
+      dummyNode.next = head
+  
+      let prev = dummyNode
+      // 第1步：从虚拟头节点走left-1步，来到left节点的前一个节点
+      for (let i=0; i<left-1; i++) {
+          prev = prev.next
+      }
+  
+      // 第2步：从prev再走right-left+1步，来到right节点
+      let rightNode = prev
+      for (let i=0; i<right-left+1; i++) {
+          rightNode = rightNode.next
+      }
+  
+      // 第3步：切断出一个子链表（截取链表）
+      let leftNode = prev.next
+      // rightNode 的后继节点
+      let curr = rightNode.next
+      // 切断链接
+      prev.next = null
+      rightNode.next =null
+  
+      // 第4步：同206反转链表
+      reverseLinkedList(leftNode)
+  
+      // 第5步：接回到原来的链表中
+      prev.next = rightNode
+      leftNode.next = curr
+      return dummyNode.next
+  };
+  
+  var reverseLinkedList = (head) => {
+      let prev = null
+      let cur = head
+  
+      while(cur) {
+          const next = cur.next
+          cur.next = prev
+          prev = cur
+          cur = next
+      }
+  }
+  ```
+
+  
+
+
+
