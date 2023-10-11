@@ -195,4 +195,70 @@ var addTwoNumbers = function(l1, l2) {
   };
   ```
   
+
+## 反转链表
+
+### 题目
+
+给你单链表的头节点 `head` ，请你反转链表，并返回反转后的链表。
+
+![image-20231011113832025](linkedList.assets/image-20231011113832025.png)
+
+```
+输入：head = [1,2,3,4,5]
+输出：[5,4,3,2,1]
+```
+
+### 思想
+
+- 迭代
+
+  假设链表为 1→2→3→∅，我们想要把它改成 ∅←1←2←3。
+
+  - 在遍历链表时，将当前节点的 **next** 指针改为指向前一个节点。
+  - 由于节点没有引用其前一个节点，因此必须事先存储其前一个节点。
+  - 在更改引用之前，还需要存储后一个节点。最后返回新的头引用。
+
+```
+var reverseList = function(head) {
+    // 前一个节点
+    let prev = null
+    // 当前节点
+    let curr = head
+    while(curr) {
+        // 获取下一个节点next
+        const next = curr.next
+        // 将当前节点指向前一个节点（反转）
+        curr.next = prev
+        // 存储当前节点与下一节点，继续反转
+        prev = curr
+        curr = next
+    }
+    return prev
+};
+```
+
+- 递归
+
+  - 假设链表为： n1→…→nk−1→nk→nk+1→…→nm→∅
+  - 若从节点 nk+1 到 nm 已经被反转，而我们正处于 nk，*n*1→…→nk*−1→*nk*→*nk+1←…←nm
+  - 我们希望nk+1的下一个节点指向nk，所以nk.next.next = nk
+
+  ```
+  var reverseList = function(head) {
+      // 终止条件：当链表为空或只有一个节点时，直接返回该节点
+      if (head === null || head.next == null) return head
+      
+      // 递归反转剩余部分
+      const newHead = reverseList(head.next)
+  
+      // 将当前节点的下一个节点的 next 指针指向当前节点，实现反转
+      head.next.next = head
+      head.next = null
+  
+      // 返回反转后的链表头节点
+      return newHead
+  };
+  ```
+
   
