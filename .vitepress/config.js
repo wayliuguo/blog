@@ -126,6 +126,10 @@ module.exports = {
                                 {
                                     text: 'reactRouter',
                                     link: '/article/react/reactRouter'
+                                },
+                                {
+                                    text: 'react 状态管理',
+                                    link: '/article/react/reactStateMan'
                                 }
                             ]
                         },
