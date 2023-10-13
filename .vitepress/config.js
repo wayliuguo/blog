@@ -145,6 +145,15 @@ module.exports = {
                                     link: '/article/requirement/upload'
                                 }
                             ]
+                        },
+                        {
+                            text: '沉淀',
+                            items: [
+                                {
+                                    text: 'EventBus 手写',
+                                    link: '/article/precipitation/eventbus'
+                                }
+                            ]
                         }
                     ]
                 }
