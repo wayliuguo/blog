@@ -126,6 +126,10 @@ module.exports = {
                                 {
                                     text: 'reactRouter',
                                     link: '/article/react/reactRouter'
+                                },
+                                {
+                                    text: 'react 状态管理',
+                                    link: '/article/react/reactStateMan'
                                 }
                             ]
                         },
@@ -139,6 +143,15 @@ module.exports = {
                                 {
                                     text: '文件上传',
                                     link: '/article/requirement/upload'
+                                }
+                            ]
+                        },
+                        {
+                            text: '沉淀',
+                            items: [
+                                {
+                                    text: 'EventBus 手写',
+                                    link: '/article/precipitation/eventbus'
                                 }
                             ]
                         }
