@@ -1,11 +1,12 @@
-const isObject = (value) => typeof value === "object" && value !== null;
+const isObject = (value) => typeof value === 'object' && value !== null;
 const extend = Object.assign;
 const isArray = Array.isArray;
-const isIntegerKey = (key) => `${parseInt(key)}` === key;
+const isIntegerKey = key => `${parseInt(key)}` === key;
 // 判断对象是否存在此属性
 const hasOwn = (target, key) => Object.prototype.hasOwnProperty.call(target, key);
 const hasChanged = (oldValue, value) => oldValue !== value;
 
+/* eslint-disable indent */
 function effect(fn, options = {}) {
     // 需要让这个 effect 变成响应式的 effect，实现数据变化重新执行
     const effect = createReactiveEffect(fn, options);
