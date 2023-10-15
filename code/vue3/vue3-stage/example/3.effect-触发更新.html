@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app"></div>
+    <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script> -->
+    <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+    <script>
+        // const { effect, reactive } = Vue
+        const { effect, reactive } = VueReactivity
+        let state = reactive({
+            name: 'well',
+            age: 18,
+            arr: [1,2,3]
+        })
+        effect(() => {
+            // 1.触发依赖
+            // app.innerHTML = `${state.name}${state.age}`
+            // 2.修改数组长度
+            // app.innerHTML = state.arr[2] + state.arr.length
+            // 3.添加数组索引
+            // app.innerHTML = state.arr
+            // 4.修改下标
+            app.innerHTML = state.arr[2]
+        })
+        setTimeout(() => {
+            // 1.触发依赖
+            /* state.age = 80
+            state.info = {sex: 'femal'}
+            state.arr.push(4)
+            state.arr[0] = -1 */
+            // 2.修改数组长度
+            // state.arr.length = 1
+            // 3.添加数组索引
+            // state.arr[100] = 100
+            // 4.修改下标
+            state.arr[2] = 600
+        }, 1000);
+    </script>
+</body>
+</html>

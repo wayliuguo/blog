@@ -154,6 +154,15 @@ module.exports = {
                                     link: '/article/precipitation/eventbus'
                                 }
                             ]
+                        },
+                        {
+                            text: 'vue3',
+                            items: [
+                                {
+                                    text: '手写vue3核心原理',
+                                    link: '/article/vue3/vue3stage'
+                                }
+                            ]
                         }
                     ]
                 }
