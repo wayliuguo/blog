@@ -149,7 +149,7 @@ var VueReactivity = (function (exports) {
             const res = Reflect.get(target, key, receiver);
             // 如果是非仅读的，进行依赖收集，等会数据变化后更新对应视图
             if (!isReadonly) {
-                console.log("执行 effect 时会取值，收集 effect");
+                console.log('执行 effect 时会取值，收集 effect');
                 // 调用 track 收集依赖
                 track(target, 0 /* GET */, key);
             }
@@ -172,9 +172,7 @@ var VueReactivity = (function (exports) {
             // 获取未变更的值
             const oldValue = target[key];
             // 判断是否存在这个属性
-            let hadKey = isArray(target) && isIntegerKey(key)
-                ? Number(key) < target.length
-                : hasOwn(target, key);
+            const hadKey = isArray(target) && isIntegerKey(key) ? Number(key) < target.length : hasOwn(target, key);
             // target: 需要取值的目标对象 key: 需要获取的值的键值 value: 设置的值 receiver: 如果target对象中指定了getter，receiver则为getter调用时的this值
             const result = Reflect.set(target, key, value, receiver);
             if (!hadKey) {
@@ -200,21 +198,21 @@ var VueReactivity = (function (exports) {
     const readonlyObj = {
         set: (target, key) => {
             console.warn(`set ${target} on key ${key} failed`);
-        },
+        }
     };
     const mutableHandlers = {
         get,
-        set,
+        set
     };
     const shallowReactiveHandlers = {
         get: shallowGet,
-        set: shallowSet,
+        set: shallowSet
     };
     const readonlyHandlers = extend({
-        get: readonlyGet,
+        get: readonlyGet
     }, readonlyObj);
     const shallowReadonlyHandlers = extend({
-        get: shallowReadonlyGet,
+        get: shallowReadonlyGet
     }, readonlyObj);
 
     function reactive(target) {
@@ -264,7 +262,7 @@ var VueReactivity = (function (exports) {
     function shallowRef(value) {
         return createRef(value, true);
     }
-    const convert = (val) => (isObject(val) ? reactive(val) : val);
+    const convert = val => (isObject(val) ? reactive(val) : val);
     class RefImpl {
         // 参数中前面增加修饰符 标识此属性放到了实例上
         constructor(rawValue, shallow) {
@@ -277,7 +275,7 @@ var VueReactivity = (function (exports) {
         }
         // 类的属性访问器(编译后会自动转成defineProperty)
         get value() {
-            track(this, 0 /* GET */, "value");
+            track(this, 0 /* GET */, 'value');
             return this._value;
         }
         set value(newValue) {
@@ -285,7 +283,7 @@ var VueReactivity = (function (exports) {
             if (hasChanged(newValue, this.rawValue)) {
                 this.rawValue = newValue;
                 this._value = this.shallow ? newValue : convert(newValue);
-                trigger(this, 1 /* SET */, "value", newValue);
+                trigger(this, 1 /* SET */, 'value', newValue);
             }
         }
     }
@@ -313,7 +311,7 @@ var VueReactivity = (function (exports) {
     // object 可能传递的是一个数组或者对象
     function toRefs(object) {
         const ret = isArray(object) ? new Array(object.length) : {};
-        for (let key in object) {
+        for (const key in object) {
             ret[key] = toRef(object, key);
         }
         return ret;
