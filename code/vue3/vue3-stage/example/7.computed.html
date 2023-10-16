@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script> -->
+    <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+    <script>
+        const { ref, computed, effect } = VueReactivity
+        // const { ref, computed } = Vue
+
+        const age = ref(18)
+        const myAge = computed(() => {
+            console.log('getter 执行了')
+            return age.value + 10
+        })
+
+        /* console.log(myAge.value) // 28
+        console.log(myAge.value) // 28
+
+        // // 更新age，myAge 不会立刻重新计算，当执行myAge.value才会重新计算
+        age.value = 100
+
+        console.log(myAge.value) // 110 */
+
+        // 当修改了age.value 时，我们也希望触发下面的effect执行
+        effect(() => {
+            // 此 effect 没有使用 age，所以需要收集其依赖的值
+            console.log(myAge.value)
+        })
+        age.value = 500
+    </script>
+</body>
+
+</html>
