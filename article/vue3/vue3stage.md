@@ -822,3 +822,133 @@ my = null
 console.log(weakMap) // WeakMap {}
 ```
 
+## computed
+
+### index.ts
+
+```
+// reactivity/src/index.ts
+...
+export { computed } from './computed'
+```
+
+### computed.ts
+
+```
+// reactivity/src/computed.ts
+import { isFunction } from '@vue/shared'
+import { effect, track, trigger } from './effect'
+import { TrackOpTypes, TriggerOrTypes } from './operators'
+
+class ComputedRefImpl {
+    // 默认取值时不要用缓存
+    public _dirty = true
+    public _value
+    public effect
+    // ts 中默认不会挂载到this上
+    constructor(
+        getter,
+        public setter
+    ) {
+        // 计算属性默认会产生一个effect
+        this.effect = effect(getter, {
+            lazy: true, // 默认不执行
+            scheduler: () => {
+                // triggle 触发执行后，把_dirty置为true，再次触发get时候即可再次更新
+                if (!this._dirty) {
+                    this._dirty = true
+                    // 通知依赖进行更新
+                    trigger(this, TriggerOrTypes.SET, 'value')
+                }
+            }
+        })
+    }
+    // 计算属性也要收集依赖
+    get value() {
+        // 在取值的时候才执行 effect(_dirty)
+        if (this._dirty) {
+            // 在 effect 执行时，会将用户的返回值返回，这时候可以更新 _value
+            this._value = this.effect()
+            this._dirty = false
+        }
+        // 收集此对象的.value属性的依赖
+        track(this, TrackOpTypes.GET, 'value')
+        return this._value
+    }
+    set value(newValue) {
+        this.setter(newValue)
+    }
+}
+
+export function computed(getterOrOptions) {
+    let getter
+    let setter
+
+    if (isFunction(getterOrOptions)) {
+        getter = getterOrOptions
+        setter = () => {
+            console.warn('computed value must be readonly')
+        }
+    } else {
+        getter = getterOrOptions.get
+        setter = getterOrOptions.set
+    }
+    return new ComputedRefImpl(getter, setter)
+}
+
+```
+
+### effect.ts
+
+```
+export function trigger(target, type?, key?, newValue?, oldValue?) {
+	...
+	// 执行所有effect
+	- effects.forEach(effect => effect())
+	+ effects.forEach((effect: any) => {
+    +    if (effect.options.scheduler) {
+    +        effect.options.scheduler(effect)
+    +    } else {
+    +        effect()
+    +    }
+    + })
+}
+```
+
+### 用例
+
+```
+<body>
+    <div id="app"></div>
+    <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script> -->
+    <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+    <script>
+        const { ref, computed, effect } = VueReactivity
+        // const { ref, computed } = Vue
+
+        const age = ref(18)
+        const myAge = computed(() => {
+            console.log('getter 执行了')
+            return age.value + 10
+        })
+
+        /* console.log(myAge.value) // 28
+        console.log(myAge.value) // 28
+
+        // // 更新age，myAge 不会立刻重新计算，当执行myAge.value才会重新计算
+        age.value = 100
+
+        console.log(myAge.value) // 110 */
+
+        // 当修改了age.value 时，我们也希望触发下面的effect执行
+        effect(() => {
+            // 此 effect 没有使用 age，所以需要收集其依赖的值
+            console.log(myAge.value)
+        })
+        age.value = 500
+    </script>
+</body>
+
+</html>
+```
+

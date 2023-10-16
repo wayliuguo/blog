@@ -4,6 +4,7 @@ var VueReactivity = (function (exports) {
     const isObject = (value) => typeof value === 'object' && value !== null;
     const extend = Object.assign;
     const isArray = Array.isArray;
+    const isFunction = value => typeof value === 'function';
     const isIntegerKey = key => `${parseInt(key)}` === key;
     // 判断对象是否存在此属性
     const hasOwn = (target, key) => Object.prototype.hasOwnProperty.call(target, key);
@@ -131,7 +132,14 @@ var VueReactivity = (function (exports) {
             }
         }
         // 执行所有effect
-        effects.forEach(effect => effect());
+        effects.forEach((effect) => {
+            if (effect.options.scheduler) {
+                effect.options.scheduler(effect);
+            }
+            else {
+                effect();
+            }
+        });
     }
 
     // Relect 的优点
@@ -317,6 +325,58 @@ var VueReactivity = (function (exports) {
         return ret;
     }
 
+    class ComputedRefImpl {
+        // ts 中默认不会挂载到this上
+        constructor(getter, setter) {
+            this.setter = setter;
+            // 默认取值时不要用缓存
+            this._dirty = true;
+            // 计算属性默认会产生一个effect
+            this.effect = effect(getter, {
+                lazy: true,
+                scheduler: () => {
+                    // triggle 触发执行后，把_dirty置为true，再次触发get时候即可再次更新
+                    if (!this._dirty) {
+                        this._dirty = true;
+                        // 通知依赖进行更新
+                        trigger(this, 1 /* SET */, 'value');
+                    }
+                }
+            });
+        }
+        // 计算属性也要收集依赖
+        get value() {
+            // 在取值的时候才执行 effect(_dirty)
+            if (this._dirty) {
+                // 在 effect 执行时，会将用户的返回值返回，这时候可以更新 _value
+                this._value = this.effect();
+                this._dirty = false;
+            }
+            // 收集此对象的.value属性的依赖
+            track(this, 0 /* GET */, 'value');
+            return this._value;
+        }
+        set value(newValue) {
+            this.setter(newValue);
+        }
+    }
+    function computed(getterOrOptions) {
+        let getter;
+        let setter;
+        if (isFunction(getterOrOptions)) {
+            getter = getterOrOptions;
+            setter = () => {
+                console.warn('computed value must be readonly');
+            };
+        }
+        else {
+            getter = getterOrOptions.get;
+            setter = getterOrOptions.set;
+        }
+        return new ComputedRefImpl(getter, setter);
+    }
+
+    exports.computed = computed;
     exports.effect = effect;
     exports.reactive = reactive;
     exports.readonly = readonly;
