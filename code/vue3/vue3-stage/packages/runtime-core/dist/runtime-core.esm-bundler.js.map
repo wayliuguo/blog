@@ -1,0 +1,1 @@
+{"version":3,"file":"runtime-core.esm-bundler.js","sources":["../src/index.ts"],"sourcesContent":["export default {\r\n    a: 1\r\n}\r\n"],"names":[],"mappings":"AAAA,YAAe;IACX,CAAC,EAAE,CAAC;CACP;;;;"}

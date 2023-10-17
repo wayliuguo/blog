@@ -952,3 +952,48 @@ export function trigger(target, type?, key?, newValue?, oldValue?) {
 </html>
 ```
 
+
+
+## render
+
+### compositionApi 的好处
+
+- 相比optionsApi，由于以前是通过`this`、`data`、`methods`声明，难以做到`tree-sharking`
+- 可以把data、computed、watch、methods 在一个文件里自由组合（hooks）
+
+### 模板使用
+
+```
+<body>
+    <div id="app"></div>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+        let { createApp, h, reactive } = Vue
+        let App = {
+            props: {
+                name: String
+            },
+            // 替换 beforeCreate created，只运行一次
+            setup(props, context) {
+
+                console.log(props.name) // well
+                console.log(context) // {attrs:xxx, emit:xxx, xxx}
+
+                const state = reactive({ count: 1 })
+                const fn = () => {
+                    state.count++
+                }
+                
+                // render 函数是一个effect，数据变化 render 函数会重新执行
+                return (proxy) => {
+                    console.log(proxy.name) // well
+                    return h('div', { style: { color: 'red' }, onclick: fn }, `hello world ${state.count}`)
+                }
+            }
+        }
+        createApp(App, { name: 'well' }).mount('#app')
+    </script>
+</body>
+
+```
+
