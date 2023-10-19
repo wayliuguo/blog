@@ -161,6 +161,10 @@ module.exports = {
                                 {
                                     text: '手写vue3核心原理',
                                     link: '/article/vue3/vue3stage'
+                                },
+                                {
+                                    text: 'vueUse 源码解析',
+                                    link: '/article/vue3/vueuse'
                                 }
                             ]
                         }
