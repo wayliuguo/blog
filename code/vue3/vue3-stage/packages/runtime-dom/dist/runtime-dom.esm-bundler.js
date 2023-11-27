@@ -1,8 +1,132 @@
 const isObject = (value) => typeof value === 'object' && value !== null;
+const extend = Object.assign;
 const isArray = Array.isArray;
 const isString = value => typeof value === 'string';
 // 判断对象是否存在此属性
 const hasOwn = (target, key) => Object.prototype.hasOwnProperty.call(target, key);
+
+const nodeOps = {
+    // createElement, 不同的平台创建元素方式不同
+    createElement: tagName => document.createElement(tagName),
+    // 移除元素
+    remove: child => {
+        // 先找到其父元素
+        const parent = child.parentNode;
+        if (parent) {
+            parent.removeChild(child);
+        }
+    },
+    // 如果参照物anchor为空，相当于appendChild
+    insert: (child, parent, anchor = null) => {
+        parent.insertBefore(child, anchor);
+    },
+    // 查询
+    querySelector: selector => document.querySelector(selector),
+    // 设置元素文本
+    setElementText: (el, text) => (el.textContent = text),
+    // 创建文本
+    createText: text => document.createTextNode(text),
+    // 设置节点内容
+    setText: (node, text) => (node.nodeValue = text)
+};
+
+const patchAttr = (el, key, value) => {
+    if (value === null) {
+        el.removeAttribute(key);
+    }
+    else {
+        el.setAttribute(key, value);
+    }
+};
+
+const patchClass = (el, value) => {
+    if (value == null) {
+        value = '';
+    }
+    el.className = value;
+};
+
+// 1.给元素缓存一个绑定事件的列表
+// 2.如果缓存中没有缓存过的，而且value有值，需要绑定方法并且缓存起来
+// 3.以前绑定过，value没有值，需要删除绑定方法与删除缓存
+// 4.前后都有，直接改变invoker 中 value 属性指向最新的事件即可
+const patchEvent = (el, key, value) => {
+    // 对函数的缓存
+    const invokers = el._vei || (el._vei = {});
+    // 如果不存在
+    const exists = invokers[key];
+    if (value && exists) {
+        // 需要绑定事件，而且还存在的情况下
+        exists.value = value;
+    }
+    else {
+        const eventName = key.slice(2).toLowerCase();
+        if (value) {
+            // 要绑定事件且以前没有绑定过
+            const invoker = (invokers[key] = createInvoker(value));
+            el.addEventListener(eventName, invoker);
+        }
+        else {
+            // 以前绑定过 当时没有value
+            el.removeEventListener(eventName, exists);
+            invokers[key] = undefined;
+        }
+    }
+};
+// 一个元素绑定事件 addEventListener(fn1) 切换为 addEventListener(fn2)
+// 可以把 value = fn1, @click="value", 后续更改把 value = fn2 即可
+function createInvoker(value) {
+    // 每次更新事件其实都是更改引用的value即可
+    const invoker = e => {
+        invoker.value(e);
+    };
+    invoker.value = value;
+    return invoker;
+}
+
+const patchStyle = (el, prev, next) => {
+    // 获取样式
+    const style = el.style;
+    if (next == null) {
+        el.removeAttribute('style');
+    }
+    else {
+        if (prev) {
+            // 老的里有新的有没有需要移除
+            for (const key in prev) {
+                if (next[key] == null) {
+                    style[key] = '';
+                }
+            }
+        }
+        // 新的里面需要赋值到style上
+        for (const key in next) {
+            style[key] = next[key];
+        }
+    }
+};
+
+/* eslint-disable indent */
+const patchProps = (el, key, prevValue, nextValue) => {
+    switch (key) {
+        case 'class':
+            patchClass(el, nextValue);
+            break;
+        case 'style':
+            patchStyle(el, prevValue, nextValue);
+            break;
+        default:
+            // 如果不是事件，才是属性
+            if (/^on[^a-z]/.test(key)) {
+                // 事件就是添加和删除修改
+                patchEvent(el, key, nextValue);
+            }
+            else {
+                patchAttr(el, key, nextValue);
+            }
+            break;
+    }
+};
 
 // createVNode 创建虚拟节点
 // h('div', {style: {color: red}}, 'children') h方法和createApp类似
@@ -180,5 +304,24 @@ function createRenderer(rendererOptions) {
     };
 }
 
-export { createRenderer };
-//# sourceMappingURL=runtime-core.esm-bundler.js.map
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// 节点操作就是增删改查
+// 属性操作包含 添加、删除、更新（样式、类、事件、其他属性）
+// 渲染时用到的所有方法
+extend({ patchProps }, nodeOps);
+// vue 中 runtime-core 提供了核心的方法，用来处理渲染的，内部会使用 runtime-dom中的api进行渲染
+function createApp(rootComponent, rootProps = null) {
+    const app = createRenderer().createApp(rootComponent, rootProps);
+    const { mount } = app;
+    app.mount = function (container) {
+        // 清空容器的操作
+        container = nodeOps.querySelector(container);
+        container.innerHTML = '';
+        // 将组件渲染成dom元素，进行挂载
+        mount(container);
+    };
+    return app;
+}
+
+export { createApp };
+//# sourceMappingURL=runtime-dom.esm-bundler.js.map
