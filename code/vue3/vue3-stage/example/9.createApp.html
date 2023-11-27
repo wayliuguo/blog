@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script> -->
+    <script src="../node_modules/@vue/runtime-dom/dist/runtime-dom.global.js"></script>
+    <script>
+        let { createApp } = VueRuntimeDOM
+        let App = {
+            setup(props, context) {
+                console.log('ok', props, context)
+                return {}
+            },
+            render(proxy) { // 其是一个 effect 函数（数据变化会重新渲染）
+                console.log(proxy.name)
+            }
+        }
+        let app = createApp(App, { name: 'well', age: 18 })
+        app.mount('#app')
+    </script>
+</body>
+
+</html>
