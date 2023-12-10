@@ -47,6 +47,10 @@ module.exports = {
                 {
                     text: 'koa',
                     link: '/node/koa'
+                },
+                {
+                    text: '脚手架实现原理',
+                    link: '/node/cliTheory'
                 }
             ],
             '/article/': [
