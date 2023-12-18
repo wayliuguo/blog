@@ -51,6 +51,10 @@ module.exports = {
                 {
                     text: '脚手架实现原理',
                     link: '/node/cliTheory'
+                },
+                {
+                    text: '脚手架基础',
+                    link: '/node/cliBasic'
                 }
             ],
             '/article/': [
