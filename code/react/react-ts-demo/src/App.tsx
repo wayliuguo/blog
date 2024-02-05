@@ -1,26 +1,12 @@
-import React, { useState } from 'react'
-// import logo from './logo.svg'
+import { RouterProvider } from 'react-router-dom'
+import routerConfig from './router'
 import './App.css'
-import List from './List'
-import Count from './components/Count'
-import ClosureTrap from './components/ClosureTrap'
+import 'antd/dist/reset.css'
+// import ContextDemo from './contextDemo'
 
 function App() {
-    const [showCountState, setCountState] = useState(true)
-    const destoryCount = () => {
-        setCountState(false)
-    }
-    return (
-        <>
-            <List />
-            <hr />
-            {showCountState && <Count />}
-            <hr />
-            <button onClick={destoryCount}>销毁count组件</button>
-            <hr/>
-            <ClosureTrap/>
-        </>
-    )
+    return <RouterProvider router={routerConfig}></RouterProvider>
+    // return <ContextDemo />
 }
 
 export default App

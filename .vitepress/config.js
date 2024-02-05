@@ -47,6 +47,14 @@ module.exports = {
                 {
                     text: 'koa',
                     link: '/node/koa'
+                },
+                {
+                    text: '脚手架实现原理',
+                    link: '/node/cliTheory'
+                },
+                {
+                    text: '脚手架基础',
+                    link: '/node/cliBasic'
                 }
             ],
             '/article/': [
@@ -122,6 +130,14 @@ module.exports = {
                                 {
                                     text: 'react 使用css',
                                     link: '/article/react/reactUseCss'
+                                },
+                                {
+                                    text: 'reactRouter',
+                                    link: '/article/react/reactRouter'
+                                },
+                                {
+                                    text: 'react 状态管理',
+                                    link: '/article/react/reactStateMan'
                                 }
                             ]
                         },
@@ -135,6 +151,28 @@ module.exports = {
                                 {
                                     text: '文件上传',
                                     link: '/article/requirement/upload'
+                                }
+                            ]
+                        },
+                        {
+                            text: '沉淀',
+                            items: [
+                                {
+                                    text: 'EventBus 手写',
+                                    link: '/article/precipitation/eventbus'
+                                }
+                            ]
+                        },
+                        {
+                            text: 'vue3',
+                            items: [
+                                {
+                                    text: '手写vue3核心原理',
+                                    link: '/article/vue3/vue3stage'
+                                },
+                                {
+                                    text: 'vueUse 源码解析',
+                                    link: '/article/vue3/vueuse'
                                 }
                             ]
                         }

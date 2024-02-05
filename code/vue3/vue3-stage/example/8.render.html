@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+        let { createApp, h, reactive } = Vue
+        let App = {
+            props: {
+                name: String
+            },
+            // 替换 beforeCreate created，只运行一次
+            setup(props, context) {
+
+                console.log(props.name) // well
+                console.log(context) // {attrs:xxx, emit:xxx, xxx}
+
+                const state = reactive({ count: 1 })
+                const fn = () => {
+                    state.count++
+                }
+                // render 函数是一个effect，数据变化 render 函数会重新执行
+                return (proxy) => {
+                    console.log(proxy.name) // well
+                    return h('div', { style: { color: 'red' }, onclick: fn }, `hello world ${state.count}`)
+                }
+            }
+        }
+        createApp(App, { name: 'well' }).mount('#app')
+    </script>
+</body>
+
+</html>

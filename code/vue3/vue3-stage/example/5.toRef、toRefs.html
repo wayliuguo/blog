@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script> -->
+    <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+    <script>
+        // const { effect, reactive, ref, toRef } = Vue
+        const { effect, reactive, ref, toRef, toRefs } = VueReactivity
+
+        let state = reactive({
+            name: 'well',
+            age: 18
+        })
+        let info = {
+            sex: '男'
+        }
+
+        let nameRef = toRef(state, 'name')
+        // let stateRef = toRefs(state)
+        // 可以配合 toRefs 解构，如果不用toRefs解构则失去响应式
+        let { age } = toRefs(state)
+
+        effect(() => {
+            app.innerHTML = nameRef.value + age.value
+        })
+        setTimeout(() => {
+            nameRef.value = 'liuguowei'
+            age.value = 80
+        }, 1000)
+    </script>
+</body>
+
+</html>
