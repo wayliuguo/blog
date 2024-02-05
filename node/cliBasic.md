@@ -226,9 +226,10 @@ module.exports = {
 
    ![image-20231216150220843](cliBasic.assets/image-20231216150220843.png) 
 
-   3. 执行
+   3. 执行，在脚手架中调用库文件即可
 
    ```
+   // weicli/bin/index.js
    #!/usr/bin/env node
    
    const lib = require('weiclilib')
@@ -236,5 +237,108 @@ module.exports = {
    
    console.log('一个最简单的脚手架！')
    ```
-
    
+
+## 脚手架命令注册和参数解释
+
+### 参数解释
+
+```
+// weicli/bin/index.js
+#!/usr/bin/env node
+
+console.log(require('process').argv)
+```
+
+执行 `weicli  init    `
+
+```
+[
+  'C:\\Program Files\\nodejs\\node.exe',
+  'C:\\Program Files\\nodejs\\node_modules\\@well_haha\\weicli\\bin\\index.js',
+  'init'
+]
+```
+
+可以通过 argv[2]来获取参数
+
+### 简单demo
+
+```
+// weiclilib/lib/index.js
+
+module.exports = {
+    init({ option, param }) {
+        console.log('执行init流程', option, param)
+    }
+}
+
+```
+
+```
+#!/usr/bin/env node
+
+const lib = require('weiclilib')
+const argv = require('process').argv
+
+// 脚手架第一个参数
+const command = argv[2]
+
+// 脚手架第一个参数后的参数
+const options = argv.slice(3)
+
+if (options.length) {
+    let [option, param] = options
+    option = option.replace('--', '')
+
+    if (command) {
+        if (lib[command]) {
+            lib[command]({ option, param })
+        } else {
+            console.log('请输入正确命令')
+        }
+    } else {
+        console.log('请输入命令')
+    }
+}
+
+// 实现全局参数解释 --version -V
+if (command.startsWith('--') || command.startsWith('-')) {
+    const globalOption = command.replace(/--|-/g, '')
+    if (globalOption === 'V' || globalOption === 'version') {
+        console.log('1.0.0')
+    }
+}
+```
+
+1. 解析命令并调用库文件的方法
+
+```
+weicli init --name well 
+// 执行init流程 name well
+```
+
+2. 测试全局函数
+
+```
+weicli -version
+// 1.0.0
+```
+
+## 发布上线
+
+1. 先发布库文件
+
+   ```
+   npm publish
+   ```
+
+2. 解除脚手架与库文件的软链接，直接安装线上包
+
+   ```
+   npm unlink weiclilib
+   npm i weiclilib
+   ```
+
+3. 发布脚手架包即可
+
