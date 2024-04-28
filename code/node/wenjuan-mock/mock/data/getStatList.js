@@ -23,7 +23,7 @@ module.exports = function getStatList(len = 10) {
         componentList.forEach(c => {
             const { fe_id, type, props } = c
 
-            switch(type) {
+            switch (type) {
                 case 'questionInput':
                     stat[fe_id] = Random.ctitle()
                     break
