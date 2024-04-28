@@ -86,7 +86,8 @@ const Login: FC = () => {
                     labelCol={{ span: 6 }}
                     wrapperCol={{ span: 16 }}
                     onFinish={onFinish}
-                    form={form}>
+                    form={form}
+                >
                     <Form.Item
                         label="用户名"
                         name="username"
@@ -105,7 +106,8 @@ const Login: FC = () => {
                                 pattern: /^\w+$/,
                                 message: '只能是字母数字下划线'
                             }
-                        ]}>
+                        ]}
+                    >
                         <Input />
                     </Form.Item>
                     <Form.Item
@@ -116,7 +118,8 @@ const Login: FC = () => {
                                 required: true,
                                 message: '请输入密码'
                             }
-                        ]}>
+                        ]}
+                    >
                         <Input.Password />
                     </Form.Item>
                     <Form.Item name="remember" valuePropName="checked" wrapperCol={{ offset: 6, span: 16 }}>

@@ -3,10 +3,7 @@
 // }
 
 function FunctionTs<P>(props: P) {
-
     return <div>hello world</div>
 }
-
-
 
 export default FunctionTs

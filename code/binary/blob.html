@@ -1,25 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
+    <body>
+        <script>
+            const blob = new Blob(['Hello World'], { type: 'text/plain' })
+            // 转为 url
+            const url = URL.createObjectURL(blob)
+            // 分片
+            const subBlob = blob.slice(0, 5)
 
-<body>
-    <script>
-        const blob = new Blob(['Hello World'], { type: 'text/plain' })
-        // 转为 url
-        const url = URL.createObjectURL(blob)
-        // 分片
-        const subBlob = blob.slice(0, 5)
-
-        console.log(blob.size) // 11
-        console.log(blob.type) // text/plain
-        console.log(url) // blob:null/d2286794-367f-432a-aee8-ef4043ae03da
-        console.log(subBlob.size) // 5
-    </script>
-</body>
-
+            console.log(blob.size) // 11
+            console.log(blob.type) // text/plain
+            console.log(url) // blob:null/d2286794-367f-432a-aee8-ef4043ae03da
+            console.log(subBlob.size) // 5
+        </script>
+    </body>
 </html>
