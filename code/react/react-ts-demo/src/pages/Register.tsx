@@ -60,7 +60,8 @@ const Register: FC = () => {
                                 pattern: /^\w+$/,
                                 message: '只能是字母数字下划线'
                             }
-                        ]}>
+                        ]}
+                    >
                         <Input />
                     </Form.Item>
                     <Form.Item
@@ -71,7 +72,8 @@ const Register: FC = () => {
                                 required: true,
                                 message: '请输入密码'
                             }
-                        ]}>
+                        ]}
+                    >
                         <Input.Password />
                     </Form.Item>
                     <Form.Item
@@ -92,7 +94,8 @@ const Register: FC = () => {
                                     }
                                 }
                             })
-                        ]}>
+                        ]}
+                    >
                         <Input.Password />
                     </Form.Item>
                     <Form.Item label="昵称" name="nickname">

@@ -44,7 +44,3 @@ const start = async () => {
         console.error(error.message)
     }
 }
-
-
-
-

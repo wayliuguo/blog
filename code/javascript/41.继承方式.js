@@ -147,10 +147,10 @@ function inheritPrototype(Child, Parent) {
 
 inheritPrototype(Child, Parent) // 继承
 
-const child1 = new Child() 
-const child2 = new Child() 
+const child1 = new Child()
+const child2 = new Child()
 console.log(child1.balance) // 10000
 child1.useMoney(500)
 // 花了500块
 // 余额9500块
-console.log(child2.balance)  // 10000
+console.log(child2.balance) // 10000

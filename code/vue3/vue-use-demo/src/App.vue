@@ -3,7 +3,5 @@ import CreateGlobalState from './components/CreateGlobalState.vue'
 </script>
 
 <template>
-  
-  <CreateGlobalState />
+    <CreateGlobalState />
 </template>
-

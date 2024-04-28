@@ -1,13 +1,13 @@
 <template>
     <div class="box">
         <li v-for="(item, index) in list" :key="index">
-            <img v-lazy="item" alt="">
+            <img v-lazy="item" alt="" />
         </li>
     </div>
-  </template>
-  
-  <script>
-  export default {
+</template>
+
+<script>
+export default {
     name: 'LazyLoad',
     data() {
         return {
@@ -38,18 +38,17 @@
             'https://scpic.chinaz.net/Files/pic/pic9/201510/apic15901.jpg'
         ]
     }
-  }
-  </script>
-  
-  <style scoped>
-  .box {
+}
+</script>
+
+<style scoped>
+.box {
     width: 400px;
     height: 400px;
     overflow: scroll;
-  }
-  img {
+}
+img {
     width: 100px;
     height: 150px;
-  }
-  </style>
-  
+}
+</style>

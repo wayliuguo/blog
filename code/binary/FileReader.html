@@ -1,28 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
+    <body>
+        <input type="file" id="fileInput" multiple="multiple" />
+        <script>
+            const fileInput = document.getElementById('fileInput')
+            const reader = new FileReader()
 
-<body>
-    <input type="file" id="fileInput" multiple="multiple">
-    <script>
-        const fileInput = document.getElementById('fileInput')
-        const reader = new FileReader()
-
-        fileInput.onchange = e => {
-            // 作为text读取
-            // reader.readAsText(e.target.files[0])
-            // 作为 url 读取
-            reader.readAsDataURL(e.target.files[0])
-        }
-        reader.onload = e => {
-            console.log(e.target.result)
-        }
-    </script>
-</body>
-
+            fileInput.onchange = e => {
+                // 作为text读取
+                // reader.readAsText(e.target.files[0])
+                // 作为 url 读取
+                reader.readAsDataURL(e.target.files[0])
+            }
+            reader.onload = e => {
+                console.log(e.target.result)
+            }
+        </script>
+    </body>
 </html>

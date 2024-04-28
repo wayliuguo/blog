@@ -38,10 +38,10 @@ const person = new Person('Nike', 29, 'teacher')
 console.log(person.age) */
 
 // 构造函数与原型组合
-function Person (name) {
+function Person(name) {
     this.name = name
 }
-Person.prototype.sayName = function() {
+Person.prototype.sayName = function () {
     console.log(this.name)
 }
 const mike = new Person('mike')
