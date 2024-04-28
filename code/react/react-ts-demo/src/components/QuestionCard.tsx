@@ -109,7 +109,8 @@ const QuestionCard: FC<PropsType> = props => {
                             icon={<EditOutlined />}
                             type="text"
                             size="small"
-                            onClick={() => nav(`/question/edit/${_id}`)}>
+                            onClick={() => nav(`/question/edit/${_id}`)}
+                        >
                             编辑问卷
                         </Button>
                         <Button
@@ -117,7 +118,8 @@ const QuestionCard: FC<PropsType> = props => {
                             type="text"
                             size="small"
                             onClick={() => nav(`/question/stat/${_id}`)}
-                            disabled={!isPublished}>
+                            disabled={!isPublished}
+                        >
                             数据统计
                         </Button>
                     </Space>
@@ -129,7 +131,8 @@ const QuestionCard: FC<PropsType> = props => {
                             disabled={changeStarLoading}
                             type="text"
                             icon={<StarOutlined />}
-                            size="small">
+                            size="small"
+                        >
                             {isStarState ? '取消标星' : '标星'}
                         </Button>
                         <Popconfirm title="确认复制该问卷？" okText="确定" cancelText="取消" onConfirm={duplicate}>
@@ -142,7 +145,8 @@ const QuestionCard: FC<PropsType> = props => {
                             icon={<DeleteOutlined />}
                             size="small"
                             disabled={deleteLoading}
-                            onClick={() => del(_id)}>
+                            onClick={() => del(_id)}
+                        >
                             删除
                         </Button>
                     </Space>

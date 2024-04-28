@@ -59,17 +59,14 @@ const Trash: FC = () => {
     )
 
     // 删除
-    const { run: deleteQuestion } = useRequest(
-        async () => await deleteQuestionsService(selectedIds),
-        {
-            manual: true,
-            onSuccess() {
-                message.success('删除成功')
-                refresh()
-                setSelectedIds([])
-            }
+    const { run: deleteQuestion } = useRequest(async () => await deleteQuestionsService(selectedIds), {
+        manual: true,
+        onSuccess() {
+            message.success('删除成功')
+            refresh()
+            setSelectedIds([])
         }
-    )
+    })
 
     const del = () => {
         confirm({

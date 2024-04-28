@@ -14,7 +14,8 @@ const NotFound: FC = () => {
                 <Button type="primary" onClick={() => nav(MANAGE_INDEX_PATHNAME)}>
                     返回首页
                 </Button>
-            }></Result>
+            }
+        ></Result>
     )
 }
 

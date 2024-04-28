@@ -1,65 +1,63 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
+    <body>
+        <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+        <script>
+            let { reactive, shallowReactive, readonly, shallowReadonly } = VueReactivity
 
-<body>
-    <script src="../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
-    <script>
-        let { reactive, shallowReactive, readonly, shallowReadonly } = VueReactivity
+            let stateReactive = reactive({
+                name: 'well',
+                info: {
+                    age: 18
+                }
+            })
 
-        let stateReactive = reactive({
-            name: 'well',
-            info: {
-                age: 18
-            }
-        })
+            let stateShallowReactive = shallowReactive({
+                name: 'well',
+                info: {
+                    age: 18
+                }
+            })
 
-        let stateShallowReactive = shallowReactive({
-            name: 'well',
-            info: {
-                age: 18
-            }
-        })
+            let stateReadonly = readonly({
+                name: 'well',
+                info: {
+                    age: 18
+                }
+            })
 
-        let stateReadonly = readonly({
-            name: 'well',
-            info: {
-                age: 18
-            }
-        })
+            let stateShallowReadonly = shallowReadonly({
+                name: 'well',
+                info: {
+                    age: 18
+                }
+            })
 
-        let stateShallowReadonly = shallowReadonly({
-            name: 'well',
-            info: {
-                age: 18
-            }
-        })
+            //  reactive
+            stateReactive.info.age = 80
+            stateReactive.name = 'wellReactive'
+            console.log('reactive', stateReactive.info, stateReactive.name) // {age: 80} wellReactive
 
-        //  reactive
-        stateReactive.info.age = 80
-        stateReactive.name = 'wellReactive'
-        console.log('reactive', stateReactive.info, stateReactive.name) // {age: 80} wellReactive
+            //  shallowReactive
+            stateShallowReactive.name = 'wellShallowReactive'
+            stateShallowReactive.info.age = 80
+            console.log('shallowReactive', stateShallowReactive.info, stateShallowReactive.name) // {age: 80} wellShallowReactive
 
-        //  shallowReactive
-        stateShallowReactive.name = 'wellShallowReactive'
-        stateShallowReactive.info.age = 80
-        console.log('shallowReactive', stateShallowReactive.info, stateShallowReactive.name) // {age: 80} wellShallowReactive
+            // shallowReadonly
+            stateShallowReadonly.name = 'wellShallowReadonly' // set [object Object] on key age failed
+            stateShallowReadonly.info.age = 80
+            console.log('shallowReadonly', stateShallowReadonly.info, stateShallowReadonly.name)
 
-        // shallowReadonly
-        stateShallowReadonly.name = 'wellShallowReadonly' // set [object Object] on key age failed
-        stateShallowReadonly.info.age = 80
-        console.log('shallowReadonly', stateShallowReadonly.info, stateShallowReadonly.name)
-
-        // readonly
-        stateReadonly.name = 'wellReadonly' // [object Object] on key age failed
-        stateReadonly.info.age = 80 // set [object Object] on key age failed
-        console.log('readonly', stateReadonly.info, stateReadonly.name)
-    </script>
-</body>
-
+            // readonly
+            stateReadonly.name = 'wellReadonly' // [object Object] on key age failed
+            stateReadonly.info.age = 80 // set [object Object] on key age failed
+            console.log('readonly', stateReadonly.info, stateReadonly.name)
+        </script>
+    </body>
 </html>
