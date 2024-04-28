@@ -15,6 +15,11 @@ module.exports = {
                 activeMatch: '/article/'
             },
             {
+                text: '可视化',
+                link: '/visualization/basic',
+                activeMatch: '/visualization/'
+            },
+            {
                 text: 'node',
                 link: '/node/nodeBasic',
                 activeMatch: '/node/'
@@ -55,6 +60,17 @@ module.exports = {
                 {
                     text: '脚手架基础',
                     link: '/node/cliBasic'
+                }
+            ],
+            'visualization': [
+                {
+                    text: '可视化',
+                    items: [
+                        {
+                            text: '可视化入门',
+                            link: '/visualization/basic'
+                        }
+                    ]
                 }
             ],
             '/article/': [
