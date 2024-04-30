@@ -62,7 +62,7 @@ module.exports = {
                     link: '/node/cliBasic'
                 }
             ],
-            'visualization': [
+            visualization: [
                 {
                     text: '可视化',
                     items: [
@@ -80,6 +80,10 @@ module.exports = {
                         {
                             text: '项目工程化',
                             items: [
+                                {
+                                    text: 'vsCode配置&Prettier',
+                                    link: '/article/project/vsCodeConfigAndPrettier'
+                                },
                                 {
                                     text: '规范化配置',
                                     link: '/article/project/normalizeConfig'

@@ -8,15 +8,16 @@
         "serve": "vitepress serve",
         "build": "vitepress build",
         "lint": "npx eslint .",
-        "lint:fix": "pnpm run lint --fix",
+        "lint:fix": "npm run lint --fix",
         "prettier": "prettier --write .",
         "prepare": "husky install",
         "commit": "git-cz"
     },
     "lint-staged": {
-        "src/**/*.{js,jsx,ts,tsx}": [
-            "prettier --write",
-            "eslint --fix"
+        "code/**/*.{js,jsx,ts,tsx}": [
+            "echo 'Linting started for staged files...'",
+            "prettier --write .",
+            "echo 'Linting finished for staged files...'"
         ]
     },
     "config": {
