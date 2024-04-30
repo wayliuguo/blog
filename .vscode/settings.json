@@ -1,3 +1,28 @@
 {
-    "liveServer.settings.port": 63741
+    "editor.fontSize": 14,
+    // "editor.formatOnSave": true, // 开启保存时自动格式化
+
+    // 对于 JavaScript，使用 Prettier 作为默认格式化器
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
+    // 对于 JSON，您可以选择使用 VS Code 自带的格式化器，或者如果您希望使用 Prettier，也可以更改这里的设置
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode" // 如果希望 JSON 也使用 Prettier 格式化
+    },
+
+    "security.workspace.trust.untrustedFiles": "open",
+
+    // 这里是保存时触发的代码操作，比如 ESLint 的修复等
+    "editor.codeActionsOnSave": {
+        // 例如，使用 ESLint 修复可修复的问题
+        "source.fixAll.eslint": true
+    },
+
+    // ESLint 相关的设置（如果安装了 ESLint 插件）
+    "eslint.codeActionsOnSave.rules": null, // 如果需要，可以指定某些规则在保存时执行
+    "eslint.execArgv": null, // ESLint 执行的参数，通常不需要设置
+
+    "compile-hero.ignore": "" // 其他插件的配置
 }
