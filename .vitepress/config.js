@@ -85,6 +85,10 @@ module.exports = {
                                     link: '/article/project/vsCodeConfigAndPrettier'
                                 },
                                 {
+                                    text: 'husky',
+                                    link: '/article/project/huskyUsage'
+                                },
+                                {
                                     text: '规范化配置',
                                     link: '/article/project/normalizeConfig'
                                 },
