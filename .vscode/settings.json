@@ -1,6 +1,6 @@
 {
     "editor.fontSize": 14,
-    // "editor.formatOnSave": true, // 开启保存时自动格式化
+    "editor.formatOnSave": true, // 开启保存时自动格式化
 
     // 对于 JavaScript，使用 Prettier 作为默认格式化器
     "[javascript]": {
