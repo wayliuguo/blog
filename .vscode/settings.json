@@ -16,8 +16,7 @@
 
     // 这里是保存时触发的代码操作，比如 ESLint 的修复等
     "editor.codeActionsOnSave": {
-        // 例如，使用 ESLint 修复可修复的问题
-        "source.fixAll.eslint": true
+        "source.fixAll.eslint": "explicit"
     },
 
     // ESLint 相关的设置（如果安装了 ESLint 插件）
