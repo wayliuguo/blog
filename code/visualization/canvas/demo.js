@@ -97,7 +97,7 @@
 } */
 
 // 绘制文本
-const draw = () => {
+/* const draw = () => {
     const canvas = document.getElementById('canvas')
     const context = canvas.getContext('2d')
 
@@ -106,6 +106,39 @@ const draw = () => {
 
     context.fillText('HELLO', 0, 50)
     context.strokeText('天若有情', 0, 100)
-}
+} */
 
+// 绘制图片
+// const draw = () => {
+//     const canvas = document.getElementById('canvas')
+//     const context = canvas.getContext('2d')
+//     const img = document.querySelector('img')
+//     const { width, height } = img
+//     context.drawImage(img, 0, 0, width / 2, height / 2)
+// }
+// document.querySelector('img').onload = () => {
+//     draw()
+// }
+
+// 状态保存和恢复
+const draw = () => {
+    const canvas = document.getElementById('canvas')
+    const context = canvas.getContext('2d')
+
+    // 保存当前状态
+    context.save()
+
+    // 设置一些样式和变换
+    context.fillStyle = 'red'
+    context.translate(50, 50)
+
+    // 绘制一个矩形
+    context.fillRect(0, 0, 100, 100) // 这个矩形会在(50, 50)的位置，颜色是红色
+
+    // 恢复之前保存的状态
+    context.restore()
+
+    // 再次绘制一个矩形，但这次它会在原始位置（0,0），且颜色可能是之前的状态（如果之前设置过的话）
+    context.fillRect(0, 0, 100, 100) // 这个矩形会在(0, 0)的位置，颜色取决于restore()之前的设置
+}
 draw()

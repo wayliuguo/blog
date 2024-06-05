@@ -21,7 +21,7 @@ const context = canvas.getContext('2d')
   ![img](canvas.assets/Canvas_default_grid.png)
 
 2. 绘制矩形
-    
+   
    只支持一种原生图形绘制：矩形；所有其他图形都至少需要生成一种路径（path）
    
    1. `fillRect(x, y, width, height)`：绘制一个填充的矩形。
@@ -250,4 +250,91 @@ const draw = () => {
 ```
 
 ## 绘制文字
+
+![下载](canvas.assets/下载-17175909472941.png)
+
+```
+const draw = () => {
+    const canvas = document.getElementById('canvas')
+    const context = canvas.getContext('2d')
+
+    context.font = '50px sans-serif'
+    context.textBaseline = 'center'
+
+    context.fillText('HELLO', 0, 50)
+    context.strokeText('天若有情', 0, 100)
+}
+```
+
+## 绘制图片
+
+```
+context.drawImage(img, x, y, width, height)
+x/y: 绘制的 img 在 canvas 中的坐标
+width/height:控制 canvas 画入时应该缩放的大小
+```
+
+![下载](canvas.assets/下载-17175923717302.png)
+
+```
+const draw = () => {
+    const canvas = document.getElementById('canvas')
+    const context = canvas.getContext('2d')
+    const img = document.querySelector('img')
+    const { width, height } = img
+    context.drawImage(img, 0, 0, width / 2, height / 2)
+}
+document.querySelector('img').onload = () => {
+    draw()
+}
+```
+
+## 状态的保存和恢复
+
+- `save()`用于保存 canvas 的当前状态，包括
+  - 当前设置的变换矩阵（由 `translate()`, `rotate()`, `scale()`, `transform()`, 或 `setTransform()` 方法修改）
+  - 当前的剪切区域（由 `beginPath()`, `moveTo()`, `lineTo()`, `clip()` 等方法设置）
+  - 当前的样式设置，如：
+    - `strokeStyle`
+    - `fillStyle`
+    - `globalAlpha`
+    - `lineWidth`
+    - `lineCap`
+    - `lineJoin`
+    - `miterLimit`
+    - `font`
+    - `textAlign`
+    - `textBaseline`
+    - `shadowOffsetX`
+    - `shadowOffsetY`
+    - `shadowBlur`
+    - `shadowColor`
+    - `globalCompositeOperation`
+    - 等等...
+- `restore()` 方法用于恢复之前由 `save()` 方法保存的Canvas状态
+
+![下载](canvas.assets/下载-17176004864823.png)
+
+```
+const draw = () => {
+    const canvas = document.getElementById('canvas')
+    const context = canvas.getContext('2d')
+
+    // 保存当前状态
+    context.save()
+
+    // 设置一些样式和变换
+    context.fillStyle = 'red'
+    context.translate(50, 50)
+
+    // 绘制一个矩形
+    context.fillRect(0, 0, 100, 100) // 这个矩形会在(50, 50)的位置，颜色是红色
+
+    // 恢复之前保存的状态
+    context.restore()
+
+    // 再次绘制一个矩形，但这次它会在原始位置（0,0），且颜色可能是之前的状态（如果之前设置过的话）
+    context.fillRect(0, 0, 100, 100) // 这个矩形会在(0, 0)的位置，颜色取决于restore()之前的设置
+}
+```
 
