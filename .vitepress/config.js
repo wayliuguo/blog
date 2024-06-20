@@ -203,6 +203,15 @@ module.exports = {
                                     link: '/article/vue3/vueuse'
                                 }
                             ]
+                        },
+                        {
+                            text: '经验总结',
+                            items: [
+                                {
+                                    text: '职业发展',
+                                    link: '/article/method/careeDevelopment'
+                                }
+                            ]
                         }
                     ]
                 }
