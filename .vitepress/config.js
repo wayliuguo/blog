@@ -15,6 +15,11 @@ module.exports = {
                 activeMatch: '/article/'
             },
             {
+                text: 'vue',
+                link: '/vue/vue3Principle/environment',
+                activeMatch: '/vue3Principle/'
+            },
+            {
                 text: '可视化',
                 link: '/visualization/basic',
                 activeMatch: '/visualization/'
@@ -36,6 +41,17 @@ module.exports = {
             }
         ],
         sidebar: {
+            '/vue/': [
+                {
+                    text: 'vue3 原理',
+                    items: [
+                        {
+                            text: '环境搭建',
+                            link: '/vue/vue3Principle/environment'
+                        }
+                    ]
+                }
+            ],
             '/node/': [
                 {
                     text: 'node 基础',
@@ -62,7 +78,7 @@ module.exports = {
                     link: '/node/cliBasic'
                 }
             ],
-            visualization: [
+            '/visualization/': [
                 {
                     text: '可视化',
                     items: [
