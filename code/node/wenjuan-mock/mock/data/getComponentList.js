@@ -74,12 +74,12 @@ function getComponentList() {
                 title: '单选标题',
                 isVertical: false,
                 options: [
-                  { value: 'item1', text: '选项1' },
-                  { value: 'item2', text: '选项2' },
-                  { value: 'item3', text: '选项3' },
+                    { value: 'item1', text: '选项1' },
+                    { value: 'item2', text: '选项2' },
+                    { value: 'item3', text: '选项3' }
                 ],
-                value: '',
-              }
+                value: ''
+            }
         },
         // Checkbox
         {
@@ -94,9 +94,9 @@ function getComponentList() {
                 list: [
                     { value: 'item1', text: '选项1', checked: true },
                     { value: 'item2', text: '选项2', checked: false },
-                    { value: 'item3', text: '选项3', checked: false },
-                ],
-              }
+                    { value: 'item3', text: '选项3', checked: false }
+                ]
+            }
         }
     ]
 }

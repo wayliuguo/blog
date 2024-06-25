@@ -17,7 +17,7 @@ function getQuestionList(opt = {}) {
             isStar,
             answerCount: Random.natural(50, 100),
             createdAt: Random.datetime(),
-            isDeleted,  // 假删除
+            isDeleted // 假删除
         })
     }
     return list

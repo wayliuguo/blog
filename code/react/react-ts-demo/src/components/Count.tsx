@@ -107,7 +107,8 @@ const Count: FC = () => {
                         <button
                             onClick={() => {
                                 setNum1(num1 + 1)
-                            }}>
+                            }}
+                        >
                             num1+1
                         </button>
                     </p>
@@ -116,7 +117,8 @@ const Count: FC = () => {
                         <button
                             onClick={() => {
                                 setNum2(num2 + 1)
-                            }}>
+                            }}
+                        >
                             num2+1
                         </button>
                     </p>

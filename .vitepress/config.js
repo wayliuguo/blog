@@ -15,6 +15,16 @@ module.exports = {
                 activeMatch: '/article/'
             },
             {
+                text: 'vue',
+                link: '/vue/vue3Principle/environment',
+                activeMatch: '/vue3Principle/'
+            },
+            {
+                text: '可视化',
+                link: '/visualization/basic',
+                activeMatch: '/visualization/'
+            },
+            {
                 text: 'node',
                 link: '/node/nodeBasic',
                 activeMatch: '/node/'
@@ -31,6 +41,21 @@ module.exports = {
             }
         ],
         sidebar: {
+            '/vue/': [
+                {
+                    text: 'vue3 原理',
+                    items: [
+                        {
+                            text: '环境搭建',
+                            link: '/vue/vue3Principle/environment'
+                        },
+                        {
+                            text: 'reactive依赖收集&触发更新',
+                            link: '/vue/vue3Principle/reactive'
+                        }
+                    ]
+                }
+            ],
             '/node/': [
                 {
                     text: 'node 基础',
@@ -57,6 +82,21 @@ module.exports = {
                     link: '/node/cliBasic'
                 }
             ],
+            '/visualization/': [
+                {
+                    text: '可视化',
+                    items: [
+                        {
+                            text: '可视化入门',
+                            link: '/visualization/basic'
+                        },
+                        {
+                            text: 'canvas 入门',
+                            link: '/visualization/canvas'
+                        }
+                    ]
+                }
+            ],
             '/article/': [
                 {
                     text: '文档',
@@ -64,6 +104,14 @@ module.exports = {
                         {
                             text: '项目工程化',
                             items: [
+                                {
+                                    text: 'vsCode配置&Prettier',
+                                    link: '/article/project/vsCodeConfigAndPrettier'
+                                },
+                                {
+                                    text: 'husky',
+                                    link: '/article/project/huskyUsage'
+                                },
                                 {
                                     text: '规范化配置',
                                     link: '/article/project/normalizeConfig'
@@ -173,6 +221,15 @@ module.exports = {
                                 {
                                     text: 'vueUse 源码解析',
                                     link: '/article/vue3/vueuse'
+                                }
+                            ]
+                        },
+                        {
+                            text: '经验总结',
+                            items: [
+                                {
+                                    text: '职业发展',
+                                    link: '/article/method/careeDevelopment'
                                 }
                             ]
                         }
