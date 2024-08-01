@@ -4,7 +4,8 @@
     "description": "",
     "main": "1.globalObject.js",
     "scripts": {
-        "start": "cross-env NODE_ENV=production node ./1.globalObject.js"
+        "start": "cross-env NODE_ENV=production node ./1.globalObject.js",
+        "start_test": "cross-env NODE_ENV=production node ./1.globalObject.js"
     },
     "keywords": [],
     "author": "",

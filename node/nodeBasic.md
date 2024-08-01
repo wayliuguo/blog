@@ -1,19 +1,42 @@
 ## 全局对象
 - Global 的作用就是作为属主
 - 常见全局变量
-  - __filename: 返回正在执行脚本文件的觉得路径
+  - __filename: 返回正在执行脚本文件的绝对路径
   - __dirname: 返回正在执行脚本所在目录
   - timer类函数： 执行顺序与事件循环间的关系
   - process： 提供与当前进程互动的接口
+    - 在项目工程中一般通过process.env .NODE_ENV 指定环境标识
+    - process.argv，即进程的参数，其是一个数组，前两个分别是node路径与进程运行路径，后一个是交互的参数，例子如下：
+      - 一个脚手架 Vue, 其运行vue create时，则 process.argv[3]  获取到的是 create
   - require：实现模块的加载
   - module、exports：处理模块的导出
-- process
-  ```
-  "start": "set NODE_ENV=production &&  node ./1.globalObject.js"
-  "start": "cross-env NODE_ENV=production node ./1.globalObject.js"
-  
-  console.log(process.env.NODE_ENV) // production
-  ```
+
+```
+// E:\working\blog\code\node\nodeBasic\1.globalObject.js
+console.log('__filename:', __filename)
+console.log('__dirname:', __dirname)
+
+console.log(process.env.NODE_ENV)
+console.log(process.argv)
+
+// package.json
+"scripts": {
+        "start": "cross-env NODE_ENV=production node ./1.globalObject.js",
+        "start_test": "cross-env NODE_ENV=production node ./1.globalObject.js"
+    }
+    
+// 输出
+__filename E:\working\blog\code\node\nodeBasic\1.globalObject.js
+__dirname E:\working\blog\code\node\nodeBasic
+production
+[
+  'C:\\Program Files\\nodejs\\node.exe',
+  'E:\\working\\blog\\code\\node\\nodeBasic\\1.globalObject.js'
+]
+
+```
+
+
 
 ## 核心模块 path
 - path.basename(path, suffix):获取路径中的基础名称
@@ -147,7 +170,7 @@
     - 从 Buffer 中提取数据
   ```
   console.log(Buffer.from('liuguowei', 'utf-8').toString()) // liuguowei
-  ``` 
+  ```
 - Buffer 静态方法
   - concat： 将多个buffer拼接成一个新的buffer
   - isBuffer：判断当前数据是否为buffer
@@ -255,7 +278,7 @@
   ```
   const EventEmitter = require('events')
   const ev = new EventEmitter()
-
+  
   ev.on('e1', () => {
       console.log('e1')
   })
