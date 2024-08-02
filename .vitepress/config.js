@@ -15,6 +15,11 @@ module.exports = {
                 activeMatch: '/article/'
             },
             {
+                text: '工程化',
+                link: '/engineer/vscodeDebug',
+                activeMatch: '/engineer/'
+            },
+            {
                 text: 'vue',
                 link: '/vue/vue3Principle/environment',
                 activeMatch: '/vue3Principle/'
@@ -54,6 +59,12 @@ module.exports = {
                             link: '/vue/vue3Principle/reactive'
                         }
                     ]
+                }
+            ],
+            engineer: [
+                {
+                    text: 'vscode 调试',
+                    link: '/engineer/vscodeDebug'
                 }
             ],
             '/node/': [
