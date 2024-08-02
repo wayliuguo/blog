@@ -6,6 +6,7 @@ const { argv } = require('yargs')
 
 const arg = hideBin(process.argv)
 const cli = yargs(arg)
+console.log(sum(1, 2))
 
 yargs(arg)
     // 用法介绍
