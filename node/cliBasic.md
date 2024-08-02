@@ -175,69 +175,49 @@ npm unlink weicli
 
 ## 调试库文件
 
-1. 文件目录
+1. 在库的目录下，执行`npm link`, 使其作为一个软链接
+1. 在使用到这个库的地方，npm link 库名称
+1. 例子如下：
+
+3.1 文件目录：
 
 ```
+// 文件目录
 weiclilib
   - lib
     - index.js
 package.json
 ```
 
-2. lib/index.js
+3.2 package.json
+
+此包名为 weiclilib
 
 ```
-module.exports = {
-    sum(a, b) {
-        return a + b
-    }
+// package.json
+{
+ "name": "weiclilib"
 }
 ```
 
-3. package.json
-
-`main`的作用，是该文件作为库时的入口
+3.3 本地引用
 
 ```
-"name": "weiclilib",
-"version": "1.0.0",
-"main": "lib/index.js"
+// 在此文件根目录(package.json目录)，则生成软链接了
+npm link
+
 ```
 
-4. 使用
+![image-20240802234603908](image-20240802234603908.png)
 
-   1. 手动添加依赖
+3.4 在使用到该库的时候，引用本地的库
+tips: 需先删除之前通过线上安装的
 
-   ```
-   // weicli/package.json
-   "dependencies": {
-       "weiclilib": "^1.0.0"
-   }
-   ```
+```
+npm link weiclilib
+```
 
-   2. weicli 目录下执行-添加软链
 
-   ```
-   // weicli 目录下执行-添加软链
-   npm link weiclilib
-   ```
-
-   测试weicli 下会增加一个node_modules 文件夹
-
-   ![image-20231216150220843](cliBasic.assets/image-20231216150220843.png) 
-
-   3. 执行，在脚手架中调用库文件即可
-
-   ```
-   // weicli/bin/index.js
-   #!/usr/bin/env node
-   
-   const lib = require('weiclilib')
-   console.log(lib.sum(1, 2))
-   
-   console.log('一个最简单的脚手架！')
-   ```
-   
 
 ## 脚手架命令注册和参数解释
 
@@ -324,23 +304,6 @@ weicli init --name well
 weicli -version
 // 1.0.0
 ```
-
-## 发布上线
-
-1. 先发布库文件
-
-   ```
-   npm publish
-   ```
-
-2. 解除脚手架与库文件的软链接，直接安装线上包
-
-   ```
-   npm unlink weiclilib
-   npm i weiclilib
-   ```
-
-3. 发布脚手架包即可
 
 
 
