@@ -91,6 +91,14 @@ module.exports = {
                 {
                     text: '脚手架基础',
                     link: '/node/cliBasic'
+                },
+                {
+                    text: 'yargs 框架',
+                    link: '/node/yargs'
+                },
+                {
+                    text: 'command 框架',
+                    link: '/node/command'
                 }
             ],
             '/visualization/': [
