@@ -99,6 +99,15 @@ module.exports = {
                 {
                     text: 'command 框架',
                     link: '/node/command'
+                },
+                {
+                    text: 'Nest 框架',
+                    items: [
+                        {
+                            text: '快速掌握NestCLI',
+                            link: '/node/nest/nestCLI'
+                        }
+                    ]
                 }
             ],
             '/visualization/': [
