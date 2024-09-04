@@ -22,8 +22,22 @@ nest -h
 ![image-20240903210127233](image-20240903210127233.png)
 
 ## nest new
+- 作用：用来创建一个新的 nest 项目
+- 具有选项：`nest new -h`
+
+![image-20240904232038088](image-20240904232038088.png)
 
 ## nest generate
+
+- 作用：生成一些代码片段，如controller、service、module 等
+- 例子：生成module
+
+```
+nest generate module aaa
+```
+
+
+
 ## nest build
 ## nest-cli.json
 ## nest start
