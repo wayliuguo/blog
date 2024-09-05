@@ -29,6 +29,8 @@ nest -h
 
 ## nest generate
 
+![image-20240905200050866](image-20240905200050866.png)
+
 - 作用：生成一些代码片段，如controller、service、module 等
 - 例子：生成module
 
@@ -36,7 +38,9 @@ nest -h
 nest generate module aaa
 ```
 
+这里会生成并引入。
 
+![image-20240905200218966](image-20240905200218966.png)
 
 ## nest build
 ## nest-cli.json
