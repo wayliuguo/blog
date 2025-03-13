@@ -16,13 +16,18 @@ module.exports = {
             },
             {
                 text: '工程化',
-                link: '/engineer/vscodeDebug',
+                link: '/engineer/moduleStandard',
                 activeMatch: '/engineer/'
             },
             {
                 text: 'vue',
                 link: '/vue/vue3Principle/environment',
                 activeMatch: '/vue3Principle/'
+            },
+            {
+                text: 'react',
+                link: '/react/reactBasic',
+                activeMatch: '/react/'
             },
             {
                 text: '可视化',
@@ -61,10 +66,65 @@ module.exports = {
                     ]
                 }
             ],
+            '/react/': [
+                {
+                    text: 'react 基础',
+                    items: [
+                        {
+                            text: 'react 基础',
+                            link: '/react/reactBasic'
+                        },
+                        {
+                            text: 'react hooks',
+                            link: '/react/reactHooks'
+                        },
+                        {
+                            text:'react 使用ts',
+                            link: '/react/reactUseTs'
+                        },
+                        {
+                            text:'react 使用css',
+                            link: '/react/reactUseCss'
+                        },
+                        {
+                            text:'reactRouter',
+                            link: '/react/reactRouter'
+                        },
+                        {
+                            text:'react 状态管理',
+                            link: '/react/reactStateMan'
+                        }
+                    ]
+                }
+            ],
             engineer: [
+                {
+                    text: '模块化规范',
+                    link: '/engineer/moduleStandard'
+                },
+                {
+                    text: 'vsCode&Prettier配置',
+                    link: '/engineer/vsCodeConfigAndPrettier'
+                },
+                {
+                    text: '规范化配置',
+                    link: '/engineer/normalizeConfig'
+                },
                 {
                     text: 'vscode 调试',
                     link: '/engineer/vscodeDebug'
+                },
+                {
+                    text: 'husky 使用',
+                    link: '/engineer/huskyUsage'
+                },
+                {
+                    text: 'webpack',
+                    link: '/engineer/webpackConfig'
+                },
+                {
+                    text: 'rollup&vite',
+                    link: '/engineer/rollup&vite'
                 }
             ],
             '/node/': [
