@@ -15,7 +15,7 @@ module.exports = {
                 activeMatch: '/article/'
             },
             {
-                text: '工程化',
+                text: '工程相关',
                 link: '/engineer/moduleStandard',
                 activeMatch: '/engineer/'
             },
@@ -125,7 +125,11 @@ module.exports = {
                 {
                     text: 'rollup&vite',
                     link: '/engineer/rollup&vite'
-                }
+                },
+                {
+                    text: 'git常见用法',
+                    link: '/engineer/gitCommonUsage'
+                },
             ],
             '/node/': [
                 {
