@@ -130,6 +130,10 @@ module.exports = {
                     text: 'git常见用法',
                     link: '/engineer/gitCommonUsage'
                 },
+                {
+                    text: 'gitee 设置镜像',
+                    link: '/engineer/giteeMirror'
+                }
             ],
             '/node/': [
                 {
