@@ -225,6 +225,10 @@ module.exports = {
                 {
                     text: 'EventBus 手写',
                     link: '/article/eventbus'
+                },
+                {
+                    text: 'cursor 白嫖',
+                    link: '/article/cursorFree'
                 }
             ],
             '/interview': [
