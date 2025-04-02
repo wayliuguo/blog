@@ -1,8 +1,7 @@
 ## windows
 
 1. 在 Cursor IDE 中退出当前登录的账号
-
-   <img src="image-20250326173918838.png" alt="image-20250326173918838" />
+   ![image-20250326173918838.png](image-20250326173918838.png)
 
 2. 完全关闭 Cursor IDE
 
