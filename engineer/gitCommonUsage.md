@@ -38,7 +38,7 @@ git push --force
 
 - 如果不想提交此次revert，由于vim退出后会自动提交此次revert，可以执行 git reset HEAD^ 去掉最新提交
 
-  ![1280X1280](1280X1280.png)
+  ![revert](revert.png)
 
 ## vim 编辑器使用指南
 
