@@ -8,7 +8,7 @@ Push 方向的镜像用于将 Gitee 的仓库自动镜像到 GitHub 。
 
 2. 如果你还没有绑定 GitHub 帐号，请根据弹窗提示绑定 GitHub 帐号；
 
-  ![设置镜像_一](设置镜像_一.PNG)
+  ![mirror.png](mirror.png)
 
 3. 添加镜像
 
