@@ -99,6 +99,69 @@ module.exports = {
             ],
             engineer: [
                 {
+                    text: 'typescript',
+                    items: [
+                        {
+                            text: '安装',
+                            link: '/engineer/typescript/install'
+                        },
+                        {
+                            text: '常用语法',
+                            items: [
+                                {
+                                    text: '基础类型',
+                                    link: '/engineer/typescript/type'
+                                },
+                                {
+                                    text: '变量声明',
+                                    link: '/engineer/typescript/declare'
+                                },
+                                {
+                                    text: '接口',
+                                    link: '/engineer/typescript/interface'
+                                },
+                                {
+                                    text: '类',
+                                    link: '/engineer/typescript/class'
+                                },
+                                {
+                                    text: '函数',
+                                    link: '/engineer/typescript/function'
+                                },
+                                {
+                                    text: '泛型',
+                                    link: '/engineer/typescript/generic'
+                                },
+                                {
+                                    text: '类型推断',
+                                    link: '/engineer/typescript/inference'
+                                },
+                                {
+                                    text: '高级类型',
+                                    link: '/engineer/typescript/advance'
+                                }
+                            ]
+                        },
+                        {
+                            text: 'ts-axios 项目初始化',
+                            items: [
+                                {
+                                    text: '需求分析',
+                                    link: '/engineer/typescript/ts-axios/require'
+                                },
+                                {
+                                    text: '项目初始化',
+                                    link: '/engineer/typescript/ts-axios/init'
+                                },
+                                {
+                                    text: '编写基础请求代码',
+                                    link: '/engineer/typescript/ts-axios/base'
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
                     text: '模块化规范',
                     link: '/engineer/moduleStandard'
                 },
