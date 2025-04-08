@@ -256,7 +256,7 @@ export default [
                     },
                     {
                         text: '拦截器模块单元测试',
-                        link: '/engineer/typescript/ts-axios/interceptor'
+                        link: '/engineer/typescript/ts-axios/interceptorTest'
                     },
                     {
                         text: 'mergeConfig 模块单元测试',
