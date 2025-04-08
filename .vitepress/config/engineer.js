@@ -232,27 +232,27 @@ export default [
                 items: [
                     {
                         text: '前言',
-                        link: '/engineer/typescript/ts-axios/preface'
+                        link: '/engineer/typescript/ts-axios/prefaceTest'
                     },
                     {
                         text: 'Jest 安装和配置',
-                        link: '/engineer/typescript/ts-axios/jest'
+                        link: '/engineer/typescript/ts-axios/jestTest'
                     },
                     {
                         text: '辅助模块单元测试',
-                        link: '/engineer/typescript/ts-axios/helpers'
+                        link: '/engineer/typescript/ts-axios/helpersTest'
                     },
                     {
                         text: '请求模块单元测试',
-                        link: '/engineer/typescript/ts-axios/requests'
+                        link: '/engineer/typescript/ts-axios/requestsTest'
                     },
                     {
                         text: '辅助模块单元测试',
-                        link: '/engineer/typescript/ts-axios/headers'
+                        link: '/engineer/typescript/ts-axios/headersTest'
                     },
                     {
                         text: 'Axios 实例模块单元测试',
-                        link: '/engineer/typescript/ts-axios/instance'
+                        link: '/engineer/typescript/ts-axios/instanceTest'
                     },
                     {
                         text: '拦截器模块单元测试',
@@ -260,15 +260,15 @@ export default [
                     },
                     {
                         text: 'mergeConfig 模块单元测试',
-                        link: '/engineer/typescript/ts-axios/mergeConfig'
+                        link: '/engineer/typescript/ts-axios/mergeConfigTest'
                     },
                     {
                         text: '请求取消模块单元测试',
-                        link: '/engineer/typescript/ts-axios/cancel'
+                        link: '/engineer/typescript/ts-axios/cancelTest'
                     },
                     {
                         text: '剩余模块单元测试',
-                        link: '/engineer/typescript/ts-axios/more'
+                        link: '/engineer/typescript/ts-axios/moreTest'
                     }
                 ]
             },
