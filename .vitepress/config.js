@@ -158,6 +158,35 @@ module.exports = {
                                     link: '/engineer/typescript/ts-axios/base'
                                 }
                             ]
+                        },
+                        {
+                            text: 'ts-axios 基础功能实现',
+                            items: [
+                                {
+                                    text: '处理请求url参数',
+                                    link: '/engineer/typescript/ts-axios/url'
+                                },
+                                {
+                                    text: '处理请求 body 数据',
+                                    link: '/engineer/typescript/ts-axios/data'
+                                },
+                                {
+                                    text: '处理请求 header',
+                                    link: '/engineer/typescript/ts-axios/header'
+                                },
+                                {
+                                    text: '处理响应数据',
+                                    link: '/engineer/typescript/ts-axios/response'
+                                },
+                                {
+                                    text: '处理响应 header',
+                                    link: '/engineer/typescript/ts-axios/response-header'
+                                },
+                                {
+                                    text: '处理响应 data',
+                                    link: '/engineer/typescript/ts-axios/response-data'
+                                }
+                            ]
                         }
                     ]
                 },
