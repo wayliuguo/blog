@@ -112,7 +112,7 @@ export default [
                         link: '/engineer/typescript/ts-axios/header'
                     },
                     {
-                        text: '处理响应数据',
+                        text: '获取响应数据',
                         link: '/engineer/typescript/ts-axios/response'
                     },
                     {
@@ -146,11 +146,11 @@ export default [
                         link: '/engineer/typescript/ts-axios/extend'
                     },
                     {
-                        text: '响应数据支持泛型',
+                        text: 'axios 函数重载',
                         link: '/engineer/typescript/ts-axios/overload'
                     },
                     {
-                        text: 'axios 函数重载',
+                        text: '响应数据支持泛型',
                         link: '/engineer/typescript/ts-axios/generic'
                     }
                 ]
@@ -172,11 +172,11 @@ export default [
                         link: '/engineer/typescript/ts-axios/merge'
                     },
                     {
-                        text: '扩展 axios.create 静态接口',
+                        text: '请求和响应配置化',
                         link: '/engineer/typescript/ts-axios/transform'
                     },
                     {
-                        text: '请求和响应配置化',
+                        text: '扩展 axios.create 静态接口',
                         link: '/engineer/typescript/ts-axios/create'
                     }
                 ]
