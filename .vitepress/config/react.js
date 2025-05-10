@@ -55,6 +55,31 @@ export default [
                         link: '/react/reactQuestion/1-createProject/viteAndWebpack'
                     }
                 ]
+            },
+            {
+                text: 'JSX和组件',
+                items: [
+                    {
+                        text: 'JSX语法',
+                        link: '/react/reactQuestion/2-jsxComponent/jsx' 
+                    },
+                    {
+                        text: '实战-开发List页',
+                        link: '/react/reactQuestion/2-jsxComponent/listPage' 
+                    },
+                    {
+                        text: '组件和props',
+                        link: '/react/reactQuestion/2-jsxComponent/componentProps' 
+                    },
+                    {
+                        text: '开发者工具',
+                        link: '/react/reactQuestion/2-jsxComponent/devTool'
+                    },
+                    {
+                        text: 'JSX对比Vue模板',
+                        link: '/react/reactQuestion/2-jsxComponent/jsxAndVueTemplate'
+                    }
+                ]
             }
         ]
     }
