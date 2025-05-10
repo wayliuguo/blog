@@ -1,7 +1,5 @@
 # vite 和 webpack
 
-PS：加餐课程，选学
-
 CRA 使用 webpack 作为打包工具，和 vite 是竞品。
 
 ## 区别
@@ -12,6 +10,10 @@ CRA 使用 webpack 作为打包工具，和 vite 是竞品。
 我们选择 CRA ，**先考虑稳定、开发成本，再说效率**
 
 ## 代码演示
+```
+# npm 6.x
+npm create vite@latest my-app --template react-ts
+```
 
 ES Module 代码演示，参考 es-module-demo
 

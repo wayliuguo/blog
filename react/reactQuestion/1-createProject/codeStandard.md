@@ -19,7 +19,7 @@ eslint prettier
 安装插件
 
 ```shell
-npm install eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin -save-dev
+npm install eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin --save-dev
 ```
 
 初始化配置文件 `.eslint.js`
