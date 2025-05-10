@@ -27,5 +27,35 @@ export default [
                 link: '/react/reactStateMan'
             }
         ]
+    },
+    {
+        text: 'react 项目实战',
+        items: [
+            {
+                text: '创建项目',
+                items: [
+                    {
+                        text: '准备',
+                        link: '/react/reactQuestion/1-createProject/prepare'
+                    },
+                    {
+                        text: 'CRA',
+                        link: '/react/reactQuestion/1-createProject/CRA'
+                    },
+                    {
+                        text: '编码规范',
+                        link: '/react/reactQuestion/1-createProject/codeStandard'
+                    },
+                    {
+                        text: '提交到git仓库',
+                        link: '/react/reactQuestion/1-createProject/pushToGit'
+                    },
+                    {
+                        text: 'vite和webpack',
+                        link: '/react/reactQuestion/1-createProject/viteAndWebpack'
+                    }
+                ]
+            }
+        ]
     }
 ]
