@@ -30,6 +30,21 @@ JSX 里的标签必须是闭合的，`<input>` `<br>` 这样写在 JSX 会报错
 - `style` 要写成 JS 对象（不能是 string），key 采用**驼峰写法**
 - `for` 要改为 `htmlFor`
 
+```jsx
+ <a
+  className="App-link"
+  href="https://reactjs.org"
+  target="_blank"
+  rel="noopener noreferrer"
+  style={{
+    color: 'red',
+    fontSize: '32px',
+  }}
+>
+  Learn React
+</a>
+```
+
 ## 事件
 
 `onXxx` 的形式
