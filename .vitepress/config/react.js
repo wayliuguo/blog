@@ -80,6 +80,35 @@ export default [
                         link: '/react/reactQuestion/2-jsxComponent/jsxAndVueTemplate'
                     }
                 ]
+            },
+            {
+                text: 'Hooks',
+                items: [
+                    {
+                        text: 'useState',
+                        link: '/react/reactQuestion/3-hooks/useState'
+                    },
+                    {
+                        text: 'useEffect',
+                        link: '/react/reactQuestion/3-hooks/useEffect'
+                    },
+                    {
+                        text: '其他hooks',
+                        link: '/react/reactQuestion/3-hooks/otherHooks'
+                    },
+                    {
+                        text: '自定义hooks',
+                        link: '/react/reactQuestion/3-hooks/customHooks' 
+                    },
+                    {
+                        text: '第三方hooks',
+                        link: '/react/reactQuestion/3-hooks/thirdHooks'
+                    },
+                    {
+                        text: 'hooks使用规则',
+                        link: '/react/reactQuestion/3-hooks/hooksRules'
+                    }
+                ]
             }
         ]
     }
