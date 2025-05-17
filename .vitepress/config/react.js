@@ -124,10 +124,6 @@ export default [
                     {
                         text: 'CSS-in-js',
                         link: '/react/reactQuestion/4-useCss/cssInJs'
-                    },
-                    {
-                        text: '实战-List 页增加样式',
-                        link: '/react/reactQuestion/4-useCss/listPageAddCss'
                     }
                 ]
             }
