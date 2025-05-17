@@ -10,11 +10,12 @@ PS：CSS-in-js 并不是内联 style （重要！！！），它会经过工具�
 
 https://styled-components.com/
 
-代码演示，参考 `components/Button3.tsx`
+代码演示，参考 `src/StyledComponentsDemo.tsx`
 
 ## Styled-jsx
 
 https://github.com/vercel/styled-jsx#getting-started
+代码演示，参考 `src/StyledJSXDemo.tsx`
 
 ## 优点
 

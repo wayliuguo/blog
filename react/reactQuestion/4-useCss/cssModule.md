@@ -12,7 +12,7 @@
 - 每个模块中的 className 都不一样
 - CRA 原生支持 CSS Module
 
-代码演示，参考 `components/Button2.tsx`
+代码演示，参考 `components/QuestionCard.tsx`
 
 ## 使用 Sass
 
@@ -20,4 +20,4 @@
 - 一般使用 Sass less 等预处理语言
 - CRA 支持 Sass Module ，把后缀改为 `.scss` 即可
 
-代码演示
+代码演示，参考 `components/QuestionCard.tsx`
