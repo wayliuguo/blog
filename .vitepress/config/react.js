@@ -126,6 +126,19 @@ export default [
                         link: '/react/reactQuestion/4-useCss/cssInJs'
                     }
                 ]
+            },
+            {
+                text: '路由',
+                items: [
+                    {
+                        text: '路由设计',
+                        link: '/react/reactQuestion/5-reactRouter/routerDesign'
+                    },
+                    {
+                        text: '实战',
+                        link: '/react/reactQuestion/5-reactRouter/routerPractice'
+                    },
+                ] 
             }
         ]
     }
