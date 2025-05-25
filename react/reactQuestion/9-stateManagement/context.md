@@ -7,6 +7,6 @@
 
 （画图解释）
 
-代码演示 react-ts-demo 中 pages/ContextDemo1
+代码演示 react-ts-demo 中 pages/ContextDemo
 
 Context 只适合统一设置、下发某些全局变量（语言，主题等），应用场景比较单一
