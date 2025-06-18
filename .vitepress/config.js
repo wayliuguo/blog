@@ -6,6 +6,7 @@ import visualization from "./config/visualization"
 import article from "./config/article"
 import interview from "./config/interview"
 import alg from "./config/alg"
+import node from './config/node'
 
 module.exports = {
     title: "well's blog",
@@ -22,49 +23,7 @@ module.exports = {
             '/vue/': vue,
             '/react/': react,
             '/engineer/': engineer,
-            '/node/': [
-                {
-                    text: 'node 基础',
-                    link: '/node/nodeBasic'
-                },
-                {
-                    text: 'mongoDB',
-                    link: '/node/mongoDB'
-                },
-                {
-                    text: 'express',
-                    link: '/node/express'
-                },
-                {
-                    text: 'koa',
-                    link: '/node/koa'
-                },
-                {
-                    text: '脚手架实现原理',
-                    link: '/node/cliTheory'
-                },
-                {
-                    text: '脚手架基础',
-                    link: '/node/cliBasic'
-                },
-                {
-                    text: 'yargs 框架',
-                    link: '/node/yargs'
-                },
-                {
-                    text: 'command 框架',
-                    link: '/node/command'
-                },
-                {
-                    text: 'Nest 框架',
-                    items: [
-                        {
-                            text: '快速掌握NestCLI',
-                            link: '/node/nest/nestCLI'
-                        }
-                    ]
-                }
-            ],
+            '/node/': node,
             '/visualization/': visualization,
             '/article/': article,
             '/interview': interview,
