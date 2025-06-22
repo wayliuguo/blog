@@ -41,6 +41,10 @@ export default [
             {
                 text: '快速掌握NestCLI',
                 link: '/node/nest/nestCLI'
+            },
+            {
+                text: '5种http传输方式',
+                link: '/node/nest/http'
             }
         ]
     }

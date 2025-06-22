@@ -12,6 +12,10 @@ export default [
         link: '/engineer/normalizeConfig'
     },
     {
+        text: 'eslint prettier 常见错误',
+        link: '/engineer/vsCodeConfigAndPrettier'
+    },
+    {
         text: 'vscode 调试',
         link: '/engineer/vscodeDebug'
     },
