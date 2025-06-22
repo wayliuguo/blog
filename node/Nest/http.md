@@ -2,7 +2,9 @@
 
 ### 基础
 
+```
 http://localhost:3000/person/123
+```
 
 这里的123就是路径种的参数，服务端框架或者单页应用的路由都支持从 url 中取出参数
 
@@ -49,7 +51,9 @@ export class PersonController {
 
 通过 url 中 ？后面的用 & 分隔的字符串传递数据。比如：
 
-http://guang.zxg/person?name=guang&age=20
+```
+http://localhost:3000/person?name=guang&age=20
+```
 
 其中非英文的字符和一些特殊字符要经过编码，可以使用 encodeURIComponent 的 api 来编码：
 
