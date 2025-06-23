@@ -1,3 +1,5 @@
+import nest from "./nest"
+
 export default [
     {
         text: 'node 基础',
@@ -31,21 +33,5 @@ export default [
         text: 'command 框架',
         link: '/node/command'
     },
-    {
-        text: 'Nest 框架',
-        items: [
-            {
-                text: 'nest 基础概念',
-                link: '/node/nest/nestBasic'
-            },
-            {
-                text: '快速掌握NestCLI',
-                link: '/node/nest/nestCLI'
-            },
-            {
-                text: '5种http传输方式',
-                link: '/node/nest/http'
-            }
-        ]
-    }
+    nest
 ]
