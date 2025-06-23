@@ -13,7 +13,7 @@ export default [
     },
     {
         text: 'eslint prettier 常见错误',
-        link: '/engineer/vsCodeConfigAndPrettier'
+        link: '/engineer/eslintAndPrettierErrorList'
     },
     {
         text: 'vscode 调试',
