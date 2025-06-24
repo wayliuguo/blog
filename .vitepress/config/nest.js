@@ -1,5 +1,5 @@
 export default {
-    text: 'Nest 框架',
+    text: 'nest 框架',
     items: [
         {
             text: 'nest 基础概念',
