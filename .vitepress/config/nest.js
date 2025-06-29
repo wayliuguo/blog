@@ -16,6 +16,10 @@ export default {
         {
             text: 'ioc 解决了什么痛点问题',
             link: '/node/nest/ioc'
+        },
+        {
+            text: '多种Provider&注入对象',
+            link: '/node/nest/providerAndInject'
         }
     ]
 }
