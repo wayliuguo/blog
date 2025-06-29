@@ -28,6 +28,13 @@ module.exports = {
             '/article/': article,
             '/interview': interview,
             '/alg': alg
+        },
+        // 添加 outline 配置以显示三级标题
+        outline: {
+            // level: [2, 3], // 显示 h2 和 h3 标题
+            // 或者使用 'deep' 显示所有深度的标题
+            level: 'deep', // 显示所有深度的标题
+            label: '目录' // 可选：修改右侧大纲的标题文本
         }
     }
 }
