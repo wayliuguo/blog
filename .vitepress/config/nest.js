@@ -24,6 +24,10 @@ export default {
         {
             text: '全局模块和生命周期',
             link: '/node/nest/globalAndLifecycle'
+        },
+        {
+            text: 'AOP 架构的好处',
+            link: '/node/nest/aop'
         }
     ]
 }
