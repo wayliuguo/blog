@@ -378,5 +378,7 @@ export class TestFilter implements ExceptionFilter {
 
 ![image-20250712224912242](image-20250712224912242.png)
 
-### 集中AOP 机制的顺序
+### 几种AOP 机制的顺序
+
+![aop顺序](aop顺序.png)
 
