@@ -20,6 +20,10 @@ export default {
         {
             text: '多种Provider&注入对象',
             link: '/node/nest/providerAndInject'
+        },
+        {
+            text: '全局模块和生命周期',
+            link: '/node/nest/globalAndLifecycle'
         }
     ]
 }
