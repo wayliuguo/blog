@@ -28,6 +28,10 @@ export default {
         {
             text: 'AOP 架构的好处',
             link: '/node/nest/aop'
+        },
+        {
+            text: 'nest 全部装饰器',
+            link: '/node/nest/decorator'
         }
     ]
 }
