@@ -32,6 +32,10 @@ export default {
         {
             text: 'nest 全部装饰器',
             link: '/node/nest/decorator'
+        },
+        {
+            text: '自定义装饰器',
+            link: '/node/nest/customDecorator'
         }
     ]
 }
