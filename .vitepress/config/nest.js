@@ -36,6 +36,10 @@ export default {
         {
             text: '自定义装饰器',
             link: '/node/nest/customDecorator'
+        },
+        {
+            text: 'Metadata和Reflector',
+            link: '/node/nest/metadataAndReflector'
         }
     ]
 }
