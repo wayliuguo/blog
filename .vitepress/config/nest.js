@@ -44,6 +44,10 @@ export default {
         {
             text: 'ExecutionContext: 切换不同上下文',
             link: '/node/nest/executionContext'
+        },
+        {
+            text: 'module和provider循环依赖处理',
+            link: '/node/nest/moduleAndProviderCircularDependency'
         }
     ]
 }
