@@ -52,6 +52,10 @@ export default {
         {
             text: '动态模块',
             link: '/node/nest/dynamicModule'
+        },
+        {
+            text: 'nest的Middleware',
+            link: '/node/nest/middleware'
         }
     ]
 }
