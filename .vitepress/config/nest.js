@@ -48,6 +48,10 @@ export default {
         {
             text: 'module和provider循环依赖处理',
             link: '/node/nest/moduleAndProviderCircularDependency'
+        },
+        {
+            text: '动态模块',
+            link: '/node/nest/dynamicModule'
         }
     ]
 }
