@@ -25,6 +25,20 @@ Pipe 是在参数传给 handler 之前对参数做一些验证和转换的 class
 
 
 
+### validationPipe
+
+post 请求的数据是通过 @Body 装饰器来取，并且要有一个 dto class 来接收。validationPipe 可以对post 参数进行参数校验。
+
+```
+npm install class-validator class-transformer
+```
+
+![image-20250809210440612](image-20250809210440612.png)
+
+![image-20250809210450922](image-20250809210450922.png)
+
+![image-20250809210524753](image-20250809210524753.png)
+
 ## 自定义Pipe
 
 ![image-20250809124155794](image-20250809124155794.png)
