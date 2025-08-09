@@ -60,6 +60,10 @@ export default {
         {
             text: 'RxJS和Interceptor',
             link: '/node/nest/rxjsAndInterceptor'
+        },
+        {
+            text: '内置Pipe和自定义Pipe',
+            link: '/node/nest/pipe'
         }
     ]
 }
