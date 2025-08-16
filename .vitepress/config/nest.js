@@ -64,6 +64,10 @@ export default {
         {
             text: '内置Pipe和自定义Pipe',
             link: '/node/nest/pipe'
+        },
+        {
+            text: '自定义Exception Filter',
+            link: '/node/nest/exceptionFilter'
         }
     ]
 }
