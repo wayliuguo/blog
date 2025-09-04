@@ -71,11 +71,11 @@ export default {
         },
         {
             text: 'Express 使用 multer 实现文件上传',
-            link: 'expressUploadFile'
+            link: '/node/nest/expressUploadFile'
         },
         {
             text: 'Nest 使用 multer 实现文件上传',
-            link: 'nestUploadFile'
+            link: '/node/nest/nestUploadFile'
         }
     ]
 }
