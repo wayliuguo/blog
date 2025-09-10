@@ -20,6 +20,10 @@ export default [
         link: '/engineer/vscodeDebug'
     },
     {
+        text: 'node_modules 定位问题',
+        link: '/engineer/nodeModulesProblem'
+    },
+    {
         text: 'husky 使用',
         link: '/engineer/huskyUsage'
     },
