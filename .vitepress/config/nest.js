@@ -80,6 +80,10 @@ export default {
         {
             text: '图书管理系统：用户后端模块',
             link: '/node/nest/bookManagerUserModule'
+        },
+        {
+            text: '图书管理系统：图书后端模块',
+            link: '/node/nest/bookManagerBookModule'
         }
     ]
 }
