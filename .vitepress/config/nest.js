@@ -76,6 +76,10 @@ export default {
         {
             text: 'Nest 使用 multer 实现文件上传',
             link: '/node/nest/nestUploadFile'
+        },
+        {
+            text: '图书管理系统：用户后端模块',
+            link: '/node/nest/bookManagerUserModule'
         }
     ]
 }
