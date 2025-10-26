@@ -7,8 +7,8 @@ export default [
                 link: '/vue/vue3Principle/environment'
             },
             {
-                text: 'reactive依赖收集&触发更新',
-                link: '/vue/vue3Principle/reactive'
+                text: 'vue3 源码架构',
+                link: '/vue/vue3Principle/architecture'
             }
         ]
     }
