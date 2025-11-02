@@ -955,3 +955,278 @@ export function isTracking() {
 }
 ```
 
+
+
+## ref
+
+### 基本功能特性
+
+- **任何类型**：可以包装基本类型（number, string, boolean）和引用类型（object, array）
+- **深层响应式**：如果值是对象，会递归地转换为响应式对象
+- **保持引用**：`.value`始终指向同一个引用
+
+### 测试用例
+
+```
+it("should be reactive", () => {
+    const a = ref(1);
+    let dummy;
+    let calls = 0;
+    effect(() => {
+      calls++;
+      dummy = a.value;
+    });
+    expect(calls).toBe(1);
+    expect(dummy).toBe(1);
+    a.value = 2;
+    expect(calls).toBe(2);
+    expect(dummy).toBe(2);
+    // same value should not trigger
+    a.value = 2;
+    expect(calls).toBe(2);
+    expect(dummy).toBe(2);
+  });
+
+  it("should make nested properties reactive", () => {
+    const a = ref({
+      count: 1,
+    });
+    let dummy;
+    effect(() => {
+      dummy = a.value.count;
+    });
+    expect(dummy).toBe(1);
+    a.value.count = 2;
+    expect(dummy).toBe(2);
+  });
+```
+
+### 关键实现
+
+1. RefImpl 类是 ref 的核心实现，它定义了 get 和 set 方法，通过 `track`和 `trigger`实现依赖收集和触发更新
+
+   1. _rawValue：原值
+   2. _value：新值（如果是对象的话，会通过  reactive 得到一个代理对象）
+   3. dep：存储收集依赖
+   4. __v_isRef：标记是 ref
+
+2. 依赖收集（trackRefValue）：把 activeEffect 保存在 dep Set 里面
+
+3. 触发更新（triggerEffects）：把 dep Set 里面的 effect 进行执行
+
+4. 响应式转换：在 RefImpl 的构造函数中，对于非浅层 ref，会调用 `toReactive`将值转换为响应式对象。如果传入的是对象，则会调用 `reactive`函数，否则直接返回。
+
+   ```
+   const toReactive = (value) => isObject(value) ? reactive(value) : value;
+   ```
+
+   ![image-20251102210515183](image-20251102210515183.png)
+
+```
+export function ref(value) {
+  return createRef(value);
+}
+
+function createRef(value) {
+  const refImpl = new RefImpl(value);
+
+  return refImpl;
+}
+
+export class RefImpl {
+  private _rawValue: any;
+  private _value: any;
+  public dep;
+  public __v_isRef = true;
+
+  constructor(value) {
+    this._rawValue = value;
+    // 看看value 是不是一个对象，如果是一个对象的话
+    // 那么需要用 reactive 包裹一下
+    this._value = convert(value);
+    this.dep = createDep();
+  }
+
+  get value() {
+    // 收集依赖
+    trackRefValue(this);
+    return this._value;
+  }
+
+  set value(newValue) {
+    // 当新的值不等于老的值的话，
+    // 那么才需要触发依赖
+    if (hasChanged(newValue, this._rawValue)) {
+      // 更新值
+      this._value = convert(newValue);
+      this._rawValue = newValue;
+      // 触发依赖
+      triggerRefValue(this);
+    }
+  }
+}
+
+export function triggerRefValue(ref) {
+  triggerEffects(ref.dep);
+}
+
+function convert(value) {
+  return isObject(value) ? reactive(value) : value;
+}
+```
+
+```
+// packages\reactivity\src\effect.ts
+export function triggerEffects(dep) {
+  // 执行收集到的所有的 effect 的 run 方法
+  for (const effect of dep) {
+    if (effect.scheduler) {
+      // scheduler 可以让用户自己选择调用的时机
+      // 这样就可以灵活的控制调用了
+      // 在 runtime-core 中，就是使用了 scheduler 实现了在 next ticker 中调用的逻辑
+      effect.scheduler();
+    } else {
+      effect.run();
+    }
+  }
+}
+```
+
+## isRef
+
+### 基本功能特性
+
+检查一个值是否为 ref 对象。
+
+### 测试用例
+
+```
+it("isRef", () => {
+    const a = ref(1);
+    const user = reactive({
+      age: 1,
+    });
+    expect(isRef(a)).toBe(true);
+    expect(isRef(1)).toBe(false);
+    expect(isRef(user)).toBe(false);
+});
+```
+
+### 关键实现
+
+```
+export function isRef(value) {
+  return !!value.__v_isRef;
+}
+```
+
+## unRef
+
+### 基本功能特性
+
+`unref`是一个语法糖，用于处理可能为 ref 的值。如果传入的是 ref，则返回其 `.value`；否则返回本身。
+
+### 测试用例
+
+```
+it("unRef", () => {
+    const a = ref(1);
+    expect(unRef(a)).toBe(1);
+    expect(unRef(1)).toBe(1);
+});
+```
+
+### 关键实现
+
+```
+// 把 ref 里面的值拿到
+export function unRef(ref) {
+  return isRef(ref) ? ref.value : ref;
+}
+```
+
+## proxyRefs
+
+### 基本功能特性
+
+1. **自动解包 ref**：当访问一个被代理的对象的属性时，如果该属性是一个 ref，那么会自动返回其 `.value`值。
+2. **响应式更新**：当 ref 的值发生变化时，通过 `proxyRefs`代理的对象在访问该属性时会得到最新的值。
+3. **双向响应**：不仅读取时会解包，设置时也会自动处理。如果设置的是一个 ref 属性，那么会更新该 ref 的 `.value`；**如果设置的是一个普通值，而原属性是一个 ref，则会更新该 ref 的 `.value`**。
+4. **深层代理**：`proxyRefs`是浅层的，它只解包第一层的 ref。如果对象的属性是另一个对象，那么不会递归解包。
+
+### 测试用例
+
+![image-20251102215424990](image-20251102215424990.png)
+
+```
+it("proxyRefs", () => {
+    const user = {
+      age: ref(10),
+      name: "xiaohong",
+    };
+    const proxyUser = proxyRefs(user);
+    expect(user.age.value).toBe(10);
+    expect(proxyUser.age).toBe(10);
+    expect(proxyUser.name).toBe("xiaohong");
+
+    (proxyUser as any).age = 20;
+    expect(proxyUser.age).toBe(20);
+    expect(user.age.value).toBe(20);
+
+    proxyUser.age = ref(10);
+    expect(proxyUser.age).toBe(10);
+    expect(user.age.value).toBe(10);
+  });
+```
+
+### 关键实现
+
+1. getter：通过unRef => 如果传入的是 ref，则返回其 `.value`；否则返回本身。
+
+2. setter: 
+
+   1. 如果旧的是 ref 而新的不是 ref，则需要更新旧的.value 
+
+      设置代理后的属性 age 为非 ref，还是可以通过旧对象的age.value 访问到
+
+      ```
+      const user = {
+            age: ref(10),
+            name: "xiaohong",
+          };
+      const proxyUser = proxyRefs(user);
+      
+      (proxyUser as any).age = 20;
+      expect(proxyUser.age).toBe(20);
+      expect(user.age.value).toBe(20);    
+      ```
+
+   2. 否则，都只需要按照传入更新
+
+```
+export function proxyRefs(objectWithRefs) {
+  return new Proxy(objectWithRefs, shallowUnwrapHandlers);
+}
+
+// 这个函数的目的是
+// 帮助解构 ref
+// 比如在 template 中使用 ref 的时候，直接使用就可以了
+// 例如： const count = ref(0) -> 在 template 中使用的话 可以直接 count
+// 解决方案就是通过 proxy 来对 ref 做处理
+const shallowUnwrapHandlers = {
+  get(target, key, receiver) {
+    // 如果里面是一个 ref 类型的话，那么就返回 .value
+    // 如果不是的话，那么直接返回value 就可以了
+    return unRef(Reflect.get(target, key, receiver));
+  },
+  set(target, key, value, receiver) {
+    const oldValue = target[key];
+    if (isRef(oldValue) && !isRef(value)) {
+      return (target[key].value = value);
+    } else {
+      return Reflect.set(target, key, value, receiver);
+    }
+  },
+};
+```
+
