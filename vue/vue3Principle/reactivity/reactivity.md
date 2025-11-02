@@ -733,7 +733,225 @@ function createGetter(isReadonly = false, shallow = false) {
 
 ### 测试用例
 
+```
+describe("effect", () => {
+  // 初始化即运行传入的函数一次
+  it("should run the passed function once (wrapped by a effect)", () => {
+    const fnSpy = vi.fn(() => {});
+    effect(fnSpy);
+    expect(fnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // 自动依赖追踪和响应式触发（单个浅层属性）
+  it("should observe basic properties", () => {
+    let dummy;
+    const counter = reactive({ num: 0 });
+    effect(() => (dummy = counter.num));
+
+    expect(dummy).toBe(0);
+    counter.num = 7;
+    expect(dummy).toBe(7);
+  });
+  
+  // 自动依赖追踪和响应式触发（多个浅层属性）
+  it("should observe multiple properties", () => {
+    let dummy;
+    const counter = reactive({ num1: 0, num2: 0 });
+    effect(() => (dummy = counter.num1 + counter.num1 + counter.num2));
+
+    expect(dummy).toBe(0);
+    counter.num1 = counter.num2 = 7;
+    expect(dummy).toBe(21);
+  });
+  
+  // 自动依赖追踪和响应式触发（深层属性）
+  it("should observe nested properties", () => {
+    let dummy;
+    const counter = reactive({ nested: { num: 0 } });
+    effect(() => (dummy = counter.nested.num));
+
+    expect(dummy).toBe(0);
+    counter.nested.num = 8;
+    expect(dummy).toBe(8);
+  });
+  
+  // 处理多种 effect
+  it("should handle multiple effects", () => {
+    let dummy1, dummy2;
+    const counter = reactive({ num: 0 });
+    effect(() => (dummy1 = counter.num));
+    effect(() => (dummy2 = counter.num));
+
+    expect(dummy1).toBe(0);
+    expect(dummy2).toBe(0);
+    counter.num++;
+    expect(dummy1).toBe(1);
+    expect(dummy2).toBe(1);
+  });
+
+  // 观察函数调用链
+  it("should observe function call chains", () => {
+    let dummy;
+    const counter = reactive({ num: 0 });
+    effect(() => (dummy = getNum()));
+
+    function getNum() {
+      return counter.num;
+    }
+
+    expect(dummy).toBe(0);
+    counter.num = 2;
+    expect(dummy).toBe(2);
+  });
+  
+  // 调度控制&返回运行器函数
+  it("scheduler", () => {
+    let dummy;
+    let run: any;
+    const scheduler = vi.fn(() => {
+      run = runner;
+    });
+    const obj = reactive({ foo: 1 });
+    const runner = effect(
+      () => {
+        dummy = obj.foo;
+      },
+      { scheduler }
+    );
+    expect(scheduler).not.toHaveBeenCalled();
+    expect(dummy).toBe(1);
+    // should be called on first trigger
+    obj.foo++;
+    expect(scheduler).toHaveBeenCalledTimes(1);
+    // // should not run yet
+    expect(dummy).toBe(1);
+    // // manually run
+    run();
+    // // should have run
+    expect(dummy).toBe(2);
+  });
+
+  // 停止侦听
+  it("stop", () => {
+    let dummy;
+    const obj = reactive({ prop: 1 });
+    const runner = effect(() => {
+      dummy = obj.prop;
+    });
+    obj.prop = 2;
+    expect(dummy).toBe(2);
+    stop(runner);
+    // obj.prop = 3
+    obj.prop++;
+    expect(dummy).toBe(2);
+
+    // stopped effect should still be manually callable
+    runner();
+    expect(dummy).toBe(3);
+  });
+
+  // 停止侦听事件
+  it("events: onStop", () => {
+    const onStop = vi.fn();
+    const runner = effect(() => {}, {
+      onStop,
+    });
+
+    stop(runner);
+    expect(onStop).toHaveBeenCalled();
+  });
+});
+```
+
+### 关键实现
+
+1. 当调用 `effect`时，会创建一个副作用函数 `effectFn`，并立即执行（除非 `lazy: true，这里没实现（只判断scheduler）`）。
+2. 在执行 `effectFn`时，会设置 `activeEffect`为当前 `effectFn`，然后执行用户传入的函数 `fn`。
+3. 在 `fn`执行过程中，如果读取了响应式属性，就会触发 `track`，将当前 `activeEffect`（即 `effectFn`）收集到该属性的依赖集合中。
+4. 当响应式属性被修改时，触发 `trigger`，找到该属性的依赖集合，然后执行其中的每个 `effectFn`（或通过 `scheduler`调度）。
+5. 如果需要停止侦听，调用 `runner.stop()`，会从所有依赖集合中移除该 `effectFn`，这样属性变化就不会再触发它。
+
+```
+let activeEffect = void 0;
+let shouldTrack = false;
+
+export function effect(fn, options = {}) {
+  const _effect = new ReactiveEffect(fn);
+
+  extend(_effect, options);
+  _effect.run();
+
+  // 把 _effect.run 这个方法返回
+  // 让用户可以自行选择调用的时机（调用 fn）
+  const runner: any = _effect.run.bind(_effect);
+  runner.effect = _effect;
+  return runner;
+}
 
 
+export class ReactiveEffect {
+  active = true;
+  deps = [];
+  public onStop?: () => void;
+  constructor(public fn, public scheduler?) {
+    console.log("创建 ReactiveEffect 对象");
+  }
 
+  run() {
+    console.log("run");
+    // 运行 run 的时候，可以控制 要不要执行后续收集依赖的一步
+    // 目前来看的话，只要执行了 fn 那么就默认执行了收集依赖
+    // 这里就需要控制了
+
+    // 是不是收集依赖的变量
+
+    // 执行 fn  但是不收集依赖
+    if (!this.active) {
+      return this.fn();
+    }
+
+    // 执行 fn  收集依赖
+    // 可以开始收集依赖了
+    shouldTrack = true;
+
+    // 执行的时候给全局的 activeEffect 赋值
+    // 利用全局属性来获取当前的 effect
+    activeEffect = this as any;
+    // 执行用户传入的 fn
+    console.log("执行用户传入的 fn");
+    const result = this.fn();
+    // 重置
+    shouldTrack = false;
+    activeEffect = undefined;
+
+    return result;
+  }
+
+  stop() {
+    if (this.active) {
+      // 如果第一次执行 stop 后 active 就 false 了
+      // 这是为了防止重复的调用，执行 stop 逻辑
+      cleanupEffect(this);
+      if (this.onStop) {
+        this.onStop();
+      }
+      this.active = false;
+    }
+  }
+}
+
+function cleanupEffect(effect) {
+  // 找到所有依赖这个 effect 的响应式对象
+  // 从这些响应式对象里面把 effect 给删除掉
+  effect.deps.forEach((dep) => {
+    dep.delete(effect);
+  });
+
+  effect.deps.length = 0;
+}
+
+export function isTracking() {
+  return shouldTrack && activeEffect !== undefined;
+}
+```
 
