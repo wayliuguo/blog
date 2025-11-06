@@ -11,7 +11,7 @@ export default [
     },
     {
         text: 'vue',
-        link: '/vue/vue3Principle/environment',
+        link: '/vue/vue3Principle/architecture',
         activeMatch: '/vue3Principle/'
     },
     {
