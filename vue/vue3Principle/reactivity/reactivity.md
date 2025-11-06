@@ -1230,3 +1230,131 @@ const shallowUnwrapHandlers = {
 };
 ```
 
+
+
+## computed
+
+### 基本功能特性
+
+1. **响应式依赖追踪**：计算属性会自动追踪其内部使用的响应式依赖（如 `ref`、`reactive`对象的属性等），并在依赖变化时重新计算。
+2. **缓存机制**：计算属性会缓存上一次计算的结果，只有当依赖发生变化时才会重新计算。如果依赖没有变化，多次访问计算属性会返回缓存的值。
+3. **惰性计算**：计算属性是惰性的，只有在被访问时才会计算。如果计算属性没有被使用（例如，没有在模板中引用或没有在 effect 中使用），则不会计算。
+4. **可写的计算属性**：计算属性默认是只读的，但可以通过提供 `get`和 `set`函数来创建可写的计算属性。
+
+### 测试用例
+
+```
+it("happy path", () => {
+    const value = reactive({
+      foo: 1,
+    });
+
+    const getter = computed(() => {
+      return value.foo;
+    });
+
+    value.foo = 2;
+    expect(getter.value).toBe(2);
+  });
+
+  it("should compute lazily", () => {
+    const value = reactive({
+      foo: 1,
+    });
+    const getter = vi.fn(() => {
+      return value.foo;
+    });
+    const cValue = computed(getter);
+
+    // lazy
+    expect(getter).not.toHaveBeenCalled();
+
+    expect(cValue.value).toBe(1);
+    expect(getter).toHaveBeenCalledTimes(1);
+
+    // should not compute again
+    cValue.value;
+    expect(getter).toHaveBeenCalledTimes(1);
+
+    // should not compute until needed
+    value.foo = 2;
+    expect(getter).toHaveBeenCalledTimes(1);
+
+    // now it should compute
+    expect(cValue.value).toBe(2);
+    expect(getter).toHaveBeenCalledTimes(2);
+
+    // should not compute again
+    cValue.value;
+    expect(getter).toHaveBeenCalledTimes(2);
+  });
+```
+
+### 关键实现
+
+- ComputedRefImpl
+  - dep: 收集依赖
+  - effect：副作用函数
+  - _dirty：用于惰性控制
+  - _value: 值
+- 工作流程
+  - computed(() => {}), 执行ComputedRefImpl的实例化 ，执行构造函数，往实例的effect属性上赋值一个新的 ReactiveEffect 实例
+  - **首次访问计算属性**
+    - 计算属性被访问，调用 `get value()`。
+    - 由于 `_dirty`为 true，执行 `getter`函数，计算值并缓存。
+    - 在 `getter`执行过程中，会访问响应式依赖，从而将计算属性的 `effect`作为依赖收集到响应式依赖的依赖列表中。
+    - 同时，当前正在运行的 effect（例如组件的渲染 effect）会被收集到计算属性的依赖列表中（通过 `trackRefValue`函数）。
+    - 返回计算值，并将 `_dirty`设为 false。
+  - **响应式依赖变化**：
+    - 响应式依赖变化，触发计算属性的 `effect`的调度函数。
+    - 调度函数将 `_dirty`设为 true，并触发计算属性的 `trigger`，通知依赖计算属性的 effect（例如组件的渲染 effect）重新运行。
+  - **再次访问计算属性**：
+    - 如果 `_dirty`为 true，则重新计算，否则返回缓存值。
+
+```
+// packages\reactivity\src\computed.ts
+
+export function computed(getter) {
+  return new ComputedRefImpl(getter);
+}
+
+
+export class ComputedRefImpl {
+  public dep: any;
+  public effect: ReactiveEffect;
+
+  private _dirty: boolean;
+  private _value
+
+  constructor(getter) {
+    this._dirty = true;
+    this.dep = createDep();
+    this.effect = new ReactiveEffect(getter, () => {
+      // scheduler
+      // 只要触发了这个函数说明响应式对象的值发生改变了
+      // 那么就解锁，后续在调用 get 的时候就会重新执行，所以会得到最新的值
+      if (this._dirty) return;
+
+      this._dirty = true;
+      triggerRefValue(this);
+    });
+  }
+
+  get value() {
+    // 收集依赖
+    trackRefValue(this);
+    // 锁上，只可以调用一次
+    // 当数据改变的时候才会解锁
+    // 这里就是缓存实现的核心
+    // 解锁是在 scheduler 里面做的
+    if (this._dirty) {
+      this._dirty = false;
+      // 这里执行 run 的话，就是执行用户传入的 fn
+      this._value = this.effect.run();
+    }
+
+    return this._value;
+  }
+}
+```
+
