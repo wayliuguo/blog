@@ -9,6 +9,10 @@ export default [
             {
                 text: 'vue3 响应式系统',
                 link: '/vue/vue3Principle/reactivity/reactivity'
+            },
+            {
+                text: 'runtime 运行时',
+                link: '/vue/vue3Principle/runtime/runtime'
             }
         ]
     }
