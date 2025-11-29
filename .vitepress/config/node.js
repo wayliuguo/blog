@@ -29,9 +29,5 @@ export default [
         text: 'yargs 框架',
         link: '/node/yargs'
     },
-    {
-        text: 'command 框架',
-        link: '/node/command'
-    },
     nest
 ]
