@@ -12,8 +12,9 @@
 
 ### 生成代码（核心功能）
 
-| `nest g module <module-name>`           | 生成模块       | `nest g module users`                              |
+| `nest g resource <module-name>`         | 生成模块的crud | nest g resource users                              |
 | --------------------------------------- | -------------- | -------------------------------------------------- |
+| `nest g module <module-name>`           | 生成模块       | `nest g module users`                              |
 | `nest g controller <controller-name>`   | 生成控制器     | `nest g controller users`                          |
 | `nest g service <service-name>`         | 生成服务       | `nest g service users`                             |
 | `nest g class <class-name> [options]`   | 生成普通类     | `nest g class users/dto/create-user.dto --no-spec` |
