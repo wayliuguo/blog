@@ -14,8 +14,16 @@ export default {
             link: '/node/nest/aop'
         },
         {
-            text: '核心概念',
-            link: '/node/nest/coreConcept'
+            text: '核心概念-模块',
+            link: '/node/nest/module'
+        },
+        {
+            text: '核心概念-控制器',
+            link: '/node/nest/controller'
+        },
+        {
+            text: '核心概念-提供器',
+            link: '/node/nest/provider'
         }
     ]
 }
