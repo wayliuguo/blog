@@ -117,9 +117,9 @@ export class CatsController {
 
 ```
 
-- findAll: http://localhost:3000/cats
+- findAll: `http://localhost:3000/cats`
 
-- findOne: http://localhost:3000/cats/1
+- findOne: `http://localhost:3000/cats/1`
 
 ##### 路由通配符
 
@@ -179,7 +179,7 @@ getDocs(@Query('version') version) {
 
 ##### 路由参数
 
-http://localhost:3000/cats/1
+`http://localhost:3000/cats/1`
 
 使用@Param()
 
@@ -216,7 +216,7 @@ create(createCatDto: CreateCatDto) {
 
 ##### 查询参数
 
-http://localhost:3000/cats?breed=波斯猫
+`http://localhost:3000/cats?breed=波斯猫`
 
 ```
 @Get()
