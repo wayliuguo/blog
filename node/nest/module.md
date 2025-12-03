@@ -107,6 +107,204 @@ export class CatsService {
 | `forFeature()` | 局部扩展配置             | 功能模块中添加局部配置（如注册数据库实体）   | 依赖 `forRoot()` 先初始化，可多次调用 |
 | `register()`   | 独立配置并注册（一次性） | 非全局、按需加载的局部模块（如第三方 API）   | 不依赖全局初始化，单独配置单独使用    |
 
+常见组合：动态模块 + 全局模块：如 `DatabaseModule.forRoot(config)` 返回 `global: true`，既实现了动态配置，又无需在每个模块重复导入，全局可用。
+
 ##### register 例子
 
+###### 实现动态模块
+
+- 实现 `register()`
+- 返回一个模块配置，指定了`OPTIONS`、`DbService`作为依赖器
+
+```
+// src\db\db.module.ts
+
+import { DynamicModule, Module } from '@nestjs/common';
+import { DbService } from './db.service';
+
+export interface DbModuleOptions {
+  path: string;
+}
+
+@Module({})
+export class DbModule {
+  static register(options: DbModuleOptions): DynamicModule {
+    return {
+      module: DbModule,
+      providers: [
+        {
+          provide: 'OPTIONS',
+          useValue: options,
+        },
+        DbService,
+      ],
+      exports: [DbService],
+    };
+  }
+}
+```
+
+###### `Dbservice` 实现
+
+依赖器`Dbservice`，根据动态模块的`OPTIONS`就可以进行配置化
+
+```
+import { Inject, Injectable } from '@nestjs/common';
+import { DbModuleOptions } from './db.module';
+import { access, readFile, writeFile } from 'fs/promises';
+
+@Injectable()
+export class DbService {
+  @Inject('OPTIONS')
+  private options: DbModuleOptions;
+
+  async read() {
+    const filePath = this.options.path;
+
+    try {
+      await access(filePath);
+    } catch (e) {
+      return [];
+    }
+
+    const str = await readFile(filePath, {
+      encoding: 'utf-8',
+    });
+
+    if (!str) {
+      return [];
+    }
+
+    return JSON.parse(str);
+  }
+
+  async write(obj: Record<string, any>) {
+    await writeFile(this.options.path, JSON.stringify(obj || []), {
+      encoding: 'utf-8',
+    });
+  }
+}
+```
+
+###### 使用-user
+
+- `user.module.ts`
+
+```
+import { Module } from '@nestjs/common';
+import { UserService } from './user.service';
+import { UserController } from './user.controller';
+import { DbModule } from 'src/db/db.module';
+
+@Module({
+  imports: [
+    DbModule.register({
+      path: 'users.json',
+    }),
+  ],
+  controllers: [UserController],
+  providers: [UserService],
+})
+export class UserModule {}
+```
+
+- user.controller.ts
+
+```
+import { Controller, Post, Body } from '@nestjs/common';
+import { UserService } from './user.service';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
+
+@Controller('user')
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Post('register')
+  async register(@Body() registerUserDto: RegisterUserDto) {
+    return this.userService.register(registerUserDto);
+  }
+
+  @Post('login')
+  async login(@Body() loginUserDto: LoginUserDto) {
+    return this.userService.login(loginUserDto);
+  }
+}
+```
+
+- user.service.ts
+
+```
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { DbService } from 'src/db/db.service';
+import { User } from './entities/user.entity';
+import { LoginUserDto } from './dto/login-user.dto';
+
+@Injectable()
+export class UserService {
+  @Inject(DbService)
+  dbService: DbService;
+
+  async register(registerUserDto: RegisterUserDto) {
+    const users: User[] = await this.dbService.read();
+
+    const foundUser = users.find(
+      (item) => item.username === registerUserDto.username,
+    );
+
+    if (foundUser) {
+      throw new BadRequestException('该用户已经注册');
+    }
+
+    const user = new User();
+    user.username = registerUserDto.username;
+    user.password = registerUserDto.password;
+    users.push(user);
+
+    await this.dbService.write(users);
+    return user;
+  }
+
+  async login(loginUserDto: LoginUserDto) {
+    const users: User[] = await this.dbService.read();
+
+    const foundUser = users.find(
+      (item) => item.username === loginUserDto.username,
+    );
+
+    if (!foundUser) {
+      throw new BadRequestException('用户不存在');
+    }
+
+    if (foundUser.password !== loginUserDto.password) {
+      throw new BadRequestException('密码不正确');
+    }
+
+    return foundUser;
+  }
+}
+```
+
+###### 使用-book
+
+```
+import { Module } from '@nestjs/common';
+import { BookService } from './book.service';
+import { BookController } from './book.controller';
+import { DbModule } from 'src/db/db.module';
+
+@Module({
+  imports: [
+    DbModule.register({
+      path: 'books.json',
+    }),
+  ],
+  controllers: [BookController],
+  providers: [BookService],
+})
+export class BookModule {}
+```
+
 ##### forRoot+forFeature 例子
+
