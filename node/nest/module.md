@@ -308,3 +308,374 @@ export class BookModule {}
 
 ##### forRoot+forFeature 例子
 
+```
+src/
+├── dynamic-database
+	├── connections
+		|── mysql.connection.ts
+		|── postgres.connection.ts
+	├── interfaces.ts
+		|── db-config.interface.ts
+		|── db-connection.interface.ts
+	├── constants.ts
+	├── dynamic-database.module.ts
+	├── dynamic-database.service.ts
+├── dynamic-config
+	├── config.module.ts
+	├── config.service.ts
+├── dogs
+	...
+├── cats
+	...
+```
+
+###### 定义核心接口和常量
+
+```
+// db-config.interface.ts
+export type DbType = 'mysql' | 'postgres';
+
+export interface DynamicDatabaseConfig {
+  type: DbType;  // 数据库类型（mysql/postgres）
+  host: string; // 主机
+  port: number;  // 端口
+  username: string;  // 用户名
+  password: string; // 密码
+  database: string; // 数据库名称
+  synchronize?: boolean; // 是否自动同步表结构（开发环境用）
+}
+```
+
+```
+// db-connection.interface.ts
+export interface DynamicDatabaseConnection {
+  // 连接数据库
+  connect(): Promise<void>;
+  // 执行查询
+  query(sql: string, params?: any[]): Promise<any>;
+  // 执行增删改（返回影响行数）
+  execute(sql: string, params?: any[]): Promise<number>;
+  // 断开连接
+  disconnect(): Promise<void>;
+}
+```
+
+```
+// constants.ts
+export const DYNAMIC_DATABASE_CONFIG = Symbol('DYNAMIC_DATABASE_CONFIG'); // 数据库配置令牌
+export const DYNAMIC_DATABASE_CONNECTION = Symbol(
+  'DYNAMIC_DATABASE_CONNECTION',
+); // 数据库连接实例令牌
+```
+
+###### 实现配置模块&服务
+
+```
+// src\dynamic-config\config.module.ts
+
+import { Module } from '@nestjs/common';
+import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import { DynamicConfigService } from './config.service';
+
+@Module({
+  imports: [
+    // 加载 .env 文件，全局可用
+    NestConfigModule.forRoot({ isGlobal: true }),
+  ],
+  providers: [DynamicConfigService],
+  exports: [DynamicConfigService], // 导出供其他模块使用
+})
+export class DynamicConfigModule {}
+
+```
+
+```
+// src\dynamic-config\config.service.ts
+import { Injectable } from '@nestjs/common';
+import { ConfigService as NestConfigService } from '@nestjs/config';
+import { DynamicDatabaseConfig, DbType } from "src/dynamic-database/interfaces/db-config.interface";
+
+@Injectable()
+export class DynamicConfigService {
+  constructor(private nestConfigService: NestConfigService) {}
+
+  // 获取数据库配置
+  getDatabaseConfig(): DynamicDatabaseConfig {
+    return {
+      type: this.nestConfigService.get<DbType>('DB_TYPE', 'mysql'), // 默认 mysql
+      host: this.nestConfigService.get<string>('DB_HOST', 'localhost'),
+      port: this.nestConfigService.get<number>('DB_PORT', 3306), // 默认 mysql 端口
+      username: this.nestConfigService.get<string>('DB_USERNAME', 'root'),
+      password: this.nestConfigService.get<string>('DB_PASSWORD', '123456'),
+      database: this.nestConfigService.get<string>('DB_NAME', 'nest_db'),
+      synchronize: this.nestConfigService.get<boolean>('DB_SYNCHRONIZE', true), // 开发环境默认同步
+    };
+  }
+}
+```
+
+###### 数据库连接服务
+
+```
+// src\dynamic-database\connections\mysql.connection.ts
+@Injectable()
+export class MySQLConnection implements DynamicDatabaseConnection {
+  private isConnected = false;
+  private config: DynamicDatabaseConfig;
+
+  constructor(config: DynamicDatabaseConfig) {
+    this.config = config;
+  }
+
+  // 连接数据库（模拟）
+  async connect(): Promise<void> {
+    // 模拟数据库连接
+    console.log(
+      `[MySQL] 模拟连接到 ${this.config.host}:${this.config.port}/${this.config.database} 作为 ${this.config.username}...`,
+    );
+    // 这里不再使用真实的MySQL客户端连接
+    this.isConnected = true;
+    console.log('[MySQL] 模拟连接成功。');
+
+    // 模拟同步表结构
+    if (this.config.synchronize) {
+      console.log('[MySQL] 模拟表结构同步完成（cats 表）');
+    }
+  }
+
+  // 检查连接状态
+  private checkConnection(): void {
+    if (!this.isConnected) {
+      console.warn('[MySQL] 尝试使用未连接的数据库连接。');
+    }
+  }
+
+  // 执行查询（SELECT）
+  async query(sql: string, params?: any[]): Promise<any> {
+    this.checkConnection();
+    if (!this.isConnected) {
+      console.warn('[MySQL] 无法执行查询，数据库未连接。');
+      return sql;
+    }
+
+    console.log(`[MySQL] 模拟执行查询: ${sql}`);
+    if (params && params.length > 0) {
+      console.log(`[MySQL] 查询参数:`, params);
+    }
+
+    // 直接返回SQL字符串
+    return sql;
+  }
+
+  // 执行增删改（INSERT/UPDATE/DELETE）
+  async execute(sql: string, params?: any[]): Promise<number> {
+    this.checkConnection();
+    if (!this.isConnected) {
+      console.warn('[MySQL] 无法执行操作，数据库未连接。');
+      return 0;
+    }
+
+    console.log(`[MySQL] 模拟执行操作: ${sql}`);
+    if (params && params.length > 0) {
+      console.log(`[MySQL] 操作参数:`, params);
+    }
+
+    // 模拟操作成功，返回影响行数
+    return 1;
+  }
+
+  // 断开连接
+  async disconnect(): Promise<void> {
+    // 模拟断开连接
+    console.log('[MySQL] 模拟断开连接...');
+    this.isConnected = false;
+    console.log(`[MySQL] 模拟断开与 ${this.config.database} 的连接`);
+  }
+}
+```
+
+```
+// src\dynamic-database\connections\postgres.connection.ts
+...
+```
+
+###### 实现数据库动态模块
+
+- `forRoot 方法`
+  - 接收全局数据库配置 `DynamicDatabaseConfig`
+  - 注册数据库配置提供器（此提供器注入给动态创建数据库连接器）
+  - 注册动态创建数据库连接器，根据配置动态创建数据库连接实例（MySQL/PostgreSQL）
+  - 将模块标记为 global: true ，使其在全局范围内可用
+  - 导出连接实例和服务，供其他模块使用
+- `forFeature 方法`
+  - 为特定业务模块提供局部数据库配置
+  - 存储模块配置到 featureConfigs 静态 Map 中
+  - 创建模块专属的配置提供器（如 DOGS_DB_CONFIG 、 PIGS_DB_CONFIG ）
+  - 创建模块专属的数据库服务实例
+  - 使用 Scope.REQUEST 确保每个请求都有独立的实例
+- 生命周期管理
+  - 实现 OnModuleDestroy 接口，确保模块销毁时断开数据库连接
+  - 防止资源泄漏
+
+```
+// dynamic-database.module.ts
+
+@Module({})
+export class DynamicDatabaseModule implements OnModuleDestroy {
+  // 存储连接实例，用于模块销毁时断开连接
+  private static connection: DynamicDatabaseConnection;
+  // 存储特性配置
+  private static featureConfigs = new Map<string, FeatureConfig>();
+
+  // 动态模块核心方法：接收配置，返回动态模块
+  static forRoot(config: DynamicDatabaseConfig): DynamicModule {
+    // 1. 注册数据库配置提供器
+    const configProvider: Provider = {
+      provide: DYNAMIC_DATABASE_CONFIG,
+      useValue: config,
+    };
+
+    // 2. 动态创建数据库连接提供器（核心逻辑）
+    const connectionProvider: Provider = {
+      provide: DYNAMIC_DATABASE_CONNECTION,
+      useFactory: async (
+        dbConfig: DynamicDatabaseConfig,
+      ): Promise<DynamicDatabaseConnection> => {
+        let connection: DynamicDatabaseConnection;
+
+        // 根据数据库类型创建对应连接实例
+        switch (dbConfig.type) {
+          case 'postgres':
+            connection = new PostgreSQLConnection(dbConfig);
+            break;
+          case 'mysql':
+          default:
+            connection = new MySQLConnection(dbConfig);
+            break;
+        }
+
+        // 初始化连接（异步操作）
+        await connection.connect();
+        DynamicDatabaseModule.connection = connection; // 保存连接实例
+        return connection;
+      },
+      inject: [DYNAMIC_DATABASE_CONFIG], // 注入配置
+    };
+
+    // 3. 返回动态模块配置
+    return {
+      module: DynamicDatabaseModule,
+      global: true, // 全局模块：所有模块无需重复导入，直接注入
+      providers: [configProvider, connectionProvider, DynamicDatabaseService],
+      exports: [DYNAMIC_DATABASE_CONNECTION, DynamicDatabaseService], // 导出供其他模块使用
+    };
+  }
+
+  // forFeature方法：用于特性模块配置
+  static forFeature(
+    moduleName: string,
+    config: FeatureConfig = {},
+  ): DynamicModule {
+    // 存储特性模块配置
+    DynamicDatabaseModule.featureConfigs.set(moduleName, config);
+
+    // 创建特性模块配置提供器
+    const featureConfigProvider: Provider = {
+      provide: `${moduleName.toUpperCase()}_DB_CONFIG`,
+      useValue: config,
+      scope: Scope.REQUEST,
+    };
+
+    // 创建特定模块的数据库服务提供器
+    const moduleDatabaseServiceProvider: Provider = {
+      provide: `${moduleName}DatabaseService`,
+      useFactory: (connection: DynamicDatabaseConnection) => {
+        const featureConfig =
+          DynamicDatabaseModule.featureConfigs.get(moduleName) || {};
+        // 这里可以根据特性配置自定义服务实例
+        // 简单起见，我们仍然使用基础的DynamicDatabaseService
+        return new DynamicDatabaseService(connection);
+      },
+      inject: [DYNAMIC_DATABASE_CONNECTION],
+      scope: Scope.REQUEST,
+    };
+
+    return {
+      module: DynamicDatabaseModule,
+      providers: [featureConfigProvider, moduleDatabaseServiceProvider],
+      exports: [featureConfigProvider, moduleDatabaseServiceProvider],
+    };
+  }
+
+  // 获取特性模块配置的静态方法
+  static getFeatureConfig(moduleName: string): FeatureConfig {
+    return this.featureConfigs.get(moduleName) || {};
+  }
+
+  // 模块销毁时断开数据库连接（Nest 生命周期钩子）
+  async onModuleDestroy() {
+    if (DynamicDatabaseModule.connection) {
+      await DynamicDatabaseModule.connection.disconnect();
+    }
+  }
+}
+
+```
+
+###### 实现数据库服务
+
+```
+@Injectable()
+export class DynamicDatabaseService {
+  constructor(
+    @Inject(DYNAMIC_DATABASE_CONNECTION)
+    private readonly connection: DynamicDatabaseConnection,
+  ) {}
+
+  // 查询（SELECT）
+  async query(sql: string, params?: any[]): Promise<any> {
+    return this.connection.query(sql, params);
+  }
+}
+```
+
+###### 使用方式-在根模块中初始化
+
+`forRoot` 入参是调用动态配置服务的`getDatabaseConfig`获得的配置信息
+
+```
+import { ConfigModule, ConfigService } from '@nestjs/config';
+...
+@Module({
+  imports: [
+    ConfigModule.forRoot(), // nestjs 提供的配置模块
+    DynamicConfigModule,
+    DynamicDatabaseModule.forRoot(
+      new DynamicConfigService(new ConfigService()).getDatabaseConfig(),
+    ),
+    DogsModule,
+    PigsModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+###### 使用方式-在子模块中定制特性
+
+```
+@Module({
+  controllers: [PigsController],
+  providers: [PigsService],
+  imports: [
+    // 为pigs模块添加特定的数据库配置
+    DynamicDatabaseModule.forFeature('pigs', {
+      tableName: 'pigs',
+      prefix: 'pig_',
+    }),
+  ],
+})
+export class PigsModule {}
+```
+

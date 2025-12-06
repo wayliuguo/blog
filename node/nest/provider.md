@@ -347,6 +347,8 @@ export class ProviderModuleService {
 
    6. 数据库和工厂提供器
 
+      `useFactory` 的参数来源就是`inject`中注入的依赖项，严格按照顺序
+   
       ```
       // src/database/database.module.ts
       import { Module, Provider } from '@nestjs/common';
@@ -415,7 +417,7 @@ export class ProviderModuleService {
       ```
 
    7. 应用控制器（app.controller.ts）
-
+   
       ```
       @Controller()
       export class AppController implements OnModuleDestroy {
@@ -437,7 +439,7 @@ export class ProviderModuleService {
         }
       }
       ```
-
+   
       ![image-20251201213834777](image-20251201213834777.png)
 
 ###### 类提供器
