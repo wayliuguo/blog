@@ -24,6 +24,10 @@ export default {
         {
             text: '核心概念-提供器',
             link: '/node/nest/provider'
+        },
+        {
+            text: '核心概念-中间件',
+            link: '/node/nest/middleware'
         }
     ]
 }
