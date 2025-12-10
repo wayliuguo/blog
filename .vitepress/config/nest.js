@@ -28,6 +28,10 @@ export default {
         {
             text: '核心概念-中间件',
             link: '/node/nest/middleware'
+        },
+        {
+            text: '核心概念-守卫',
+            link: '/node/nest/guard'
         }
     ]
 }
