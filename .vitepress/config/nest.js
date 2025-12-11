@@ -32,6 +32,10 @@ export default {
         {
             text: '核心概念-守卫',
             link: '/node/nest/guard'
+        },
+        {
+            text: '核心概念-拦截器',
+            link: '/node/nest/interceptor'
         }
     ]
 }
