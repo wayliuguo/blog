@@ -215,6 +215,206 @@ export class CacheInterceptor implements NestInterceptor {
 @UseInterceptors(TransformResponseInterceptor, new CacheInterceptor())
 ```
 
+### 超时处理拦截器
+
+```
+
+```
+
+### 日志记录拦截器
+
+```
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+} from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+
+@Injectable()
+export class LoggingInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const { method, url, ip, headers } = request;
+    const userAgent = headers['user-agent'] || '';
+
+    const now = Date.now();
+
+    return next.handle().pipe(
+      tap(() => {
+        const response = context.switchToHttp().getResponse();
+        const delay = Date.now() - now;
+
+        console.log(
+          `${method} ${url} - ${response.statusCode} - ${delay}ms - IP: ${ip} - Agent: ${userAgent}`,
+        );
+      }),
+    );
+  }
+}
+```
+
 ## 拦截器的绑定方式
 
+### 全局绑定
+
+```
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { TransformInterceptor } from './interceptors/transform.interceptor';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  
+  // 全局拦截器
+  app.useGlobalInterceptors(new TransformInterceptor());
+  
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+或者通过依赖注入方式（推荐）：
+
+```
+import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TransformInterceptor } from './interceptors/transform.interceptor';
+
+@Module({
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+### 控制器级别
+
+```
+import { Controller, UseInterceptors } from '@nestjs/common';
+import { TransformInterceptor } from './interceptors/transform.interceptor';
+import { CacheInterceptor } from './interceptors/cache.interceptor';
+
+@Controller('users')
+@UseInterceptors(TransformInterceptor, CacheInterceptor)
+export class UsersController {
+  // 该控制器的所有路由都会应用上述拦截器
+}
+```
+
+### 方法级别绑定
+
+```
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
+import { TimeoutInterceptor } from './interceptors/timeout.interceptor';
+
+@Controller('users')
+export class UsersController {
+  
+  @Get()
+  @UseInterceptors(TimeoutInterceptor)
+  async findAll() {
+    // 这个特定路由会应用超时拦截器
+    return this.usersService.findAll();
+  }
+}
+```
+
+### 拦截器执行顺序
+
+```
+// 执行顺序示例
+global Before...      // 全局拦截器
+class Before...       // 控制器级拦截器  
+method Before...      // 方法级拦截器
+// 方法执行逻辑
+method After... 0ms   // 方法级拦截器
+class After... 1ms    // 控制器级拦截器
+global After... 3ms   // 全局拦截器
+```
+
 ## 高级应用场景
+
+### 用户操作日志拦截器
+
+结合数据库记录用户操作
+
+```
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+import { OperationLogService } from '../services/operation-log.service';
+
+@Injectable()
+export class OperationLogInterceptor implements NestInterceptor {
+  constructor(private readonly logService: OperationLogService) {}
+  
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const { user, method, url, params, body } = request;
+    
+    // 异步记录操作日志（不阻塞主响应）
+    return next.handle().pipe(
+      tap(async () => {
+        try {
+          if (user && method !== 'GET') {
+            await this.logService.record({
+              userId: user.id,
+              action: url,
+              method: method,
+              params: { ...params, ...body },
+              timestamp: new Date()
+            });
+          }
+        } catch (error) {
+          // 日志记录错误不应影响主流程
+          console.error('操作日志记录失败:', error);
+        }
+      })
+    );
+  }
+}
+```
+
+### 数据转换和清理拦截器
+
+处理 null 值或敏感信息
+
+```
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+@Injectable()
+export class DataSanitizeInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    return next.handle().pipe(
+      map(data => this.sanitizeData(data))
+    );
+  }
+  
+  private sanitizeData(data: any): any {
+    if (Array.isArray(data)) {
+      return data.map(item => this.sanitizeItem(item));
+    }
+    return this.sanitizeItem(data);
+  }
+  
+  private sanitizeItem(item: any): any {
+    if (!item || typeof item !== 'object') {
+      return item === null ? '' : item; // 将 null 转为空字符串
+    }
+    
+    // 移除敏感字段
+    const { password, ...sanitizedItem } = item;
+    return sanitizedItem;
+  }
+}
+```
+
