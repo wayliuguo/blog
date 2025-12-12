@@ -114,3 +114,19 @@ export class AppModule {}
 5. **控制器（Controller）和服务（Service）**
 6. **拦截器（Interceptor）- 后置处理**
 7. **异常过滤器（Exception Filter）**
+
+
+
+## 核心功能模块
+
+| 模块         | 作用                 | 实现方式                  |
+| ------------ | -------------------- | ------------------------- |
+| 控制器       | 处理 HTTP 请求       | `@Controller()`, `@Get()` |
+| 服务         | 封装业务逻辑         | `@Injectable()`           |
+| 模块         | 组织代码结构         | `@Module()`               |
+| 中间件       | 请求预处理           | `NestMiddleware`          |
+| 异常过滤器   | 统一异常处理         | `ExceptionFilter`         |
+| 管道         | 数据验证和转换       | `PipeTransform`           |
+| 守卫         | 权限控制             | `CanActivate`             |
+| 拦截器       | 请求 / 响应拦截、AOP | `NestInterceptor`         |
+| 自定义装饰器 | 提取请求数据         | `createParamDecorator`    |
