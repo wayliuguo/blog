@@ -136,7 +136,7 @@ async function bootstrap() {
 
 ## 创建自定义管道
 
-这个管道用于验证输入的电话号码格式。
+### 实现自定义管道
 
 ```
 import { PipeTransform, Injectable, BadRequestException, ArgumentMetadata } from '@nestjs/common';
@@ -153,6 +153,8 @@ export class PhoneValidationPipe implements PipeTransform {
   }
 }
 ```
+
+### 使用管道
 
 ```
 import { Controller, Post, Body } from '@nestjs/common';
@@ -171,3 +173,16 @@ export class UserController {
 }
 ```
 
+### transform 参数
+
+- value：当前被处理的参数的值。
+- metadata：参数的元数据，包含以下属性
+  - type：参数来源（'body', 'query', 'param', 'custom'）。
+  - metatype：参数的类型（如 CreateUserDto）。
+  - data：传递给装饰器的字符串（如 @Body('username')中的 'username'）。
+
+## 核心概念和最佳实践
+
+- **执行顺序**：管道在 NestJS 请求生命周期中的位置位于中间件之后、路由处理程序（控制器方法）之前。如果多个管道应用于同一请求，其执行顺序为：全局管道 -> 控制器管道 -> 方法管道 -> 参数管道。
+- **DTO 模式**：强烈建议使用 DTO（数据传输对象）来定义接口的输入和输出格式。这不仅是 TypeScript 的优势体现，也是与 `ValidationPipe`和 `class-validator`完美配合的最佳实践。
+- **全局管道的优势**：对于像 `ValidationPipe`这样核心的验证逻辑，推荐将其设置为全局管道，以确保整个应用的数据一致性，避免在每个控制器或方法中重复声明。
