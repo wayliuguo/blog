@@ -36,6 +36,10 @@ export default {
         {
             text: '核心概念-拦截器',
             link: '/node/nest/interceptor'
+        },
+        {
+            text: '核心概念-管道',
+            link: '/node/nest/pipe'
         }
     ]
 }
