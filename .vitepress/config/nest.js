@@ -56,6 +56,10 @@ export default {
         {
             text: '循环依赖',
             link: '/node/nest/circularDependency'
+        },
+        {
+            text: '模块引用',
+            link: '/node/nest/moduleRef'
         }
     ]
 }
