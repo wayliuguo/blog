@@ -50,16 +50,28 @@ export default {
             link: '/node/nest/customDecorator'
         },
         {
-            text: '注入作用域',
+            text: '基础知识-注入作用域',
             link: '/node/nest/injectionScope'
         },
         {
-            text: '循环依赖',
+            text: '基础知识-循环依赖',
             link: '/node/nest/circularDependency'
         },
         {
-            text: '模块引用',
+            text: '基础知识-模块引用',
             link: '/node/nest/moduleRef'
+        },
+        {
+            text: '基础知识-懒加载模块',
+            link: '/node/nest/lazyLoadingModule'
+        },
+        {
+            text: '基础知识-执行上下文',
+            link: '/node/nest/executionContext'
+        },
+        {
+            text: '基础知识-生命周期事件',
+            link: '/node/nest/lifecycleEvent'
         }
     ]
 }
