@@ -44,6 +44,10 @@ export default {
         {
             text: '核心概念-异常过滤器',
             link: '/node/nest/exceptionFilter'
+        },
+        {
+            text: '核心概念-自定义装饰器',
+            link: '/node/nest/customDecorator'
         }
     ]
 }
