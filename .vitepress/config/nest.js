@@ -52,6 +52,10 @@ export default {
         {
             text: '注入作用域',
             link: '/node/nest/injectionScope'
+        },
+        {
+            text: '循环依赖',
+            link: '/node/nest/circularDependency'
         }
     ]
 }
