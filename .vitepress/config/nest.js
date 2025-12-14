@@ -48,6 +48,10 @@ export default {
         {
             text: '核心概念-自定义装饰器',
             link: '/node/nest/customDecorator'
+        },
+        {
+            text: '注入作用域',
+            link: '/node/nest/injectionScope'
         }
     ]
 }
