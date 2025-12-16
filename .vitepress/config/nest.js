@@ -72,6 +72,10 @@ export default {
         {
             text: '基础知识-生命周期事件',
             link: '/node/nest/lifecycleEvent'
+        },
+        {
+            text: '基础知识-docker',
+            link: '/node/nest/docker'
         }
     ]
 }
