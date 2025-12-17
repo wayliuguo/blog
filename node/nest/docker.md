@@ -61,7 +61,53 @@ nginx -s reload
 exit
 ```
 
+## 自定义 Dockerfile
 
+### 编写 Dockerfile
+
+- FROM：基于一个基础镜像来修改
+- WORKDIR：指定当前工作目录
+- COPY：把容器外的内容复制到容器内
+- EXPOSE：声明当前容器要访问的网络端口，比如这里起服务会用到 8080
+- VOLUME: 目录挂载
+- RUN：在容器内执行命令
+- CMD：容器启动的时候执行的命令
+- `.`：当前的工作目录（在终端中执行`docker build`所处的目录）
+
+```
+FROM node:latest
+
+WORKDIR /app
+
+COPY . .
+
+RUN npm config set registry https://registry.npmmirror.com/
+
+RUN npm install -g http-server
+
+EXPOSE 8080
+
+VOLUME /app
+
+CMD ["http-server", "-p", "8080"]
+```
+
+### 打包
+
+- my-image：镜像名
+- latest: 镜像标签（如node: latest 的 latest）
+
+```
+docker build -t my-image:latest .
+```
+
+### 使用
+
+```
+docker run -d --name my-image-test -p 8888:8080 my-image:latest
+```
+
+![image-20251217224316066](image-20251217224316066.png)
 
 ## 目录挂载（Volume/Bind Mount）
 
