@@ -109,6 +109,210 @@ docker run -d --name my-image-test -p 8888:8080 my-image:latest
 
 ![image-20251217224316066](image-20251217224316066.png)
 
+## Nest 项目编写 dockerfile
+
+### docker daemon
+
+在`docker build`的时候，会把 dockerfile 和它的构建上下文（也就是所在目录）打包发送给 docker daemon 来构建镜像。
+
+```
+docker build -t my-image:latest .
+```
+
+这个`.`就是构建上下文的目录，也可以指定别的路径`-f filename`
+
+<img src="41-2.png" alt="img" style="zoom:50%;" />
+
+
+
+### .dockerignore
+
+镜像自然是越小性能越好，所以 docker 支持你通过 .dockerignore 声明哪些不需要发送给 docker daemon。
+
+可以这样写：
+
+```
+# 这是一个注释
+*.md
+!README.md
+node_modules/
+[a-c].txt
+.git/
+.DS_Store
+.vscode/
+.dockerignore
+.eslintignore
+.eslintrc
+.prettierrc
+.prettierignore
+```
+
+### 正式构建镜像
+
+#### .dockerignore
+
+```
+*.md
+node_modules/
+.git/
+.vscode/
+.dockerignore
+```
+
+#### Dockerfile
+
+```
+FROM node:latest
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm config set registry https://registry.npmmirror.com/
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+EXPOSE 3000
+
+CMD [ "node", "./dist/main.js" ]
+```
+
+#### 应用
+
+```
+docker run -d --name nest-start-test -p 3000:3000 nest-start:latest
+```
+
+就已经正式可以应用了，访问：`http://localhost:3000/`
+
+#### 存在的问题
+
+上面构建镜像的时候，明显不需要`src`等目录，仅需要`dist`目录就可以了
+
+<img src="image-20251217232402708.png" alt="image-20251217232402708" style="zoom:50%;" />
+
+#### 构建优化-多阶段构建
+
+```
+# build stage
+FROM node:latest as build-stage
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm config set registry https://registry.npmmirror.com/
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+# production stage
+FROM node:latest as production-stage
+
+COPY --from=build-stage /app/dist /app
+COPY --from=build-stage /app/package.json /app/package.json
+
+WORKDIR /app
+
+RUN npm config set registry https://registry.npmmirror.com/
+
+RUN npm install --production
+
+EXPOSE 3000
+
+CMD ["node", "/app/main.js"]
+```
+
+#### 生产优化建议
+
+1. 生产阶段使用轻量镜像（大幅减小体积）
+
+   `node:latest` 基于 Debian 系统，体积约 1.6GB；而 `node:xx-alpine` 基于 Alpine Linux，体积仅几十 MB，是生产环境的首选。
+
+   **注意**：Alpine 镜像使用 musl libc 而非 glibc，部分 Node.js 原生模块（如 `bcrypt`、`canvas`）可能存在兼容问题，可通过以下方式解决：
+
+   - 构建阶段使用全量镜像（`node:20`），生产阶段使用 Alpine 镜像。
+   - 若有兼容问题，可安装 `gcompat` 库（Alpine 下的 glibc 兼容层）。
+
+2. 优化依赖安装（利用缓存 + 保证版本一致性）
+
+   - 复制 `package-lock.json`（或 `yarn.lock`）文件，保证依赖版本的一致性。
+
+   - 合并 `RUN` 指令，减少镜像层数。
+
+3. 使用非 root 用户运行应用（提升安全性）
+
+​		默认以 `root` 用户运行应用存在安全风险，可创建普通用户并切换。
+
+4. 清理 npm 缓存（减少镜像冗余）
+
+​		安装依赖后清理 npm 缓存，进一步减小镜像体积。
+
+```
+# 构建阶段：使用 Node.js 20 LTS 全量镜像（保证构建工具兼容性）
+FROM node:20 as build-stage
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 package.json 和 package-lock.json（利用缓存，减少重复安装）
+COPY package.json package-lock.json ./
+
+# 配置国内镜像源并安装所有依赖
+RUN npm config set registry https://registry.npmmirror.com/ \
+    && npm install
+
+# 复制项目源代码（.dockerignore 已忽略无用文件）
+COPY . .
+
+# 执行构建命令
+RUN npm run build
+
+# 生产阶段：使用 Node.js 20 Alpine 镜像（轻量）
+FROM node:20-alpine as production-stage
+
+# 安装时区和兼容库（按需，如需要中文时区、glibc 兼容）
+RUN apk add --no-cache tzdata gcompat
+ENV TZ=Asia/Shanghai
+
+# 创建普通用户（提升安全性）
+RUN addgroup -g 1001 -S nodejs \
+    && adduser -S appuser -u 1001
+
+# 从构建阶段复制构建产物和 package.json
+COPY --from=build-stage /app/dist /app
+COPY --from=build-stage /app/package.json /app/package.json
+
+# 设置工作目录
+WORKDIR /app
+
+# 配置国内镜像源、安装生产依赖并清理缓存
+RUN npm config set registry https://registry.npmmirror.com/ \
+    && npm install --production \
+    && npm cache clean --force
+
+# 修改文件权限为普通用户
+RUN chown -R appuser:nodejs /app
+
+# 切换到普通用户
+USER appuser
+
+# 暴露端口（仅声明，实际映射需用 -p 参数）
+EXPOSE 3000
+
+# 启动应用（NestJS 构建后的入口通常是 dist/main.js）
+CMD ["node", "/app/main.js"]
+```
+
+
+
 ## 目录挂载（Volume/Bind Mount）
 
 ### 核心作用
