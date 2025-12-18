@@ -121,7 +121,7 @@ docker build -t my-image:latest .
 
 这个`.`就是构建上下文的目录，也可以指定别的路径`-f filename`
 
-<img src="41-2.png" alt="img" style="zoom:50%;" />
+<img src="docker.png" alt="img" style="zoom:50%;" />
 
 
 
