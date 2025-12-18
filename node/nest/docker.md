@@ -193,7 +193,7 @@ docker run -d --name nest-start-test -p 3000:3000 nest-start:latest
 
 上面构建镜像的时候，明显不需要`src`等目录，仅需要`dist`目录就可以了
 
-<img src="image-20251217232402708.png" alt="image-20251217232402708" style="zoom:50%;" />
+<img src="./image-20251217232402708.png" alt="image-20251217232402708" style="zoom:50%;" />
 
 #### 构建优化-多阶段构建
 
