@@ -76,6 +76,10 @@ export default {
         {
             text: '基础知识-docker',
             link: '/node/nest/docker'
+        },
+        {
+            text: '基础知识-pm2',
+            link: '/node/nest/pm2'
         }
     ]
 }
