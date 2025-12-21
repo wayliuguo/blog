@@ -80,6 +80,10 @@ export default {
         {
             text: '基础知识-pm2',
             link: '/node/nest/pm2'
+        },
+        {
+            text: 'mysql',
+            link: '/node/nest/mysql'
         }
     ]
 }
