@@ -82,8 +82,8 @@ export default {
             link: '/node/nest/pm2'
         },
         {
-            text: 'mysql',
-            link: '/node/nest/mysql'
+            text: 'mysql-入门',
+            link: '/node/nest/mysqlBasic'
         }
     ]
 }
