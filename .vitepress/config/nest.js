@@ -84,6 +84,10 @@ export default {
         {
             text: 'mysql-入门',
             link: '/node/nest/mysqlBasic'
+        },
+        {
+            text: 'mysql-练习',
+            link: '/node/nest/mysqlPractice'
         }
     ]
 }
