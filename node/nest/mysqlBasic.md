@@ -372,6 +372,8 @@ SELECT name, score, CASE WHEN score >=90 THEN '优秀' WHEN score >=60 THEN '良
 #### INNER JOIN
 
 - 语法：`JOIN` 或 `INNER JOIN`
+  - `test_db.user JOIN id_card`: 内连接，返回两表中满足关联条件的记录(无需考虑先后顺序)
+  - `ON user.id = id_card.user_id`: 关联条件，指定两表中用于匹配的列
 - 作用：只返回两表中满足关联条件的记录
 
 ```
