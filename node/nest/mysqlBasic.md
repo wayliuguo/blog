@@ -557,11 +557,104 @@ DELETE FROM `test_db`.`user` WHERE (`id` = '1');
     - id
     - name
 
-## 子查询 和 EXISTS
+## 子查询 和 EXISTS\NOT EXISTS
 
+### 子查询
 
+如果我想查询学生表中成绩最高的学生的姓名和班级名称
 
+```
+SELECT MAX(score) FROM student; // 假设这个最高分的分数为95分
+SELECT name, class FROM student WHERE score = 95;
+```
 
+子查询：
 
+```
+SELECT name, class FROM student WHERE score = (SELECT MAX(score) FROM student);
+```
 
+### EXISTS
+
+查询所有存在员工的部门名称:
+
+```
+SELECT name FROM department
+    WHERE EXISTS (
+        SELECT * FROM employee WHERE department.id = employee.department_id
+    );
+```
+
+| 部分                                                         | 作用                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `SELECT name FROM department`                                | 主查询：从 `department` 表中获取部门名称                     |
+| `WHERE EXISTS (...)`                                         | 条件：判断子查询是否有返回结果（只要有结果，`EXISTS` 就为 `TRUE`，该部门会被选中） |
+| `SELECT * FROM employee WHERE department.id = employee.department_id` | 子查询：检查当前部门（`department.id`）是否在 `employee` 表中有对应的员工（`employee.department_id`） |
+
+1. 主查询遍历 `department` 表的每一行（每个部门）。
+2. 对于每个部门，执行子查询：在 `employee` 表中查找是否有 `department_id` 等于当前部门 `id` 的员工。
+3. 如果子查询找到至少一条记录，`EXISTS` 返回 `TRUE`，该部门的名称会被加入结果集；否则跳过该部门。
+
+### NOT EXISTS
+
+查询所有不存在员工的部门名称:
+
+```
+SELECT name FROM department
+    WHERE NOT EXISTS (
+        SELECT * FROM employee WHERE department.id = employee.department_id
+    );
+```
+
+| 部分                                                         | 具体作用                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `SELECT name FROM department`                                | 主查询：从部门表中获取部门名称                               |
+| `WHERE NOT EXISTS (...)`                                     | 条件：子查询**无结果返回**时，该部门才会被选中               |
+| `SELECT * FROM employee WHERE department.id = employee.department_id` | 子查询：检查当前部门（`department.id`）是否在员工表中有对应的员工 |
+
+1. 主查询遍历 `department` 表的每一个部门（每一行）。
+2. 对每个部门，执行子查询：在 `employee` 表中查找是否有 `department_id` 等于当前部门 `id` 的员工。
+3. 如果子查询**没有找到任何员工记录**，`NOT EXISTS` 返回 `TRUE`，该部门名称被加入结果集；如果找到员工，就跳过该部门。
+
+### 非 select 用法
+
+除了在select可以使用，还可以在update、insert、delete 等场景里使用
+
+#### insert
+
+```
+产品表-product
+id  name        price   category stock
+1	iPhone12	6999.00	手机	100
+2	iPad Pro	7999.00	平板电脑	50
+3	MacBook Pro	12999.00	笔记本电脑	30
+4	AirPods Pro	1999.00	耳机	200
+5	Apple Watch	3299.00	智能手表	80
+```
+
+建立一个分类_平均价格（`avg_price_by_catrgory`）表，用于存储分类-平均价格
+
+```
+INSERT INTO avg_price_by_category (category, avg_price) 
+    SELECT category, AVG(price) FROM product GROUP BY category;
+```
+
+#### update
+
+把技术部所有人的name前加上：“技术-”
+
+```
+UPDATE employee SET name = CONCAT('技术-', name) 
+    WHERE department_id = (
+        SELECT id FROM department WHERE name = '技术部'
+    );
+```
+
+#### delete
+
+```
+DELETE FROM employee WHERE department_id = (
+    SELECT id FROM department WHERE name = '技术部'
+);
+```
 
