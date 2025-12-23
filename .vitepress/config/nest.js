@@ -88,6 +88,10 @@ export default {
         {
             text: 'mysql-练习',
             link: '/node/nest/mysqlPractice'
+        },
+        {
+            text: 'mysql-进阶',
+            link: '/node/nest/mysqlAdvanced'
         }
     ]
 }
