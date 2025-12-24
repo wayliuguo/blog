@@ -92,6 +92,10 @@ export default {
         {
             text: 'mysql-进阶',
             link: '/node/nest/mysqlAdvanced'
+        },
+        {
+            text: 'mysql-mysql2',
+            link: '/node/nest/mysql2'
         }
     ]
 }
