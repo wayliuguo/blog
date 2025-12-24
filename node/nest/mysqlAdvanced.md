@@ -123,3 +123,67 @@ SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
 SET GLOBAL TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 ```
 
+
+
+## 视图、存储过程、函数
+
+### 视图
+
+视图是基于**一个或多个表的查询结果**构建的「虚拟表」—— 它本身不存储数据，仅存储查询逻辑，每次访问视图时，会动态执行底层 `SQL` 并返回结果。
+
+```
+// 创建视图
+CREATE VIEW customer_orders AS 
+    SELECT 
+        c.name AS customer_name, 
+        o.id AS order_id, 
+        o.order_date, 
+        o.total_amount
+    FROM customers c
+    JOIN orders o ON c.id = o.customer_id;
+    
+// 查询
+select * from customer_orders;
+```
+
+### 存储过程
+
+存储过程是封装在数据库中的「一组 `SQL` 语句的集合」，支持条件判断、循环、变量等编程逻辑，可接收参数、返回结果，用于执行批量操作（如批量插入、业务逻辑处理）。
+
+```
+// 创建存储过程
+DELIMITER $$
+CREATE PROCEDURE get_customer_orders(IN customer_id INT)
+BEGIN
+        SELECT o.id AS order_id, o.order_date, o.total_amount
+        FROM orders o
+		WHERE o.customer_id = customer_id;
+END $$
+DELIMITER ;
+
+// 调用
+CALL get_customer_orders(5);
+```
+
+### 函数
+
+函数（自定义函数）是封装在数据库中的「有返回值的 SQL 逻辑块」，语法与存储过程类似，但必须返回单个值，可直接嵌入 `SELECT` 语句中使用。
+
+```
+// 创建函数
+SET GLOBAL log_bin_trust_function_creators = 1;
+
+DELIMITER $$
+CREATE FUNCTION square(x INT)
+RETURNS INT
+BEGIN
+    DECLARE result INT;
+    SET result = x * x;
+    RETURN result;
+END $$
+DELIMITER ;
+
+// 调用
+select customer_id, square(total_amount) from orders;
+```
+
