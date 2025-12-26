@@ -96,6 +96,10 @@ export default {
         {
             text: 'mysql-mysql2',
             link: '/node/nest/mysql2'
+        },
+        {
+            text: 'mysql-typeorm',
+            link: '/node/nest/typeorm'
         }
     ]
 }
