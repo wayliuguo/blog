@@ -409,5 +409,196 @@ AppDataSource.initialize()
    npx typeorm entity:create src/entity/IdCard
    ```
 
-2. 
+2. IdCard entity
+
+   ```
+   import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+   import { User } from "./User";
+   
+   @Entity({
+     name: "id_card",
+   })
+   export class IdCard {
+     @PrimaryGeneratedColumn()
+     id: number;
+   
+     @Column({
+       length: 50,
+       comment: "身份证号",
+     })
+     cardName: string;
+   
+     @JoinColumn()
+     @OneToOne(() => User, {
+       cascade: true, // 是否级联操作(删除时级联删除关联的user)
+       onDelete: "CASCADE", //  "RESTRICT" | "CASCADE" | "SET NULL" | "DEFAULT" | "NO ACTION"
+       onUpdate: "CASCADE", //  "RESTRICT" | "CASCADE" | "SET NULL" | "DEFAULT" | "NO ACTION"
+     })
+     user: User;
+   }
+   ```
+
+### CRUD
+
+#### save
+
+```
+import { AppDataSource } from "./data-source";
+import { IdCard } from "./entity/IdCard";
+import { User } from "./entity/User";
+
+AppDataSource.initialize()
+  .then(async () => {
+    const user = new User();
+    user.firstName = "san";
+    user.lastName = "zhang";
+    user.age = 20;
+
+    const idCard = new IdCard();
+    idCard.cardName = "222222222222";
+    idCard.user = user; // 关联user
+
+    await AppDataSource.manager.save(user);
+    await AppDataSource.manager.save(idCard);
+  })
+  .catch((error) => console.log(error));
+```
+
+#### find
+
+```
+import { AppDataSource } from "./data-source";
+import { IdCard } from "./entity/IdCard";
+
+AppDataSource.initialize()
+  .then(async () => {
+    // 查找所有IdCard
+    // const ics = await AppDataSource.manager.find(IdCard);
+    // 查找所有IdCard，关联User
+    // const ics = await AppDataSource.manager.find(IdCard, {
+    //   relations: {
+    //     user: true,
+    //   },
+    // });
+    const ics = await AppDataSource.manager
+      .getRepository(IdCard)
+      .createQueryBuilder("ic")
+      .leftJoinAndSelect("ic.user", "u")
+      .getMany();
+
+    console.log(ics);
+  })
+  .catch((error) => console.log(error));
+```
+
+
+
+## 一对多映射和关联CRUD
+
+### 一对多映射
+
+```
+// Department.ts
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Employee } from "./Employee";
+
+@Entity()
+export class Department {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    length: 50,
+  })
+  name: string;
+
+  // 第二个参数指定外键列在 employee.department
+  @OneToMany(() => Employee, (employee) => employee.department)
+  employees: Employee[];
+}
+
+// Employee.ts
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Department } from "./Department";
+
+@Entity()
+export class Employee {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    length: 50,
+  })
+  name: string;
+
+  @ManyToOne(() => Department, {
+    onDelete: 'CASCADE', // 级联删除，当部门被删除时，关联的员工也会被删除
+  })
+  department: Department;
+}
+```
+
+### CRUD
+
+#### save
+
+```
+import { Department } from "./entity/Department";
+import { Employee } from "./entity/Employee";
+import { AppDataSource } from "./data-source";
+
+AppDataSource.initialize()
+  .then(async () => {
+    const e1 = new Employee();
+    e1.name = "张三";
+
+    const e2 = new Employee();
+    e2.name = "李四";
+
+    const e3 = new Employee();
+    e3.name = "王五";
+
+    const d1 = new Department();
+    d1.name = "技术部";
+    d1.employees = [e1, e2, e3];
+
+    await AppDataSource.manager.save(Department, d1);
+  })
+  .catch((error) => console.log(error));
+```
+
+#### find
+
+```
+import { Department } from "./entity/Department";
+import { AppDataSource } from "./data-source";
+
+AppDataSource.initialize()
+  .then(async () => {
+    // 查找 department 表中的所有记录
+    // const deps = await AppDataSource.manager.find(Department);
+
+    // 查找 department 表中的所有记录，同时关联查询 employees 表
+    // 方法1：使用 find 方法，指定 relations 参数
+    // const deps = await AppDataSource.manager.find(Department, {
+    //   relations: {
+    //     employees: true,
+    //   },
+    // });
+    
+    // 方法2：使用 createQueryBuilder 方法，指定 leftJoinAndSelect 方法
+    // const deps = await AppDataSource.manager
+    //   .getRepository(Department)
+    //   .createQueryBuilder("d")
+    //   .leftJoinAndSelect("d.employees", "e")
+    //   .getMany();
+    const deps = await AppDataSource.manager
+      .createQueryBuilder(Department, "d")
+      .leftJoinAndSelect("d.employees", "e")
+      .getMany();
+    console.log(deps);
+    console.log(deps.map((item) => item.employees));
+  })
+  .catch((error) => console.log(error));
+```
 
