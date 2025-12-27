@@ -747,3 +747,111 @@ AppDataSource.initialize()
 
 ## 在Nest中集成
 
+### 安装
+
+```
+npm install --save @nestjs/typeorm typeorm mysql2
+```
+
+### 模块注册
+
+```
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { UserModule } from './user/user.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+@Module({
+  imports: [
+    UserModule,
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: 'localhost',
+      port: 3306,
+      username: 'root',
+      password: '123456',
+      database: 'nest_typeorm_test',
+      synchronize: true,
+      logging: true,
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      poolSize: 10,
+      connectorPackage: 'mysql2',
+      extra: {
+        authPlugin: 'mysql_native_password',
+      },
+    }),
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+### Repository
+
+```
+import { Module } from '@nestjs/common';
+import { UserService } from './user.service';
+import { UserController } from './user.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([User])],
+  controllers: [UserController],
+  providers: [UserService],
+})
+export class UserModule {}
+```
+
+### CRUD
+
+使用`Repository`可以简化调用
+
+```
+import { Injectable } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { User } from './entities/user.entity';
+
+@Injectable()
+export class UserService {
+
+  @InjectEntityManager()
+  private manager: EntityManager;
+
+  @InjectRepository(User)
+  private userRepository: Repository<User>;
+
+  create(createUserDto: CreateUserDto) {
+    return this.userRepository.save(createUserDto);
+  }
+
+  findAll() {
+    return this.userRepository.find();
+  }
+
+  findOne(id: number) {
+    return this.userRepository.findOne({
+      where: {
+        id,
+      },
+    });
+  }
+
+  update(id: number, updateUserDto: UpdateUserDto) {
+    return this.manager.update(User, { id }, updateUserDto);
+  }
+
+  remove(id: number) {
+    return this.manager.delete(User, { id });
+  }
+}
+```
+
+## TypeORM 保存任意层级
+
