@@ -497,6 +497,9 @@ AppDataSource.initialize()
 
 ### 一对多映射
 
+- 主表是 department，employee 是从表
+- employee 的外键 departmentId 关联了 department的 id
+
 ```
 // Department.ts
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
@@ -601,4 +604,146 @@ AppDataSource.initialize()
   })
   .catch((error) => console.log(error));
 ```
+
+## 多对多映射和关联CRUD
+
+### 多对多映射
+
+- `@JoinTable()`放在`Article`,负责维护中间表关系，生成的中间表（article_tags_tag）
+- 多对多中的表都是主表，中间表才是从表
+
+```
+import {
+  Column,
+  Entity,
+  JoinTable,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+} from "typeorm";
+import { Tag } from "./Tag";
+
+@Entity()
+export class Article {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    length: 100,
+    comment: "文章标题",
+  })
+  title: string;
+
+  @Column({
+    type: "text",
+    comment: "文章内容",
+  })
+  content: string;
+
+  @JoinTable() // 定义中间表
+//   @ManyToMany(() => Tag)
+  @ManyToMany(() => Tag, (tag) => tag.articles)
+  tags: Tag[];
+}
+
+```
+
+```
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Article } from "./Article";
+
+@Entity()
+export class Tag {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    length: 100,
+  })
+  name: string;
+
+  @ManyToMany(() => Article, (article) => article.tags)
+  articles: Article[];
+}
+```
+
+除了会建立`article`、`tag`表，还会创建中间表`article_tags_tag`
+
+### CRUD
+
+#### save
+
+```
+import { AppDataSource } from "./data-source";
+import { Article } from "./entity/Article";
+import { Tag } from "./entity/Tag";
+
+AppDataSource.initialize()
+  .then(async () => {
+    const a1 = new Article();
+    a1.title = "aaaa";
+    a1.content = "aaaaaaaaaa";
+
+    const a2 = new Article();
+    a2.title = "bbbbbb";
+    a2.content = "bbbbbbbbbb";
+
+    const t1 = new Tag();
+    t1.name = "ttt1111";
+
+    const t2 = new Tag();
+    t2.name = "ttt2222";
+
+    const t3 = new Tag();
+    t3.name = "ttt33333";
+
+    a1.tags = [t1, t2];
+    a2.tags = [t1, t2, t3];
+
+    const entityManager = AppDataSource.manager;
+
+    await entityManager.save(t1);
+    await entityManager.save(t2);
+    await entityManager.save(t3);
+
+    await entityManager.save(a1);
+    await entityManager.save(a2);
+  })
+  .catch((error) => console.log(error));
+```
+
+#### find
+
+```
+import { AppDataSource } from "./data-source";
+import { Article } from "./entity/Article";
+
+AppDataSource.initialize()
+  .then(async () => {
+    const entityManager = AppDataSource.manager;
+
+    // 通过relation 指定关联查询
+    // const article = await entityManager.find(Article, {
+    //   relations: {
+    //     tags: true,
+    //   },
+    // });
+
+    // 通过queryBuilder来join查询
+    // const article = await entityManager
+    //   .createQueryBuilder(Article, "a")
+    //   .leftJoinAndSelect("a.tags", "t")
+    //   .getMany();
+    const article = await entityManager
+      .getRepository(Article)
+      .createQueryBuilder("a")
+      .leftJoinAndSelect("a.tags", "t")
+      .getMany();
+
+    console.log(article);
+    console.log(article.map((item) => item.tags));
+  })
+  .catch((error) => console.log(error));
+```
+
+## 在Nest中集成
 
