@@ -855,3 +855,169 @@ export class UserService {
 
 ## TypeORM 保存任意层级
 
+### entities/city.entity.ts
+
+- `@Tree('closure-table')`,定义了闭合表，会生成一个除了city表外的city-closure表
+- `@TreeChildren`，定义了children
+-  `@TreeParent()`，定义了parent
+- [文档资料](https://typeorm.bootcss.com/tree-entities)
+
+```
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Tree,
+  TreeChildren,
+  TreeParent,
+  UpdateDateColumn,
+} from 'typeorm';
+
+@Entity()
+@Tree('closure-table')
+export class City {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ default: 0 })
+  status: number;
+
+  @CreateDateColumn()
+  createDate: Date;
+
+  @UpdateDateColumn()
+  updateDate: Date;
+
+  @Column()
+  name: string;
+
+  @TreeChildren()
+  children: City[];
+
+  @TreeParent()
+  parent: City;
+}
+```
+
+### CRUD
+
+#### create
+
+```
+async create(createCityDto: CreateCityDto) {
+    return this.createCityWithChildren(createCityDto);
+}
+
+private async createCityWithChildren(
+    dto: CreateCityDto,
+    parent?: City,
+  ): Promise<City> {
+    const city = new City();
+    city.name = dto.name;
+
+    if (parent) {
+      city.parent = parent;
+    }
+
+    const savedCity = await this.entityManager.save(city);
+
+    if (dto.children && dto.children.length > 0) {
+      for (const childDto of dto.children) {
+        await this.createCityWithChildren(childDto, savedCity);
+      }
+    }
+
+    return savedCity;
+}  
+```
+
+#### find
+
+```
+async findAll() {
+    return this.entityManager.getTreeRepository(City).findTrees();
+  }
+
+async findOne(name: string) {
+    const parent = await this.entityManager.findOne(City, {
+      where: {
+        name,
+      },
+    });
+    return this.entityManager
+      .getTreeRepository(City)
+      .findDescendantsTree(parent);
+}
+```
+
+```
+[
+    {
+        "id": 1,
+        "status": 0,
+        "createDate": "2025-12-27T20:17:30.819Z",
+        "updateDate": "2025-12-27T20:17:30.819Z",
+        "name": "中国",
+        "children": [
+            {
+                "id": 2,
+                "status": 0,
+                "createDate": "2025-12-27T20:17:30.885Z",
+                "updateDate": "2025-12-27T20:17:30.885Z",
+                "name": "华北",
+                "children": [
+                    {
+                        "id": 3,
+                        "status": 0,
+                        "createDate": "2025-12-27T20:17:30.925Z",
+                        "updateDate": "2025-12-27T20:17:30.925Z",
+                        "name": "北京",
+                        "children": []
+                    },
+                    {
+                        "id": 4,
+                        "status": 0,
+                        "createDate": "2025-12-27T20:17:30.957Z",
+                        "updateDate": "2025-12-27T20:17:30.957Z",
+                        "name": "天津",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": 5,
+                "status": 0,
+                "createDate": "2025-12-27T20:17:30.986Z",
+                "updateDate": "2025-12-27T20:17:30.986Z",
+                "name": "华东",
+                "children": [
+                    {
+                        "id": 6,
+                        "status": 0,
+                        "createDate": "2025-12-27T20:17:31.015Z",
+                        "updateDate": "2025-12-27T20:17:31.015Z",
+                        "name": "上海",
+                        "children": []
+                    },
+                    {
+                        "id": 7,
+                        "status": 0,
+                        "createDate": "2025-12-27T20:17:31.043Z",
+                        "updateDate": "2025-12-27T20:17:31.043Z",
+                        "name": "江苏",
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    }
+]
+```
+
+### 其他
+
+除了`closure-table`，还有`materialized-path`,这种是数据库中存储树结构的另一种模式。
+
+## typeorm migration 迁移功能
+
