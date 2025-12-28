@@ -1021,3 +1021,123 @@ async findOne(name: string) {
 
 ## typeorm migration 迁移功能
 
+### 数据库配置
+
+- `synchronize：false`，需关闭自动同步实体到数据库
+- `mig-rations: ['./src/migration/**/*.ts']`,迁移文件数组
+
+### 手动建表
+
+1. 通过`migration:create`，生成`migration`文件
+
+   ```
+   npx ts-node ./node_modules/typeorm/cli migration:create ./src/migration/migration_1
+   ```
+
+   ![image-20251228220035192](image-20251228220035192.png)
+
+2. 补充建表sql
+
+   ```
+   export class Migration11766906666662 implements MigrationInterface {
+     public async up(queryRunner: QueryRunner): Promise<void> {
+       await queryRunner.query(`
+               CREATE TABLE user (
+                   id int NOT NULL AUTO_INCREMENT,
+                   firstName varchar(255) NOT NULL,
+                   lastName varchar(255) NOT NULL,
+                   age int NOT NULL,
+                   PRIMARY KEY (id)
+               ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;    
+           `);
+     }
+   
+     public async down(queryRunner: QueryRunner): Promise<void> {}
+   }
+   ```
+
+3. 通过`migration:run`手动建表
+
+   ```
+   npx ts-node ./node_modules/typeorm/cli migration:run -d ./src/data-source.ts
+   ```
+
+### 自动建表
+
+补充建表`sql`太麻烦了，`typeorm` 提供了`migration:generate`命令来自动生成
+
+```
+npx ts-node ./node_modules/typeorm/cli migration:generate ./src/migration/migration_2 -d ./src/data-source.ts
+```
+
+![image-20251228221027251](image-20251228221027251.png)
+
+一样通过`migration:run`手动建表
+
+```
+npx ts-node ./node_modules/typeorm/cli migration:run -d ./src/data-source.ts
+```
+
+![image-20251228221229666](image-20251228221229666.png)
+
+
+
+### 更新&撤销
+
+#### 更新
+
+1. 增加了`email`列
+
+   ```
+   // entity/User.ts
+   import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+   
+   @Entity()
+   export class User {
+     ......
+   
+     @Column()
+     email: string;
+   }
+   ```
+
+2. 执行`migration:generate`更新sql生成
+
+   ```
+   npx ts-node ./node_modules/typeorm/cli migration:generate ./src/migration/migration_3 -d ./src/data-source.ts
+   ```
+
+   ![image-20251228221948095](image-20251228221948095.png)
+
+3. 一样通过`migration:run`再次建表
+
+   ```
+   npx ts-node ./node_modules/typeorm/cli migration:run -d ./src/data-source.ts
+   ```
+
+#### 撤销
+
+1. 去除 `User.ts`的`email`列
+
+2. 执行`revert`
+
+   ```
+   npx ts-node ./node_modules/typeorm/cli migration:revert -d ./src/data-source.ts
+   ```
+
+   此时就会撤销删除掉`email`列了，当然还可以继续撤销。
+
+### 封装为`scripts`
+
+- `migration:create`：生成空白 migration 文件
+- `migration:generate`：连接数据库，根据 Entity 和数据库表的差异，生成 migration 文件
+- `migration:run`：执行 migration，会根据数据库 migrations 表的记录来确定执行哪个
+- `migration:revert`：撤销上次 migration，删掉数据库 migrations 里的上次执行记录
+
+```
+"migration:create": "npm run typeorm -- migration:create",
+"migration:generate": "npm run typeorm -- migration:generate -d ./src/data-source.ts",
+"migration:run": "npm run typeorm -- migration:run -d ./src/data-source.ts",
+"migration:revert": "npm run typeorm -- migration:revert -d ./src/data-source.ts"
+```
+
