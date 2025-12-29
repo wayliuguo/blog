@@ -1141,3 +1141,121 @@ npx ts-node ./node_modules/typeorm/cli migration:run -d ./src/data-source.ts
 "migration:revert": "npm run typeorm -- migration:revert -d ./src/data-source.ts"
 ```
 
+
+
+## nest 项目使用typeorm 迁移
+
+1. app.module.ts
+
+   正常配置`TypeOrmModule`, `synchronize` 为false
+
+   ```
+   import { Module } from '@nestjs/common';
+   import { AppController } from './app.controller';
+   import { AppService } from './app.service';
+   import { TypeOrmModule } from '@nestjs/typeorm';
+   import { ArticleModule } from './article/article.module';
+   import { Article } from './article/entities/article.entity';
+   
+   @Module({
+     imports: [
+       TypeOrmModule.forRoot({
+         type: 'mysql',
+         host: 'localhost',
+         port: 3306,
+         username: 'root',
+         password: '123456',
+         database: 'nest_migration_test',
+         synchronize: false,
+         logging: true,
+         entities: [Article],
+         poolSize: 10,
+         migrations: ['src/migrations/**.ts'],
+         connectorPackage: 'mysql2',
+         extra: {
+           authPlugin: 'mysql_native_password',
+         },
+       }),
+       ArticleModule,
+     ],
+     controllers: [AppController],
+     providers: [AppService],
+   })
+   export class AppModule {}
+   
+   ```
+
+2. data-source.ts
+
+   ```
+   import { DataSource } from 'typeorm';
+   import { Article } from './article/entities/article.entity';
+   
+   export default new DataSource({
+     type: 'mysql',
+     host: 'localhost',
+     port: 3306,
+     username: 'root',
+     password: '123456',
+     database: 'nest_migration_test',
+     synchronize: false,
+     logging: true,
+     entities: [Article],
+     poolSize: 10,
+     migrations: ['dist/src/migrations/**.ts'],
+     connectorPackage: 'mysql2',
+     extra: {
+       authPlugin: 'mysql_native_password',
+     },
+   });
+   ```
+
+3.  package.json 增加 scripts
+
+   ```
+   "typeorm": "ts-node ./node_modules/typeorm/cli",
+   "migration:create": "npm run typeorm -- migration:create",
+   "migration:generate": "npm run typeorm -- migration:generate -d ./src/data-source.ts",
+   "migration:run": "npm run typeorm -- migration:run -d ./src/data-source.ts",
+   "migration:revert": "npm run typeorm -- migration:revert -d ./src/data-source.ts"
+   ```
+
+4. 使用 `migration:generate`生成migration 文件
+
+   ```
+   npm run migration:generate src/migrations/init
+   ```
+
+   它会对比 entity 和数据表的差异，生成迁移 sql
+
+   ![image-20251229232307407](image-20251229232307407.png)
+
+5. 使用` migration:run`, 执行sql，生成`article`和`migrations`表
+
+   ```
+   npm run migration:run
+   ```
+
+6. 再创建 migration 初始化数据
+
+   ```
+   npm run migration:create src/migrations/data
+   ```
+
+   - **migration:generate 只会根据表结构变动生成迁移 sql，而数据的插入的 sql 需要我们自己添加**
+
+   - 如果要支持 revert，那 down 方法里应该补上 delete 语句
+
+![image-20251229235318797](image-20251229235318797.png)
+
+7. 再执行`migration:run`
+
+   ```
+   npm run migration:run
+   ```
+
+   ![image-20251230000814990](image-20251230000814990.png)
+
+8. 总结
+   - 都是使用`migration:generate`生成迁移sql
+   - 再使用`migration:run`执行就可以了
