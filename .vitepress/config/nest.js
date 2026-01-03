@@ -100,6 +100,10 @@ export default {
         {
             text: 'mysql-typeorm',
             link: '/node/nest/typeorm'
+        },
+        {
+            text: 'redis',
+            link: '/node/nest/redis'
         }
     ]
 }
