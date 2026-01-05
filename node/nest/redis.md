@@ -112,5 +112,100 @@ root@9ae9fe66c1b7:/data# redis-cli
 "3"
 ```
 
+## 在node 中操作 redis
+
+常见使用两个包：
+
+- redis
+- ioredis
+
+### redis
+
+```
+import { createClient } from 'redis';
+
+const client = createClient({
+    socket: {
+        host: 'localhost',
+        port: 6379
+    }
+});
+
+client.on('error', err => console.log('Redis Client Error', err));
+
+await client.connect();
+
+const value = await client.keys('*');
+
+console.log(value);
+
+await client.disconnect();
+```
+
+### ioredis
+
+```
+import Redis from "ioredis";
+
+const redis = new Redis();
+
+const res = await redis.keys('*');
+
+console.log(res);
+```
+
 ## 在nest里操作 redis
+
+- app.module.ts
+
+  使用 useFactory 动态注入 redis 实例
+
+  ```
+  import { Module } from '@nestjs/common';
+  import { AppController } from './app.controller';
+  import { AppService } from './app.service';
+  import { createClient } from 'redis';
+  
+  @Module({
+    imports: [],
+    controllers: [AppController],
+    providers: [
+      AppService,
+      {
+        provide: 'REDIS_CLIENT',
+        async useFactory() {
+          const client = createClient({
+            socket: {
+              host: 'localhost',
+              port: 6379,
+            },
+          });
+          await client.connect();
+          return client;
+        },
+      },
+    ],
+  })
+  export class AppModule {}
+  ```
+
+- app.service.ts
+
+  ```
+  import { Inject, Injectable } from '@nestjs/common';
+  import { RedisClientType } from 'redis';
+  
+  @Injectable()
+  export class AppService {
+    @Inject('REDIS_CLIENT')
+    private redisClient: RedisClientType;
+  
+    async getHello() {
+      const value = await this.redisClient.keys('*');
+      return value;
+    }
+  }
+  ```
+
+  
 
