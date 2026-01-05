@@ -104,6 +104,10 @@ export default {
         {
             text: 'redis',
             link: '/node/nest/redis'
+        },
+        {
+            text: '登录注册',
+            link: '/node/nest/loginRegister'
         }
     ]
 }
