@@ -115,3 +115,145 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiaWQiOjEsImV4cCI
 
 ### nest 里实现session
 
+1. 依赖安装
+
+   ```
+   npm install express-session @types/express-session
+   ```
+
+2. 启用中间件
+
+   ```、
+   import { NestFactory } from '@nestjs/core';
+   import { AppModule } from './app.module';
+   import * as session from 'express-session';
+   
+   async function bootstrap() {
+     const app = await NestFactory.create(AppModule);
+   
+     app.use(
+       session({
+         secret: 'secret_str_123456', // 密钥
+         resave: false, // 不重新保存会话
+         saveUninitialized: false, // 不保存未初始化的会话
+       }),
+     );
+   
+     await app.listen(3000);
+   }
+   bootstrap();
+   ```
+
+3. 在 controller 注入 session对象
+
+   ```
+   import { Controller, Get, Session } from '@nestjs/common';
+   import { AppService } from './app.service';
+   import session from 'express-session';
+   
+   @Controller()
+   export class AppController {
+     constructor(private readonly appService: AppService) {}
+   
+     @Get('session')
+     getSession(@Session() session): string {
+       session.count = session.count ? session.count + 1 : 1;
+       return session.count
+     }
+   }
+   ```
+
+4. 测试
+
+   - Request Header 
+     - cookie connect.sid=s%3A4QPeTHPpUpOOUseOevlICk0FybsqPg_d.eODpjIc1I5AcRfwPhHZitHo9WoKzu%2B8ArCUu4ccWCVI
+   - response 返回数字字段值
+
+### nest 里实现 jwt
+
+- app.module.ts
+
+  ```
+  import { Module } from '@nestjs/common';
+  import { AppController } from './app.controller';
+  import { AppService } from './app.service';
+  import { JwtModule } from '@nestjs/jwt';
+  
+  @Module({
+    imports: [
+      JwtModule.registerAsync({
+        useFactory: () => ({
+          secret: 'my-secret',
+          signOptions: { expiresIn: '7d' },
+        }),
+      }),
+    ],
+    controllers: [AppController],
+    providers: [AppService],
+  })
+  export class AppModule {}
+  ```
+
+- app.controller.ts
+
+  ```
+  import {
+    Controller,
+    Get,
+    Res,
+    Session,
+    Headers,
+    UnauthorizedException,
+  } from '@nestjs/common';
+  import { AppService } from './app.service';
+  import { JwtService } from '@nestjs/jwt';
+  import { Response } from 'express';
+  
+  @Controller()
+  export class AppController {
+    constructor(
+      private readonly appService: AppService,
+      private readonly jwtService: JwtService,
+    ) {}
+  
+    @Get('jwt')
+    getJwt(
+      @Headers('authorization') authorization: string,
+      @Res({ passthrough: true }) response: Response,
+    ) {
+      if (authorization) {
+        try {
+          const token = authorization.split(' ')[1];
+          const data = this.jwtService.verify(token);
+  
+          const newToken = this.jwtService.sign({
+            count: data.count + 1,
+          });
+          response.setHeader('token', newToken);
+          return data.count + 1;
+        } catch (e) {
+          console.log(e);
+          throw new UnauthorizedException();
+        }
+      } else {
+        const newToken = this.jwtService.sign({
+          count: 1,
+        });
+  
+        response.setHeader('token', newToken);
+        return 1;
+      }
+    }
+  }
+  ```
+
+- 请求
+
+  ```
+  // 请求
+  http://localhost:3000/jwt
+  // header
+  authorization Bear xxx
+  ```
+
+  
