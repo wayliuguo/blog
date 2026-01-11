@@ -496,3 +496,491 @@ export class UserService {
 }
 ```
 
+
+
+## 基于 ACL 实现权限控制
+
+### 概念
+
+- ACL （Access Control List）的方式实现了权限控制，它的特点是用户直接和权限关联。
+- 用户和权限是多对多关系，在数据库中会存在用户表、权限表、用户权限中间表。
+- 登录的时候，把用户信息查出来，放到 session 或者 jwt 返回。
+- 访问接口的时候，在 Guard 里判断是否登录，是否有权限，没有就返回 401，有的话才会继续处理请求。
+- 通过 handler 上用 SetMetadata 声明的所需权限的信息，和从数据库中查出来的当前用户的权限做对比，有相应权限才会放行。
+
+### 安装依赖
+
+```
+npm install --save @nestjs/typeorm typeorm mysql2
+npm install express-session @types/express-session
+npm install --save class-validator class-transformer
+npm install redis
+```
+
+### 实现
+
+#### main.ts
+
+```
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+import * as session from 'express-session';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  app.use(
+    session({
+      secret: 'secret_str', // cookie 的密钥
+      resave: false, // session 没变的时候要不要重新生成 cookie
+      saveUninitialized: false, // 没登录不要也创建一个 session
+    }),
+  );
+  app.useGlobalPipes(new ValidationPipe());
+  await app.listen(3000);
+}
+bootstrap();
+
+```
+
+#### app.module.ts
+
+```
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserModule } from './user/user.module';
+import { PermissionModule } from './permission/permission.module';
+import { User } from './user/entities/user.entity';
+import { Permission } from './permission/entities/permission.entity';
+import { AaaModule } from './aaa/aaa.module';
+import { RedisModule } from './redis/redis.module';
+
+@Module({
+  imports: [
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: 'localhost',
+      port: 3306,
+      username: 'root',
+      password: '123456',
+      database: 'acl_test',
+      synchronize: true,
+      logging: true,
+      entities: [User, Permission],
+      poolSize: 10,
+      connectorPackage: 'mysql2',
+    }),
+    UserModule,
+    PermissionModule,
+    AaaModule,
+    RedisModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+#### user 模块
+
+- init 实现了数据初始化
+
+  ```
+  // user
+  id  name password 
+  1	东东	aaaaaa	2026-01-11 10:16:29.178726	2026-01-11 10:16:29.178726
+  2	光光	bbbbbb	2026-01-11 10:16:29.187785	2026-01-11 10:16:29.187785
+  
+  // permisssion
+  id    name        desc      
+  1	create_aaa	新增 aaa	2026-01-11 10:16:29.053174	2026-01-11 10:16:29.053174
+  2	update_aaa	修改 aaa	2026-01-11 10:16:29.075471	2026-01-11 10:16:29.075471
+  3	remove_aaa	删除 aaa	2026-01-11 10:16:29.085448	2026-01-11 10:16:29.085448
+  4	query_aaa	查询 aaa	2026-01-11 10:16:29.093297	2026-01-11 10:16:29.093297
+  5	create_bbb	新增 bbb	2026-01-11 10:16:29.103369	2026-01-11 10:16:29.103369
+  6	update_bbb	修改 bbb	2026-01-11 10:16:29.110762	2026-01-11 10:16:29.110762
+  7	remove_bbb	删除 bbb	2026-01-11 10:16:29.120245	2026-01-11 10:16:29.120245
+  8	query_bbb	查询 bbb	2026-01-11 10:16:29.129275	2026-01-11 10:16:29.129275
+  
+  // user_permission_relation
+  userId permissionId
+  1	1
+  1	2
+  1	3
+  1	4
+  2	5
+  ```
+
+- 实现 `login` 用于实现登录能力,登录后在session的user对象上保存
+
+- 实现`findByUsername`用于根据用于名称查找用户信息
+
+- 登录后
+
+  ```
+  Response Header
+  Set-Cookie	connect.sid=s%3AAIOVSdfrubHtfAc8WEopfz-0D3txg8jg.H8JDGyoCor3upK0Ux2npr%2FlFN9kjarmclWtWk3EBWTY; Path=/; HttpOnly
+  ```
+
+##### user.module.ts
+
+```
+import { Module } from '@nestjs/common';
+import { UserService } from './user.service';
+import { UserController } from './user.controller';
+
+@Module({
+  controllers: [UserController],
+  providers: [UserService],
+  exports: [UserService],
+})
+export class UserModule {}
+```
+
+##### user.controller.ts
+
+```
+import { Body, Controller, Get, Post, Session } from '@nestjs/common';
+import { UserService } from './user.service';
+import { LoginUserDto } from './dto/login-user.dto';
+
+@Controller('user')
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Get('init')
+  async initData() {
+    await this.userService.initData();
+    return 'done';
+  }
+
+  @Post('login')
+  async login(@Body() loginUser: LoginUserDto, @Session() session) {
+    const user = await this.userService.login(loginUser);
+    session.user = {
+      username: user.username,
+    };
+    return 'success';
+  }
+}
+```
+
+##### user.service.ts
+
+```
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { Permission } from 'src/permission/entities/permission.entity';
+import { EntityManager } from 'typeorm';
+import { User } from './entities/user.entity';
+import { LoginUserDto } from './dto/login-user.dto';
+
+@Injectable()
+export class UserService {
+  @InjectEntityManager()
+  entityManager: EntityManager;
+
+  async initData() {
+    const permission1 = new Permission();
+    permission1.name = 'create_aaa';
+    permission1.desc = '新增 aaa';
+
+    const permission2 = new Permission();
+    permission2.name = 'update_aaa';
+    permission2.desc = '修改 aaa';
+
+    const permission3 = new Permission();
+    permission3.name = 'remove_aaa';
+    permission3.desc = '删除 aaa';
+
+    const permission4 = new Permission();
+    permission4.name = 'query_aaa';
+    permission4.desc = '查询 aaa';
+
+    const permission5 = new Permission();
+    permission5.name = 'create_bbb';
+    permission5.desc = '新增 bbb';
+
+    const permission6 = new Permission();
+    permission6.name = 'update_bbb';
+    permission6.desc = '修改 bbb';
+
+    const permission7 = new Permission();
+    permission7.name = 'remove_bbb';
+    permission7.desc = '删除 bbb';
+
+    const permission8 = new Permission();
+    permission8.name = 'query_bbb';
+    permission8.desc = '查询 bbb';
+
+    const user1 = new User();
+    user1.username = '东东';
+    user1.password = 'aaaaaa';
+    user1.permissions = [permission1, permission2, permission3, permission4];
+
+    const user2 = new User();
+    user2.username = '光光';
+    user2.password = 'bbbbbb';
+    user2.permissions = [permission5, permission6, permission7, permission8];
+
+    await this.entityManager.save([
+      permission1,
+      permission2,
+      permission3,
+      permission4,
+      permission5,
+      permission6,
+      permission7,
+      permission8,
+    ]);
+    await this.entityManager.save([user1, user2]);
+  }
+
+  async login(loginUserDto: LoginUserDto) {
+    const user = await this.entityManager.findOneBy(User, {
+      username: loginUserDto.username,
+    });
+    if (!user) {
+      throw new HttpException('用户不存在', HttpStatus.ACCEPTED);
+    }
+    if (user.password !== loginUserDto.password) {
+      throw new HttpException('密码错误', HttpStatus.ACCEPTED);
+    }
+    return user;
+  }
+
+  async findByUsername(username: string) {
+    const user = await this.entityManager.findOne(User, {
+      where: {
+        username,
+      },
+      relations: {
+        permissions: true,
+      },
+    });
+    return user;
+  }
+}
+```
+
+#### permission 模块
+
+```
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+@Entity()
+export class Permission {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    length: 50,
+  })
+  name: string;
+
+  @Column({
+    length: 100,
+    nullable: true,
+  })
+  desc: string;
+
+  @CreateDateColumn()
+  createTime: Date;
+
+  @UpdateDateColumn()
+  updateTime: Date;
+}
+```
+
+#### login.guard.ts
+
+```
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { Request } from 'express';
+import { Observable } from 'rxjs';
+
+declare module 'express-session' {
+  interface Session {
+    user: {
+      username: string;
+    };
+  }
+}
+
+@Injectable()
+export class LoginGuard implements CanActivate {
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    const request: Request = context.switchToHttp().getRequest();
+
+    if (!request.session?.user) {
+      throw new UnauthorizedException('用户未登录');
+    }
+
+    return true;
+  }
+}
+```
+
+#### redis 模块
+
+- 通过 `useFactory` 创建提供器，提供`redis`连接对象
+- 设置了`redis`相关的操作`redis`工具函数
+
+##### redis.module.ts
+
+```
+import { Global, Module } from '@nestjs/common';
+import { createClient } from 'redis';
+import { RedisService } from './redis.service';
+
+@Global()
+@Module({
+  providers: [
+    RedisService,
+    {
+      provide: 'REDIS_CLIENT',
+      async useFactory() {
+        const client = createClient({
+          socket: {
+            host: 'localhost',
+            port: 6379,
+          },
+        });
+        await client.connect();
+        return client;
+      },
+    },
+  ],
+  exports: [RedisService],
+})
+export class RedisModule {}
+
+```
+
+##### redis.service.ts
+
+```
+import { Inject, Injectable } from '@nestjs/common';
+import { RedisClientType } from 'redis';
+
+@Injectable()
+export class RedisService {
+  @Inject('REDIS_CLIENT')
+  private redisClient: RedisClientType;
+
+  async listGet(key: string) {
+    return await this.redisClient.lRange(key, 0, -1);
+  }
+
+  async listSet(key: string, list: Array<string>, ttl?: number) {
+    for (let i = 0; i < list.length; i++) {
+      await this.redisClient.lPush(key, list[i]);
+    }
+    if (ttl) {
+      await this.redisClient.expire(key, ttl);
+    }
+  }
+}
+```
+
+#### permission.guard.ts
+
+- 先在`redis`中获取缓存的值
+- 如果没有找到，则查数据或获取，再缓存到redis
+- 如果获取到的`permissions`包含`handler`的值，则通过守卫
+
+```
+import {
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
+import { UserService } from './user/user.service';
+import { RedisService } from './redis/redis.service';
+
+@Injectable()
+export class PermissionGuard implements CanActivate {
+  @Inject(UserService)
+  private userService: UserService;
+
+  @Inject(Reflector)
+  private reflector: Reflector;
+
+  @Inject(RedisService)
+  private redisService: RedisService;
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request: Request = context.switchToHttp().getRequest();
+
+    const user = request.session.user;
+    if (!user) {
+      throw new UnauthorizedException('用户未登录');
+    }
+
+    let permissions = await this.redisService.listGet(
+      `user_${user.username}_permissions`,
+    );
+
+    if (permissions.length === 0) {
+      const foundUser = await this.userService.findByUsername(user.username);
+      permissions = foundUser.permissions.map((item) => item.name);
+
+      this.redisService.listSet(
+        `user_${user.username}_permissions`,
+        permissions,
+        60 * 30,
+      );
+    }
+
+    const permission = this.reflector.get('permission', context.getHandler());
+
+    if (permissions.some((item) => item === permission)) {
+      return true;
+    } else {
+      throw new UnauthorizedException('没有权限访问该接口');
+    }
+  }
+}
+```
+
+#### 测试
+
+```
+import { Controller, Get, UseGuards, SetMetadata } from '@nestjs/common';
+import { AaaService } from './aaa.service';
+import { LoginGuard } from 'src/login.guard';
+import { PermissionGuard } from 'src/permission.guard';
+
+@Controller('aaa')
+export class AaaController {
+  constructor(private readonly aaaService: AaaService) {}
+
+  @Get()
+  @UseGuards(LoginGuard, PermissionGuard)
+  @SetMetadata('permission', 'query_aaa')
+  findAll() {
+    return this.aaaService.findAll();
+  }
+}
+```
+
