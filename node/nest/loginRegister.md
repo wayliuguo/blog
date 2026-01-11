@@ -256,4 +256,243 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiaWQiOjEsImV4cCI
   authorization Bear xxx
   ```
 
-  
+## mysql + typeorm + jwt 实现登录
+
+### 安装依赖
+
+```
+npm install --save @nestjs/typeorm typeorm mysql2
+npm install @nestjs/jwt
+```
+
+### 实现
+
+#### app.module.ts
+
+```
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { UserModule } from './user/user.module';
+import { User } from './user/entities/user.entity';
+import { JwtModule } from '@nestjs/jwt';
+
+@Module({
+  imports: [
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: 'localhost',
+      port: 3306,
+      username: 'root',
+      password: '123456',
+      database: 'login_test',
+      synchronize: true,
+      logging: true,
+      entities: [User],
+      poolSize: 10,
+      connectorPackage: 'mysql2',
+    }),
+    UserModule,
+    JwtModule.register({
+      global: true,
+      secret: 'secret-str',
+      signOptions: { expiresIn: '7d' },
+    }),
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+#### user
+
+##### user.entity.ts
+
+```
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    length: 50,
+    comment: '用户名',
+  })
+  username: string;
+
+  @Column({
+    length: 50,
+    comment: '密码',
+  })
+  password: string;
+
+  @CreateDateColumn({
+    comment: '创建时间',
+  })
+  createTime: Date;
+
+  @UpdateDateColumn({
+    comment: '更新时间',
+  })
+  updateTime: Date;
+}
+```
+
+##### user.module.ts
+
+```
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserService } from './user.service';
+import { UserController } from './user.controller';
+import { User } from '..//user/entities/user.entity';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([User])],
+  controllers: [UserController],
+  providers: [UserService],
+})
+export class UserModule {}
+```
+
+##### user.controller.ts
+
+```
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { UserService } from './user.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { JwtService } from '@nestjs/jwt';
+import { Response } from 'express';
+import { LoginGuard } from 'src/login.guard';
+
+@Controller('user')
+export class UserController {
+  constructor(
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  @Post('login')
+  async login(
+    @Body() user: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const foundUser = await this.userService.login(user);
+
+    if (foundUser) {
+      const token = await this.jwtService.signAsync({
+        user: {
+          id: foundUser.id,
+          username: foundUser.username,
+        },
+      });
+      res.setHeader('token', token);
+      return 'login success';
+    } else {
+      return 'login fail';
+    }
+  }
+
+  @Post('register')
+  async register(@Body() registerDto: RegisterDto) {
+    return await this.userService.register(registerDto);
+  }
+
+  @Get('aaa')
+  @UseGuards(LoginGuard)
+  aaa() {
+    return 'aaa';
+  }
+
+  @Get('bbb')
+  @UseGuards(LoginGuard)
+  bbb() {
+    return 'bbb';
+  }
+}
+
+```
+
+##### user.service.ts
+
+```
+import { RegisterDto } from './dto/register.dto';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './entities/user.entity';
+import * as crypto from 'crypto';
+import { LoginDto } from './dto/login.dto';
+
+function md5(str) {
+  const hash = crypto.createHash('md5');
+  hash.update(str);
+  return hash.digest('hex');
+}
+
+@Injectable()
+export class UserService {
+  private logger = new Logger();
+
+  @InjectRepository(User)
+  private userRepository: Repository<User>;
+
+  async login(user: LoginDto) {
+    const foundUser = await this.userRepository.findOneBy({
+      username: user.username,
+    });
+
+    if (!foundUser) {
+      throw new HttpException('用户名不存在', 200);
+    }
+    if (foundUser.password !== md5(user.password)) {
+      throw new HttpException('密码错误', 200);
+    }
+    return foundUser;
+  }
+
+  async register(user: RegisterDto) {
+    const foundUser = await this.userRepository.findOneBy({
+      username: user.username,
+    });
+
+    if (foundUser) {
+      throw new HttpException('用户已存在', 200);
+    }
+
+    const newUser = new User();
+    newUser.username = user.username;
+    newUser.password = md5(user.password);
+
+    try {
+      await this.userRepository.save(newUser);
+      return '注册成功';
+    } catch (e) {
+      this.logger.error(e, UserService);
+      return '注册失败';
+    }
+  }
+}
+```
+
