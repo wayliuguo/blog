@@ -502,13 +502,9 @@ export class UserService {
 
 ### 核心概念
 
-- **主体 (Subject)**：访问者（用户 / 用户组，如张三、运营组）
-
-  **资源 (Resource)**：被访问的对象（如订单 123、文章 456、商品列表）
-
-  **权限 (Permission)**：对资源的具体操作（如读、写、删除）
-
-### 安装依赖
+- 一个 user 表，每一行都有id和姓名、密码等
+- 一个 permission 表，每一行都有id 和 permission key值等
+- 一个user_permission 中间表，每一行都维护了 userId => permissionId, 这样就可以联结查询出有哪些权限
 
 ```
 npm install --save @nestjs/typeorm typeorm mysql2
@@ -988,6 +984,176 @@ export class AaaController {
 
 ### 核心概念
 
-- **用户 (User)**：系统的使用者（如张三、李四）
-- **角色 (Role)**：权限的集合（如管理员、普通用户、运营）
-- **权限 (Permission)**：具体的操作权限（如查看订单、删除商品、编辑文章）
+- 把**权限（Permission）** 分配给**角色（Role）**，而非直接分配给用户（User）
+- 用户通过关联角色获得对应的权限，实现「用户 - 角色 - 权限」的解耦
+- 权限判断逻辑：用户 → 所属角色 → 角色拥有的权限 → 校验是否包含目标权限
+
+### 从数据库中理解
+
+- user 表
+
+  ```
+  id  name  password
+  1 张三	111111	2026-01-11 14:07:10.414500	2026-01-11 14:07:10.414500
+  2 李四	222222	2026-01-11 14:07:10.424647	2026-01-11 14:07:10.424647
+  ```
+
+- role 表
+
+  ```
+  id  name  
+  1	管理员	  2026-01-11 14:07:10.380271 2026-01-11 14:07:10.380271
+  2	普通用户 2026-01-11 14:07:10.388581	2026-01-11 14:07:10.388581
+  ```
+
+- permission 表
+
+  ```
+  id   name
+  1	新增 aaa		2026-01-11 14:07:10.286252	2026-01-11 14:07:10.286252
+  2	修改 aaa		2026-01-11 14:07:10.308032	2026-01-11 14:07:10.308032
+  3	删除 aaa		2026-01-11 14:07:10.316550	2026-01-11 14:07:10.316550
+  4	查询 aaa		2026-01-11 14:07:10.324165	2026-01-11 14:07:10.324165
+  5	新增 bbb		2026-01-11 14:07:10.332773	2026-01-11 14:07:10.332773
+  6	修改 bbb		2026-01-11 14:07:10.340429	2026-01-11 14:07:10.340429
+  7	删除 bbb		2026-01-11 14:07:10.348632	2026-01-11 14:07:10.348632
+  8	查询 bbb		2026-01-11 14:07:10.356601	2026-01-11 14:07:10.356601
+  ```
+
+- user_role_relation
+
+  ```
+  userId roleId
+  1	     1
+  2	     2
+  ```
+
+- role_permission_relation
+
+  ```
+  roleId permissionId
+  1	1
+  1	2
+  1	3
+  1	4
+  1	5
+  1	6
+  1	7
+  1	8
+  2	1
+  2	2
+  2	3
+  2	4
+  ```
+
+## 无感刷新
+
+### 基于 access_token 和 refresh_token 实现无感刷新
+
+#### 原理
+
+1. 登录时，后台下发 access_token 和 refresh_token
+2. 平时使用 access_token，过期了前端调用刷新token接口，传入 refresh_token，再次下发两个token
+3. 前端刷新成功后，重新发起之前的请求
+
+#### 前端关键点
+
+```
+import axios from 'axios';
+
+// 创建axios实例
+const service = axios.create({
+  baseURL: '/api',
+  timeout: 5000
+});
+
+// 存储令牌的工具函数
+const tokenStorage = {
+  getAccessToken: () => sessionStorage.getItem('access_token') || '',
+  getRefreshToken: () => localStorage.getItem('refresh_token') || '',
+  setAccessToken: (token) => sessionStorage.setItem('access_token', token),
+  setRefreshToken: (token) => localStorage.setItem('refresh_token', token),
+  clearTokens: () => {
+    sessionStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  }
+};
+
+// 刷新令牌的请求（单独实例，避免被拦截器循环拦截）
+const refreshTokenRequest = axios.create({
+  baseURL: '/api'
+});
+
+// 用于防止重复刷新令牌
+let isRefreshing = false;
+// 存储等待刷新令牌后重试的请求
+let requestQueue = [];
+
+// 请求拦截器：添加access_token
+service.interceptors.request.use(
+  (config) => {
+    const token = tokenStorage.getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// 响应拦截器：处理401无感刷新
+service.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    // 排除刷新令牌接口本身的401，避免循环
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true; // 标记已重试，避免重复请求
+
+      if (isRefreshing) {
+        // 已有刷新请求，将当前请求加入队列
+        return new Promise((resolve) => {
+          requestQueue.push(() => resolve(service(originalRequest)));
+        });
+      }
+
+      isRefreshing = true;
+      try {
+        // 调用刷新令牌接口
+        const refreshToken = tokenStorage.getRefreshToken();
+        const res = await refreshTokenRequest.post('/auth/refresh', {
+          refresh_token: refreshToken
+        });
+
+        const { access_token, refresh_token: newRefreshToken } = res.data;
+        // 更新令牌
+        tokenStorage.setAccessToken(access_token);
+        if (newRefreshToken) {
+          tokenStorage.setRefreshToken(newRefreshToken);
+        }
+
+        // 重试队列中的所有请求
+        requestQueue.forEach(cb => cb());
+        requestQueue = [];
+
+        // 重试当前失败的请求
+        return service(originalRequest);
+      } catch (refreshError) {
+        // 刷新令牌失败，跳登录页
+        tokenStorage.clearTokens();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default service;
+```
+
+### 单 token 无限续期
+
+在单token快过期时的请求中，主动返回新的 token即可。
