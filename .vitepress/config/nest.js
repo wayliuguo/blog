@@ -108,6 +108,10 @@ export default {
         {
             text: '登录注册',
             link: '/node/nest/loginRegister'
+        },
+        {
+            text: 'docker 进阶',
+            link: '/node/nest/dockerAdvanced'
         }
     ]
 }
