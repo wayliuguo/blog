@@ -201,3 +201,160 @@ services:
 #### 代码地址
 
 [acl-test](https://gitee.com/wayliuhaha/nestExplore/tree/main/acl-test)
+
+## docker 桥接网络
+
+### 创建桥接模式网络
+
+#### 核心语法
+
+```
+docker network inspect networkName
+```
+
+#### 完整示例
+
+```
+# 1. 基础创建（你的原始命令）
+docker network create common-network
+
+# 2. 可选：指定子网、网关（自定义网络参数）
+docker network create \
+  --driver bridge \
+  --subnet 172.20.0.0/16 \
+  --gateway 172.20.0.1 \
+  common-network
+
+# 3. 验证网络是否创建成功
+docker network ls | grep common-network
+
+# 4. 查看网络详细信息（包含连接的容器、子网等）
+docker network inspect common-network
+
+# 5. 将容器连接到该网络（创建容器时指定）
+docker run -d --name my-app --network common-network nginx
+
+# 6. 为已运行的容器连接该网络
+docker network connect common-network existing-container
+
+# 7. 移除该网络（确保无容器使用后）
+docker network rm common-network
+```
+
+##### 关键参数说明
+
+|       参数        |                             作用                             |
+| :---------------: | :----------------------------------------------------------: |
+| `--driver bridge` | 指定网络驱动（默认就是 `bridge`，可省略），其他常用驱动还有 `overlay`（跨主机）、`host` 等 |
+|    `--subnet`     | 指定网络的子网段（如 `172.20.0.0/16`），避免与宿主机 / 其他网络网段冲突 |
+|    `--gateway`    |                      指定子网的网关地址                      |
+
+#### 实践
+
+##### 创建桥接网络
+
+```
+docker network create common-network
+```
+
+##### 运行mysql 容器（连接桥接网络）
+
+```
+docker run -d --network common-network -v E:\mysql-volumn:/var/lib/mysql --name mysql-container -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_DATABASE=acl_test -p 3306:3306  mysql
+```
+
+##### 运行 redis 容器（桥接网络）
+
+```
+docker run -d --network common-network -v E:\redis-volumn:/data --name redis-container -p 6379:6379 redis
+```
+
+##### app.module.ts
+
+host 使用 mysql-container
+
+```
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserModule } from './user/user.module';
+import { PermissionModule } from './permission/permission.module';
+import { User } from './user/entities/user.entity';
+import { Permission } from './permission/entities/permission.entity';
+import { AaaModule } from './aaa/aaa.module';
+import { RedisModule } from './redis/redis.module';
+
+@Module({
+  imports: [
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      // host: '172.21.48.1',
+      host: 'mysql-container',
+      port: 3306,
+      username: 'root',
+      password: '123456',
+      database: 'acl_test',
+      synchronize: true,
+      logging: true,
+      entities: [User, Permission],
+      poolSize: 10,
+      connectorPackage: 'mysql2',
+    }),
+    UserModule,
+    PermissionModule,
+    AaaModule,
+    RedisModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+
+```
+
+##### redis.module.ts
+
+host 使用 redis-container
+
+```
+import { Global, Module } from '@nestjs/common';
+import { createClient } from 'redis';
+import { RedisService } from './redis.service';
+
+@Global()
+@Module({
+  providers: [
+    RedisService,
+    {
+      provide: 'REDIS_CLIENT',
+      async useFactory() {
+        const client = createClient({
+          socket: {
+            // host: '172.21.48.1',
+            host: 'redis-container',
+            port: 6379,
+          },
+        });
+        await client.connect();
+        return client;
+      },
+    },
+  ],
+  exports: [RedisService],
+})
+export class RedisModule {}
+```
+
+##### 打包 dockfile
+
+```
+docker build -t acl-container:latest .
+```
+
+##### 运行
+
+```
+docker run -d --network common-network -p 3000:3000 --name nest-container acl-container:latest
+```
+
