@@ -407,6 +407,10 @@ PS E:\working\nestExplore\acl-test> docker-compose down
 PS E:\working\nestExplore\acl-test> docker-compose up
 ```
 
+#### 其他说明
+
+把 networks 部分注释掉，其实也是可以的，他会创建一个默认的 network
+
 ## 参考资料
 
 [acl-test](https://gitee.com/wayliuhaha/nestExplore/tree/main/acl-test)
