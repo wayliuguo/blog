@@ -358,3 +358,55 @@ docker build -t acl-container:latest .
 docker run -d --network common-network -p 3000:3000 --name nest-container acl-container:latest
 ```
 
+### docker compose 使用桥接网络
+
+#### docker-compse.yml
+
+```
+services:
+  nest-app:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    depends_on:
+      - mysql-container
+      - redis-container
+    ports:
+      - '3000:3000'
+    networks:
+      - common-network
+  mysql-container:
+    image: mysql
+    volumes:
+      - E:\mysql-volumn:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: acl_test
+      MYSQL_ROOT_PASSWORD: 123456
+    networks:
+      - common-network
+  redis-container:
+    image: redis
+    volumes:
+      - E:\redis-volumn:/data
+    networks:
+      - common-network
+networks:
+  common-network:
+    driver: bridge
+```
+
+#### 清除已有的 compse 容器
+
+```
+PS E:\working\nestExplore\acl-test> docker-compose down
+```
+
+#### 运行
+
+```
+PS E:\working\nestExplore\acl-test> docker-compose up
+```
+
+## 参考资料
+
+[acl-test](https://gitee.com/wayliuhaha/nestExplore/tree/main/acl-test)
