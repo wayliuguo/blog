@@ -5,6 +5,11 @@ export default [
         activeMatch: '/article/'
     },
     {
+        text: 'AI',
+        link: '/ai/claudeCode',
+        activeMatch: '/ai/'
+    },
+    {
         text: '工程相关',
         link: '/engineer/moduleStandard',
         activeMatch: '/engineer/'
