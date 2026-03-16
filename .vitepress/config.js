@@ -7,6 +7,7 @@ import article from "./config/article"
 import interview from "./config/interview"
 import alg from "./config/alg"
 import node from './config/node'
+import ai from './config/ai'
 
 module.exports = {
     title: "well's blog",
@@ -27,7 +28,8 @@ module.exports = {
             '/visualization/': visualization,
             '/article/': article,
             '/interview': interview,
-            '/alg': alg
+            '/alg': alg,
+            '/ai': ai
         },
         // 添加 outline 配置以显示三级标题
         outline: {
