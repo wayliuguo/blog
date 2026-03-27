@@ -76,36 +76,6 @@
 - 工作流会构建 VitePress 站点并发布到 GitHub Pages。
 - 站点基础路径为 `/blog/`，配置见 `.vitepress/config.js`。
 
-## 项目专用 Skills
-
-### create-doc-entry
-
-用于在已有博客分类下新增文章入口，自动执行以下流程：
-
-1. 创建对应的 Markdown 文件
-2. 更新对应的 sidebar 配置
-3. 根据参数可选更新 nav 配置
-
-适用场景：
-- 在 `ai/`、`article/`、`react/` 等已存在分类下新增文章
-- 希望减少手工同时改 md、sidebar、nav 的重复工作
-
-调用时传入 `key=value` 参数，常用参数如下：
-
-- `category`：分类目录名
-- `slug`：文章路径标识，不带 `.md`
-- `title`：文章标题
-- `sidebarTarget`：`root` / `group:<文本>` / `path:<组1>/<组2>/...`
-- `template`：`minimal` / `article`
-- `updateNav`：`true` / `false`
-- `navText`：更新 nav 时的文案
-- `dryRun`：是否只预览不落盘
-
-示例：
-
-- `create-doc-entry category=ai slug=promptEngineering title=Prompt Engineering sidebarTarget=group:AI template=article`
-- `create-doc-entry category=article slug=vitepressSkill title=VitePress Skill sidebarTarget=root dryRun=true`
-
 ## 补充说明
 
 - 当前站点使用 VitePress `1.0.0-beta.6`。
