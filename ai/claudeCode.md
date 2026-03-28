@@ -155,9 +155,8 @@ claude --version
 
 其分为项目、全局两个文件配置。
 
-#### 项目
-
 ```
+// 项目
 - CLAUDE.md
 - .mcp.json
 - ./claude/
@@ -177,15 +176,102 @@ claude --version
  - agent-memory
  	- <agent-name> /
  	 - MEMORY.md
+ 	 
+// 全局
+- .claude.json
+- .claude/
+	- CLAUDE.md
+	- settings.json
+	- keybindings.json
+	- projects/
+		- MEMORY.md
+	- plugins
+	- rules
+	- skills
+	- output-styles
+	- agents/
+	- agent-memory
 ```
 
-##### CLAUDE.md
+#### CLAUDE.md
 
 - 项目级别的，默认是不在./claude 目录下，如果希望整洁可以放在./claude 目录下的
 - 这个文件的长度应该在200行以内，较长的虽然可以完整加载，但会降低加载速度
 - 每个会话都会加载，非每个会话都需要的，应该移除到skills或rules 中
 
+#### mcp.json
 
+- 配置mcp服务
+
+  - 相关命令查看
+
+    - `claude  mcp --help`
+    - `claude mcp add -h`
+
+  - `claude mcp add --transport http figma https://mcp.figma.com/mcp`
+
+    - 这个命令会在`.claude.json`中生成
+
+      ![image-20260328135926545](image-20260328135926545.png)
+
+    - 通过添加`--scope project`,`claude mcp add --scope project --transport http figma https://mcp.figma.com/mcp`, 在项目级别增加mcp.json
+
+      ![image-20260328141702816](image-20260328141702816.png)
+
+#### setting.json/setting.local.json
+
+- 可以设置如：permissions\hooks\statusLine\model\env\outputStyle
+
+- 例子
+
+  ```
+  {
+    "permissions": {
+      "allow": [
+        "Bash(claude mcp:*)",
+        "Bash(claude:*)",
+        "Bash(CLAUDE_CODE_GIT_BASH_PATH=\"E:/Program Files/Git/usr/bin/bash.exe\" claude mcp remove figma)",
+        "Bash(CLAUDE_CODE_GIT_BASH_PATH='E:\\\\Program Files\\\\Git\\\\usr\\\\bin\\\\bash.exe' claude mcp remove figma)"
+      ]
+    }
+  }
+  ```
+
+#### rules/
+
+- 可以通过通配符配置，如`path`
+
+  ```
+  // testing.md
+  ---
+  paths:
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+  ---
+  
+  # Testing Rules
+  
+  - Use descriptive test names: "should [expected] when [condition]"
+  - Mock external dependencies, not internal modules
+  - Clean up side effects in afterEach
+  ```
+
+#### skills/
+
+- 用于放置 skills 
+
+#### commands
+
+- 自定义命令，和 skills 相同的机制
+
+#### agents/
+
+- 输入 /agent 进行创建，会有一步一步的引导
+- [创建agent](https://code.claude.com/docs/en/sub-agents#quickstart-create-your-first-subagent)
+
+#### agent-memory/
+
+- 配置 agent 的 momory
 
 ## 生态
 
