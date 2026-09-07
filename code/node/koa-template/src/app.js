@@ -1,7 +1,7 @@
 require('reflect-metadata')
 const Koa = require('koa')
 const Router = require('@koa/router')
-const koaBody = require('koa-body')
+const { koaBody } = require('koa-body')
 const cors = require('@koa/cors')
 const { AppDataSource } = require('./config/database')
 const redisClient = require('./utils/redis')

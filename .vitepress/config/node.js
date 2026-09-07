@@ -91,9 +91,7 @@ export default [
     {
         text: '第九阶段：脚手架开发',
         collapsed: true,
-        items: [
-            { text: '01-脚手架开发入门', link: '/node/09-脚手架开发/01-脚手架开发入门' }
-        ]
+        items: [{ text: '01-脚手架开发入门', link: '/node/09-脚手架开发/01-脚手架开发入门' }]
     },
     {
         text: '第十阶段：进阶主题',

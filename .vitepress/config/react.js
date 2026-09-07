@@ -61,15 +61,15 @@ export default [
                 items: [
                     {
                         text: 'JSX语法',
-                        link: '/react/reactQuestion/2-jsxComponent/jsx' 
+                        link: '/react/reactQuestion/2-jsxComponent/jsx'
                     },
                     {
                         text: '实战-开发List页',
-                        link: '/react/reactQuestion/2-jsxComponent/listPage' 
+                        link: '/react/reactQuestion/2-jsxComponent/listPage'
                     },
                     {
                         text: '组件和props',
-                        link: '/react/reactQuestion/2-jsxComponent/componentProps' 
+                        link: '/react/reactQuestion/2-jsxComponent/componentProps'
                     },
                     {
                         text: '开发者工具',
@@ -98,7 +98,7 @@ export default [
                     },
                     {
                         text: '自定义hooks',
-                        link: '/react/reactQuestion/3-hooks/customHooks' 
+                        link: '/react/reactQuestion/3-hooks/customHooks'
                     },
                     {
                         text: '第三方hooks',
@@ -119,7 +119,7 @@ export default [
                     },
                     {
                         text: 'css-Module',
-                        link: '/react/reactQuestion/4-useCss/cssModule' 
+                        link: '/react/reactQuestion/4-useCss/cssModule'
                     },
                     {
                         text: 'CSS-in-js',
@@ -137,8 +137,8 @@ export default [
                     {
                         text: '实战',
                         link: '/react/reactQuestion/5-reactRouter/routerPractice'
-                    },
-                ] 
+                    }
+                ]
             },
             {
                 text: 'UI 组件',
@@ -149,15 +149,15 @@ export default [
                     },
                     {
                         text: '使用antd',
-                        link: '/react/reactQuestion/6-uiComponent/useAntd'  
+                        link: '/react/reactQuestion/6-uiComponent/useAntd'
                     },
                     {
                         text: '实战',
-                        link: '/react/reactQuestion/6-uiComponent/uiComponentPractice' 
+                        link: '/react/reactQuestion/6-uiComponent/uiComponentPractice'
                     },
                     {
                         text: '了解tailwindcss',
-                        link: '/react/reactQuestion/6-uiComponent/knowTailwindcss' 
+                        link: '/react/reactQuestion/6-uiComponent/knowTailwindcss'
                     }
                 ]
             },
@@ -170,15 +170,15 @@ export default [
                     },
                     {
                         text: 'antd-form组件',
-                        link: '/react/reactQuestion/7-formComponent/antdFormComponent' 
+                        link: '/react/reactQuestion/7-formComponent/antdFormComponent'
                     },
                     {
                         text: '实战-登录注册',
-                        link: '/react/reactQuestion/7-formComponent/loginAndRegister' 
+                        link: '/react/reactQuestion/7-formComponent/loginAndRegister'
                     },
                     {
                         text: '表单校验',
-                        link: '/react/reactQuestion/7-formComponent/formValidate' 
+                        link: '/react/reactQuestion/7-formComponent/formValidate'
                     }
                 ]
             },
@@ -191,11 +191,11 @@ export default [
                     },
                     {
                         text: '搭建mock服务',
-                        link: '/react/reactQuestion/8-ajax/setupMockServer' 
+                        link: '/react/reactQuestion/8-ajax/setupMockServer'
                     },
                     {
                         text: 'API 设计',
-                        link: '/react/reactQuestion/8-ajax/apiDesign' 
+                        link: '/react/reactQuestion/8-ajax/apiDesign'
                     },
                     {
                         text: '实战-问卷ajax',
@@ -203,9 +203,9 @@ export default [
                     },
                     {
                         text: '实战-用户ajax',
-                        link: '/react/reactQuestion/8-ajax/userAjax' 
+                        link: '/react/reactQuestion/8-ajax/userAjax'
                     }
-                ] 
+                ]
             },
             {
                 text: '状态管理',
@@ -216,7 +216,7 @@ export default [
                     },
                     {
                         text: 'Context',
-                        link: '/react/reactQuestion/9-stateManagement/context' 
+                        link: '/react/reactQuestion/9-stateManagement/context'
                     },
                     {
                         text: 'useReducer',
@@ -224,44 +224,44 @@ export default [
                     },
                     {
                         text: 'redux',
-                        link: '/react/reactQuestion/9-stateManagement/redux' 
+                        link: '/react/reactQuestion/9-stateManagement/redux'
                     },
                     {
                         text: 'mobx',
-                        link: '/react/reactQuestion/9-stateManagement/mobx' 
+                        link: '/react/reactQuestion/9-stateManagement/mobx'
                     },
                     {
                         text: 'redux-用户信息',
-                        link: '/react/reactQuestion/9-stateManagement/reduxUserInfo' 
+                        link: '/react/reactQuestion/9-stateManagement/reduxUserInfo'
                     }
-                ] 
+                ]
             },
             {
                 text: '编辑器',
                 items: [
                     {
                         text: '需求分析',
-                        link: '/react/reactQuestion/10-editor/requirementAnalysis' 
+                        link: '/react/reactQuestion/10-editor/requirementAnalysis'
                     },
                     {
                         text: '技术方案设计',
-                        link: '/react/reactQuestion/10-editor/techSolutionDesign' 
+                        link: '/react/reactQuestion/10-editor/techSolutionDesign'
                     },
                     {
                         text: '设计 UI',
-                        link: '/react/reactQuestion/10-editor/designUI' 
+                        link: '/react/reactQuestion/10-editor/designUI'
                     },
                     {
                         text: '显示问卷列表',
-                        link: '/react/reactQuestion/10-editor/displayQuestionnaireList' 
+                        link: '/react/reactQuestion/10-editor/displayQuestionnaireList'
                     },
                     {
                         text: '组件库',
-                        link: '/react/reactQuestion/10-editor/componentLibrary' 
+                        link: '/react/reactQuestion/10-editor/componentLibrary'
                     },
                     {
                         text: '组件属性',
-                        link: '/react/reactQuestion/10-editor/componentProps' 
+                        link: '/react/reactQuestion/10-editor/componentProps'
                     },
                     {
                         text: '工具栏',
@@ -269,11 +269,11 @@ export default [
                     },
                     {
                         text: '其他组件',
-                        link: '/react/reactQuestion/10-editor/otherComponent' 
+                        link: '/react/reactQuestion/10-editor/otherComponent'
                     },
                     {
                         text: '图层',
-                        link: '/react/reactQuestion/10-editor/layer' 
+                        link: '/react/reactQuestion/10-editor/layer'
                     },
                     {
                         text: '页面信息',
@@ -281,24 +281,24 @@ export default [
                     },
                     {
                         text: '保存和发布',
-                        link: '/react/reactQuestion/10-editor/saveAndPublish' 
+                        link: '/react/reactQuestion/10-editor/saveAndPublish'
                     },
                     {
                         text: '拖拽排序',
-                        link: '/react/reactQuestion/10-editor/dragSort' 
+                        link: '/react/reactQuestion/10-editor/dragSort'
                     },
                     {
                         text: '撤销重做',
                         link: '/react/reactQuestion/10-editor/undoAndRedo'
-                    },
-                ] 
+                    }
+                ]
             },
             {
                 text: '统计页面',
                 items: [
                     {
                         text: '需求分析',
-                        link: '/react/reactQuestion/11-statisticsPage/requirementAnalysis' 
+                        link: '/react/reactQuestion/11-statisticsPage/requirementAnalysis'
                     },
                     {
                         text: '页面布局',
@@ -327,8 +327,8 @@ export default [
                     {
                         text: '图表统计',
                         link: '/react/reactQuestion/11-statisticsPage/chartStatistics'
-                    },
-                ] 
+                    }
+                ]
             },
             {
                 text: 'c端页面',
@@ -343,17 +343,17 @@ export default [
                     },
                     {
                         text: 'Form 提交',
-                        link: '/react/reactQuestion/12-customPage/formSubmit' 
+                        link: '/react/reactQuestion/12-customPage/formSubmit'
                     },
                     {
                         text: '流程',
-                        link: '/react/reactQuestion/12-customPage/flow'  
+                        link: '/react/reactQuestion/12-customPage/flow'
                     },
                     {
                         text: '完善其他组件',
-                        link: '/react/reactQuestion/12-customPage/improveOtherComponent'  
+                        link: '/react/reactQuestion/12-customPage/improveOtherComponent'
                     }
-                ] 
+                ]
             },
             {
                 text: '性能优化',
@@ -365,21 +365,21 @@ export default [
                     {
                         text: '代码体积和拆分',
                         link: '/react/reactQuestion/13-PerformanceOpti/codeSizeAndSplit'
-                    },  
-                ] 
+                    }
+                ]
             },
             {
                 text: '测试',
                 items: [
                     {
                         text: '单元测试',
-                        link: '/react/reactQuestion/14-test/unitTest' 
+                        link: '/react/reactQuestion/14-test/unitTest'
                     },
                     {
                         text: 'storybook',
-                        link: '/react/reactQuestion/14-test/storybook' 
+                        link: '/react/reactQuestion/14-test/storybook'
                     }
-                ] 
+                ]
             },
             {
                 text: '总结',
@@ -388,7 +388,7 @@ export default [
                         text: '知识点',
                         link: '/react/reactQuestion/15-sumarry/knowledgePoint'
                     }
-                ] 
+                ]
             }
         ]
     }
