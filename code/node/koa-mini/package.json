@@ -1,0 +1,9 @@
+{
+  "name": "koa-mini",
+  "version": "1.0.0",
+  "description": "Koa 最小实现 - 演示 compose、洋葱模型、Context 封装",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  }
+}

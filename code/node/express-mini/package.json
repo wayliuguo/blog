@@ -1,0 +1,9 @@
+{
+  "name": "express-mini",
+  "version": "1.0.0",
+  "description": "Express 最小实现 - 演示路由注册、中间件链、响应封装",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  }
+}

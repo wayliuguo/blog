@@ -1,0 +1,32 @@
+{
+  "name": "koa-template",
+  "version": "1.0.0",
+  "description": "Koa 项目模板 - TypeORM + Redis + JWT + 日志",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "migration:create": "tsx node_modules/typeorm/cli.js migration:create",
+    "migration:generate": "tsx node_modules/typeorm/cli.js migration:generate -d src/config/database.js",
+    "migration:run": "tsx node_modules/typeorm/cli.js migration:run -d src/config/database.js",
+    "migration:revert": "tsx node_modules/typeorm/cli.js migration:revert -d src/config/database.js",
+    "migration:show": "tsx node_modules/typeorm/cli.js migration:show -d src/config/database.js"
+  },
+  "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "@koa/router": "^12.0.0",
+    "bcrypt": "^5.1.0",
+    "dotenv": "^16.0.0",
+    "ioredis": "^5.3.0",
+    "joi": "^17.9.0",
+    "jsonwebtoken": "^9.0.0",
+    "koa": "^2.14.0",
+    "koa-body": "^6.0.0",
+    "mysql2": "^3.0.0",
+    "reflect-metadata": "^0.1.13",
+    "typeorm": "^0.3.0",
+    "winston": "^3.8.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13"
+  }
+}

@@ -31,7 +31,7 @@ export default [
     },
     {
         text: 'node',
-        link: '/node/nodeBasic',
+        link: '/node/index',
         activeMatch: '/node/'
     },
     {
