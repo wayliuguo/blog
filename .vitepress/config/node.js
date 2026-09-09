@@ -69,7 +69,8 @@ export default [
             { text: '06-数据库集成', link: '/node/06-NestJS 入门/06-数据库集成' }
         ]
     },
-    { text: '第七阶段：NestJS 进阶',
+    {
+        text: '第七阶段：NestJS 进阶',
         collapsed: true,
         items: [
             { text: '03-自定义装饰器', link: '/node/07-NestJS 进阶/03-自定义装饰器' },
