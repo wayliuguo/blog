@@ -40,9 +40,10 @@ export default [
         items: [
             { text: '01-MySQL 基础', link: '/node/04-数据库/01-MySQL 基础' },
             { text: '02-MySQL 进阶', link: '/node/04-数据库/02-MySQL 进阶' },
-            { text: '03-Node.js 操作 MySQL', link: '/node/04-数据库/03-Node.js 操作 MySQL' },
-            { text: '04-MongoDB 入门', link: '/node/04-数据库/04-MongoDB 入门' },
-            { text: '05-MongoDB 进阶', link: '/node/04-数据库/05-MongoDB 进阶' }
+            { text: '03-MySQL 高级实战', link: '/node/04-数据库/03-MySQL%20高级实战' },
+            { text: '04-Node.js 操作 MySQL', link: '/node/04-数据库/04-Node.js 操作 MySQL' },
+            { text: '05-MongoDB 入门', link: '/node/04-数据库/05-MongoDB 入门' },
+            { text: '06-MongoDB 进阶', link: '/node/04-数据库/06-MongoDB 进阶' }
         ]
     },
     {
@@ -68,24 +69,34 @@ export default [
             { text: '06-数据库集成', link: '/node/06-NestJS 入门/06-数据库集成' }
         ]
     },
-    {
-        text: '第七阶段：NestJS 进阶',
+    { text: '第七阶段：NestJS 进阶',
         collapsed: true,
         items: [
-            { text: '01-管道与校验', link: '/node/07-NestJS 进阶/01-管道与校验' },
-            { text: '02-拦截器与过滤器', link: '/node/07-NestJS 进阶/02-拦截器与过滤器' },
             { text: '03-自定义装饰器', link: '/node/07-NestJS 进阶/03-自定义装饰器' },
             { text: '04-作用域与循环依赖', link: '/node/07-NestJS 进阶/04-作用域与循环依赖' },
-            { text: '05-登录注册实战', link: '/node/07-NestJS 进阶/05-登录注册实战' }
+            { text: '05-登录注册实战', link: '/node/07-NestJS 进阶/05-登录注册实战' },
+            { text: '06-文件上传实战', link: '/node/07-NestJS 进阶/06-文件上传实战' },
+            { text: '07-WebSocket 实时通信', link: '/node/07-NestJS 进阶/07-WebSocket 实时通信' },
+            { text: '08-定时任务与队列', link: '/node/07-NestJS 进阶/08-定时任务与队列' },
+            { text: '09-微服务架构', link: '/node/07-NestJS 进阶/09-微服务架构' },
+            { text: '10-切换Fastify平台', link: '/node/07-NestJS 进阶/10-切换Fastify平台' },
+            { text: '11-NestJS 源码分析', link: '/node/07-NestJS 进阶/11-NestJS 源码分析' },
+            { text: '12-NestJS 项目模板', link: '/node/07-NestJS 进阶/12-NestJS 项目模板' }
         ]
     },
     {
         text: '第八阶段：部署与工程化',
         collapsed: true,
         items: [
-            { text: '01-Docker 部署', link: '/node/08-部署与工程化/01-Docker 部署' },
-            { text: '02-PM2 进程管理', link: '/node/08-部署与工程化/02-PM2 进程管理' },
-            { text: '03-环境管理与日志', link: '/node/08-部署与工程化/03-环境管理与日志' }
+            { text: '01-环境管理与配置', link: '/node/08-部署与工程化/01-环境管理与配置' },
+            { text: '02-日志体系', link: '/node/08-部署与工程化/02-日志体系' },
+            { text: '03-PM2 进程管理', link: '/node/08-部署与工程化/03-PM2 进程管理' },
+            { text: '04-Docker 容器化', link: '/node/08-部署与工程化/04-Docker 容器化' },
+            { text: '05-Docker Compose 编排', link: '/node/08-部署与工程化/05-Docker Compose 编排' },
+            { text: '06-Nginx 反向代理与网关', link: '/node/08-部署与工程化/06-Nginx 反向代理与网关' },
+            { text: '07-数据库迁移与发布', link: '/node/08-部署与工程化/07-数据库迁移与发布' },
+            { text: '08-生产部署实战', link: '/node/08-部署与工程化/08-生产部署实战' },
+            { text: '09-CI-CD 自动化部署', link: '/node/08-部署与工程化/09-CI-CD 自动化部署' }
         ]
     },
     {

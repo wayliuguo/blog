@@ -39,7 +39,6 @@
 ├── interview/             # 面试题内容
 ├── node/                  # Node.js 文章
 ├── react/                 # React 文章与教程
-├── visualization/         # 数据可视化内容
 ├── vue/                   # Vue 文章
 ├── assets/                # 图片与静态资源
 ├── public/                # 公共静态文件

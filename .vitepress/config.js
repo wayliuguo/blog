@@ -2,7 +2,6 @@ import engineer from './config/engineer'
 import nav from './config/nav'
 import vue from './config/vue'
 import react from './config/react'
-import visualization from './config/visualization'
 import article from './config/article'
 import interview from './config/interview'
 import alg from './config/alg'
@@ -25,7 +24,6 @@ module.exports = {
             '/react/': react,
             '/engineer/': engineer,
             '/node/': node,
-            '/visualization/': visualization,
             '/article/': article,
             '/interview': interview,
             '/alg': alg,

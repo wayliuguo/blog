@@ -1,0 +1,23 @@
+{
+  "name": "microservice-demo",
+  "version": "1.0.0",
+  "description": "NestJS 微服务架构示例：API 网关 + 用户微服务 + 订单微服务，通过 TCP 通信",
+  "scripts": {
+    "start:user": "ts-node user-service/src/main.ts",
+    "start:order": "ts-node order-service/src/main.ts",
+    "start:gateway": "ts-node api-gateway/src/main.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/microservices": "^10.0.0",
+    "@nestjs/platform-express": "^10.0.0",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.3"
+  }
+}

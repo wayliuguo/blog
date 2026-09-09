@@ -25,11 +25,6 @@ export default [
         activeMatch: '/react/'
     },
     {
-        text: '可视化',
-        link: '/visualization/basic',
-        activeMatch: '/visualization/'
-    },
-    {
         text: 'node',
         link: '/node/index',
         activeMatch: '/node/'
