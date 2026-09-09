@@ -167,6 +167,73 @@ rename-command CONFIG ""
 port 6380
 ```
 
+## [中级] 生产场景：Redis 慢查询与延迟诊断
+
+```bash
+# 慢查询日志
+# 配置（redis.conf）
+slowlog-log-slower-than 10000    # 记录超过 10ms 的命令
+slowlog-max-len 128              # 最多保留 128 条
+
+# 查看慢查询
+SLOWLOG GET 10                   # 查看最近 10 条慢查询
+SLOWLOG LEN                      # 查看慢查询数量
+SLOWLOG RESET                    # 清空慢查询日志
+
+# 慢查询结果示例
+# 1) 1) (integer) 1              ← 唯一 ID
+#    2) (integer) 1735689600     ← 时间戳
+#    3) (integer) 15000          ← 执行耗时（微秒）= 15ms
+#    4) 1) "KEYS"                ← 命令
+#       2) "user:*"              ← 参数（KEYS 导致慢查询）
+#    5) "127.0.0.1:6379"         ← 客户端地址
+```
+
+## [中级] 生产场景：Redis 6.0+ 多线程 IO
+
+Redis 6.0 引入了多线程 IO，但仍然是单线程处理命令执行。
+
+```bash
+# 配置（redis.conf）
+io-threads 4          # IO 线程数（建议不超过 CPU 核心数）
+io-threads-do-reads yes  # 读请求也使用多线程
+
+# 注意：多线程只用于 IO 读写，命令执行仍然是单线程
+# 适合场景：网络 IO 密集型，如大量并发连接
+# 通常单线程已经足够，大部分场景不需要开启
+```
+
+### 生产场景：Redis 监控与告警
+
+```bash
+# 关键监控指标
+# 1. 连接数
+INFO clients
+# connected_clients: 50          ← 当前连接数
+# blocked_clients: 0             ← 阻塞的客户端（B* 命令导致）
+
+# 2. 内存
+INFO memory
+# used_memory: 1.5G
+# mem_fragmentation_ratio: 1.3   ← 碎片率
+
+# 3. 命中率
+INFO stats
+# keyspace_hits: 1000000          ← 缓存命中次数
+# keyspace_misses: 10000          ← 缓存未命中次数
+# 命中率 = hits / (hits + misses) = 99%
+
+# 4. 命令统计
+INFO commandstats
+# cmdstat_get:calls=500000,usec=3000000,usec_per_call=6.00
+# cmdstat_set:calls=200000,usec=1000000,usec_per_call=5.00
+
+# 5. 复制延迟
+# 从节点执行
+INFO replication
+# master_last_io_seconds_ago: 0  ← 距上次同步秒数，> 30 表示延迟严重
+```
+
 ---
 
 ## 面试题
@@ -183,9 +250,17 @@ List 简单但不支持消费组和 ACK，消息可能丢失。Stream 支持消�
 
 使用 GEO 数据结构存储地理位置，通过 GEORADIUS 命令查询指定半径内的位置。
 
+### Q14: Redis 6.0 的多线程 IO 是怎么回事？
+
+Redis 6.0 引入了多线程 IO，但命令执行仍然是单线程。多线程只用于网络 IO 读写处理，适合大量并发连接场景。CPU 密集场景或命令执行慢的场景，多线程 IO 没有帮助。
+
+### Q15: Redis 缓存命中率多少算正常？如何提升？
+
+一般缓存命中率应该在 90% 以上，低于 80% 需要优化。提升方法：增大缓存容量、延长过期时间、缓存预热、优化缓存策略（如 LFU 替代 LRU）。
+
 ---
 
 ## 参考
 
 - 上一篇：[Redis 缓存实战](./04-Redis%20缓存实战)
-- 下一篇：NestJS 入门
+- 下一篇：[NestJS 入门](../06-NestJS%20入门/01-快速上手)

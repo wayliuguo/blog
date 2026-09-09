@@ -113,6 +113,81 @@ maxmemory 1gb           # 最大内存限制
 maxmemory-policy allkeys-lru  # 淘汰策略
 ```
 
+### 生产场景：内存监控与告警
+
+```bash
+# 查看内存使用情况
+INFO memory
+# 重点关注：
+# used_memory_human: 1.5G      ← 当前使用内存
+# used_memory_rss_human: 2.0G  ← 操作系统看到的内存（含碎片）
+# maxmemory_human: 4.0G        ← 配置的最大内存
+# mem_fragmentation_ratio: 1.3 ← 内存碎片率（>1.5 表示碎片严重）
+
+# 查看 key 数量
+INFO keyspace
+# db0: keys=1000000, expires=800000, avg_ttl=3600000
+
+# 设置告警阈值
+# 内存使用超过 80% maxmemory → 告警
+# 内存碎片率超过 1.5 → 告警
+# 淘汰 key 数量（evicted_keys）持续增加 → 告警
+```
+
+### 生产场景：Big Key 问题
+
+Big Key 是指某个 key 存储了大量数据，导致操作耗时。
+
+```
+Big Key 的判定标准：
+  String 类型：> 10KB
+  Hash/List/Set/ZSet 类型：> 5000 个元素
+
+Big Key 的危害：
+  1. 操作耗时：读取、删除 Big Key 会阻塞 Redis
+  2. 内存不均：集群模式下数据倾斜
+  3. 网络开销：传输大数据包占用带宽
+
+Big Key 的排查：
+  redis-cli --bigkeys  # 扫描大 key（生产环境谨慎使用，有性能影响）
+```
+
+**Big Key 解决方案**：
+
+```bash
+# 1. 拆分大 Hash
+# 原：HMSET user:10000 name "张三" orders:100 order:200 ... (含 10000 条订单)
+# 改为：拆分为多个 Hash
+HMSET user:10000:basic name "张三" age 25
+HMSET user:10000:orders:202401 order:100 order:200
+HMSET user:10000:orders:202402 order:300
+
+# 2. 使用压缩
+# 对大 JSON 字符串用 ZSTD 或 Snappy 压缩后再存储
+
+# 3. 限流删除（避免阻塞）
+# 删除大 List 时，用 LTRIM 分批删除
+LTRIM biglist 0 999999  # 保留前 100 万条，删除后面的
+# 或者用 UNLINK（异步删除，非阻塞）
+UNLINK biglist  # 4.0+ 异步删除，不阻塞主线程
+```
+
+### 生产场景：Hot Key 问题
+
+Hot Key 是指某个 key 被大量请求同时访问，导致某个 Redis 节点负载过高。
+
+```
+Hot Key 的判定标准：
+  单个 key 的 QPS 超过 1万+
+  某个节点的 CPU 比其他节点高很多
+
+Hot Key 的解决方案：
+  1. 本地缓存：在应用层缓存热点 key，减少 Redis 访问
+  2. 读写分离：将读请求分散到从节点
+  3. 数据分片：将 hot key 的副本分散到多个分片
+  4. 限流：对热点 key 的访问进行限流保护
+```
+
 ---
 
 ## [中级] Redis 事务
@@ -154,6 +229,14 @@ RDB 适合备份和灾难恢复，恢复速度快，但可能丢数据。AOF 数
 ### Q5: 内存淘汰策略有哪些？生产环境常用哪个？
 
 8 种策略，最常用 `allkeys-lru`（淘汰最近最少使用的 key），适合缓存场景。
+
+### Q6: 什么是 Big Key？有什么危害？如何解决？
+
+Big Key 是指存储了大量数据的 key（如大的 Hash 或 List）。危害：操作耗时阻塞 Redis、内存分布不均、网络开销大。解决：拆分大 key、使用压缩、用 UNLINK 异步删除。
+
+### Q7: 什么是 Hot Key？如何解决？
+
+Hot Key 是某个 key 被大量请求同时访问，导致节点负载过高。解决：本地缓存、读写分离、副本分散、限流保护。
 
 ---
 

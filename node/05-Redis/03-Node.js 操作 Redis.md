@@ -208,7 +208,6 @@ export class RedisService {
 ```
 
 ---
-
 ## [中级] 管道与批量操作
 
 ```typescript
@@ -222,6 +221,81 @@ const results = await pipeline.exec()
 // results 是 [[null, 'OK'], [null, 'OK'], [null, 'value1'], [null, 1]]
 ```
 
+## [中级] Lua 脚本
+
+Lua 脚本在 Redis 中原子执行，适用于需要保证多个命令原子性的场景。
+
+```typescript
+// 使用 Lua 脚本实现"扣减库存并检查"
+const script = `
+    local stock = redis.call('GET', KEYS[1])
+    if not stock or tonumber(stock) <= 0 then
+        return 0
+    end
+    redis.call('DECR', KEYS[1])
+    return 1
+`
+
+// 执行脚本，原子操作
+const result = await redis.eval(script, 1, 'product:1001:stock')
+// result === 1 表示扣减成功，result === 0 表示库存不足
+```
+
+## [中级] 生产场景：连接池监控
+
+```typescript
+// 生产环境需要监控 Redis 连接状态
+class RedisMonitor {
+    private redis: Redis
+    private checkInterval: NodeJS.Timeout
+
+    constructor(redis: Redis) {
+        this.redis = redis
+    }
+
+    start() {
+        // 每 30 秒检查一次 Redis 状态
+        this.checkInterval = setInterval(async () => {
+            try {
+                // 发送 PING 检查连接
+                await this.redis.ping()
+
+                // 获取 Redis 状态信息
+                const info = await this.redis.info()
+                const status = this.parseInfo(info)
+
+                // 告警检查
+                if (status.connectedClients > 1000) {
+                    console.error('Redis 连接数过多:', status.connectedClients)
+                }
+                if (status.usedMemory > 1024 * 1024 * 1024) {
+                    console.error('Redis 内存使用超过 1GB')
+                }
+                if (status.evictedKeys > 0) {
+                    console.warn('Redis 触发了内存淘汰:', status.evictedKeys)
+                }
+            } catch (err) {
+                console.error('Redis 连接异常:', err)
+                // 触发告警通知
+            }
+        }, 30000)
+    }
+
+    private parseInfo(info: string) {
+        const lines = info.split('\n')
+        return {
+            connectedClients: parseInt(lines.find(l => l.startsWith('connected_clients:'))?.split(':')[1] || '0'),
+            usedMemory: parseInt(lines.find(l => l.startsWith('used_memory:'))?.split(':')[1] || '0'),
+            evictedKeys: parseInt(lines.find(l => l.startsWith('evicted_keys:'))?.split(':')[1] || '0')
+        }
+    }
+
+    stop() {
+        clearInterval(this.checkInterval)
+    }
+}
+```
+
 ---
 
 ## 面试题
@@ -233,6 +307,10 @@ ioredis 更流行，支持 Promise、集群、哨兵、Pipeline、Lua 脚本等�
 ### Q7: Pipeline 的作用是什么？
 
 将多个命令批量发送到 Redis 服务器，减少网络往返次数，提高吞吐量。适合需要批量操作的场景。
+
+### Q8: Lua 脚本在 Redis 中有什么作用？
+
+Lua 脚本在 Redis 中原子执行，所有命令要么全部执行，要么全部不执行。适合需要保证多个命令原子性的场景，如库存扣减、分布式锁释放等。
 
 ---
 

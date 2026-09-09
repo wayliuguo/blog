@@ -40,20 +40,21 @@
 | 文件 | 说明 | 级别 |
 |------|------|------|
 | [MySQL 基础](/node/04-数据库/01-MySQL%20基础) | 关系型数据库、SQL 基础、表设计、连接查询 | [初级] |
-| [MySQL 进阶](/node/04-数据库/02-MySQL%20进阶) | 索引原理、事务与锁、查询优化、分库分表 | [中级]→[高级] |
-| [Node.js 操作 MySQL](/node/04-数据库/03-Node.js%20操作%20MySQL) | mysql2 连接池、TypeORM、N+1 查询、事务 | [初级]→[中级] |
-| [MongoDB 入门](/node/04-数据库/04-MongoDB%20入门) | NoSQL、CRUD、Mongoose、文档关系设计 | [初级]→[中级] |
-| [MongoDB 进阶](/node/04-数据库/05-MongoDB%20进阶) | 索引优化、聚合管道、事务、副本集与分片 | [中级]→[高级] |
+| [MySQL 进阶](/node/04-数据库/02-MySQL%20进阶) | 索引原理、SQL 执行顺序、子查询、锁与死锁、GROUP BY、查询优化、慢查询排查 | [中级] |
+| [MySQL 高级实战](/node/04-数据库/03-MySQL%20高级实战) | 主从复制、分库分表、Online DDL、连接池调优、备份恢复 | [高级] |
+| [Node.js 操作 MySQL](/node/04-数据库/04-Node.js%20操作%20MySQL) | mysql2 连接池、TypeORM、N+1 查询、事务 | [初级]→[中级] |
+| [MongoDB 入门](/node/04-数据库/05-MongoDB%20入门) | NoSQL、CRUD、Mongoose、文档关系设计、日志系统、评论系统、TTL 索引 | [初级]→[中级] |
+| [MongoDB 进阶](/node/04-数据库/06-MongoDB%20进阶) | 索引优化、聚合管道、事务、副本集与选举、分片集群、读写分离、慢查询排查 | [中级]→[高级] |
 
 ### 第五阶段：Redis
 
 | 文件 | 说明 | 级别 |
 |------|------|------|
-| [Redis 基础与数据类型](/node/05-Redis/01-Redis%20基础与数据类型) | 5种数据类型、应用场景、为什么快 | [初级] |
-| [Redis 持久化与淘汰策略](/node/05-Redis/02-Redis%20持久化与淘汰策略) | RDB/AOF、过期策略、内存淘汰、事务 | [中级] |
-| [Node.js 操作 Redis](/node/05-Redis/03-Node.js%20操作%20Redis) | ioredis 集成、NestJS 封装、Pipeline | [初级]→[中级] |
-| [Redis 缓存实战](/node/05-Redis/04-Redis%20缓存实战) | 缓存三大问题、分布式锁、限流、缓存策略 | [中级] |
-| [Redis 进阶](/node/05-Redis/05-Redis%20进阶) | 主从复制、哨兵、Cluster 集群、高级数据类型 | [中级]→[高级] |
+| [Redis 基础与数据类型](/node/05-Redis/01-Redis%20基础与数据类型) | 5种数据类型、SDS、应用场景、为什么快 | [初级] |
+| [Redis 持久化与淘汰策略](/node/05-Redis/02-Redis%20持久化与淘汰策略) | RDB/AOF、过期策略、内存淘汰、Big Key、Hot Key、内存监控 | [中级] |
+| [Node.js 操作 Redis](/node/05-Redis/03-Node.js%20操作%20Redis) | ioredis 集成、NestJS 封装、Pipeline、Lua 脚本、连接池监控 | [初级]→[中级] |
+| [Redis 缓存实战](/node/05-Redis/04-Redis%20缓存实战) | 缓存三大问题、分布式锁、限流、缓存预热、全局 ID 生成器 | [中级] |
+| [Redis 进阶](/node/05-Redis/05-Redis%20进阶) | 主从复制、哨兵、Cluster 集群、高级数据类型、慢查询、多线程 IO、监控告警 | [中级]→[高级] |
 
 ### 第六阶段：NestJS 入门
 
@@ -63,26 +64,37 @@
 | [IOC 与依赖注入](/node/06-NestJS%20入门/02-IOC%20与依赖注入) | DI 原理、@Injectable、自定义 Provider | [初级]→[中级] |
 | [模块与提供器](/node/06-NestJS%20入门/03-模块与提供器) | @Module、模块共享、动态模块 | [初级]→[中级] |
 | [控制器与路由](/node/06-NestJS%20入门/04-控制器与路由) | @Controller、参数装饰器、RESTful 设计 | [初级]→[中级] |
-| [请求处理链](/node/06-NestJS%20入门/05-请求处理链) | 中间件→Guard→Interceptor→Pipe→Handler 全流程 | [初级]→[中级] |
+| [请求处理链](/node/06-NestJS%20入门/05-请求处理链) | Middleware/Guard/Interceptor/Pipe/Filter 全流程，含 @UseXxx、全局绑定、内置管道、DTO 校验、自定义管道、统一响应格式、异常过滤器 | [初级]→[中级] |
 | [数据库集成](/node/06-NestJS%20入门/06-数据库集成) | TypeORM 集成、实体关系、迁移 | [初级]→[中级] |
 
 ### 第七阶段：NestJS 进阶
 
 | 文件 | 说明 | 级别 |
 |------|------|------|
-| [管道与校验](/node/07-NestJS%20进阶/01-管道与校验) | 内置管道、DTO 校验、自定义管道 | [中级]→[高级] |
-| [拦截器与过滤器](/node/07-NestJS%20进阶/02-拦截器与过滤器) | 统一响应格式、统一错误处理 | [中级]→[高级] |
 | [自定义装饰器](/node/07-NestJS%20进阶/03-自定义装饰器) | 参数装饰器、方法装饰器、ExecutionContext | [中级]→[高级] |
 | [作用域与循环依赖](/node/07-NestJS%20进阶/04-作用域与循环依赖) | Provider 作用域、forwardRef 解决循环依赖 | [中级]→[高级] |
 | [登录注册实战](/node/07-NestJS%20进阶/05-登录注册实战) | bcrypt 加密、JWT 登录、Refresh Token、微信登录 | [中级]→[高级] |
+| [文件上传实战](/node/07-NestJS%20进阶/06-文件上传实战) | Multer 文件上传、自定义校验管道、静态资源、多文件上传 | [中级]→[高级] |
+| [WebSocket 实时通信](/node/07-NestJS%20进阶/07-WebSocket%20实时通信) | Gateway、Socket.IO、房间管理、身份验证、HTTP 推送 | [中级]→[高级] |
+| [定时任务与队列](/node/07-NestJS%20进阶/08-定时任务与队列) | @Cron、@Interval、Bull 消息队列、延迟任务、失败重试 | [中级]→[高级] |
+| [微服务架构](/node/07-NestJS%20进阶/09-微服务架构) | TCP/RMQ/Redis 传输、API 网关、@MessagePattern、分布式场景 | [高级] |
+| [切换 Fastify 平台](/node/07-NestJS%20进阶/10-切换Fastify平台) | Fastify 适配器、性能对比、中间件兼容性、文件上传适配 | [高级] |
+| [NestJS 源码分析](/node/07-NestJS%20进阶/11-NestJS%20源码分析) | 最小实现 NestJS：装饰器、DI 容器、路由匹配、请求处理链 | [高级] |
+| [NestJS 项目模板](/node/07-NestJS%20进阶/12-NestJS%20项目模板) | 真实项目结构、模块划分、Auth/Redis/TypeORM 集成、全局过滤器与拦截器 | [中级] |
 
 ### 第八阶段：部署与工程化
 
 | 文件 | 说明 | 级别 |
 |------|------|------|
-| [Docker 部署](/node/08-部署与工程化/01-Docker%20部署) | Dockerfile、Compose、镜像优化、部署策略 | [初级]→[中级] |
-| [PM2 进程管理](/node/08-部署与工程化/02-PM2%20进程管理) | 常用命令、集群模式、守护进程 | [初级]→[中级] |
-| [环境管理与日志](/node/08-部署与工程化/03-环境管理与日志) | 环境变量、Winston 日志、分级日志 | [中级] |
+| [环境管理与配置](/node/08-部署与工程化/01-环境管理与配置) | .env、@nestjs/config、多环境、类型安全、配置校验 | [初级]→[中级] |
+| [日志体系](/node/08-部署与工程化/02-日志体系) | Winston、双写架构、按日轮转、请求追踪 ID、三层日志查看 | [初级]→[中级] |
+| [PM2 进程管理](/node/08-部署与工程化/03-PM2%20进程管理) | 常用命令、ecosystem 配置、fork vs cluster、与 Docker 的分工 | [初级]→[中级] |
+| [Docker 容器化](/node/08-部署与工程化/04-Docker%20容器化) | 镜像/容器、多阶段构建、生产级 Dockerfile（缓存/安全/健康检查） | [初级]→[中级] |
+| [Docker Compose 编排](/node/08-部署与工程化/05-Docker%20Compose%20编排) | 多服务编排、基础设施与应用堆栈分离、启动顺序、数据卷 | [中级] |
+| [Nginx 反向代理与网关](/node/08-部署与工程化/06-Nginx%20反向代理与网关) | 反向代理、WebSocket、负载均衡、动静分离、部署架构 | [中级] |
+| [数据库迁移与发布](/node/08-部署与工程化/07-数据库迁移与发布) | migrations 表、幂等、三个 DataSource、迁移 Job 与业务分离 | [中级]→[高级] |
+| [生产部署实战](/node/08-部署与工程化/08-生产部署实战) | 首次部署、日常迭代、数据持久化、备份恢复、故障排障 | [中级]→[高级] |
+| [CI/CD 自动化部署](/node/08-部署与工程化/09-CI-CD%20自动化部署) | GitHub Actions、构建推送、SSH 自动部署、Secrets、回滚 | [中级]→[高级] |
 
 ### 第九阶段：脚手架开发
 

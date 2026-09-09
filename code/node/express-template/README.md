@@ -31,7 +31,7 @@ npm install
 
 复制 `.env` 文件并按需修改：
 
-```env
+```ini
 PORT=3000
 NODE_ENV=development
 

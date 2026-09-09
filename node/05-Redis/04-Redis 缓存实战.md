@@ -143,6 +143,78 @@ async write(key: string, value: any) {
 
 ---
 
+## [中级] 生产场景：缓存预热
+
+系统上线前或大促前，提前将热点数据加载到缓存，避免请求直接打到数据库。
+
+```typescript
+// 缓存预热脚本
+async function warmUpCache() {
+    // 1. 从数据库查询热点数据
+    const hotProducts = await productRepository.find({
+        where: { isHot: true },
+        order: { sales: 'DESC' },
+        take: 1000
+    })
+
+    // 2. 批量写入 Redis（使用 Pipeline 提高效率）
+    const pipeline = redis.pipeline()
+    for (const product of hotProducts) {
+        const key = `product:${product.id}`
+        const ttl = 3600 + Math.floor(Math.random() * 300)  // 随机过期时间
+        pipeline.setex(key, ttl, JSON.stringify(product))
+    }
+    await pipeline.exec()
+
+    console.log(`缓存预热完成，共加载 ${hotProducts.length} 条数据`)
+}
+
+// 大促前执行
+// 预热时间：大促前 30 分钟
+// 预热频率：每 5 分钟刷新一次热门数据
+// 定时任务：cron 表达式
+```
+
+## [中级] 生产场景：全局 ID 生成器
+
+```typescript
+// 使用 Redis INCR 生成全局唯一 ID
+// 适用场景：订单号、流水号、分布式 ID
+class IdGenerator {
+    private redis: Redis
+    private prefix: string
+
+    constructor(redis: Redis, prefix: string = 'idgen') {
+        this.redis = redis
+        this.prefix = prefix
+    }
+
+    // 生成 ID：前缀 + 日期 + 自增序列
+    async nextId(bizType: string): Promise<string> {
+        const today = new Date()
+        const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '')
+        const key = `${this.prefix}:${bizType}:${dateStr}`
+
+        // 每天从 1 开始自增
+        const seq = await this.redis.incr(key)
+
+        // 设置过期时间，防止 key 堆积
+        if (seq === 1) {
+            await this.redis.expire(key, 86400 * 2)  // 2 天后过期
+        }
+
+        // 生成：ORDER20240101000001
+        return `${bizType}${dateStr}${String(seq).padStart(6, '0')}`
+    }
+}
+
+// 使用
+const idGen = new IdGenerator(redis)
+const orderId = await idGen.nextId('ORDER')  // ORDER20240101000001
+```
+
+---
+
 ## [中级] 分布式锁
 
 ### 使用 SET NX 实现
@@ -223,6 +295,10 @@ Cache Aside 模式：先更新数据库，再删除缓存。最终一致性方�
 ### Q10: Redis 分布式锁如何实现？
 
 SET NX PX 实现基础锁，Lua 脚本保证释放锁的原子性。多节点场景使用 Redlock 算法。
+
+### Q11: 什么是缓存预热？为什么要做？
+
+缓存预热是系统上线前提前将热点数据加载到缓存中。如果不预热，系统刚上线时大量请求穿透到数据库，可能导致数据库崩溃。大促场景下尤其重要，通常提前 30 分钟预热，并持续刷新热门数据。
 
 ---
 

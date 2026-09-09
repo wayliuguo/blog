@@ -1,0 +1,17 @@
+{
+  "name": "nestjs-mini",
+  "version": "1.0.0",
+  "description": "NestJS 最小实现 - 演示装饰器、DI 容器、路由匹配、请求处理链",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "dev": "ts-node --watch index.ts"
+  },
+  "dependencies": {
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.11.0"
+  }
+}
