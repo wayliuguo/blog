@@ -100,7 +100,10 @@ export default [
                     { text: '08-切换Fastify平台', link: '/node/08-NestJS 进阶/08-切换Fastify平台' },
                     { text: '09-NestJS 源码分析', link: '/node/08-NestJS 进阶/09-NestJS 源码分析' },
                     { text: '10-NestJS 项目模板', link: '/node/08-NestJS 进阶/10-NestJS 项目模板' },
-                    { text: '11-认证进阶-双Token与多设备会话', link: '/node/08-NestJS 进阶/11-认证进阶-双Token与多设备会话' },
+                    {
+                        text: '11-认证进阶-双Token与多设备会话',
+                        link: '/node/08-NestJS 进阶/11-认证进阶-双Token与多设备会话'
+                    },
                     { text: '12-IoC 与依赖注入原理', link: '/node/08-NestJS 进阶/12-IoC 与依赖注入原理' }
                 ]
             }

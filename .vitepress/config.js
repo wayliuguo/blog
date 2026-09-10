@@ -1,8 +1,5 @@
-import engineer from './config/engineer'
+import frontend from './config/frontend'
 import nav from './config/nav'
-import vue from './config/vue'
-import react from './config/react'
-import article from './config/article'
 import interview from './config/interview'
 import alg from './config/alg'
 import node from './config/node'
@@ -12,6 +9,8 @@ module.exports = {
     title: "well's blog",
     description: "well's blog",
     base: '/blog/',
+    // code/ 下是配套示例代码，不是站点页面，排除出页面集合
+    srcExclude: ['**/node_modules/**', '**/dist/**', 'code/**'],
     themeConfig: {
         lastUpdated: '最后更新时间',
         docsDir: 'docs',
@@ -20,11 +19,8 @@ module.exports = {
         repo: 'https://gitee.com/wayliuhaha/blog',
         nav: nav,
         sidebar: {
-            '/vue/': vue,
-            '/react/': react,
-            '/engineer/': engineer,
+            '/frontend/': frontend,
             '/node/': node,
-            '/article/': article,
             '/interview': interview,
             '/alg': alg,
             '/ai': ai

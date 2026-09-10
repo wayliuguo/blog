@@ -1,4 +1,8 @@
 node_modules/
 .vitepress/cache
+.vitepress/.temp
+.vitepress/.temp-old
 .vitepress/dist
-.vitepress/verify-dist
+.vitepress/verify-dist*
+.vitepress/verify-*
+.vitepress/build-check*.log
