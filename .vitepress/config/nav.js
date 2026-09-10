@@ -1,37 +1,22 @@
 export default [
     {
-        text: '文档',
-        link: '/article/lazyload',
-        activeMatch: '/article/'
-    },
-    {
         text: 'AI',
         link: '/ai/claudeCode',
         activeMatch: '/ai/'
     },
     {
-        text: '工程相关',
-        link: '/engineer/moduleStandard',
-        activeMatch: '/engineer/'
+        text: '前端',
+        link: '/frontend/index',
+        activeMatch: '/frontend/'
     },
     {
-        text: 'vue',
-        link: '/vue/vue3Principle/architecture',
-        activeMatch: '/vue3Principle/'
-    },
-    {
-        text: 'react',
-        link: '/react/reactBasic',
-        activeMatch: '/react/'
-    },
-    {
-        text: 'node',
+        text: 'Node 后端',
         link: '/node/index',
         activeMatch: '/node/'
     },
     {
         text: '不止于面试',
-        link: '/interview/css',
+        link: '/interview/index',
         activeMatch: '/interview/'
     },
     {

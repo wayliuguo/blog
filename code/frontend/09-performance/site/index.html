@@ -80,4 +80,13 @@
             </p>
         </div>
 
-        <div class=
+        <div class="card" style="border-color:#2563eb;background:#f5f9ff;">
+            <a href="./agent.html">企业级监控闭环 · agent.html + monitor.html + 后端聚合</a>
+            <p>
+                运行 <code>npm run enterprise —— node enterprise-server.js</code>（端口 5183）。AGENT 页模拟埋点上报（性能/延迟/错误），
+                后端按秒桶聚合出 <code>TPS / P95 / 错误率 / FP / LCP</code>，超阈（P95&gt;120ms、错误率&gt;1%）触发告警，
+                MONITOR 页实时拉取报表与告警。这是一幅完整的"埋点 → 上报 → 聚合 → 告警"企业级闭环。
+            </p>
+        </div>
+    </body>
+</html>
