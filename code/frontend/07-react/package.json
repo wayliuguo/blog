@@ -1,0 +1,9 @@
+{
+  "name": "chapter07-react",
+  "version": "1.0.0",
+  "private": true,
+  "description": "07-前端框架-React：手写 mini-react / vdom diff / hooks 数组实现 最小原理 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

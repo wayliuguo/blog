@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>注册表单</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 460px;
+                margin: 3rem auto;
+                padding: 0 1rem;
+            }
+            form {
+                display: grid;
+                gap: 0.75rem;
+            }
+            label {
+                font-size: 0.9rem;
+                font-weight: 500;
+            }
+            input {
+                padding: 0.6rem;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                font-size: 1rem;
+                width: 100%;
+            }
+            input:valid {
+                border-color: #16a34a;
+            }
+            input:invalid {
+                border-color: #dc2626;
+            }
+            button {
+                padding: 0.7rem;
+                font-size: 1rem;
+                border: none;
+                border-radius: 6px;
+                background: #2563eb;
+                color: #fff;
+                cursor: pointer;
+            }
+            #log {
+                margin-top: 1rem;
+                padding: 0.75rem;
+                background: #f3f4f6;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                white-space: pre-wrap;
+                min-height: 3rem;
+            }
+        </style>
+    </head>
+    <body>
+        <form id="reg" method="post" novalidate>
+            <label for="u">用户名</label>
+            <input id="u" name="username" required minlength="2" placeholder="至少 2 个字符" />
+
+            <label for="p">密码</label>
+            <input id="p" name="password" type="password" required minlength="6" placeholder="至少 6 位" />
+
+            <label for="phone">手机号</label>
+            <input id="phone" name="phone" type="tel" pattern="[0-9]{11}" placeholder="11 位数字" />
+
+            <label for="email">邮箱</label>
+            <input id="email" name="email" type="email" placeholder="xx@example.com" />
+
+            <label for="birth">出生日期（可选）</label>
+            <input id="birth" name="birth" type="date" />
+
+            <button type="submit">注册</button>
+        </form>
+        <div id="log">提交数据将显示在这里</div>
+
+        <script>
+            const form = document.getElementById('reg')
+            const phone = document.getElementById('phone')
+            const log = document.getElementById('log')
+
+            // 原生校验命中 invalid 时，把默认英文气泡替换成中文通用提示
+            document.querySelectorAll('input').forEach(inp => {
+                inp.addEventListener('invalid', () => inp.setCustomValidity('请按格式填写'))
+                inp.addEventListener('input', () => inp.setCustomValidity(''))
+            })
+            // 手机号给更具体的提示
+            phone.addEventListener('invalid', () => phone.setCustomValidity('请输入 11 位手机号'))
+
+            form.addEventListener('submit', e => {
+                e.preventDefault() // 掐断浏览器默认“跳转/刷新”
+                if (!form.checkValidity()) return // 未通过原生存量校验则停
+                // 通过后用 FormData 一次读全表单并展示
+                const data = Object.fromEntries(new FormData(form))
+                log.textContent = `校验通过 ✅\n提交数据：\n${JSON.stringify(data, null, 2)}`
+            })
+        </script>
+    </body>
+</html>

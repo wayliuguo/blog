@@ -1,0 +1,9 @@
+{
+  "name": "chapter02-css",
+  "version": "1.0.0",
+  "private": true,
+  "description": "02-CSS：盒模型/优先级/BFC/布局/响应式/动画/BEM 综合最小 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

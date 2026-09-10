@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>特性卡片落地页 · CSS 综合实战</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: system-ui, sans-serif;
+                margin: 0;
+                color: #1f2937;
+                background: #fff;
+            }
+            /* BEM：layout 组件 */
+            .nav {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 1rem;
+                padding: 1rem 1.5rem;
+                background: #111827;
+                color: #fff;
+            }
+            .nav__logo {
+                font-weight: 700;
+            }
+            .nav__links {
+                display: flex;
+                gap: 1rem;
+                list-style: none;
+                margin: 0;
+            }
+            .nav a {
+                color: #9ca3af;
+                text-decoration: none;
+            }
+
+            .hero {
+                max-width: 960px;
+                margin: 3rem auto 1rem;
+                padding: 0 1.5rem;
+                text-align: center;
+            }
+            .hero__title {
+                font-size: clamp(1.8rem, 4vw, 3rem);
+                margin: 0 0 0.5rem;
+            }
+            .hero__desc {
+                color: #6b7280;
+            }
+
+            /* BEM：features 组件 —— 入场动画 + fill-mode:both */
+            .features {
+                max-width: 960px;
+                margin: 2rem auto;
+                padding: 0 1.5rem;
+                display: grid;
+                gap: 1rem;
+                grid-template-columns: 1fr;
+            }
+            .feature {
+                border: 1px solid #e5e7eb;
+                border-radius: 14px;
+                padding: 1.5rem;
+                transition:
+                    transform 0.3s ease,
+                    box-shadow 0.3s ease;
+                animation: rise 0.5s ease both;
+            }
+            .feature:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            }
+            .feature--primary {
+                background: #eff6ff;
+                border-color: #bfdbfe;
+            }
+            .feature__icon {
+                font-size: 2rem;
+            }
+            .feature__title {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin: 0.5rem 0 0.25rem;
+            }
+            .feature__desc {
+                color: #6b7280;
+                font-size: 0.9rem;
+                margin: 0;
+            }
+
+            .footer {
+                text-align: center;
+                padding: 1.5rem;
+                color: #9ca3af;
+                background: #f3f4f6;
+                margin-top: 3rem;
+            }
+
+            /* Mobile First：向上递进 */
+            @media (min-width: 600px) {
+                .features {
+                    grid-template-columns: 1fr 1fr;
+                }
+            }
+            @media (min-width: 1000px) {
+                .features {
+                    grid-template-columns: 1fr 1fr 1fr;
+                }
+            }
+
+            @keyframes rise {
+                from {
+                    opacity: 0;
+                    transform: translateY(24px);
+                }
+                to {
+                    opacity: 1;
+                    transform: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="nav">
+            <span class="nav__logo">MyProduct</span>
+            <ul class="nav__links">
+                <li><a href="#features">特性</a></li>
+                <li><a href="#pricing">定价</a></li>
+            </ul>
+        </nav>
+
+        <header class="hero">
+            <h1 class="hero__title">为专注而生的产品</h1>
+            <p class="hero__desc">
+                响应式网格 + BEM 命名 + 合成层动效<br />拖动窗口宽度，卡片在 1 → 2 → 3 列间自适应。
+            </p>
+        </header>
+
+        <main id="features" class="features">
+            <article class="feature feature--primary">
+                <div class="feature__icon">🚀</div>
+                <h3 class="feature__title">秒级启动</h3>
+                <p class="feature__desc">开发冷启动快到无感知，专注代码而非等待。</p>
+            </article>
+            <article class="feature">
+                <div class="feature__icon">🎨</div>
+                <h3 class="feature__title">组件化</h3>
+                <p class="feature__desc">BEM 命名隔离样式，改一处不影响全局。</p>
+            </article>
+            <article class="feature">
+                <div class="feature__icon">📱</div>
+                <h3 class="feature__title">多端适配</h3>
+                <p class="feature__desc">Mobile First，一套代码覆盖手机到桌面。</p>
+            </article>
+            <article class="feature">
+                <div class="feature__icon">⚡</div>
+                <h3 class="feature__title">流畅动画</h3>
+                <p class="feature__desc">只动 transform/opacity，跑在合成层不掉帧。</p>
+            </article>
+            <article class="feature">
+                <div class="feature__icon">🔒</div>
+                <h3 class="feature__title">安全默认</h3>
+                <p class="feature__desc">开箱即用的安全基线，降低风险敞口。</p>
+            </article>
+            <article class="feature">
+                <div class="feature__icon">🌐</div>
+                <h3 class="feature__title">全球化</h3>
+                <p class="feature__desc">i18n 就绪，从第一天支持多语言。</p>
+            </article>
+        </main>
+
+        <footer class="footer">© 2026 MyProduct · CSS 综合实战</footer>
+    </body>
+</html>

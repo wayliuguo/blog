@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Canvas 2D 手写折线图 + 柱状图</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            canvas {
+                display: block;
+                border: 1px solid #ddd;
+                background: #fff;
+                margin: 0.5rem 0;
+            }
+            code {
+                background: #f1f5f9;
+                padding: 0.1em 0.4em;
+                border-radius: 4px;
+            }
+            .note {
+                color: #475569;
+                font-size: 0.92em;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Canvas 2D 手写折线图 + 柱状图</h1>
+        <div id="out" class="note"></div>
+        <canvas id="chart" width="640" height="280"></canvas>
+        <p id="tip"></p>
+        <h2>这段代码在做什么</h2>
+        <p>
+            <code>canvas-chart.html</code> 用原生 Canvas 2D 演示图表库背后"数据 → 像素"的核心逻辑（即 ECharts 默认
+            Canvas 渲染器的最小形态）： 拿到一份业务数据数组，先求出 min/max，把业务值线性映射成画布上的
+            <code>x</code> / <code>y</code> 像素坐标，再用 Canvas API
+            <code>moveTo / lineTo / fillRect</code>
+            逐笔描出轴线、刻度与折线/柱子。点击按钮重新生成数据即可触发整幅重绘，体现"立即模式、绘制即弃"。
+        </p>
+        <button onclick="restart()">重新生成数据并重绘</button>
+        <script>
+            const canvas = document.getElementById('chart')
+            const ctx = canvas.getContext('2d')
+            const tip = document.getElementById('tip')
+
+            // 数据 -> 像素坐标的线性映射
+            function mapData(data, W, H, padL, padR, padT, padB) {
+                const w = W - padL - padR
+                const h = H - padT - padB
+                const min = Math.min(...data)
+                const max = Math.max(...data)
+                const range = max - min || 1
+                const n = data.length
+                const step = n > 1 ? w / (n - 1) : 0
+                return data.map((v, i) => ({
+                    x: padL + i * step,
+                    y: padT + h - ((v - min) / range) * h
+                }))
+            }
+
+            function draw(data) {
+                const W = canvas.width,
+                    H = canvas.height
+                const padL = 40,
+                    padR = 20,
+                    padT = 20,
+                    padB = 30
+                ctx.clearRect(0, 0, W, H)
+                // 轴线 + 边框
+                ctx.strokeStyle = '#334155'
+                ctx.lineWidth = 1
+                ctx.strokeRect(padL, padT, W - padL - padR - 1, H - padT - padB - 1)
+                // 柱状图（底部对齐）
+                const barW = ((W - padL - padR) / data.length) * 0.6
+                data.forEach((v, i) => {
+                    const x = padL + ((W - padL - padR) / data.length) * i + ((W - padL - padR) / data.length) * 0.2
+                    const barH =
+                        ((v - Math.min(...data)) / (Math.max(...data) - Math.min(...data) || 1)) * (H - padT - padB - 1)
+                    ctx.fillStyle = '#4a90d9'
+                    ctx.fillRect(x, H - padB - barH, barW, barH)
+                })
+                // 折线
+                const pts = mapData(data, W, H, padL, padR, padT, padB)
+                ctx.strokeStyle = '#e67e22'
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+                ctx.stroke()
+                // 数据点
+                ctx.fillStyle = '#e67e22'
+                pts.forEach(
+                    p => ctx.beginPath(),
+                    p => ctx.arc(p.x, p.y, 3, 0, Math.PI * 2),
+                    ctx.fill()
+                )
+                // 刻度标记
+                pts.forEach((p, i) => {
+                    ctx.fillStyle = '#64748b'
+                    ctx.font = '10px sans-serif'
+                    ctx.textAlign = 'center'
+                    ctx.fillText(i, p.x, H - 10)
+                })
+                tip.textContent = '当前数据: [' + data.join(', ') + ']'
+            }
+
+            function restart() {
+                const data = Array.from({ length: 8 }, () => Math.round(Math.random() * 90 + 10))
+                draw(data)
+            }
+
+            document.getElementById('out').textContent =
+                '这是『命令式 / 立即模式』的最小演示：调用一次 API 就立刻把像素画上去，绘制后不留图形对象。'
+            restart()
+        </script>
+    </body>
+</html>

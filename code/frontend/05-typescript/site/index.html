@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>05-TypeScript · 最小实现 Demo 目录</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 660px;
+                margin: 3rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            p {
+                color: #374151;
+            }
+            li {
+                margin: 0.55rem 0;
+            }
+            a {
+                color: #2563eb;
+            }
+            code {
+                background: #eef2ff;
+                padding: 0.1em 0.4em;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>05-TypeScript · 最小实现 Demo 目录</h1>
+        <p>
+            TypeScript 是<strong>类型层面</strong>的语言，运行时执行的仍是 JavaScript。以下 demo 用纯 JS 把 TS
+            的类型概念可视化并输出到页面，帮助理解“这些类型到底在说什么”。
+        </p>
+        <ul>
+            <li><a href="structural.html">结构类型（鸭子类型）：只关心“形状”对得上</a></li>
+            <li><a href="union-intersection.html">联合类型 / 交叉类型：多选一 vs 全都要</a></li>
+            <li><a href="generic-infer.html">泛型容器 + infer 提取返回类型</a></li>
+            <li><a href="utility-practice.html">手写实现 Partial / Exclude（映射类型与条件分发）</a></li>
+        </ul>
+        <p>
+            启动方式：在 <code>code/frontend/05-typescript</code> 下执行 <code>npm start</code>（即
+            <code>node server.js</code>），浏览器打开 <code>http://localhost:5178/</code>。
+        </p>
+        <p>附带 <code>check.ts</code>：可选做类型编译校验（见文件顶部注释，用 <code>npx tsc --noEmit</code>）。</p>
+    </body>
+</html>

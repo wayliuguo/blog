@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>01 发布/订阅:手写事件中心</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            pre {
+                background: #f6f8fa;
+                border: 1px solid #e1e4e8;
+                border-radius: 6px;
+                padding: 12px;
+                overflow: auto;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+            .card {
+                border: 1px solid #e3e8ee;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin: 12px 0;
+            }
+            .card strong {
+                color: #0366d6;
+            }
+            button {
+                margin-right: 8px;
+                padding: 6px 12px;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>01 发布/订阅：手写事件中心</h1>
+        <p>
+            两个"组件"(购物车组件 Cart、结算栏组件 Checkout)互不引用对方、也互相不认识。它们唯一认识的是中间那个
+            <strong>EventHub 事件中心</strong
+            >：一个负责"发布"事件，一个负责"订阅"事件。这就是发布/订阅模式的解耦——组件之间不产生直接依赖。
+        </p>
+
+        <h2>事件中心源码(约 10 行)</h2>
+        <pre id="hubCode"></pre>
+
+        <h2>组件 A:购物车 Cart(点按钮"发布")</h2>
+        <div class="card">
+            Cart 当前数量:<strong id="cartCount">0</strong><br />
+            <button onclick="Cart.add()">add 加入一件</button>
+            <button onclick="Cart.clear()">clear 清空</button>
+        </div>
+
+        <h2>组件 B:结算栏 Checkout(只"订阅",被动收到更新)</h2>
+        <div class="card">
+            结算金额(每件 10 元):<strong id="checkoutTotal">0 元</strong><br />
+            <span>Checkout 从未持有任何状态,只监听事件</span>
+        </div>
+
+        <h2>运行日志</h2>
+        <pre id="log"></pre>
+
+        <script>
+            // ---- 发布/订阅事件中心:非订阅者不持有数据,只负责调度 ----
+            function createEventHub() {
+                var handlers = {}
+                return {
+                    on: function (event, fn) {
+                        ;(handlers[event] = handlers[event] || []).push(fn)
+                    },
+                    off: function (event, fn) {
+                        handlers[event] = (handlers[event] || []).filter(function (f) {
+                            return f !== fn
+                        })
+                    },
+                    emit: function (event, data) {
+                        ;(handlers[event] || []).forEach(function (fn) {
+                            fn(data)
+                        })
+                    }
+                }
+            }
+
+            var hub = createEventHub()
+            document.getElementById('hubCode').textContent = createEventHub.toString()
+
+            function log(msg) {
+                var pre = document.getElementById('log')
+                pre.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + pre.textContent
+            }
+
+            // ---- 组件 A:Cart,只发布,不关心谁在听 ----
+            var Cart = {
+                count: 0,
+                add: function () {
+                    this.count++
+                    hub.emit('cart:changed', { count: this.count })
+                    log('Cart 发布 cart:changed count=' + this.count)
+                },
+                clear: function () {
+                    this.count = 0
+                    hub.emit('cart:clear')
+                    log('Cart 发布 cart:clear')
+                }
+            }
+            document.getElementById('cartCount').textContent = Cart.count
+
+            // ---- 组件 B:Checkout,只订阅,不关心谁发布了 ----
+            function renderCheckout(item) {
+                document.getElementById('checkoutTotal').textContent = item.count * 10 + ' 元'
+                log('Checkout 收到事件,重新渲染金额')
+            }
+            hub.on('cart:changed', renderCheckout)
+            hub.on('cart:clear', function () {
+                document.getElementById('checkoutTotal').textContent = '0 元'
+                log('Checkout 收到清空事件,重置金额')
+            })
+        </script>
+    </body>
+</html>

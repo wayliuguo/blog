@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>配置即界面 · Schema 驱动渲染</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'PingFang SC',
+                    'Microsoft YaHei',
+                    sans-serif;
+                background: #f5f7fa;
+                color: #1f2329;
+                padding: 24px;
+                line-height: 1.6;
+            }
+            h1 {
+                font-size: 22px;
+                margin-bottom: 6px;
+            }
+            .desc {
+                color: #6b7380;
+                font-size: 14px;
+                margin-bottom: 18px;
+            }
+            .cols {
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+            }
+            .panel {
+                flex: 1 1 360px;
+                background: #fff;
+                border-radius: 12px;
+                padding: 18px 20px;
+                box-shadow: 0 1px 4px rgba(31, 35, 41, 0.06);
+            }
+            .panel h2 {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+            pre {
+                background: #1e2530;
+                color: #d7e0ff;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 12px;
+                overflow: auto;
+                max-height: 380px;
+            }
+            .field {
+                margin-bottom: 12px;
+            }
+            .field label {
+                display: block;
+                font-size: 13px;
+                color: #4b5563;
+                margin-bottom: 4px;
+            }
+            .field label .req {
+                color: #e5484d;
+            }
+            .field input,
+            .field select {
+                width: 100%;
+                padding: 8px 10px;
+                border: 1px solid #d0d5dd;
+                border-radius: 8px;
+                font-size: 14px;
+            }
+            .field input[type='radio'] {
+                width: auto;
+                margin-right: 6px;
+            }
+            .field .hint {
+                font-size: 12px;
+                color: #e5484d;
+                margin-top: 3px;
+            }
+            button {
+                background: #2f6bff;
+                color: #fff;
+                border: none;
+                padding: 9px 18px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                margin-top: 4px;
+            }
+            button:hover {
+                background: #1e53d8;
+            }
+            .card {
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                padding: 16px;
+                margin-top: 14px;
+                background: #fafbfc;
+            }
+            .card h3 {
+                font-size: 15px;
+                margin-bottom: 6px;
+            }
+            .card p {
+                font-size: 14px;
+                color: #4b5563;
+            }
+            .msg {
+                margin-top: 12px;
+                font-size: 14px;
+                color: #2f6bff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>配置即界面 · Schema 驱动渲染</h1>
+        <p class="desc">
+            低代码的最小渲染器：读入 JSON Schema，递归生成可见表单与卡片。改右侧 Schema，点“重渲染”看变化。
+        </p>
+
+        <div class="cols">
+            <div class="panel">
+                <h2>生成的界面</h2>
+                <div id="ui"></div>
+            </div>
+            <div class="panel">
+                <h2>Schema（可编辑）</h2>
+                <pre id="schemaOut"></pre>
+                <button id="rerender" type="button">重渲染</button>
+            </div>
+        </div>
+
+        <script>
+            // —— 一段“描述要什么”的 Schema ——
+            const defaultSchema = {
+                cardTitle: '入职信息卡片',
+                fields: [
+                    { name: 'name', label: '姓名', type: 'input', required: true, placeholder: '请输入真实姓名' },
+                    { name: 'email', label: '邮箱', type: 'input', required: true, placeholder: 'name@example.com' },
+                    { name: 'dept', label: '部门', type: 'select', options: ['前端组', '后端组', '产品组', '设计组'] },
+                    { name: 'isMarried', label: '婚否', type: 'radio', options: ['是', '否'] },
+                    { name: 'age', label: '年龄', type: 'input', placeholder: '可选', min: 0 }
+                ]
+            }
+
+            const ui = document.getElementById('ui')
+            const schemaOut = document.getElementById('schemaOut')
+            let values = {}
+
+            // —— 渲染器：遍历 schema.fields，按 type 生成控件 ——
+            function render(schema) {
+                schemaOut.textContent = JSON.stringify(schema, null, 2)
+                ui.innerHTML = ''
+
+                const title = document.createElement('h3')
+                title.textContent = schema.cardTitle
+                ui.appendChild(title)
+
+                schema.fields.forEach(function (f) {
+                    const wrap = document.createElement('div')
+                    wrap.className = 'field'
+
+                    const label = document.createElement('label')
+                    label.textContent = f.label + (f.required ? ' *' : '')
+                    wrap.appendChild(label)
+
+                    let widget
+                    if (f.type === 'select') {
+                        widget = document.createElement('select')
+                        f.options.forEach(function (opt) {
+                            const o = document.createElement('option')
+                            o.value = opt
+                            o.textContent = opt
+                            widget.appendChild(o)
+                        })
+                    } else if (f.type === 'radio') {
+                        widget = document.createElement('div')
+                        f.options.forEach(function (opt) {
+                            const lab = document.createElement('label')
+                            const r = document.createElement('input')
+                            r.type = 'radio'
+                            r.name = f.name
+                            r.value = opt
+                            lab.appendChild(r)
+                            lab.appendChild(document.createTextNode(opt))
+                            widget.appendChild(lab)
+                        })
+                    } else {
+                        widget = document.createElement('input')
+                        widget.type = 'text'
+                        if (f.placeholder) widget.placeholder = f.placeholder
+                    }
+
+                    // 状态更新时回填错误提示
+                    widget.addEventListener('input', function () {
+                        values[f.name] = widget.value
+                        validate(f, wrap)
+                    })
+
+                    wrap.appendChild(widget)
+                    ui.appendChild(wrap)
+                })
+
+                const btn = document.createElement('button')
+                btn.textContent = '提交校验'
+                btn.addEventListener('click', function () {
+                    let pass = true
+                    schema.fields.forEach(function (f) {
+                        if (!validate(f)) pass = false
+                    })
+                    ui.insertAdjacentHTML(
+                        'beforeend',
+                        '<div class="msg">' +
+                            (pass ? '校验通过，数据：' + JSON.stringify(values) : '请补全必填项') +
+                            '</div>'
+                    )
+                })
+                ui.appendChild(btn)
+            }
+
+            // 校验：required 与 email 格式，纯前端演示（生产环境必须后端兜底）
+            function validate(f, wrap) {
+                const v = (values[f.name] || '').toString().trim()
+                let err = ''
+                if (f.required && !v) err = '该项必填'
+                else if (f.name === 'email' && v && v.indexOf('@') < 0) err = '邮箱格式不正确'
+                if (wrap) {
+                    const old = wrap.querySelector('.hint')
+                    if (old) old.remove()
+                    if (err) {
+                        const h = document.createElement('div')
+                        h.className = 'hint'
+                        h.textContent = err
+                        wrap.appendChild(h)
+                    }
+                }
+                return !err
+            }
+
+            document.getElementById('rerender').addEventListener('click', function () {
+                try {
+                    render(JSON.parse(schemaOut.textContent))
+                } catch (e) {
+                    alert('Schema 不是一个合法 JSON：' + e.message)
+                }
+            })
+
+            render(defaultSchema)
+        </script>
+    </body>
+</html>

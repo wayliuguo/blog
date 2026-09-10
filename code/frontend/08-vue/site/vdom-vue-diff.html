@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>虚拟 DOM diff · 最小实现</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 780px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            button {
+                padding: 0.4rem 0.8rem;
+                margin-right: 0.5rem;
+                cursor: pointer;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>虚拟 DOM · 轻量 VNode 树 diff 生成 patch</h1>
+        <p>
+            Vue 更新视图不改整棵 DOM，而是先用 JS 快速对比新旧 VNode 树（diff）， 产出最小改动清单（patch），最后按
+            patch 只更新真正变化的地方，比直接操作 DOM 更高效。
+        </p>
+
+        <p>
+            <button id="btnUpdate">切换到"更新后"的树</button>
+            <button id="btnReset">回到初始的树</button>
+        </p>
+
+        <div id="out" class="box">（初始树挂载后的真实 DOM 结构）</div>
+        <div id="patch" class="box">// 本次 diff 生成的 patch</div>
+
+        <script>
+            // ---------- VNode 表示：{ tag, props, children } ----------
+            function h(tag, props, children) {
+                return { tag, props: props || {}, children: children || [] }
+            }
+
+            // 把 VNode 树挂载成真实 DOM
+            function mount(vnode, container) {
+                const el = document.createElement(vnode.tag)
+                vnode.el = el
+                for (const k in vnode.props) el.setAttribute(k, vnode.props[k])
+                vnode.children.forEach(c => mount(c, el))
+                if (typeof vnode.children === 'string') el.textContent = vnode.children
+                container.appendChild(el)
+            }
+
+            // ---------- 极简 diff：对比两棵同类型节点树，收集 patch 操作 ----------
+            // 这里只演示「同层级、同结构」下的 diff 思路，真实框架还处理 key 复用与移动
+            function diff(oldV, newV, patches) {
+                if (newV.tag !== oldV.tag) {
+                    patches.push({ type: 'replace', oldV, newV }) // 标签不同 -> 整体替换
+                } else {
+                    // 属性不同 -> 记录到 props patch
+                    const p = {}
+                    for (const k in newV.props) {
+                        if (newV.props[k] !== oldV.props[k]) p[k] = newV.props[k]
+                    }
+                    if (Object.keys(p).length) patches.push({ type: 'props', vnode: newV, props: p })
+
+                    if (typeof newV.children === 'string' && typeof oldV.children === 'string') {
+                        if (newV.children !== oldV.children)
+                            patches.push({ type: 'text', vnode: newV, text: newV.children })
+                    } else if (Array.isArray(newV.children)) {
+                        // 子节点逐个 diff（按位置对比的简化版）
+                        const len = Math.max(oldV.children.length || 0, newV.children.length)
+                        for (let i = 0; i < len; i++) {
+                            if (!newV.children[i]) continue
+                            if (!oldV.children[i]) patches.push({ type: 'mount', vnode: newV.children[i] })
+                            else diff(oldV.children[i], newV.children[i], patches)
+                        }
+                    }
+                }
+                // 建立 el 关联，便于应用 patch
+                newV.el = oldV.el
+            }
+
+            // 应用 patch 到真实 DOM
+            function apply(patches) {
+                patches.forEach(p => {
+                    const el = p.vnode ? p.vnode.el : p.newV.el
+                    if (p.type === 'text') el.textContent = p.text
+                    if (p.type === 'props') for (const k in p.props) el.setAttribute(k, p.props[k])
+                })
+            }
+
+            // ---------- 两棵树：内容相同构架，仅文本与标题属性不同 ----------
+            const treeA = h('section', { id: 'card' }, [
+                h('h3', { class: 'title' }, '原始标题'),
+                h('p', {}, '这是第一段内容')
+            ])
+            const treeB = h('section', { id: 'card' }, [
+                h('h3', { class: 'title' }, '更新后的标题'),
+                h('p', {}, '这是第二段内容，已经被替换')
+            ])
+
+            const out = document.getElementById('out')
+            mount(treeA, out) // 先挂载树 A
+
+            function run(oldV, newV, desc) {
+                const patches = []
+                diff(oldV, newV, patches) // 对比，产出 patch
+                apply(patches) // 按 patch 更新 DOM
+                const list = patches.length ? patches.map(x => '[' + x.type + ']') : ['（无差异）']
+                out.insertAdjacentText('afterend', ' —— ' + desc) // 提示当前状态
+                document.getElementById('patch').textContent =
+                    '// ' + desc + '，共 ' + patches.length + ' 步最小改动\n// ' + list.join('  ')
+            }
+
+            document.getElementById('btnUpdate').onclick = function () {
+                out.textContent = ''
+                mount(treeA, out)
+                run(treeA, treeB, '切换为更新后树')
+            }
+            document.getElementById('btnReset').onclick = function () {
+                out.textContent = ''
+                mount(treeA, out)
+                run(treeA, treeA, '回到初始的树') // 两树相同 -> 无差异
+            }
+        </script>
+    </body>
+</html>

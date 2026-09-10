@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>PWA：Service Worker 生命周期与缓存策略</title>
+        <style>
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    sans-serif;
+                max-width: 780px;
+                margin: 32px auto;
+                padding: 0 20px;
+                color: #1f2937;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            h2 {
+                font-size: 18px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 6px;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            th,
+            td {
+                border: 1px solid #e5e7eb;
+                padding: 8px 10px;
+                text-align: left;
+            }
+            th {
+                background: #f3f4f6;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            pre {
+                background: #111827;
+                color: #e5e7eb;
+                padding: 14px;
+                border-radius: 8px;
+                overflow-x: auto;
+                font-size: 13px;
+            }
+            button {
+                background: #2563eb;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 16px;
+                font-size: 14px;
+                cursor: pointer;
+            }
+            button:disabled {
+                background: #9ca3af;
+                cursor: not-allowed;
+            }
+            #status {
+                margin-top: 10px;
+                padding: 10px 14px;
+                border-radius: 8px;
+                background: #eef2ff;
+                color: #1e3a8a;
+                font-size: 14px;
+                white-space: pre-wrap;
+            }
+            .box {
+                background: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                padding: 14px 18px;
+                margin: 14px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Service Worker：生命周期与缓存策略</h1>
+        <p>
+            Service Worker 是运行在主线程之外的网络代理，通过
+            <code>install</code
+            >（预缓存）、<code>activate</code>（清理旧版本）、<code>fetch</code>（拦截请求）三个钩子接管离线缓存。本页在同目录注册精简版
+            <code>sw.js</code>，下面给出注册结果与说明，unreg 按钮用于反注册以观察变化。
+        </p>
+
+        <button id="btnRegister">注册 Service Worker</button>
+        <button id="btnUnregister" disabled>注销 Service Worker</button>
+        <div id="status">尚未注册（提示：请在 localhost 打开以保证安全来源）。</div>
+
+        <h2>生命周期状态流转</h2>
+        <div class="box">
+            <code
+                >registered(已登记) → installing(安装中, 触发 install) → activated(激活, 触发 activate) → 接管
+                fetch</code
+            >
+            <p style="margin: 8px 0 0">
+                注册后浏览器异步执行：先 <code>install</code> 预缓存常用资源，随后
+                <code>activate</code> 清理旧版本缓存并 <code>clients.claim()</code> 接管页面，之后页面请求会进入
+                <code>fetch</code> 事件走缓存策略。
+            </p>
+        </div>
+
+        <h2>常见缓存策略对比</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>策略</th>
+                    <th>读取顺序</th>
+                    <th>适用场景</th>
+                    <th>优点 / 缺点</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cache First</td>
+                    <td>缓存→网络</td>
+                    <td>静态资源、图片</td>
+                    <td>快，但更新滞后</td>
+                </tr>
+                <tr>
+                    <td>Network First</td>
+                    <td>网络→缓存</td>
+                    <td>需新鲜度的 API</td>
+                    <td>数据新，弱网慢</td>
+                </tr>
+                <tr>
+                    <td>Stale-While-Revalidate</td>
+                    <td>缓存→网络后台更新</td>
+                    <td>列表、应用壳</td>
+                    <td>快且渐次更新</td>
+                </tr>
+                <tr>
+                    <td>Network Only</td>
+                    <td>仅网络</td>
+                    <td>实时性强的写入</td>
+                    <td>无法离线</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>sw.js 核心片段（本演示所用）</h2>
+        <pre>
+self.addEventListener("install", (e) =&gt; {
+  e.waitUntil(caches.open("v1").then((c) =&gt; c.addAll(["/pwa-sw.html"])));
+  self.skipWaiting();
+});
+self.addEventListener("activate", (e) =&gt; {
+  e.waitUntil(清理旧缓存后 self.clients.claim());
+});
+self.addEventListener("fetch", (e) =&gt; {
+  e.respondWith(caches.match(e.request) || fetch(e.request).then(回填缓存));
+});</pre
+        >
+
+        <script>
+            const statusEl = document.getElementById('status')
+            const btnReg = document.getElementById('btnRegister')
+            const btnUnreg = document.getElementById('btnUnregister')
+
+            function log(line) {
+                statusEl.textContent = line
+            }
+
+            btnReg.addEventListener('click', async () => {
+                btnReg.disabled = true
+                if (!('serviceWorker' in navigator)) {
+                    log('当前环境不支持 Service Worker（需要 https 或 localhost）。')
+                    btnReg.disabled = false
+                    return
+                }
+                try {
+                    const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    const state = reg.active
+                        ? 'active(已激活)'
+                        : reg.installing
+                        ? 'installing(安装中)'
+                        : 'registered(已登记)'
+                    log(
+                        '注册完成：scope = ' +
+                            reg.scope +
+                            '\n' +
+                            '当前状态：SW.state = ' +
+                            (reg.installing || reg.active || {}).state +
+                            '\n' +
+                            '含义说明：install 阶段预缓存资源，activate 阶段接管页面，之后请求走 fetch 缓存策略。\n' +
+                            '实现方案：Cache First（先缓存，未命中再走网络并回填）。'
+                    )
+                    btnUnreg.disabled = false
+                } catch (err) {
+                    log('注册失败：' + err.message + '（说明：仅 https 或 localhost 下允许 SW，且同源策略需满足）。')
+                    btnReg.disabled = false
+                }
+            })
+
+            btnUnreg.addEventListener('click', async () => {
+                try {
+                    const reg = await navigator.serviceWorker.getRegistration()
+                    if (reg) {
+                        await reg.unregister()
+                        log('已注销 Service Worker（旧缓存不再被拦截）。')
+                        btnUnreg.disabled = true
+                        btnReg.disabled = false
+                    } else {
+                        log('没有找到可注销的 Service Worker。')
+                        btnUnreg.disabled = true
+                        btnReg.disabled = false
+                    }
+                } catch (err) {
+                    log('注销出错：' + err.message)
+                }
+            })
+        </script>
+    </body>
+</html>

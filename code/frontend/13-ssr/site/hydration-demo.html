@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>02 水合 Hydration：静态 HTML + 客户端再绑定事件</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1 {
+                color: #2c3e50;
+            }
+            .panel {
+                border: 1px solid #e3e8ee;
+                border-radius: 10px;
+                padding: 14px 18px;
+                margin: 16px 0;
+            }
+            .box {
+                min-height: 120px;
+                padding: 12px 16px;
+                border: 1px dashed #ccc;
+                border-radius: 6px;
+                background: #fafbfc;
+            }
+            button {
+                margin: 6px 8px 6px 0;
+                padding: 8px 14px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                color: #fff;
+            }
+            .b-hydrate {
+                background: #0366d6;
+            }
+            .b-count {
+                background: #6f42c1;
+            }
+            .b-drop {
+                background: #d73a49;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 10px;
+                border-radius: 6px;
+                font-size: 13px;
+                overflow: auto;
+            }
+            .log {
+                color: #555;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>02 水合 Hydration：静态 HTML + 客户端再绑定交互</h1>
+        <p>
+            服务端（或构建期）直出的 HTML 是"看得见但点不动"的静态骨架。水合（Hydration）就是在不重建 DOM
+            的前提下，由客户端 JS
+            给这些既有节点补上事件监听与状态，让页面"活"起来。下面这个计数器，页面初始时已经写死了静态
+            HTML，等点击"水合"后才真正能交互。
+        </p>
+
+        <div class="panel">
+            <div class="head">计数器（初始是服务端直出的静态做 HTML）</div>
+            <div class="box" id="counter-box">
+                <p>当前数字：<span id="count-display">0</span></p>
+                <button class="b-count" id="btn-inc">加一</button>
+                <button class="b-count" id="btn-reset">归零</button>
+                <span class="log" id="interactive-hint">（尚无任何事件绑定，点了没反应 —— 这是"未水合"状态）</span>
+            </div>
+            <button class="b-hydrate" onclick="hydrate()">仿真水合：给既有节点补事件与状态</button>
+            <p class="log">
+                关键：上方按钮的 HTML 一开始就存在，水合不是重新生成 DOM，而是"认领"现有节点，附上事件与状态。
+            </p>
+            <pre id="log-view"></pre>
+        </div>
+
+        <p style="font-size: 13px; color: #888">
+            先别点"水合"，直接点"加一"试试 —— 你会发现数字纹丝不动；点水合后再点"加一"，才开始累计。
+        </p>
+
+        <script>
+            var box = document.getElementById('counter-box')
+            var display = document.getElementById('count-display')
+            var hint = document.getElementById('interactive-hint')
+            var logView = document.getElementById('log-view')
+            var btnInc = document.getElementById('btn-inc')
+            var btnReset = document.getElementById('btn-reset')
+
+            var hydrated = false
+            var count = 0
+
+            // 初始：静态 HTML 已经在 DOM 里（text "0"、两个按钮），但没绑任何事件
+            appendLog('初始状态：DOM 里已有静态按钮，但事件表为空（点按无反应）。')
+
+            function hydrate() {
+                if (hydrated) {
+                    appendLog('已经水合过了，重复调用无害。')
+                    return
+                }
+                hydrated = true
+
+                // 不重建 DOM，只给既有节点绑定事件（这就是水合的最小形态）
+                btnInc.addEventListener('click', function () {
+                    if (!hydrated) return
+                    count++
+                    display.textContent = String(count)
+                    appendLog('点击加一 → 数字变 ' + count)
+                })
+
+                btnReset.addEventListener('click', function () {
+                    count = 0
+                    display.textContent = '0'
+                    appendLog('点击归零 → 数字回 0')
+                })
+
+                hint.textContent = '（已水合：事件已绑定，按钮可以点了）'
+                appendLog('水合完成：在不重建 DOM 的前提下，事件已挂到既有节点上。')
+            }
+
+            function appendLog(msg) {
+                logView.textContent += '> ' + msg + '\n'
+            }
+        </script>
+    </body>
+</html>

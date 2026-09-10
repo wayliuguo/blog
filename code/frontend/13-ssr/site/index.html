@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>13-SSR与SSG服务端渲染 · Demo 目录</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 780px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1 {
+                color: #2c3e50;
+            }
+            ul {
+                list-style: none;
+                padding: 0;
+            }
+            li {
+                margin: 16px 0;
+                border: 1px solid #e3e8ee;
+                border-radius: 8px;
+                padding: 16px 20px;
+            }
+            a {
+                font-size: 18px;
+                font-weight: 600;
+                color: #0366d6;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            p {
+                margin: 6px 0 0;
+                color: #555;
+                font-size: 14px;
+            }
+            .tip {
+                background: #f6f8fa;
+                border-left: 4px solid #0366d6;
+                padding: 10px 16px;
+                border-radius: 4px;
+                color: #555;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>13-SSR与SSG服务端渲染 · 最小实现 Demo</h1>
+        <p>
+            SSR 的本质是"渲染发生在服务端、返回给浏览器的 HTML 里已带正文"。下面三个纯前端 demo 用 JS
+            在页面里模拟"服务端渲染"思想，让你看清首屏 HTML 差异、水合（Hydration）与构建期静态生成（SSG）背后的原理。
+        </p>
+        <div class="tip">
+            诚实说明：真正的 SSR 需要 Node 服务端把组件渲染成字符串再返回（见正文 01-SSR入口、06-章节的 Node 与
+            dev-server 思路）。这里的 demo 是"纯前端自足"的最小演示，只是把"渲染成
+            HTML"这一步搬进了浏览器演示，帮助你建立等价的概念模型。
+        </div>
+        <ul>
+            <li>
+                <a href="ssr-vs-csr.html">01 模拟 SSR vs CSR：首屏 HTML 里有没有内容</a>
+                <p>
+                    SSR 框先由"模拟服务器"把整段 HTML 字符串 insert 进页面，首屏即见正文；CSR 框先挂个空壳、再由 JS
+                    填充。对比两种渲染顺序，理解 SEO 与首屏差异。
+                </p>
+            </li>
+            <li>
+                <a href="hydration-demo.html">02 水合 Hydration：静态 HTML + 客户端再绑定事件</a>
+                <p>
+                    页面初始已有服务端直出的静态标签（看得见、点不动），JS
+                    随后为按钮补上事件与状态，让页面"活"起来——这正是水合的化身。
+                </p>
+            </li>
+            <li>
+                <a href="build-time-static.html">03 构建期静态生成 SSG / ISR：构建时产出 + 增量再生成</a>
+                <p>
+                    模拟构建器把一组 markdown 数据在"构建时"渲染成若干静态 HTML 文件清单，并演示 ISR
+                    到点后对单个页面增量再生成的产出变化。
+                </p>
+            </li>
+        </ul>
+    </body>
+</html>

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>搭积木式搭建 · 最小搭建器</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'PingFang SC',
+                    'Microsoft YaHei',
+                    sans-serif;
+                background: #f5f7fa;
+                color: #1f2329;
+                padding: 24px;
+                line-height: 1.6;
+            }
+            h1 {
+                font-size: 22px;
+                margin-bottom: 6px;
+            }
+            .desc {
+                color: #6b7380;
+                font-size: 14px;
+                margin-bottom: 18px;
+            }
+            .layout {
+                display: flex;
+                gap: 18px;
+                flex-wrap: wrap;
+            }
+            .side,
+            .canvas,
+            .out {
+                background: #fff;
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: 0 1px 4px rgba(31, 35, 41, 0.06);
+            }
+            .side {
+                width: 190px;
+            }
+            .canvas {
+                flex: 1 1 360px;
+                min-height: 320px;
+                border: 2px dashed #d0d5dd;
+            }
+            .out {
+                flex: 1 1 300px;
+            }
+            h2 {
+                font-size: 15px;
+                margin-bottom: 10px;
+                color: #374151;
+            }
+            .material {
+                display: block;
+                width: 100%;
+                background: #eef2ff;
+                color: #2f6bff;
+                border: none;
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                cursor: pointer;
+                font-size: 14px;
+                text-align: left;
+            }
+            .material:hover {
+                background: #e0e7ff;
+            }
+            .node {
+                background: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 10px;
+                position: relative;
+            }
+            .node-title {
+                font-size: 14px;
+                font-weight: 600;
+                margin-bottom: 6px;
+            }
+            .node-field {
+                font-size: 13px;
+                color: #4b5563;
+            }
+            .node-field input,
+            .node-field select {
+                width: calc(100% - 10px);
+                padding: 5px 8px;
+                border-radius: 6px;
+                border: 1px solid #d0d5dd;
+            }
+            .node button {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: #fee2e2;
+                color: #e5484d;
+                border: none;
+                border-radius: 6px;
+                padding: 2px 8px;
+                cursor: pointer;
+                font-size: 12px;
+            }
+            pre {
+                background: #1e2530;
+                color: #d7e0ff;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 12px;
+                overflow: auto;
+                max-height: 320px;
+            }
+            .tip {
+                font-size: 13px;
+                color: #6b7380;
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>搭积木式搭建 · 最小搭建器</h1>
+        <p class="desc">
+            左侧物料面板，点击“+ 加入”把你想要的组件块装进画布；每加一块都会生产并打印对应的页面 Schema。搭建器 =
+            物料(Schema) → 画布插入 → 序列化。
+        </p>
+
+        <div class="layout">
+            <div class="side">
+                <h2>物料面板</h2>
+                <button class="material" data-type="button">+ 按钮</button>
+                <button class="material" data-type="input">+ 输入框</button>
+                <button class="material" data-type="card">+ 卡片</button>
+            </div>
+            <div class="canvas" id="canvas">
+                <div class="tip">← 把物料拖到这里或点左侧加入</div>
+            </div>
+            <div class="out">
+                <h2>当前页面 Schema</h2>
+                <pre id="schemaOut">{}</pre>
+            </div>
+        </div>
+
+        <script>
+            // 物料库：名称 → 默认 Schema 片段的工厂
+            const materials = {
+                button: function () {
+                    return { component: 'Button', props: { text: '按钮', kind: 'primary' } }
+                },
+                input: function () {
+                    return { component: 'Input', props: { placeholder: '请输入' } }
+                },
+                card: function () {
+                    return { component: 'Card', props: { title: '卡片', padding: 16 } }
+                }
+            }
+
+            const canvas = document.getElementById('canvas')
+            const schemaOut = document.getElementById('schemaOut')
+            let nodes = [] // 当前画布上的 Schema 节点（运行时做深拷贝插入）
+            let id = 0
+
+            function serialize() {
+                const page = {
+                    version: 1,
+                    component: 'Page',
+                    children: nodes.map(function (n) {
+                        return { id: n.id, component: n.component, props: JSON.parse(JSON.stringify(n.props)) }
+                    })
+                }
+                schemaOut.textContent = JSON.stringify(page, null, 2)
+            }
+
+            // 每个节点渲染为一个可编辑块
+            function renderNode(node) {
+                const div = document.createElement('div')
+                div.className = 'node'
+                div.dataset.id = node.id
+
+                const ttl = document.createElement('div')
+                ttl.className = 'node-title'
+                ttl.textContent = node.component
+                div.appendChild(ttl)
+
+                // 属性面板（简化）：为常见 props 生成输入控件
+                if (node.component === 'Button') {
+                    div.appendChild(
+                        field('文字', node.props.text, function (v) {
+                            node.props.text = v
+                        })
+                    )
+                } else if (node.component === 'Input') {
+                    div.appendChild(
+                        field('占位符', node.props.placeholder, function (v) {
+                            node.props.placeholder = v
+                        })
+                    )
+                } else if (node.component === 'Card') {
+                    div.appendChild(
+                        field('标题', node.props.title, function (v) {
+                            node.props.title = v
+                        })
+                    )
+                }
+
+                const del = document.createElement('button')
+                del.textContent = '删'
+                del.addEventListener('click', function () {
+                    nodes = nodes.filter(function (n) {
+                        return n.id !== node.id
+                    })
+                    div.remove()
+                    serialize()
+                })
+                div.appendChild(del)
+
+                return div
+            }
+
+            function field(label, value, onChange) {
+                const wrap = document.createElement('div')
+                wrap.className = 'node-field'
+                const lab = document.createElement('div')
+                lab.textContent = label
+                const input = document.createElement('input')
+                input.value = value
+                input.addEventListener('input', function () {
+                    onChange(input.value)
+                    serialize()
+                })
+                wrap.appendChild(lab)
+                wrap.appendChild(input)
+                return wrap
+            }
+
+            function addNode(type) {
+                const node = { id: 'node-' + ++id, component: type, props: materials[type]() }
+                nodes.push(node)
+                if (!canvas.querySelector('.tip')) canvas.querySelector('.tip').remove()
+                // 新节点插入画布末尾
+                canvas.appendChild(renderNode(node))
+                serialize()
+            }
+
+            // 点击物料的“加入”行为；同时演示 HTML5 拖拽（draggable 数据携带物料类型）
+            document.querySelectorAll('.material').forEach(function (mat) {
+                mat.addEventListener('click', function () {
+                    addNode(mat.dataset.type)
+                })
+                mat.draggable = true
+                mat.addEventListener('dragstart', function (e) {
+                    e.dataTransfer.setData('text/plain', mat.dataset.type)
+                })
+            })
+
+            // 画布作为 drop 目标，区别于“点加入”：拖入也走同一插入逻辑（drop 时深拷贝）
+            canvas.addEventListener('dragover', function (e) {
+                e.preventDefault()
+            })
+            canvas.addEventListener('drop', function (e) {
+                e.preventDefault()
+                const type = e.dataTransfer.getData('text/plain')
+                if (materials[type]) addNode(type)
+            })
+        </script>
+    </body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>10-可视化与WebGL · 最小实现 Demo 目录</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 680px;
+                margin: 3rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            li {
+                margin: 0.6rem 0;
+            }
+            a {
+                color: #2563eb;
+            }
+            code {
+                background: #f1f5f9;
+                padding: 0.1em 0.4em;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>10-可视化与WebGL · 最小实现 Demo 目录</h1>
+        <p>以下 demo 全部为纯原生 JS 编写、零第三方依赖，用「最小实现」逐点演示可视化与 WebGL 的底层原理。</p>
+        <ul>
+            <li>
+                <a href="canvas-chart.html">Canvas 2D 手写折线图+柱状图</a> —— 数据 →
+                像素坐标，命令式逐笔绘制与按数据重绘
+            </li>
+            <li>
+                <a href="svg-chart.html">手写坐标系映射与 SVG 元素生成</a> —— 数据 → SVG 节点，保留模式 vs Canvas
+                立即模式
+            </li>
+            <li>
+                <a href="raf-particles.html">requestAnimationFrame 粒子动画</a> —— 帧循环与按帧更新，"清屏 → 重绘 →
+                循环"
+            </li>
+            <li>
+                <a href="webgl-triangle.html">原生 WebGL 旋转三角形</a> —— 顶点着色器 / 片元着色器，GPU 管线最小示例
+            </li>
+        </ul>
+        <p>
+            启动方式：在 <code>code/frontend/10-visualize</code> 下执行 <code>npm start</code>（即
+            <code>node server.js</code>），然后访问 <code>http://localhost:5183/</code>。
+        </p>
+    </body>
+</html>

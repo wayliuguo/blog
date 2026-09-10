@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>错误监控：window.onerror + unhandledrejection + URLSearchParams 上报</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 640px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+                line-height: 1.7;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+            }
+            button {
+                cursor: pointer;
+                padding: 8px 16px;
+                margin: 4px 8px 4px 0;
+                font-size: 1rem;
+            }
+            .ok {
+                color: #15803d;
+            }
+            .bad {
+                color: #b91c1c;
+            }
+            .warn {
+                color: #b45309;
+            }
+            .dim {
+                color: #6b7280;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>错误监控与上报</h1>
+        <p>
+            全局兜底两个入口：<code>window.onerror</code> 捕获运行时脚本错误，<code>unhandledrejection</code>
+            捕获未被处理的 Promise 拒绝。捕获后把关键信息拼进
+            <code>URLSearchParams</code> 模拟发送到服务端（在页面内回显，无需真实后端）。
+        </p>
+
+        <p>
+            <button id="btn-err">触发运行时错误</button>
+            <button id="btn-reject">触发未处理 Promise 拒绝</button>
+            <button id="btn-clear">清空日志</button>
+        </p>
+
+        <pre id="log">（捕获到的错误与其序列化后的上报参数会在这里展示）</pre>
+
+        <script>
+            // 模拟把监控数据 POST 给后端：这里拼成 URLSearchParams 并"回显"，真实项目可换 fetch/图片打点
+            function report(payload) {
+                var params = new URLSearchParams()
+                Object.keys(payload).forEach(function (k) {
+                    params.append(k, payload[k])
+                })
+                // 模拟网络上报，仅打印到页面
+                log('>>> 模拟上报（URLSearchParams）: ' + decodeURIComponent(params.toString()), 'bad')
+            }
+
+            function log(line, cls) {
+                var p = document.createElement('pre')
+                p.textContent = line
+                if (cls) p.className = cls
+                document.querySelector('#log').appendChild(p)
+            }
+
+            // 1) window.onerror：捕获运行时（未 try/catch）错误
+            window.onerror = function (msg, source, lineno, colno, error) {
+                log(
+                    '捕获 window.onerror：type=' +
+                        (error && error.name) +
+                        ', msg=' +
+                        msg +
+                        ' @ ' +
+                        lineno +
+                        ':' +
+                        colno,
+                    'warn'
+                )
+                report({
+                    catg: 'js_error',
+                    msg: msg,
+                    lineno: lineno,
+                    colno: colno,
+                    stack: error ? (error.stack || '').slice(0, 200) : '',
+                    url: location.href
+                })
+            }
+
+            // 2) 捕获未处理的 Promise 拒绝
+            window.addEventListener('unhandledrejection', function (e) {
+                log('捕获 unhandledrejection：reason=' + e.reason, 'warn')
+                report({
+                    catg: 'promise_rejection',
+                    reason: String(e.reason),
+                    url: location.href
+                })
+            })
+
+            document.querySelector('#btn-err').addEventListener('click', function () {
+                // 故意抛一个未捕获错误：注意它发生在异步回调里、且没被 try/catch 包住
+                setTimeout(function () {
+                    var obj = null
+                    obj.name.length // 触发 TypeError，交给 window.onerror
+                }, 10)
+            })
+
+            document.querySelector('#btn-reject').addEventListener('click', function () {
+                // 创建并丢弃一个 rejected Promise，没人 catch —— 触发 unhandledrejection
+                Promise.reject(new Error('这是一个未被处理的 Promise 拒绝'))
+            })
+
+            document.querySelector('#btn-clear').addEventListener('click', function () {
+                document.querySelector('#log').textContent = ''
+            })
+
+            log('请在页面任意位置点按钮体验。真实项目里，这两处只是采集端，数据会进一步聚合告警。', 'dim')
+        </script>
+    </body>
+</html>

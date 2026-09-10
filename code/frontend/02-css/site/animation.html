@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>动画：transform 合成层 vs width</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .track {
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 0.5rem 1rem;
+                margin: 0.5rem 0;
+                overflow: hidden;
+            }
+            .box {
+                width: 120px;
+                height: 40px;
+                border-radius: 6px;
+                background: #6366f1;
+                color: #fff;
+                font-size: 0.8rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .box.transform {
+                transform: translateX(0);
+                background: #10b981;
+            }
+            .box.width {
+                width: 120px;
+                background: #f59e0b;
+            }
+            .bx-transform:hover .box.transform {
+                animation: bx 0.8s ease-in-out infinite;
+            }
+            .bx-width:hover .box.width {
+                animation: wd 0.8s ease-in-out infinite;
+            }
+            label {
+                font-weight: 600;
+            }
+            .legend {
+                color: #6b7280;
+                font-size: 0.9rem;
+            }
+            button {
+                margin-right: 0.5rem;
+            }
+            @keyframes bx {
+                50% {
+                    transform: translateX(200px);
+                }
+            } /* 只动 transform：走合成层 */
+            @keyframes wd {
+                50% {
+                    width: 320px;
+                }
+            } /* 动 width：触发布局+重绘 */
+        </style>
+    </head>
+    <body>
+        <h1>动画：只动 transform/opacity 更流畅</h1>
+        <p class="legend">
+            悬停到轨道区域触发动画。左边只动 <code>transform</code>（GPU 合成层，不掉帧）；右边动
+            <code>width</code>（每次都触发布局/重绘，肉眼可见卡顿或抖动）。
+        </p>
+
+        <div class="bx-transform">
+            <label>只动 transform</label>
+            <div class="track"><div class="box transform">translateX</div></div>
+        </div>
+
+        <div class="bx-width">
+            <label>动 width（性能差）</label>
+            <div class="track"><div class="box width">width</div></div>
+        </div>
+
+        <p>
+            原理：浏览器渲染路径里 "布局 → 绘制 → 合成"。动 <code>width</code> 每次触发前两步；动
+            <code>transform/opacity</code> 只走最后一步合成（GPU），因此最省。这就是
+            <code>will-change: transform</code> 与 micro-animation 动效库只动 transform 的原因。
+        </p>
+    </body>
+</html>

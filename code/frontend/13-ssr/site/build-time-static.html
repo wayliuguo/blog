@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>03 构建期静态生成 SSG / ISR：构建时产出 + 增量再生成</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 780px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1 {
+                color: #2c3e50;
+            }
+            .panel {
+                border: 1px solid #e3e8ee;
+                border-radius: 10px;
+                padding: 14px 18px;
+                margin: 16px 0;
+            }
+            button {
+                margin: 6px 8px 6px 0;
+                padding: 8px 14px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                color: #fff;
+            }
+            .b-build {
+                background: #2ea44f;
+            }
+            .b-isr {
+                background: #0366d6;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            th,
+            td {
+                border: 1px solid #d0d7de;
+                padding: 8px 10px;
+                text-align: left;
+            }
+            th {
+                background: #f6f8fa;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 10px;
+                border-radius: 6px;
+                font-size: 13px;
+                overflow: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>03 构建期静态生成 SSG / ISR：构建时产出 + 增量再生成</h1>
+        <p>
+            SSG（静态站点生成）在<strong>构建期</strong>就把每个页面渲染成静态
+            HTML，之后浏览器直接拿到现成文件，无需服务器实时算——开发期那些 markdown 就是这么被打包成 HTML 的。ISR
+            则是"构建生成 + 到点/按需对单个页面增量再生成"。下面用一个玩具构建器演示这份产出。
+        </p>
+
+        <div class="panel">
+            <div class="head">① 点击"构建"：模拟 SSG 构建器把 markdown 数据渲染成静态 HTML 文件表</div>
+            <button class="b-build" onclick="buildNow()">执行构建（SSG 全量生成）</button>
+            <p id="build-time" class="p-log"></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>生成的静态文件</th>
+                        <th>标题</th>
+                        <th>更新于（生成戳）</th>
+                    </tr>
+                </thead>
+                <tbody id="file-table">
+                    <tr>
+                        <td colspan="3" style="color: #888">（尚未构建）</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <div class="head">② 模拟 ISR：对单个页面"增量再生成"，其余静态文件不动</div>
+            <p>点下面按钮，只重新生成一篇文章页（相当于 revalidate 到点的产物刷新），其它已生成文件保持原样不变。</p>
+            <button class="b-isr" onclick="isrOnce()">某个文章页到点 → 增量再生成它</button>
+            <pre id="log-view"></pre>
+        </div>
+
+        <p style="font-size: 13px; color: #888">
+            对比"全量构建重新生成所有文件"与"增量只刷新单个页面"的差别，你就能理解为什么 ISR 在更新频繁时比纯 SSG
+            更省成本。
+        </p>
+
+        <script>
+            // 供"构建器"消费的 markdown 数据源（模拟站点内容库）
+            var posts = [
+              { slug: "hello", title: "你好，静态站点" },
+              { slug: "ssr-guide", title: "SSR 入门指南" },
+              { slug: "ssg-notes", title: "SSG 与 ISR 笔记" }
+            ];
+
+            var files = [];    // 已生成的"静态 HTML 文件"清单
+            var index = 1;
+
+            function buildNow() {
+              files = posts.map(function (p) {
+                return { file: "out/" + p.slug + ".html", title: p.title, stamp: nextStamp() };
+              });
+              renderTable();
+              var t = document.getElementById("build-time");
+              t.textContent = "构建完成：全量生成了 " + files.length + " 个静态 HTML 文件，之后浏览器直接访问即可。";
+              appendLog("SSG 构建：一次性产出 " + files.length + " 个页面文件，全部为可静态托管的 HTML。");
+            }
+
+            function isrOnce() {
+              if (files.length === 0) {
+                appendLog("请先点上方"构建"按钮，生成静态文件后再演示 ISR。");
+                return;
+              }
+              // ISR：只挑第二个文件"增量再生成"，其它不动
+              files[1] = { file: files[1].file, title: files[1].title + "（v" + index + " 已刷新）", stamp: nextStamp() };
+              index++;
+              renderTable();
+              appendLog("ISR 增量：仅重新生成了 " + files[1].file + "，其余静态文件保持原样，无需全量重构建。");
+            }
+
+            function renderTable() {
+              var tbody = document.getElementById("file-table");
+              tbody.innerHTML = "";
+              files.forEach(function (f) {
+                var tr = document.createElement("tr");
+                var td1 = document.createElement("td"); td1.textContent = f.file;
+                var td2 = document.createElement("td"); td2.textContent = f.title;
+                var td3 = document.createElement("td"); td3.textContent = f.stamp;
+                tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+                tbody.appendChild(tr);
+              });
+            }
+
+            var n = 0;
+            function nextStamp() {
+              n++;
+              return "生成戳 #" + n;
+            }
+
+            function appendLog(msg) {
+              var pre = document.getElementById("log-view");
+              pre.textContent += "> " + msg + "\n";
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "chapter06-engineering",
+  "version": "1.0.0",
+  "private": true,
+  "description": "06-工程化与构建：极简打包器 / 热更新思路 / 语义化版本 / tree-shaking 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

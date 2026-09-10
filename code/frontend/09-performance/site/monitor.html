@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>监控报表 &amp; 告警台 · 企业级监控 demo</title>
+  <style>
+    body { font-family: -apple-system, 'Segoe UI', sans-serif; margin: 0; background: #0d1117; color: #c9d1d9; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
+    h1 { font-size: 22px; color: #f0f6fc; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 20px; }
+    .kpi { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; }
+    .kpi .num { font-size: 26px; font-weight: 700; color: #58a6ff; margin-top: 6px; }
+    .kpi .num.red { color: #ff7b72; }
+    .kpi .lbl { font-size: 12px; color: #8b949e; }
+    .panel { background: #161b22; border: 1px solid #30363d; border-radius: 10px; margin-top: 16px; padding: 16px; }
+    .panel h2 { font-size: 15px; margin: 0 0 10px; color: #f0f6fc; }
+    svg { width: 100%; display: block; }
+    .alert { background: #3d1117; border: 1px solid #f85149; color: #ff7b72; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-top: 8px; }
+    .muted { color: #8b949e; font-size: 13px; }
+    code { background: #21262d; border-radius: 4px; padding: 1px 5px; color: #79c0ff; }
+    .legend { font-size: 12px; color: #8b949e; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>监控报表 &amp; 告警台</h1>
+    <p class="muted">每 2s 拉取一次 <code>/api/report</code>，后端按秒桶聚合出 <code>TPS / 平均延迟 / P95 / 错误率 / FP / LCP</code>。当 P95 超过 <code>120ms</code> 或错误率超过 <code>1%</code> 时产生一条告警。</p>
+
+    <div class="cards" id="kpis"></div>
+
+    <div class="panel">
+      <h2>接口延迟 · 最近 60 秒（avg / p95 vs 阈值线）</h2>
+      <svg viewBox="0 0 600 180" id="latencyChart"></svg>
+      <div class="legend">绿=avg 黄=P95 红=120ms 阈值线。去 agent 页点击「接口变慢」观察曲线抬升与告警出现。</div>
+    </div>
+
+    <div class="panel">
+      <h2>TPS &amp; 错误率</h2>
+      <svg viewBox="0 0 600 160" id="tpsChart"></svg>
+    </div>
+
+    <div class="panel">
+      <h2>实时告警（最近 20 条）</h2>
+      <div id="alerts"><span class="muted">暂无告警。去 agent 页连点「接口变慢」5 次以上触发 P95 告警。</span></div>
+    </div>
+
+    <p class="muted" style="text-align:right">埋点端 → <a href="agent.html" style="color:#79c0ff">打开 Agent 模拟页</a></p>
+  </div>
+
+  <script>
+    function el(id) { return document.getElementById(id) }
+
+    async function refresh() {
+      let data
+      try { data = await (await fetch('/api/report')).json() } catch (e) { return }
+
+      const a = data.agg
+      const pct = (n) => (n * 100).toFixed(1) + '%'
+      const kpis = [
+        { l: 'TPS（近60s总量）', v: a.tps },
+        { l: '平均延迟', v: a.avgLatency + 'ms' },
+        { l: 'P95 延迟', v: a.p95 + 'ms', red: a.p95 > data.limits.p95 },
+        { l: '错误率', v: pct(a.errorRate), red: a.errorRate > data.limits.errorRate },
+        { l: 'FP', v: a.fp + 'ms' },
+        { l: 'LCP', v: a.lcp + 'ms' },
+      ]
+      el('kpis').innerHTML = kpis.map(k =>
+        '<div class="kpi"><div class="lbl">' + k.l + '</div><div class="num' + (k.red ? ' red' : '') + '">' + k.v + '</div></div>'
+      ).join('')
+
+      drawLine('latencyChart', data.series.slice(-60), ['avgLatency', 'p95'])
+      drawLine('tpsChart', data.series.slice(-60), ['tps'])
+
+      el('alerts').innerHTML = data.alerts.length
+        ? data.alerts.map(a => '<div class="alert">[' + a.time + '] <b>' + a.msg + '</b>（值=' +
+            (Math.round(a.value * 100) / 100) + '，阈值=' + a.limit + '）</div>').join('')
+        : '<span class="muted">暂无告警</span>'
+    }
+
+    // 极简折线绘制（无外部依赖）
+    function drawLine(svgId, series, fields) {
+      const svg = el(svgId)
+      const W = 600, H = parseInt(svg.getAttribute('viewBox').split(' ')[3], 10)
+      const n = series.length
+      if (n < 2) { svg.innerHTML = ''; return }
+      const maxV = Math.max(...series.map(s => Math.max(...fields.map(f => s[f] || 0))), 10)
+      const slot = W / (n - 1)
+      const Y = (v) => H - (v / maxV) * (H - 24) - 8
+      const pts = (f) => series.map((s, i) => (i * slot) + ',' + Y(s[f] || 0)).join(' ')
+      let out = ''
+      fields.forEach((f, idx) => {
+        const colors = ['#2ea043', '#d29922', '#58a6ff']
+        out += '<polyline fill="none" stroke="' + colors[idx] + '" stroke-width="2" points="' + pts(f) + '"/>'
+      })
+      // 阈值线（p95）
+      if (series.length && svgId === 'latencyChart') {
+        const ly = Y(120)
+        out += '<line x1="0" y1="' + ly + '" x2="' + W + '" y2="' + ly + '" stroke="#f85149" stroke-width="1.5" stroke-dasharray="4,3"/>'
+        out += '<text x="' + (W - 46) + '" y="' + (ly + 12) + '" fill="#f85149" font-size="10">120ms</text>'
+      }
+      svg.innerHTML = '<rect width="' + W + '" height="' + H + '" fill="#0d1117"/>' + out
+    }
+
+    refresh()
+    setInterval(refresh, 2000)
+  </script>
+</body>
+</html>

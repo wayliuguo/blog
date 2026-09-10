@@ -1,0 +1,9 @@
+{
+  "name": "chapter11-architecture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "11-工程实践与架构：发布/订阅事件中心 / 单例状态 store / 按需模块加载 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "chapter12-cross-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "12-跨端开发：一次编写多端适配层 / 极简响应式引擎 / 渲染模型对比桥接 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

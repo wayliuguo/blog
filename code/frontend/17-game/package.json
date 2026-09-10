@@ -1,0 +1,9 @@
+{
+  "name": "chapter17-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web 游戏开发章节最小实现 demo（相零依赖静态演示）",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>game-loop · 手写主循环与 deltaTime</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                margin: 20px auto;
+                max-width: 760px;
+                padding: 0 16px;
+                color: #1f2937;
+            }
+            canvas {
+                background: #0f172a;
+                border-radius: 8px;
+                display: block;
+                margin-top: 8px;
+            }
+            p {
+                font-size: 14px;
+                line-height: 1.7;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 2px 5px;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>手写主循环：方块移动 + 边界反弹</h1>
+        <p>
+            核心是 <code>requestAnimationFrame(gameLoop)</code> 驱动的"更新 + 渲染"循环。每帧把回调自带的时间戳相减得到
+            <code>dt</code>（毫秒），位移用 "速度 × 秒" 计算：<code>sprite.x += SPEED * (dt / 1000)</code>，这样无论
+            60fps 还是 30fps， 方块每秒移动的距离都一致——这就是 <strong>deltaTime</strong> 的作用：让速度与帧率解耦。
+        </p>
+        <canvas id="game" width="720" height="160"></canvas>
+        <div id="info"></div>
+        <script>
+            const canvas = document.getElementById('game')
+            const ctx = canvas.getContext('2d')
+            const W = canvas.width,
+                H = canvas.height
+
+            // 方块状态：位置、尺寸、速度(像素/秒)
+            const box = { x: 0, y: H / 2 - 20, w: 40, h: 40, vx: 240 }
+            const SPEED = 240
+
+            let last = performance.now()
+            let frames = 0,
+                sumDt = 0
+
+            function update(dt) {
+                const seconds = dt / 1000 // 毫秒 -> 秒
+                box.x += SPEED * seconds // 按秒缩放的位移
+                // 边界反弹
+                if (box.x + box.w > W) {
+                    box.x = W - box.w
+                    box.vx = -Math.abs(box.vx)
+                }
+                if (box.x < 0) {
+                    box.x = 0
+                    box.vx = Math.abs(box.vx)
+                }
+            }
+
+            function render() {
+                ctx.clearRect(0, 0, W, H)
+                ctx.fillStyle = '#38bdf8'
+                ctx.fillRect(box.x, box.y, box.w, box.h)
+                ctx.fillStyle = '#64748b'
+                ctx.fillRect(0, H - 2, W, 2) // 地面参考线
+            }
+
+            function gameLoop(now) {
+                const dt = Math.min(now - last, 100) // 封顶，防止切后台后跳变
+                last = now
+                update(dt)
+                render()
+                frames++
+                sumDt += dt
+                requestAnimationFrame(gameLoop)
+            }
+
+            // 每秒刷新一次 FPS / 帧耗时信息
+            setInterval(() => {
+                const total = sumDt
+                sumDt = 0
+                const fps = (frames * 1000) / total
+                const avg = total / frames
+                document.getElementById('info').textContent =
+                    'FPS ≈ ' + fps.toFixed(0) + '，平均帧耗时 ≈ ' + avg.toFixed(1) + ' ms'
+                frames = 0
+            }, 1000)
+
+            requestAnimationFrame(gameLoop)
+        </script>
+    </body>
+</html>

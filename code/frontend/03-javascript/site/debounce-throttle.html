@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>防抖 / 节流 · 手写实现</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            input {
+                padding: 0.5rem 0.7rem;
+                font-size: 1rem;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+            }
+            .counter {
+                color: #15803d;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>手写实现 · 防抖 debounce / 节流 throttle</h1>
+        <p>
+            <strong>防抖</strong>：停止触发后再等 delay
+            才执行（最后一次生效）；<strong>节流</strong>：固定间隔至多执行一次。
+        </p>
+        <p>在输入框连续打字，观察两种函数实际触发的"执行次数"与"触发次数"对比。</p>
+
+        <label>输入内容（连续触发）：<input type="text" id="input" placeholder="快速连续输入" /></label>
+        <p>
+            原生触发次数：<span class="counter" id="rawCount">0</span> ｜ 防抖执行次数：<span
+                class="counter"
+                id="debCount"
+                >0</span
+            >
+            ｜ 节流执行次数：<span class="counter" id="thrCount">0</span>
+        </p>
+        <div id="log" class="box">// 连续输入，停顿后可看到防抖在停止后执行、节流固定间隔执行</div>
+
+        <script>
+            function debounce(fn, delay) {
+                var timer = null
+                return function () {
+                    var ctx = this,
+                        args = arguments
+                    clearTimeout(timer) // 灵魂：每次触发重置倒计时
+                    timer = setTimeout(function () {
+                        fn.apply(ctx, args)
+                    }, delay)
+                }
+            }
+
+            function throttle(fn, delay) {
+                var timer = null
+                return function () {
+                    var ctx = this,
+                        args = arguments
+                    if (!timer) {
+                        // 灵魂：有 timer 就拦截
+                        timer = setTimeout(function () {
+                            fn.apply(ctx, args)
+                            timer = null
+                        }, delay)
+                    }
+                }
+            }
+
+            var raw = 0,
+                deb = 0,
+                thr = 0
+
+            function show(msg) {
+                var box = document.getElementById('log')
+                box.textContent = msg + '\n' + box.textContent
+            }
+
+            document.getElementById('input').addEventListener('input', function () {
+                raw++
+                document.getElementById('rawCount').textContent = raw
+            })
+
+            var onDebounce = debounce(function () {
+                deb++
+                document.getElementById('debCount').textContent = deb
+                show('防抖执行了第 ' + deb + ' 次（停止输入后 400ms 才执行）')
+            }, 400)
+
+            var onThrottle = throttle(function () {
+                thr++
+                document.getElementById('thrCount').textContent = thr
+                show('节流执行了第 ' + thr + ' 次（固定 800ms 间隔）')
+            }, 800)
+
+            // 绑到同一个输入事件上，防抖与节流共用输入源
+            var inpDom = document.getElementById('input')
+            inpDom.addEventListener('input', function () {
+                onDebounce()
+                onThrottle()
+            })
+        </script>
+    </body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>前端埋点 Agent · 企业级监控 demo</title>
+  <style>
+    body { font-family: -apple-system, 'Segoe UI', sans-serif; margin: 0; background: #f4f6f8; color: #1f2329; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
+    h1 { font-size: 22px; }
+    .card { background: #fff; border-radius: 10px; padding: 20px; margin-top: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+    button { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; cursor: pointer; background: #1f6feb; color: #fff; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.danger { background: #d73a49; }
+    .log { background: #0d1117; color: #c9d1d9; border-radius: 8px; padding: 14px; font-family: ui-monospace, monospace; font-size: 12px; max-height: 240px; overflow: auto; margin-top: 12px; white-space: pre-wrap; word-break: break-all; }
+    .muted { color: #6e7781; font-size: 13px; }
+    code { background: #eff1f3; border-radius: 4px; padding: 1px 5px; }
+    fieldset { border: 1px solid #d0d7de; border-radius: 8px; margin-top: 12px; padding: 12px; }
+    legend { font-weight: 600; font-size: 13px; }
+    .tag { display: inline-block; background: #ddf4ff; color: #0969da; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>前端埋点 Agent</h1>
+    <p class="muted">模拟浏览器运行中的真实埋点：采集 <code>FP/FCP/LCP/TTFB/接口延迟</code>，异常时构造一个带 <code>stack</code> 的错误，并在 <code>document.visibilityState === 'hidden'</code> 时用 <code>sendBeacon</code> 兜底上报。</p>
+
+    <div class="card">
+      <b>模拟一次「页面访问 + 接口调用」</b>
+      <div class="row">
+        <button onclick="reportNormal()">正常访问（延迟 ~50-90ms）</button>
+        <button class="danger" onclick="reportSlow()">接口变慢（延迟 ~200-400ms）</button>
+        <button onclick="reportError()">产生一条 JS 错误</button>
+      </div>
+      <div class="row">
+        <button onclick="burst()">突发 20 次访问（拉高 TPS）</button>
+        <button onclick="clearLog()">清空日志</button>
+      </div>
+      <div class="log" id="log">等待产生第一条上报...</div>
+    </div>
+
+    <div class="card">
+      <b>为什么这样做？</b>
+      <ul style="font-size:13px;line-height:1.8;margin-bottom:0">
+        <li>上报使用 <code>sendBeacon</code>，页面跳转/关闭时也能送达，不阻塞卸载；</li>
+        <li>指标在 <code>visibilitychange → hidden</code> 时上报，确保拿到 LCP/CLS 最终值；</li>
+        <li>错误在 <code>window.onerror</code> / <code>unhandledrejection</code> 兜底捕获，错误信息附带文件+行号+堆栈。</li>
+      </ul>
+    </div>
+
+    <p class="muted" style="text-align:right">
+      监控端 → <a href="monitor.html" style="color:#0969da">打开聚合报表/告警页</a>
+    </p>
+  </div>
+
+  <script>
+    const logBox = document.getElementById('log')
+    function append(line) {
+      logBox.textContent = (logBox.textContent === '等待产生第一条上报...' ? '' : logBox.textContent + '\n') + line
+      logBox.scrollTop = logBox.scrollHeight
+    }
+
+    // 统一上报入口：组装一条结构化监控事件
+    function sendReport(metrics) {
+      const extra = { route: location.pathname + '?demo', ua: navigator.userAgent.slice(0, 80), ts: Date.now() }
+      const body = JSON.stringify({ metrics, extra })
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/collect', body)
+      } else {
+        fetch('/api/collect', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'application/json' } })
+      }
+      append('[上报] ' + metrics.label + '  latency=' + Math.round(metrics.latency) + 'ms fp=' + Math.round(metrics.fp) + 'ms lcp=' + Math.round(metrics.lcp) + 'ms ok=' + metrics.ok)
+    }
+
+    // 采样一条页面性能（含接口延迟）
+    function sample(latency, ok) {
+      const nav = performance.getEntriesByType('navigation')[0]
+      return {
+        label: ok ? '正常' : '失败',
+        fp: performance.getEntriesByType('paint')[0] ? performance.getEntriesByType('paint')[0].startTime : 120,
+        fcp: performance.getEntriesByType('paint')[1] ? performance.getEntriesByType('paint')[1].startTime : 180,
+        lcp: 480 + Math.random() * 120,
+        ttfb: nav ? nav.responseStart : 160,
+        latency: latency,
+        ok: ok,
+      }
+    }
+
+    function reportNormal() { sendReport(sample(50 + Math.random() * 40, true)) }
+    function reportSlow()   { sendReport(sample(200 + Math.random() * 200, true)) }
+    function reportError() {
+      const e = new Error('Uncaught TypeError: Cannot read property of demo')
+      append('[捕获] window.onerror -> ' + e.message)
+      append('[捕获] stack 前两行: ' + (e.stack || '').split('\n').slice(0, 3).join(' | '))
+      sendReport(sample(60, false))
+    }
+    function burst() { for (let i = 0; i < 20; i++) sendReport(sample(50 + Math.random() * 60, true)) }
+    function clearLog() { logBox.textContent = '日志已清空' }
+
+    // 页面隐藏前补发一次当前可见指标（企业实践：防止漏报）
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') append('[beacon] 页面隐藏，兜底补发一次采集')
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "chapter01-html",
+  "version": "1.0.0",
+  "private": true,
+  "description": "01-HTML 基础：语义化博客页 / 注册表单校验示例",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

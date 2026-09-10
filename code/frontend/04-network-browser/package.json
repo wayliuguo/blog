@@ -1,0 +1,9 @@
+{
+  "name": "chapter04-network-browser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "04-网络与浏览器：fetch 状态码/Promise 时序/存储/渲染阻塞 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

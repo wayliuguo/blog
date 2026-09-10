@@ -1,0 +1,9 @@
+{
+  "name": "chapter03-js",
+  "version": "1.0.0",
+  "private": true,
+  "description": "03-JavaScript 核心：深浅拷贝/闭包/原型/new/事件循环/WeakMap/防抖节流 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

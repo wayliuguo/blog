@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>09 性能优化与监控 · 最小实现示例</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 680px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+                line-height: 1.7;
+            }
+            h1 {
+                border-bottom: 2px solid #2563eb;
+                padding-bottom: 8px;
+            }
+            .card {
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 14px 18px;
+                margin: 12px 0;
+            }
+            .card a {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #2563eb;
+                text-decoration: none;
+            }
+            .card a:hover {
+                text-decoration: underline;
+            }
+            .card p {
+                margin: 6px 0 0;
+                color: #555;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>09 性能优化与监控 · 最小实现示例</h1>
+        <p>用浏览器直接打开下面的页面即可看到效果。本组 demo 全部离线可运行，纯前端输出，无任何外部依赖。</p>
+
+        <div class="card">
+            <a href="./perf-reader.html">perf-reader.html · 读取并展示性能指标</a>
+            <p>
+                通过 <code>performance.getEntriesByType('paint')</code> 与 <code>PerformanceObserver</code> 读取 FCP /
+                LCP，再算 DOMContentLoaded 与 TTFB，页面先显示 waiting 再打印真实值。
+            </p>
+        </div>
+
+        <div class="card">
+            <a href="./fps-frames.html">fps-frames.html · FPS 帧率与主线程卡顿</a>
+            <p>
+                用 <code>requestAnimationFrame</code> 统计当前
+                FPS，点击按钮同步阻塞主线程，观察帧率骤降与页面卡顿，直观理解"长任务拖垮 60fps"。
+            </p>
+        </div>
+
+        <div class="card">
+            <a href="./lazy-load.html">lazy-load.html · 懒加载 / IntersectionObserver</a>
+            <p>
+                用
+                <code>IntersectionObserver</code>
+                监听占位元素，滚动进入视口才填充内容并输出观察结果，理解"按需加载"如何省下非首屏资源。
+            </p>
+        </div>
+
+        <div class="card">
+            <a href="./error-report.html">error-report.html · 错误监控与上报</a>
+            <p>
+                通过 <code>window.onerror</code> 与 <code>unhandledrejection</code> 捕获运行时错误与 Promise 拒绝，拼成
+                <code>URLSearchParams</code> 模拟一次上报并回显。
+            </p>
+        </div>
+
+        <div class=

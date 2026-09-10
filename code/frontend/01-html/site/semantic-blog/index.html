@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="关于前端入门的一点心得" />
+    <title>我的技术博客</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: system-ui, sans-serif; margin: 0; color: #1f2937; line-height: 1.7; }
+      header { background: #111827; color: #fff; padding: 1.5rem 2rem; }
+      header a { color: #9ca3af; margin-right: 1rem; text-decoration: none; }
+      main { max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+      article img { width: 100%; border-radius: 8px; }
+      figure { margin: 1rem 0; }
+      figcaption { font-size: 0.85rem; color: #6b7280; text-align: center; margin-top: 0.5rem; }
+      time { color: #6b7280; font-size: 0.9rem; }
+      footer { background: #f3f4f6; padding: 1.5rem 2rem; text-align: center; margin-top: 3rem; }
+      address { font-style: normal; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>我的技术博客</h1>
+      <nav>
+        <ul>
+          <li><a href="#home">首页</a></li>
+          <li><a href="#articles">文章</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="articles">
+      <!-- 头图：不同屏幕宽度取不同源（纯 HTML，无需 CSS 媒体查询） -->
+      <picture>
+        <source media="(min-width: 720px)" srcset="../banner-wide.svg" />
+        <img src="../banner.svg" alt="博客横幅图" />
+      </picture>
+
+      <article>
+        <h2>用语义化标签重写你的页面</h2>
+        <time datetime="2026-09-10">2026-09-10 发布</time>
+
+        <section aria-label="正文">
+          <h3>为什么语义化</h3>
+          <p>
+            语义化让<strong>爬虫</strong>（SEO）和<strong>读屏器</strong>（无障碍）
+            都能读懂页面：<code>&lt;nav&gt;</code> 是可跳过的导航、<code>&lt;main&gt;</code>
+            是主体内容、<code>&lt;h1&gt;</code> 明确主标题。比起一堆 <code>&lt;div&gt;</code>，
+            语义化标签让结构"一读就懂"。
+          </p>
+        </section>
+
+        <figure>
+          <img src="../banner.svg" alt="一张说明语义化的示意图" />
+          <figcaption>图 1：结构语义化示意</figcaption>
+        </figure>
+      </article>
+    </main>
+
+    <footer>
+      <p>© 2026 我的技术博客 · 反馈请邮件到
+        <address>hi@blog.com</address>
+      </p>
+    </footer>
+  </body>
+</html>

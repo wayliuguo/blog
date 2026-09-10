@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>03 渲染模型对比与桥接 · 跨端最小实现</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 920px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            td,
+            th {
+                border: 1px solid #e3e8ee;
+                padding: 8px 10px;
+                text-align: left;
+            }
+            th {
+                background: #f0f3f7;
+            }
+            .tabs {
+                margin: 16px 0 8px;
+            }
+            .tabs button {
+                background: #eef1f5;
+                border: 1px solid #ccd;
+                padding: 8px 14px;
+                border-radius: 6px 6px 0 0;
+                cursor: pointer;
+                margin-right: 4px;
+            }
+            .tabs button.active {
+                background: #fff;
+                border-bottom: 2px solid #0366d6;
+                font-weight: 600;
+            }
+            .tabBody {
+                border: 1px solid #e3e8ee;
+                border-radius: 0 8px 8px 8px;
+                padding: 14px 16px;
+                min-height: 120px;
+                background: #fafbfc;
+            }
+            .panel {
+                border: 1px solid #e3e8ee;
+                border-radius: 8px;
+                padding: 14px 16px;
+                background: #fafbfc;
+            }
+            pre {
+                background: #282c34;
+                color: #e6e6e6;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+                font-size: 13px;
+            }
+            code {
+                background: #eef1f5;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            .tip {
+                background: #fff8e6;
+                border: 1px solid #f5d589;
+                border-radius: 6px;
+                padding: 10px 14px;
+                margin-top: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>03 · 渲染模型对比与桥接</h1>
+        <p>
+            跨端方案的差异根源在<b>渲染模型</b>：UI 到底由谁、用什么方式画出来。下面是 React Native / Flutter / Taro /
+            uni-app 四家的"快照"，再用一个简化桥接器演示它们与原生/宿主"适配、桥接"的共同套路。
+        </p>
+
+        <h2>① 四种渲染模型快照对比</h2>
+        <table>
+            <tr>
+                <th>方案</th>
+                <th>语言内核</th>
+                <th>渲染路径</th>
+                <th>与原生/宿主通信</th>
+                <th>一致性</th>
+            </tr>
+            <tr>
+                <td><b>React Native</b></td>
+                <td>JS / TS + JSX</td>
+                <td>映射为原生控件（iOS/Android View）</td>
+                <td>JSI / Bridge（桥）</td>
+                <td>平台差异中</td>
+            </tr>
+            <tr>
+                <td><b>Flutter</b></td>
+                <td>Dart</td>
+                <td>自绘引擎（Skia/Impeller）GPU 绘制</td>
+                <td>MethodChannel / FFI</td>
+                <td>极高（UI 引擎绘制）</td>
+            </tr>
+            <tr>
+                <td><b>Taro</b></td>
+                <td>React（编译型）</td>
+                <td>编译为各端宿主产物（WXML / H5 / RN）</td>
+                <td>编译 + 宿主适配层</td>
+                <td>依目标端</td>
+            </tr>
+            <tr>
+                <td><b>uni-app</b></td>
+                <td>Vue（编译型）</td>
+                <td>编译为小程序 / H5 / App（内置引擎）</td>
+                <td>编译 + 差量原生桥</td>
+                <td>依目标端</td>
+            </tr>
+        </table>
+
+        <h2>② 逐家看渲染模型（点击切换）</h2>
+        <div class="tabs" id="tabs"></div>
+        <div class="tabBody" id="tabBody"></div>
+
+        <h2>③ 简化"桥接 / 适配器"演示</h2>
+        <div class="panel">
+            <p>
+                概念上，"桥 / 适配器"就是一份<b>统一接口</b>，把一条指令路由到当前平台的实现。下面统一调用
+                <code>bridge.render(items)</code>，切换平台观察它内部如何分发到不同实现：
+            </p>
+            <div style="margin: 10px 0">
+                <button
+                    type="button"
+                    style="
+                        background: #0366d6;
+                        color: #fff;
+                        border: none;
+                        padding: 8px 14px;
+                        border-radius: 6px;
+                        margin-right: 8px;
+                    "
+                    onclick="selectPlatform('webdom')"
+                >
+                    Web DOM + 原生桥
+                </button>
+                <button
+                    type="button"
+                    style="
+                        background: #0366d6;
+                        color: #fff;
+                        border: none;
+                        padding: 8px 14px;
+                        border-radius: 6px;
+                        margin-right: 8px;
+                    "
+                    onclick="selectPlatform('native')"
+                >
+                    原生渲染映射（RN 风格）
+                </button>
+                <button
+                    type="button"
+                    style="
+                        background: #0366d6;
+                        color: #fff;
+                        border: none;
+                        padding: 8px 14px;
+                        border-radius: 6px;
+                        margin-right: 8px;
+                    "
+                    onclick="selectPlatform('canvas')"
+                >
+                    自绘引擎（Flutter 风格）
+                </button>
+            </div>
+            <pre id="bridgeOut"></pre>
+            <div class="tip">
+                <b>原理一句话：</b
+                >四种方案都把"统一接口"（适配器/桥/编译器）当作分水岭——业务只认一套抽象，各端由适配器翻译成原生渲染、宿主
+                JSON 或引擎指令，这就是<b>一次编写、多端抵抗平台差异</b>的骨架。
+            </div>
+        </div>
+
+        <script>
+            var detail = {
+                rn: {
+                    title: 'React Native：原生渲染映射',
+                    flow:
+                        'React 组件树 (JS线程)' +
+                        '   ==>   ' +
+                        'Shadow Tree 意图' +
+                        '   ==>  ' +
+                        'Bridge/JSI' +
+                        '   ==>  ' +
+                        '原生控件 (UIView / Android View)',
+                    point: 'JS 只描述意图，实际 UI 由原生控件渲染；渲染在原生线程，与 JS 之间靠桥/JSI 通信。性能受通信粒度影响，一致性依赖各平台控件外观。'
+                },
+                flutter: {
+                    title: 'Flutter：自绘引擎',
+                    flow:
+                        'Dart Widget 声明' +
+                        '   ==>   ' +
+                        '布局' +
+                        '   ==>  ' +
+                        'Canvas 绘制指令' +
+                        '   ==>  ' +
+                        'Skia/Impeller' +
+                        '   ==>  ' +
+                        'GPU 合成到屏幕',
+                    point: 'UI 由引擎直接绘制，不依赖宿主原生控件，因此跨端像素一致、动画流畅；代价是包体积偏大、与原生 UI 融合需额外工作。'
+                },
+                taro: {
+                    title: 'Taro：编译型 + 宿主适配',
+                    flow:
+                        'React 源码' +
+                        '   ==>   ' +
+                        'Taro 编译器' +
+                        '   ==>  ' +
+                        '微信/支付宝产物 (WXML/WXSS/JS) 或 H5/RN',
+                    point: '运行时把 React 组件树映射到宿主组件；可在编译期对平台差异做处理。一套源码产出多端代码。'
+                },
+                uniapp: {
+                    title: 'uni-app：Vue + 多端编译',
+                    flow:
+                        'Vue 源码' + '   ==>   ' + 'uni-app 编译器' + '   ==>  ' + '小程序 / H5 / App（内置渲染引擎）',
+                    point: 'Vue 语法编写，编译到多端产物；条件编译处理平台差异，App 端可走内置引擎渲染。'
+                }
+            }
+            var order = ['rn', 'flutter', 'taro', 'uniapp']
+            var active = 'rn'
+
+            function renderTabs() {
+                var box = document.getElementById('tabs')
+                box.innerHTML = ''
+                order.forEach(function (key) {
+                    var btn = document.createElement('button')
+                    btn.type = 'button'
+                    btn.textContent = detail[key].title.split('：')[0]
+                    btn.classList.toggle('active', key === active)
+                    btn.onclick = function () {
+                        active = key
+                        renderTabs()
+                    }
+                    box.appendChild(btn)
+                })
+                var d = detail[active]
+                document.getElementById('tabBody').innerHTML =
+                    '<b>' +
+                    d.title +
+                    "</b><div style='margin-top:8px'>" +
+                    d.flow +
+                    "</div><div style='margin-top:8px;color:#555'>" +
+                    d.point +
+                    '</div>'
+            }
+
+            // ---- 简化桥接器：统一接口 + 各平台适配实现 ----
+            var bridge = {
+                // 统一接口，业务只认它
+                render: function (items, platform) {
+                    return bridge.adapters[platform](items)
+                },
+                // 各平台适配器（桥接的不同实现）
+                adapters: {
+                    webdom: function (items) {
+                        return { via: 'Web DOM', action: '直接更新浏览器 DOM 节点', items: items }
+                    },
+                    native: function (items) {
+                        return { via: 'JSI/桥 -> 原生控件', action: 'JS 意图 -> 原生渲染映射', items: items }
+                    },
+                    canvas: function (items) {
+                        return { via: '自绘引擎 -> GPU', action: 'Dart 声明 -> Canvas 指令', items: items }
+                    }
+                }
+            }
+            var currentPlatform = 'webdom'
+
+            function selectPlatform(id) {
+                currentPlatform = id
+                var itemList = ['首页', '列表', '详情']
+                var result = bridge.render(itemList, currentPlatform)
+                document.getElementById('bridgeOut').textContent =
+                    '业务代码只调用 bridge.render(items)\n当前平台：' +
+                    currentPlatform +
+                    '\n适配器产物：' +
+                    JSON.stringify(result, null, 2)
+            }
+
+            renderTabs()
+            selectPlatform('webdom')
+        </script>
+    </body>
+</html>

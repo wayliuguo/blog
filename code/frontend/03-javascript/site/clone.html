@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>深浅拷贝 · 数据类型</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            button {
+                padding: 0.4rem 0.8rem;
+                margin-right: 0.5rem;
+                cursor: pointer;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>数据类型 · 手写深浅拷贝</h1>
+        <p>
+            基本类型按<strong>值</strong>拷贝互不影响；引用类型变量存的是<strong>引用地址</strong>。深拷贝要递归复制每一层，且处理循环引用。
+        </p>
+
+        <div>
+            <button id="btnShallow">执行浅拷贝</button>
+            <button id="btnDeep">执行深拷贝</button>
+        </div>
+        <div id="log" class="box">// 点击按钮查看结果</div>
+
+        <script>
+            let output = []
+
+            function show(label, val) {
+                output.push(label + ' => ' + val)
+                document.getElementById('log').textContent = '// ' + output.join('\n// ')
+            }
+
+            // ---- 浅拷贝：只复制第一层 ----
+            const origin = { name: '张三', tags: ['a', 'b'], meta: { level: 1 } }
+
+            // ---- 深拷贝：递归 + WeakMap 防循环引用 ----
+            function deepClone(target, map) {
+                map = map || new WeakMap()
+                if (target === null || typeof target !== 'object') return target // 基本类型直接返回
+                if (map.has(target)) return map.get(target) // 循环引用：返回缓存
+                if (target instanceof Date) return new Date(target)
+                if (target instanceof RegExp) return new RegExp(target.source, target.flags)
+
+                const clone = Array.isArray(target) ? [] : {}
+                map.set(target, clone)
+                Reflect.ownKeys(target).forEach(key => {
+                    clone[key] = deepClone(target[key], map)
+                })
+                return clone
+            }
+
+            origin.self = origin // 制造循环引用，验证深拷贝不回栈溢出
+
+            document.getElementById('btnShallow').onclick = function () {
+                output = []
+                const copy = { ...origin } // 浅拷贝：仅第一层
+                copy.name = '李四' // 基本类型属性独立
+                copy.tags.push('c') // 引用属性仍共享 origin.tags
+                show('copy.name(改引用属性)', copy.name + ' / origin.name=' + origin.name)
+                show('copy.tags(共享数组)', copy.tags + ' / origin.tags=' + origin.tags)
+                show('浅拷贝后修改 copy.tags 会影响 origin', 'true（共享同一个数组）')
+            }
+
+            document.getElementById('btnDeep').onclick = function () {
+                output = []
+                const copy = deepClone(origin)
+                // 深拷贝：每层都独立
+                copy.tags.push('c')
+                copy.self.name = '深拷贝改值'
+                show('修改 copy.tags 后 origin.tags', origin.tags + '（不变，完全独立）')
+                show('copy.self === copy', copy.self === copy + '（循环引用正确重建）')
+                show('copy.meta === origin.meta', copy.meta === origin.meta + '（嵌套对象也独立）')
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>盒模型：content-box vs border-box</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .demo {
+                display: flex;
+                gap: 2rem;
+                flex-wrap: wrap;
+            }
+            .card {
+                width: 260px;
+                width: 220px;
+                padding: 20px;
+                border: 10px solid #93c5fd;
+                background: #eff6ff;
+                border-radius: 8px;
+                font-size: 0.85rem;
+            }
+            .badge {
+                font-weight: 600;
+            }
+            .content-box {
+                box-sizing: content-box;
+            }
+            .border-box {
+                box-sizing: border-box;
+            }
+            .note {
+                color: #6b7280;
+                margin-top: 0.25rem;
+            }
+            .rule {
+                margin-top: 1.5rem;
+                background: #f3f4f6;
+                padding: 1rem;
+                border-radius: 8px;
+            }
+            code {
+                background: #fff;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>盒模型：同一宽度，两种 box-sizing</h1>
+        <p>两者都设了 <code>width: 220px</code>，但各自的"可见总宽"不同。</p>
+        <div class="demo">
+            <div class="card content-box">
+                <div class="badge">content-box</div>
+                <div>width 指 内容区 = 220px</div>
+                <div class="note">总宽 = content(220) + padding(40) + border(20) = 280px</div>
+            </div>
+            <div class="card border-box">
+                <div class="badge">border-box</div>
+                <div>width 指 整个盒子 = 220px</div>
+                <div class="note">总宽固定 220px，内容自动被压缩</div>
+            </div>
+        </div>
+        <p class="rule">
+            结论：<strong>border-box</strong> 让"我设置多宽，盒子就多宽"，加 padding/border 不会撑爆布局——这也是全局
+            <code>*{box-sizing:border-box}</code> 流行的原因。
+        </p>
+    </body>
+</html>

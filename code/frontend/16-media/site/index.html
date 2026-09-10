@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>16-音视频与富媒体前端 · 最小实现</title>
+        <style>
+            body {
+                font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                margin: 0;
+                background: #f5f7fa;
+                color: #2c3e50;
+                line-height: 1.7;
+            }
+            .wrap {
+                max-width: 860px;
+                margin: 40px auto;
+                padding: 0 20px;
+            }
+            h1 {
+                font-size: 26px;
+                border-bottom: 2px solid #3498db;
+                padding-bottom: 10px;
+            }
+            .sub {
+                color: #7f8c8d;
+                margin: 6px 0 24px;
+            }
+            ul {
+                list-style: none;
+                padding: 0;
+            }
+            li {
+                background: #fff;
+                border: 1px solid #e3e7eb;
+                border-radius: 8px;
+                margin-bottom: 14px;
+                padding: 16px 18px;
+            }
+            a {
+                color: #2980b9;
+                text-decoration: none;
+                font-size: 17px;
+                font-weight: 600;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            .desc {
+                color: #555;
+                margin: 6px 0 0;
+                font-size: 14px;
+            }
+            .tag {
+                display: inline-block;
+                background: #eaf2fb;
+                color: #2471a3;
+                font-size: 12px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                margin-right: 6px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <h1>16-音视频与富媒体前端 · 最小实现</h1>
+            <p class="sub">
+                对应章节概念的可运行 demo（全部零依赖、纯前端演示原理），请使用现代浏览器（Chrome / Edge /
+                Firefox）打开。
+            </p>
+            <ul>
+                <li>
+                    <span class="tag">媒体采集</span><a href="media-capture.html">media-capture.html</a>
+                    <p class="desc">
+                        用 navigator.mediaDevices.getUserMedia 打开摄像头 / 麦克风，实时回显到
+                        &lt;video&gt;，含权限拒绝与不支持时的友好降级提示。
+                    </p>
+                </li>
+                <li>
+                    <span class="tag">Web Audio</span><a href="audio-viz.html">audio-viz.html</a>
+                    <p class="desc">
+                        用 Web Audio API + AnalyserNode 生成合成振荡器音并实时把声音频谱画到
+                        canvas（无音频文件也能发声）。
+                    </p>
+                </li>
+                <li>
+                    <span class="tag">语音合成</span><a href="speech-synth.html">speech-synth.html</a>
+                    <p class="desc">用 speechSynthesis 朗读文本，讲解浏览器的语音合成（TTS）API。</p>
+                </li>
+                <li>
+                    <span class="tag">MSE</span><a href="mse-hls.html">mse-hls.html</a>
+                    <p class="desc">
+                        MediaSource Extensions 流式播放原理页 + 受控样例说明：浏览器如何用 appendBuffer 实现"边下边播"。
+                    </p>
+                </li>
+            </ul>
+            <p class="sub">提示：返回章节阅读「最小实现」小节可获得每个 demo 对应的原理说明。</p>
+        </div>
+    </body>
+</html>

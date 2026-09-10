@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WebAssembly：概念可视化与 wat 示例</title>
+        <style>
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    sans-serif;
+                max-width: 800px;
+                margin: 32px auto;
+                padding: 0 20px;
+                color: #1f2937;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            h2 {
+                font-size: 18px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 6px;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            th,
+            td {
+                border: 1px solid #e5e7eb;
+                padding: 8px 10px;
+                text-align: left;
+            }
+            th {
+                background: #f3f4f6;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            pre {
+                background: #111827;
+                color: #e5e7eb;
+                padding: 14px;
+                border-radius: 8px;
+                overflow-x: auto;
+                font-size: 13px;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 10px;
+                padding: 12px 18px;
+                margin: 12px 0;
+                font-size: 14px;
+            }
+            .chain {
+                font-family: monospace;
+                background: #f9fafb;
+                border: 1px dashed #d1d5db;
+                padding: 10px 14px;
+                border-radius: 8px;
+                margin: 8px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>WebAssembly：为何快、编译链路与最小 wat 示例</h1>
+        <p>
+            WebAssembly（Wasm）是一种可移植、体积紧凑的字节码格式，代码在下载时被 AOT
+            编译成机器码，因而接近原生速度。它不与 JS 竞争，而是负责 JS 之外的重计算。
+        </p>
+
+        <h2>一、为什么 Wasm 比 JS 快（对照）</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>维度</th>
+                    <th>JavaScript</th>
+                    <th>WebAssembly</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>执行方式</td>
+                    <td>解释执行 + JIT</td>
+                    <td>AOT 编译为机器码，接近原生</td>
+                </tr>
+                <tr>
+                    <td>类型</td>
+                    <td>动态类型</td>
+                    <td>静态类型（i32 / f32 / f64 等）</td>
+                </tr>
+                <tr>
+                    <td>适用</td>
+                    <td>DOM、事件、UI 交互</td>
+                    <td>CPU 密集计算、图形、编解码</td>
+                </tr>
+                <tr>
+                    <td>体积</td>
+                    <td>较大</td>
+                    <td>二进制小，加载快</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>二、编译链路：源码 → .wat → .wasm → 运行</h2>
+        <div class="chain">
+            源文件(.rs / .c / .cpp) → clang / rustc → .wat（人类可读文本） ↔ .wasm（二进制字节码）→ 浏览器实例化执行
+        </div>
+        <p>
+            JavaScript 侧用 <code>WebAssembly.instantiateStreaming()</code> 把 .wasm
+            以流式方式编译并实例化，得到可调用对象。
+        </p>
+
+        <h2>三、一个最小 add 的 wat 文本格式</h2>
+        <p>下面这段是"加法函数"的人类可读文本（等价于一个导出 <code>add</code> 的模块，把两个 i32 相加并返回）：</p>
+        <pre>
+(module
+  (func $add (param $a i32) (param $b i32) (result i32)
+    local.get $a
+    local.get $b
+    i32.add)
+  (export "add" (func $add)))</pre
+        >
+
+        <div class="box">
+            <strong>原理一句话：</strong>把它用 <code>wat2wasm</code> 转成二进制 .wasm
+            后，浏览器会把函数体一次性编译成机器码，之后每次调用都接近原生——这就是 Wasm 相比逐行解释、动态内联的 JS
+            更快的原因。JS 负责 UI，Wasm 负责重计算，二者协同。
+        </div>
+    </body>
+</html>

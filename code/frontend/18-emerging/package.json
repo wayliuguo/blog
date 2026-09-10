@@ -1,0 +1,9 @@
+{
+  "name": "chapter18-emerging",
+  "version": "1.0.0",
+  "private": true,
+  "description": "18-新兴方向：PWA/Service Worker、WebAssembly、AI 前端推理 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

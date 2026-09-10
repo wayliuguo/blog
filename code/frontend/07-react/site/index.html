@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>07-前端框架-React · 最小实现 Demo 目录</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 680px;
+                margin: 3rem auto;
+                padding: 0 1rem;
+            }
+            li {
+                margin: 0.8rem 0;
+            }
+            a {
+                color: #2563eb;
+            }
+            code {
+                background: #f1f5f9;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>07-前端框架-React · 最小实现 Demo 目录</h1>
+        <p>
+            这 3 个 demo 均用原生 JS 手写而成，<strong>不依赖任何第三方库</strong>，浏览器直接打开即可在页面上看到结果。
+        </p>
+        <ul>
+            <li>
+                <a href="mini-runtime.html"
+                    >mini-runtime：手写极简渲染器 createElement + render + onUpdate（虚拟 DOM + 声明式更新）</a
+                >
+            </li>
+            <li><a href="vdom-diff.html">vdom-diff：两棵轻量虚拟 DOM 树做最小 diff，输出生成的 patch</a></li>
+            <li>
+                <a href="hooks-demo.html">hooks-demo：用普通数组实现极简 useState / useEffect（hooks 调用顺序原理）</a>
+            </li>
+        </ul>
+        <p>
+            启动方式：在 <code>code/frontend/07-react</code> 下执行 <code>npm start</code>（即
+            <code>node server.js</code>），然后打开 http://localhost:5180/ 。
+        </p>
+    </body>
+</html>

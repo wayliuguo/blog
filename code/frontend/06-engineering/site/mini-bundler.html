@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>01 极简打包器:手写模块拼装</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            pre {
+                background: #f6f8fa;
+                border: 1px solid #e1e4e8;
+                border-radius: 6px;
+                padding: 12px;
+                overflow: auto;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>01 极简打包器:手写模块拼装</h1>
+        <p>
+            真实打包器(如 Webpack)做的事可简化为三句:找到入口 → 收集它依赖的所有模块 →
+            把它们按统一的包装函数拼成一个文件。下面用原生的"模块字符串"模拟这一步。
+        </p>
+
+        <h2>两个源"模块"(字符串形式)</h2>
+        <pre id="source"></pre>
+
+        <h2>打包产物(生成的单个输出文件)</h2>
+        <pre id="output"></pre>
+
+        <h2>执行结果(产物在浏览器里返回了什么)</h2>
+        <pre id="result"></pre>
+
+        <script>
+            // ---- 模拟"模块"：source 是模块源码字符串，deps 声明它依赖了哪些模块 ----
+            const modules = {
+                './math': {
+                    deps: [],
+                    source: 'module.exports = { add: (a, b) => a + b };'
+                },
+                './main': {
+                    deps: ['./math'],
+                    source: "var math = require('./math'); module.exports = '计算结果 = ' + math.add(2, 3);"
+                }
+            }
+            const entryId = './main'
+
+            // ---- 极简"打包器"：1. 遍历依赖图 2. 收集模块 3. 拼成单个输出文件 ----
+            function buildBundle(entryId, modules) {
+                let depGraph = ''
+                for (const id of Object.keys(modules)) {
+                    depGraph +=
+                        "'" + id + "': { factory: function(require, module, exports) { " + modules[id].source + ' } }, '
+                }
+                return [
+                    '(function(modules) {',
+                    '  var cache = {};',
+                    '  function require(id) {',
+                    '    if (cache[id]) return cache[id].exports;',
+                    '    var module = cache[id] = { exports: {} };',
+                    '    modules[id].factory(require, module);',
+                    '    return module.exports;',
+                    '  }',
+                    '  return require("' + entryId + '");',
+                    '})({ ' + depGraph + ' })'
+                ].join('\n')
+            }
+
+            const bundleCode = buildBundle(entryId, modules)
+
+            document.getElementById('source').textContent =
+                './math  deps:[ ]\n  ' +
+                modules['./math'].source +
+                '\n' +
+                './main  deps:[' +
+                modules['./main'].deps.join(', ') +
+                ']\n  ' +
+                modules['./main'].source
+
+            document.getElementById('output').textContent = bundleCode
+
+            // ---- 在浏览器里真正执行这份"打包产物"，证明它是可运行的整体 ----
+            try {
+                const run = new Function('return ' + bundleCode)
+                document.getElementById('result').textContent = String(run())
+            } catch (err) {
+                document.getElementById('result').textContent = '执行出错: ' + err.message
+            }
+        </script>
+    </body>
+</html>

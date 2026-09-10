@@ -1,0 +1,9 @@
+{
+  "name": "chapter15-lowcode",
+  "version": "1.0.0",
+  "private": true,
+  "description": "15-低代码与无代码：Schema 驱动渲染 / 可视化搭建 / 出码 最小 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>泛型容器 + infer 提取返回类型</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>泛型 <code>&lt;T&gt;</code> 容器 + <code>infer</code> 提取返回类型</h1>
+        <p>
+            泛型让“存入类型 = 取出类型”得以保持；<code>infer R</code> 则像是从函数签名里“挖出”返回类型（正是内置
+            <code>ReturnType</code> 的原理）。运行时这些都只是普通 JS 容器/函数。
+        </p>
+        <pre>
+type MyReturnType&lt;T&gt; = T extends (...args:any[]) =&gt; infer R ? R : never;
+type R = MyReturnType&lt;(a:number, b:string) =&gt; boolean>; // boolean</pre
+        >
+        <div id="log" class="box">// 见下方输出</div>
+        <script>
+            // ---- 泛型容器：Box<string> 运行时就是一个 { value } 对象 ----
+            function makeBox(value) {
+                return { value }
+            }
+
+            // ---- infer 的“运行时模拟”：把任意函数源码变成字符串后解析返回单词 ----
+            function tryInferReturn(fn) {
+                const src = fn.toString()
+                const arrow = src.match(/=\&gt;\s*([^,;{}]+)/)
+                if (arrow) return arrow[1].trim()
+                const m = src.match(new RegExp('return\\s+([^;]+)'))
+                return m ? m[1].trim() : null
+            }
+            const fn = (a, b) => a + b > 0 // 返回 boolean
+            const box = makeBox('hello')
+
+            const lines = [
+                "makeBox('hello') 的 shape => " + JSON.stringify(box),
+                'box.value（取出的值与存入类型一致）=> ' + box.value,
+                'infer 抽出来的“函数返回类型” => ' + tryInferReturn(fn),
+                '在 TS 里 infer 在编译期完成；这里用 JS 字符串解析只是可视化其含义'
+            ]
+            document.getElementById('log').textContent = lines.join('\n')
+        </script>
+        <p><a href="index.html">← 返回目录</a></p>
+    </body>
+</html>

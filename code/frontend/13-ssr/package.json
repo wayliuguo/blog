@@ -1,0 +1,9 @@
+{
+  "name": "chapter13-ssr",
+  "version": "1.0.0",
+  "private": true,
+  "description": "13-SSR与SSG服务端渲染：服务端渲染 / 水合 / 构建期静态生成 最小实现 demo（纯前端演示 SSR 思想）",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

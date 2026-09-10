@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>BEM 综合卡片</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                display: flex;
+                justify-content: center;
+                padding: 2rem 1rem;
+                background: #f8fafc;
+            }
+            .card {
+                width: 280px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 14px;
+                padding: 1.25rem;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            }
+            .card--featured {
+                border-color: #f59e0b;
+                box-shadow: 0 6px 20px rgba(245, 158, 11, 0.25);
+            } /* modifier */
+            .card__badge {
+                display: inline-block;
+                font-size: 0.7rem;
+                padding: 0.15rem 0.5rem;
+                border-radius: 999px;
+                background: #fef3c7;
+                color: #92400e;
+            }
+            .card__badge--hot {
+                background: #fee2e2;
+                color: #b91c1c;
+            } /* modifier */
+            .card__title {
+                font-size: 1.1rem;
+                margin: 0.5rem 0;
+            }
+            .card__desc {
+                color: #64748b;
+                font-size: 0.9rem;
+                line-height: 1.6;
+            }
+            .card__btn {
+                margin-top: 1rem;
+                display: inline-block;
+                background: #3b82f6;
+                color: #fff;
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                font-size: 0.9rem;
+            }
+            .card__btn--muted {
+                background: #e2e8f0;
+                color: #334155;
+            } /* modifier */
+        </style>
+    </head>
+    <body>
+        <div class="card card--featured">
+            <span class="card__badge card__badge--hot">热销</span>
+            <h3 class="card__title">标准版 ×12</h3>
+            <p class="card__desc">
+                类名结构：block=card，element=__badge/__title/__btn，modifier=--featured/--hot/--muted。
+            </p>
+            <a class="card__btn card__btn--muted">了解更多</a>
+        </div>
+        <p style="max-width: 300px; margin-left: 1.5rem; color: #64748b">
+            改为 <code>card__btn--muted</code> 只影响这一个状态，不污染全局——这就是 BEM 的价值：改一处，不改全局。
+        </p>
+    </body>
+</html>

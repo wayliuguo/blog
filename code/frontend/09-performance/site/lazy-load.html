@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>懒加载 / IntersectionObserver</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 640px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+                line-height: 1.7;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+            }
+            .slot {
+                height: 150px;
+                margin: 20px 0;
+                border: 2px dashed #cbd5e1;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #94a3b8;
+                font-size: 1.05rem;
+            }
+            .slot.loaded {
+                border-style: solid;
+                border-color: #22c55e;
+                color: #15803d;
+                background: #f0fdf4;
+            }
+            .spacer {
+                height: 180px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>懒加载：元素进入视口才"加载"</h1>
+        <p>
+            下方的占位"资源槽"初始只显示等待文案，用一个
+            <code>IntersectionObserver</code> 监听它们：只有滚动进入视口（isIntersecting 为
+            true）时才填充真实内容。浏览器会批量命中所观察元素，避免用 scroll 反复计算。
+        </p>
+
+        <div class="slot" data-id="1">第 1 个资源 · wait…（往下滚动进入视口后加载）</div>
+        <div class="spacer"></div>
+        <div class="slot" data-id="2">第 2 个资源 · wait…（滚动进来才加载）</div>
+        <div class="spacer"></div>
+        <div class="slot" data-id="3">第 3 个资源 · wait…（滚动进来才加载）</div>
+        <div class="spacer"></div>
+
+        <pre id="log">（观察器的回调会把命中结果输出在这）</pre>
+
+        <script>
+            var slots = document.querySelectorAll('.slot')
+
+            // 模拟"真正去加载资源"的动作：填充内容并标记状态
+            function loadSlot(slot) {
+                if (slot.classList.contains('loaded')) return // 只加载一次
+                slot.classList.add('loaded')
+                slot.textContent = '已加载：第 ' + slot.getAttribute('data-id') + ' 个资源（进入视口时触发）'
+                log('资源 ' + slot.getAttribute('data-id') + ' 进入视口 -> 执行真实加载', 'ok')
+            }
+
+            function log(line, cls) {
+                var p = document.createElement('pre')
+                p.textContent = line
+                if (cls) p.className = cls
+                document.querySelector('#log').appendChild(p)
+            }
+
+            // 核心：IntersectionObserver。可传 threshold：进入比例超过该值时触发
+            var io = new IntersectionObserver(
+                function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            loadSlot(entry.target)
+                            // 已加载的元素可以解除观察，避免重复回调
+                            io.unobserve(entry.target)
+                        }
+                    })
+                },
+                { threshold: 0.1 }
+            )
+
+            slots.forEach(function (slot) {
+                io.observe(slot)
+            })
+            log('已用 IntersectionObserver 观察 ' + slots.length + ' 个资源槽。请向下滚动页面触发加载。', 'dim')
+        </script>
+    </body>
+</html>

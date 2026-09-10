@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>极简 lint Demo</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 24px auto;
+            }
+            textarea {
+                width: 100%;
+                height: 180px;
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                border-radius: 8px;
+                padding: 10px;
+                border: 1px solid #cbd5e1;
+            }
+            .bar {
+                margin: 12px 0;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            button {
+                padding: 8px 14px;
+                cursor: pointer;
+                border: none;
+                border-radius: 6px;
+                background: #2563eb;
+                color: #fff;
+            }
+            pre {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                padding: 14px;
+                border-radius: 8px;
+                min-height: 120px;
+            }
+            .e {
+                color: #dc2626;
+            }
+            .w {
+                color: #d97706;
+            }
+            .i {
+                color: #2563eb;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>极简 lint：规则数组逐条扫描</h1>
+        <p>
+            下面是一段示例"代码"。点"运行检查"后，<b>每条规则</b>用正则逐行匹配，命中则报错/警告并给提示、扣分。这就是
+            ESLint/Prettier 等规范工具的本质——把约定转成"能逐条执行的规则"。你也可编辑左下角规则数组或代码。
+        </p>
+
+        <div class="bar"><button id="btnRun">运行检查</button><span id="score" style="font-weight: 600"></span></div>
+
+        <textarea id="code" spellcheck="false">
+function Foo ( x , y ) {
+  const unused = 1
+  console.log( 'debug 残留' )
+  var old = 'var 关键字'
+  return x  +  y
+}</textarea
+        >
+
+        <p style="font-weight: 600; margin: 12px 0 4px">规则数组（每条含 匹配正则 / 严重度 / 提示）：</p>
+        <textarea id="rulesText" spellcheck="false" style="height: 150px">
+[
+  { "sev": "error", "re": "var ", "msg": "禁止使用 var，改用 let / const" },
+  { "sev": "warn",  "re": "console\\.log", "msg": "含调试用 console.log，发布前清理" },
+  { "sev": "warn",  "re": "  +  ", "msg": "运算符两侧空格不规范" },
+  { "sev": "error", "re": "function \\w+ \\(", "msg": "函数名后不应有空格" },
+  { "sev": "info",  "re": "const [a-z]\\w* =\\s*[0-9]", "msg": "建议为魔法数字命名常量" }
+]</textarea
+        >
+
+        <p style="font-weight: 600; margin: 12px 0 4px">检查结果：</p>
+        <pre id="out">等待检查……</pre>
+
+        <script>
+            const codeEl = document.getElementById('code')
+            const rulesEl = document.getElementById('rulesText')
+            const out = document.getElementById('out')
+            const scoreEl = document.getElementById('score')
+
+            function scan() {
+                const code = codeEl.value
+                let rules
+                try {
+                    rules = JSON.parse(rulesEl.value)
+                } catch (e) {
+                    out.innerHTML = '<span class="e">规则数组 JSON 解析失败：' + e.message + '</span>'
+                    return
+                }
+
+                const report = []
+                let errors = 0,
+                    warns = 0,
+                    infos = 0
+
+                const lines = code.split('\n')
+                lines.forEach((line, idx) => {
+                    rules.forEach(rule => {
+                        const re = new RegExp(rule.re)
+                        if (re.test(line)) {
+                            report.push('  第 ' + (idx + 1) + ' 行 [' + rule.sev + '] ' + rule.msg)
+                            if (rule.sev === 'error') errors++
+                            else if (rule.sev === 'warn') warns++
+                            else if (rule.sev === 'info') infos++
+                        }
+                    })
+                })
+
+                // 简单打分：error 扣 10 分、warn 扣 3 分、info 扣 1 分，满分 100
+                const rawScore = 100 - errors * 10 - warns * 3 - infos * 1
+                const score = Math.max(0, rawScore)
+                let verdict
+                if (errors > 0) verdict = '<span class="e">✗ 门禁拦截：存在 error，禁止合入</span>'
+                else if (warns > 0) verdict = '<span class="w">△ 警告：建议修复，可通过</span>'
+                else verdict = '<span class="i">✓ 通过</span>'
+
+                scoreEl.textContent = '得分 ' + score + ' / 100（error -10 / warn -3 / info -1）'
+                out.innerHTML =
+                    '规则命中 ' +
+                    (errors + warns + infos) +
+                    ' 处（error ' +
+                    errors +
+                    ' / warn ' +
+                    warns +
+                    ' / info ' +
+                    infos +
+                    '）\n' +
+                    (report.length ? report.join('\n') : '  无命中') +
+                    '\n\n' +
+                    verdict
+            }
+
+            document.getElementById('btnRun').addEventListener('click', scan)
+        </script>
+    </body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>模板编译 · 最小实现</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 780px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            .view {
+                background: #ecfdf5;
+                border: 1px solid #a7f3d0;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+            }
+            button {
+                padding: 0.4rem 0.8rem;
+                margin-right: 0.5rem;
+                cursor: pointer;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+            }
+            input {
+                padding: 0.4rem 0.5rem;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                width: 180px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>模板编译 · 模板字符串 → 渲染函数</h1>
+        <p>
+            Vue 编译的本质：把「模板字符串」解析成带占位符的结构，再包装成一个「渲染函数」。
+            渲染函数接收数据，返回替换好占位符后的 HTML。这里用字符串模板模拟 Vue 的插值编译。
+        </p>
+
+        <p>
+            <label>输入 content：<input id="input" value="深度学习" /></label>
+            <button id="btnRender">用当前数据渲染</button>
+        </p>
+
+        <div id="view" class="view">渲染结果会显示在这里</div>
+        <div id="code" class="box">// 编译生成的渲染函数示意</div>
+        <pre id="fn">等待编译……</pre>
+
+        <script>
+            // ---------- 极简模板编译器：模板 -> 渲染函数 ----------
+            // 模板里的 "Hi {name}" 中，花括号包裹的部分就是插值占位，将被替换成数据
+
+            function compile(tpl) {
+                // 1) 把模板拆分：普通文本片段 与 插值片段（分别打标记）
+                const parts = []
+                let rest = tpl
+                let m
+                const re = /\{([^{}]+)\}/g // 匹配 {name} 这类插值
+                let last = 0
+                while ((m = re.exec(tpl))) {
+                    if (m.index > last) parts.push({ type: 'text', value: tpl.slice(last, m.index) })
+                    parts.push({ type: 'expr', expr: m[1] }) // 记录插值表达式的名字
+                    last = m.index + m[0].length
+                }
+                if (last < tpl.length) parts.push({ type: 'text', value: tpl.slice(last) })
+
+                // 2) 返回「渲染函数」：接收数据对象，按 parts 拼出最终字符串
+                return function render(data) {
+                    let html = ''
+                    parts.forEach(p => {
+                        html += p.type === 'text' ? p.value : String(data[p.expr] === undefined ? '' : data[p.expr])
+                    })
+                    return html
+                }
+            }
+
+            // ---------- 使用 ----------
+            function demo() {
+                // 模板：与 Vue 模板（如 <p>Hi 张三</p>）类似的占位写法
+                const tpl = '你好，{name}！你正在学习：{course}。'
+                const render = compile(tpl) // 编译 -> 得到渲染函数
+
+                const data = { name: '小明', course: document.getElementById('input').value }
+                document.getElementById('view').textContent = render(data)
+
+                // 展示编译产物的「核心片段」：把插值替换成 data 字段引用
+                const body = tpl.replace(/\{([^{}]+)\}/g, function (_, name) {
+                    return '" + data.' + name + ' + "'
+                })
+                document.getElementById('fn').textContent =
+                    '// 模板: ' +
+                    JSON.stringify(tpl) +
+                    '\n' +
+                    'function render(data) {\n' +
+                    '  return "' +
+                    body +
+                    '";\n' +
+                    '}'
+                document.getElementById('code').textContent =
+                    '// 编译结果：把插值片段替换为 data 字段引用，执行后得到最终字符串\n' +
+                    "// render({ name:'小明', course:'" +
+                    data.course +
+                    "' }) => " +
+                    render(data)
+            }
+
+            document.getElementById('btnRender').onclick = demo
+            demo() // 页面加载即演示一次
+        </script>
+    </body>
+</html>
