@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>03 概念可视化:tree-shaking 与代码分割</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            li {
+                margin: 8px 0;
+            }
+            .keep {
+                color: #1a7f37;
+                font-weight: 600;
+            }
+            .drop {
+                color: #cf222e;
+                text-decoration: line-through;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>03 概念可视化:tree-shaking 与代码分割</h1>
+        <p>
+            <b>tree-shaking</b> 的核心是"没被用到就别打进包里"。它依赖 ESM 的静态
+            import/export——打包器能在编译期确定哪些导出从未被引用,从而把它们剔除。下面用一次"静态分析"演示。
+        </p>
+
+        <h2>模块导出 vs 实际被引用</h2>
+        <ul>
+            <li>utils 模块导出: <code>sum</code> <code>diff</code> <code>uppercase</code> <code>square</code></li>
+            <li>入口模块引用: <code>sum</code> 与 <code>uppercase</code></li>
+        </ul>
+
+        <h2>tree-shaking 后的取舍判定</h2>
+        <ul id="result"></ul>
+
+        <h2>代码分割(懒加载)示意</h2>
+        <p id="split"></p>
+
+        <script>
+            // ---- 静态分析:哪些导出被引用 ----
+            const exported = [
+                { name: 'sum', used: true },
+                { name: 'diff', used: false },
+                { name: 'uppercase', used: true },
+                { name: 'square', used: false }
+            ]
+
+            const kept = []
+            const dropped = []
+            for (const e of exported) {
+                if (e.used) kept.push(e.name)
+                else dropped.push(e.name)
+            }
+
+            const ul = document.getElementById('result')
+            for (const e of exported) {
+                const li = document.createElement('li')
+                if (e.used) {
+                    li.className = 'keep'
+                    li.textContent = '保留 ' + e.name + ':被入口引用,打进主包'
+                } else {
+                    li.className = 'drop'
+                    li.textContent = '剔除 ' + e.name + ':从未被引用,被摇树摇掉'
+                }
+                ul.appendChild(li)
+            }
+
+            // ---- 代码分割:未被用到的模块可拆分到单独 chunk,按需加载 ----
+            document.getElementById('split').textContent =
+                '被引用的 ' +
+                kept.join('、') +
+                ' 留在主包;未被引用的 ' +
+                dropped.join('、') +
+                ' 要么被剔除,要么拆到独立 chunk 做到懒加载,从而减小首屏体积。'
+        </script>
+    </body>
+</html>

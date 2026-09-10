@@ -1,0 +1,9 @@
+{
+  "name": "chapter14-infra",
+  "version": "1.0.0",
+  "private": true,
+  "description": "前端工程化与基建（并入 06 章）的最小实现 Demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>01 一套 DSL → 多平台适配层 · 跨端最小实现</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 900px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+            .row {
+                display: flex;
+                gap: 18px;
+                flex-wrap: wrap;
+            }
+            .card {
+                flex: 1 1 300px;
+                border: 1px solid #e3e8ee;
+                border-radius: 8px;
+                padding: 14px 16px;
+                background: #fafbfc;
+            }
+            textarea {
+                width: 100%;
+                box-sizing: border-box;
+                font-family: Consolas, monospace;
+                font-size: 13px;
+                padding: 8px;
+                border: 1px solid #ccd;
+                border-radius: 6px;
+                height: 150px;
+            }
+            button {
+                background: #0366d6;
+                color: #fff;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+            button:hover {
+                background: #0258b5;
+            }
+            .seg {
+                margin: 8px 4px 8px 0;
+            }
+            pre {
+                background: #282c34;
+                color: #e6e6e6;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+                min-height: 60px;
+                font-size: 13px;
+            }
+            .tip {
+                background: #fff8e6;
+                border: 1px solid #f5d589;
+                border-radius: 6px;
+                padding: 10px 14px;
+                margin-top: 16px;
+            }
+            code {
+                background: #eef1f5;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            label {
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>01 · 一套 DSL → 多平台适配层</h1>
+        <p>
+            跨端的核心是<b>"一次编写，多端运行"</b>。真实工程里 Taro/uni-app
+            就是编译器：开发者写一份业务，编译器按目标平台产出各自产物。这里我们把「编译 /
+            适配层」这层思想压到最小——输入一条统一的 DSL（领域专用描述，比如一次 setData
+            更新），由适配层分发给不同"平台"生成各自结构。
+        </p>
+
+        <div class="row">
+            <div class="card">
+                <label>① 输入一条跨端 DSL（JSON）</label>
+                <textarea id="dsl"></textarea>
+                <div style="margin-top: 8px">
+                    <button onclick="run()">编译这一条</button>
+                    <span style="color: #888; font-size: 13px">可在上方文本框自由改写再编译</span>
+                </div>
+            </div>
+            <div class="card">
+                <label>② 选择目标平台（指定产物格式）</label>
+                <div id="platforms" class="seg"></div>
+                <p style="font-size: 14px; color: #555">
+                    适配层只认统一 DSL，把 DSL 映射成该平台的原语：Web 操作 DOM，小程序走 setData，RN
+                    生虚拟节点树，Flutter 生成 Widget 描述。
+                </p>
+            </div>
+        </div>
+
+        <h2>③ 该平台编译产物</h2>
+        <pre id="out">（选择平台后在此显示产物）</pre>
+
+        <div class="tip">
+            <b>原理一句话：</b>适配层的本质是把「统一 DSL」翻译成「各端原语」。业务代码永远只用一套 DSL，新增平台 =
+            新增一个适配器，而不是改业务。这正是 Taro/uni-app 与 RN 适配层的共同骨架。
+        </div>
+
+        <script>
+            var defaultDsl = {
+                op: 'setData',
+                route: 'user.info',
+                data: { name: 'Tom', age: 18, online: true }
+            }
+
+            var platforms = [
+                {
+                    id: 'webdom',
+                    name: 'Web DOM 平台',
+                    compile: function (n) {
+                        return {
+                            kind: 'DOM 更新指令',
+                            op: "document.getElementById('" + n.route + "').textContent = value",
+                            patch: buildPatch('web', n.data),
+                            note: '直接操作浏览器 DOM，宿主是浏览器内核'
+                        }
+                    }
+                },
+                {
+                    id: 'weapp',
+                    name: '小程序平台 (setData)',
+                    compile: function (n) {
+                        return {
+                            kind: 'setData 载荷（数据快照）',
+                            binding: '逻辑层 -> 渲染层通过原生桥',
+                            payload: n.data,
+                            diffPath: { path: n.route, type: '局部定点更新' },
+                            note: '小程序渲染层无法碰 DOM，必须走 setData 传 JSON'
+                        }
+                    }
+                },
+                {
+                    id: 'rn',
+                    name: 'React Native 平台（虚拟节点树）',
+                    compile: function (n) {
+                        return {
+                            kind: 'Fabric Shadow Tree',
+                            root: 'View',
+                            children: [leaf('Text', n.data.name), leaf('Text', String(n.data.age))],
+                            native: '映射为 iOS UIView / Android View',
+                            note: 'JS 只描述意图，渲染发生在原生线程'
+                        }
+                    }
+                },
+                {
+                    id: 'flutter',
+                    name: 'Flutter 平台（Widget 描述）',
+                    compile: function (n) {
+                        return {
+                            kind: 'Widget 不可变声明',
+                            widget: 'Container',
+                            child: { widget: 'Text', text: n.data.name },
+                            engine: 'Skia / Impeller 自绘 GPU',
+                            note: 'UI 由引擎绘制，不依赖宿主原生控件，跨端一致'
+                        }
+                    }
+                }
+            ]
+
+            function leaf(type, text) {
+                return { type: type, text: text }
+            }
+
+            // 生成"扁平化补丁"，模拟 web 侧逐步操作与小程序 diff 的差异
+            function buildPatch(platform, data) {
+                var keys = Object.keys(data)
+                var out = []
+                keys.forEach(function (k) {
+                    out.push({ ctx: platform, field: k, value: data[k] })
+                })
+                return out
+            }
+
+            var activeId = 'webdom'
+
+            function renderPlatforms() {
+                var box = document.getElementById('platforms')
+                box.innerHTML = ''
+                platforms.forEach(function (p) {
+                    var btn = document.createElement('button')
+                    btn.type = 'button'
+                    btn.className = 'seg'
+                    btn.textContent = p.name
+                    btn.style.background = p.id === activeId ? '#0366d6' : '#8a97a8'
+                    btn.onclick = function () {
+                        activeId = p.id
+                        renderPlatforms()
+                        run()
+                    }
+                    box.appendChild(btn)
+                })
+            }
+
+            function parseDsl() {
+                try {
+                    return JSON.parse(document.getElementById('dsl').value)
+                } catch (e) {
+                    return null
+                }
+            }
+
+            function run() {
+                var raw = document.getElementById('dsl').value.trim()
+                if (!raw) raw = JSON.stringify(defaultDsl)
+                document.getElementById('dsl').value = raw
+                var node = parseDsl()
+                if (!node) {
+                    document.getElementById('out').textContent = 'DSL 不是合法的 JSON，请检查后重试。'
+                    return
+                }
+                var target = null
+                platforms.forEach(function (p) {
+                    if (p.id === activeId) target = p
+                })
+                var result
+                try {
+                    result = target.compile(node)
+                } catch (e) {
+                    result = { error: String(e) }
+                }
+                document.getElementById('out').textContent = JSON.stringify(result, null, 2)
+            }
+
+            renderPlatforms()
+            document.getElementById('dsl').value = JSON.stringify(defaultDsl, null, 2)
+            run()
+        </script>
+    </body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>闭包计数器 · 作用域与闭包</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            button {
+                padding: 0.4rem 0.8rem;
+                margin-right: 0.5rem;
+                cursor: pointer;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>作用域与闭包 · 闭包计数器 + 作用域链</h1>
+        <p>
+            内层函数引用外层函数的变量，即使外层已返回，变量仍被闭包<strong>持有</strong>（形成作用域链：内→外→全局）。
+        </p>
+
+        <button id="btnCreate">创建独立计数器</button>
+        <button id="btnInc1">counter1 自增</button>
+        <button id="btnInc2">counter2 自增</button>
+        <div id="log" class="box">// 点击按钮查看结果</div>
+
+        <script>
+            // 闭包工厂：每次调用返回一个独立计数器
+            function createCounter(start) {
+                let count = start // 被闭包持有
+                return function () {
+                    return ++count // 记住并修改外层 count
+                }
+            }
+
+            let counter1 = null
+            let counter2 = null
+
+            function show(label, val) {
+                const box = document.getElementById('log')
+                box.textContent = label + ' => ' + val + '\n' + box.textContent
+            }
+
+            document.getElementById('btnCreate').onclick = function () {
+                counter1 = createCounter(0)
+                counter2 = createCounter(100)
+                show('counter1/counter2 已创建', '各自持有独立的 count')
+            }
+
+            document.getElementById('btnInc1').onclick = function () {
+                if (!counter1) {
+                    show('提示', '请先点击「创建独立计数器」')
+                    return
+                }
+                show('counter1() 返回', counter1())
+            }
+
+            document.getElementById('btnInc2').onclick = function () {
+                if (!counter2) {
+                    show('提示', '请先点击「创建独立计数器」')
+                    return
+                }
+                show('counter2() 返回', counter2())
+            }
+        </script>
+    </body>
+</html>

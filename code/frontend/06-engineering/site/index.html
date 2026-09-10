@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>06-工程化与构建 · Demo 目录</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1 {
+                color: #2c3e50;
+            }
+            ul {
+                list-style: none;
+                padding: 0;
+            }
+            li {
+                margin: 16px 0;
+                border: 1px solid #e3e8ee;
+                border-radius: 8px;
+                padding: 16px 20px;
+            }
+            a {
+                font-size: 18px;
+                font-weight: 600;
+                color: #0366d6;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            p {
+                margin: 6px 0 0;
+                color: #555;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>06-工程化与构建 · 最小实现 Demo</h1>
+        <p>
+            工程化本质是把"手工流程"交给"工具":看懂下面四个玩具级
+            demo,你就看穿了真实构建工具的骨架。全部为纯前端演示,浏览器直接打开即可。
+        </p>
+        <ul>
+            <li>
+                <a href="mini-bundler.html">01 极简打包器:手写模块拼装</a>
+                <p>把两个存在依赖关系的"模块"字符串拼接成一份打包产物,模拟打包器从入口收集依赖并产出单个文件。</p>
+            </li>
+            <li>
+                <a href="semver.html">02 package.json:语义化版本解析</a>
+                <p>用一段 JS 解释 `^1.2.3`、`~1.2.3`、精确版本三者的区别并给出解析结果。</p>
+            </li>
+            <li>
+                <a href="tree-shaking.html">03 概念可视化:tree-shaking 与代码分割</a>
+                <p>列出哪些导出被摇树剔除、哪些被保留,直观呈现"被剔除 = 未使用"。</p>
+            </li>
+            <li>
+                <a href="mini-dev-hmr.html">04 热更新思路:轮询本地信号</a>
+                <p>用原生 fetch 定时请求本地 json 作为"文件变更信号",模拟最小 dev-server + 热更新。</p>
+            </li>
+        </ul>
+    </body>
+</html>

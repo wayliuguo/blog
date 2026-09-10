@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>08-Vue 前端框架 · 最小实现 Demo 目录</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 620px;
+                margin: 3rem auto;
+                padding: 0 1rem;
+            }
+            li {
+                margin: 0.5rem 0;
+            }
+            a {
+                color: #2563eb;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>08-Vue 前端框架 · 最小实现 Demo 目录</h1>
+        <p>以下 demo 均为纯原生 JS 编写、不依赖 Vue，用「最小实现」直观演示 Vue 三大核心原理。</p>
+        <ul>
+            <li>
+                <a href="mini-reactive.html">响应式原理：手写 track / trigger（Proxy 依赖收集 + 触发）</a> ——
+                数据驱动视图
+            </li>
+            <li><a href="vdom-vue-diff.html">虚拟 DOM 与 diff：轻量 VNode 树 diff 生成 patch</a></li>
+            <li><a href="compiler-demo.html">模板编译：模板字符串 → 渲染函数</a></li>
+        </ul>
+        <p>
+            启动方式：在 <code>code/frontend/08-vue</code> 下执行 <code>npm start</code>（即
+            <code>node server.js</code>）。
+        </p>
+    </body>
+</html>

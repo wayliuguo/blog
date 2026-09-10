@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>18-新兴方向 · 原理演示目录</title>
+        <style>
+            :root {
+                --border: #e5e7eb;
+                --bg: #f9fafb;
+                --link: #2563eb;
+            }
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #1f2937;
+                line-height: 1.7;
+                background: var(--bg);
+            }
+            h1 {
+                font-size: 26px;
+            }
+            .card {
+                background: #fff;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 18px 22px;
+                margin: 16px 0;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            }
+            .card a {
+                font-size: 18px;
+                font-weight: 600;
+                color: var(--link);
+                text-decoration: none;
+            }
+            .card a:hover {
+                text-decoration: underline;
+            }
+            .desc {
+                margin-top: 6px;
+                color: #4b5563;
+                font-size: 14px;
+            }
+            .tag {
+                display: inline-block;
+                background: #eef2ff;
+                color: #4338ca;
+                border-radius: 999px;
+                padding: 2px 10px;
+                font-size: 12px;
+                margin-top: 8px;
+            }
+            .note {
+                font-size: 13px;
+                color: #6b7280;
+                margin-top: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>18 · 新兴方向：纯前端原理演示</h1>
+        <p>
+            浏览器里逐个打开下面的 demo，亲手验证 PWA / WebAssembly / AI
+            前端这几类"新兴方向"的最小实现原理。无需任何第三方依赖与网络。
+        </p>
+
+        <div class="card">
+            <a href="pwa-sw.html">① PWA：Service Worker 生命周期与缓存策略</a>
+            <div class="desc">
+                在同一目录注册一个精简 Service Worker，给出 install / activate / fetch
+                的注册结果与说明，并列出四种常见缓存策略及适用场景。
+            </div>
+            <span class="tag">对应《02-PWA渐进式网页应用》</span>
+        </div>
+
+        <div class="card">
+            <a href="wasm-note.html">② WebAssembly：为何快 &amp; 编译链路 &amp; wat 示例</a>
+            <div class="desc">
+                用表格与文本可视化 WebAssembly 的概念：为什么接近原生、从源码到 .wat/.wasm
+                再到实例化的编译链路，以及一个最小 add 的 wat 文本格式展示。
+            </div>
+            <span class="tag">对应《01-WebAssembly》</span>
+        </div>
+
+        <div class="card">
+            <a href="ai-fe.html">③ AI 前端：浏览器推理概念 + 文字分类假推理</a>
+            <div class="desc">
+                说明在浏览器跑模型（WebNN / ONNX /
+                WASM）的概念，并用一份预训练常量模拟"文字分类"的假推理演示，离线也能看到完整输出。
+            </div>
+            <span class="tag">对应《03/04/05-AI前端》与《06-WebGPU》</span>
+        </div>
+
+        <p class="note">
+            提示：Service Worker 演示请在 <code>http://localhost:5191/pwa-sw.html</code> 下打开，以便满足 SW
+            需要的安全来源（localhost 被浏览器视为受信）。
+        </p>
+    </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "chapter09-performance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "09-性能优化与监控：读取性能指标 / FPS帧率与主线程卡顿 / 懒加载 / 错误上报 / 企业级监控(埋点→聚合→告警) demo",
+  "scripts": {
+    "start": "node server.js",
+    "enterprise": "node enterprise-server.js"
+  }
+}

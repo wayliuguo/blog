@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>极简请求封装 + Promise 时序</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 640px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 10px;
+                border-radius: 6px;
+                white-space: pre-wrap;
+            }
+            button {
+                cursor: pointer;
+                padding: 6px 14px;
+                margin-right: 6px;
+            }
+            .ok {
+                background: #ecfdf5;
+                color: #15803d;
+            }
+            .bad {
+                background: #fef2f2;
+                color: #b91c1c;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>手写极简请求封装：XHR 调 fetch，看 Promise 时序</h1>
+        <p>
+            不用真网络也能演示：封装一个给 Promise 包上 XHR 的 <code>request()</code>，再用定时器模拟"响应延迟"，观察
+            resolve 顺序与错误分支。
+        </p>
+
+        <h2>时序</h2>
+        <div id="seq"><pre>（点击下方按钮查看每一步的先后关系）</pre></div>
+        <button id="btn-p">用 setTimeout 模拟"响应延迟"的封装时序</button>
+        <button id="btn-err">模拟失败分支（reject）</button>
+
+        <script>
+            // 极简统一出口
+            function out(text, cls) {
+                var p = document.createElement('pre')
+                p.textContent = text
+                if (cls) p.className = cls
+                document.querySelector('#seq').appendChild(p)
+            }
+
+            // 一个极简的"请求封装"：返回 Promise，成功/失败都带一个模拟延迟
+            function request(label, ok, delayMs) {
+                out("→ request('" + label + "') 被调用，返回 pending Promise")
+                return new Promise(function (resolve, reject) {
+                    setTimeout(function () {
+                        if (ok) {
+                            out('→ ' + delayMs + "ms 后... resolve('" + label + " 的结果')", 'ok')
+                            resolve(label + ' 的结果')
+                        } else {
+                            out('→ ' + delayMs + "ms 后... reject('" + label + " 失败')", 'bad')
+                            reject(label + ' 失败')
+                        }
+                    }, delayMs)
+                })
+            }
+
+            document.querySelector('#btn-p').addEventListener('click', function () {
+                document.querySelector('#seq').innerHTML = ''
+                out('【同步开始】发起两个请求（它们会并行等待各自的延迟）')
+                request('请求A', true, 100).then(function (v) {
+                    out('收到 A: ' + v, 'ok')
+                })
+                request('请求B', true, 300).then(function (v) {
+                    out('收到 B: ' + v, 'ok')
+                })
+                out('【同步结束】注意 A、B 的 then 并不在此刻执行，而是等微任务/时间到后回调')
+            })
+
+            document.querySelector('#btn-err').addEventListener('click', function () {
+                document.querySelector('#seq').innerHTML = ''
+                request('请求C', false, 150)
+                    .then(function (v) {
+                        out('成功: ' + v)
+                    })
+                    .catch(function (e) {
+                        out('捕获失败: ' + e, 'bad')
+                    })
+            })
+        </script>
+    </body>
+</html>

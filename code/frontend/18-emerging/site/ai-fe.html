@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI 前端：浏览器推理概念 + 文字分类假推理</title>
+        <style>
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    sans-serif;
+                max-width: 800px;
+                margin: 32px auto;
+                padding: 0 20px;
+                color: #1f2937;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            h2 {
+                font-size: 18px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 6px;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            th,
+            td {
+                border: 1px solid #e5e7eb;
+                padding: 8px 10px;
+                text-align: left;
+            }
+            th {
+                background: #f3f4f6;
+            }
+            input {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 15px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                box-sizing: border-box;
+            }
+            button {
+                background: #2563eb;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 18px;
+                font-size: 14px;
+                margin-top: 10px;
+                cursor: pointer;
+            }
+            #out {
+                margin-top: 14px;
+                padding: 14px 18px;
+                border-radius: 10px;
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                font-size: 15px;
+                min-height: 50px;
+                white-space: pre-wrap;
+            }
+            .box {
+                background: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                padding: 12px 18px;
+                margin: 12px 0;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>AI 前端：在浏览器跑模型的三种后端</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>后端</th>
+                    <th>运行位置</th>
+                    <th>适用</th>
+                    <th>性能</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>WebNN</td>
+                    <td>GPU / NPU</td>
+                    <td>神经网络算子</td>
+                    <td>极高（硬件加速）</td>
+                </tr>
+                <tr>
+                    <td>ONNX Runtime (WASM)</td>
+                    <td>CPU 线程</td>
+                    <td>通用模型导出</td>
+                    <td>中，兼容广</td>
+                </tr>
+                <tr>
+                    <td>WebGPU 后端</td>
+                    <td>GPU</td>
+                    <td>大模型推理</td>
+                    <td>高</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="box">
+            思路：模型下载到浏览器本地，用 <code>onnxruntime-web</code> /
+            <code>Transformers.js</code>
+            等运行时执行推理，输入输出都不出本机——主打隐私、零服务端延迟与离线可用。下图用一个<strong>预训练常量</strong>模拟"文字分类"的假推理，离线也能看到完整输出。
+        </div>
+
+        <h2>文字分类（假推理演示）</h2>
+        <input id="text" placeholder="输入一句话，例如：今天天气不错，我们去春游" />
+        <br />
+        <button id="btn">运行推理</button>
+        <div id="out">输入文字后点击"运行推理"，下面将给出预测分类、置信度与命中关键词。</div>
+
+        <script>
+            // 预训练常量：每个类别关联一组关键词（模拟模型学到的特征）
+            const TOPICS = [
+                { name: '天气', keywords: ['天气', '下雨', '晴朗', '温度', '台风', '降温'] },
+                { name: '美食', keywords: ['吃', '饭', '菜', '奶茶', '火锅', '好吃'] },
+                { name: '科技', keywords: ['AI', '前端', '代码', '模型', '计算机', '网页'] },
+                { name: '出行', keywords: ['车', '旅游', '春游', '高铁', '飞机', '打车'] }
+            ]
+
+            const out = document.getElementById('out')
+            const btn = document.getElementById('btn')
+            const input = document.getElementById('text')
+
+            function fakeInference(text) {
+                const results = TOPICS.map(t => {
+                    let score = 0
+                    const hits = []
+                    for (const kw of t.keywords) {
+                        if (text.includes(kw)) {
+                            score += 1
+                            hits.push(kw)
+                        }
+                    }
+                    return { name: t.name, score, hits }
+                })
+                // 归一化为"置信度"，取最高分类别；全为 0 时给默认类别
+                const sorted = results.slice().sort((a, b) => b.score - a.score)
+                const best = sorted[0]
+                const total = sorted.reduce((s, it) => s + it.score, 0)
+                return {
+                    label: total === 0 ? '无法判断' : best.name,
+                    confidence: total === 0 ? 0 : Math.round((best.score / total) * 100),
+                    hits: best.hits
+                }
+            }
+
+            btn.addEventListener('click', () => {
+                const text = input.value.trim()
+                if (!text) {
+                    out.textContent = '请先输入一句话。'
+                    return
+                }
+                const r = fakeInference(text)
+                out.textContent =
+                    '输入：[ ' +
+                    text +
+                    ' ]\n' +
+                    '预测分类：<' +
+                    r.label +
+                    '>\n' +
+                    '置信度：' +
+                    r.confidence +
+                    '%\n' +
+                    '命中的关键词：' +
+                    (r.hits.length ? r.hits.join('、') : '无') +
+                    '\n' +
+                    '说明：这是用预训练关键字常量模拟的假推理，真实场景由 ONNX/WASM/WebNN 加载权重后计算得到，原理相同——特征匹配 + 归一化得分。'
+            })
+        </script>
+    </body>
+</html>

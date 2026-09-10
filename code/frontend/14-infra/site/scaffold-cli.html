@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>脚手架 CLI 参数解析 + Monorepo workspace Demo</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 24px auto;
+            }
+            input[type='text'] {
+                width: 100%;
+                box-sizing: border-box;
+                font-family: ui-monospace, monospace;
+                padding: 8px;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+            }
+            .bar {
+                display: flex;
+                gap: 10px;
+                margin: 12px 0;
+            }
+            button {
+                padding: 8px 14px;
+                cursor: pointer;
+                border: none;
+                border-radius: 6px;
+                background: #2563eb;
+                color: #fff;
+            }
+            pre {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                padding: 14px;
+                border-radius: 8px;
+                min-height: 120px;
+            }
+            .k {
+                color: #2563eb;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>脚手架 CLI：参数解析 + workspace 解析</h1>
+        <p>
+            脚手架的本质是"<b>解析参数 + 按参数决定模板</b
+            >"。下方输入一条命令，点"解析"看它如何被拆成结构化选项；若命令带 <code>--workspace</code>，还会像 monorepo
+            的 pnpm workspace 一样在本地包列表里"解析指向"依赖。
+        </p>
+
+        <p>输入命令（可改动）：</p>
+        <input type="text" id="cmd" value="my-create app -t vue --workspace @scope/sdk --force" />
+        <div class="bar">
+            <button id="btnParse">解析</button>
+            <button id="btnReset">还原示例</button>
+        </div>
+
+        <p>本地 monorepo workspace 包（模拟 pnpm-workspace.yaml 扫描出的 packages）：</p>
+        <pre id="ws">
+@scope/ui
+@scope/sdk
+@scope/shared</pre
+        >
+
+        <p style="font-weight: 600; margin: 10px 0 4px">解析结果：</p>
+        <pre id="out">等待解析……</pre>
+
+        <script>
+            const cmdEl = document.getElementById('cmd')
+            const out = document.getElementById('out')
+            const workspacePkgs = ['@scope/ui', '@scope/sdk', '@scope/shared']
+
+            function parseArgs(cmd) {
+                const tokens = cmd.trim().split(/\s+/)
+                const res = { command: null, positional: [], options: {}, flags: {} }
+                for (let i = 0; i < tokens.length; i++) {
+                    const t = tokens[i]
+                    if (res.command === null && !t.startsWith('-')) {
+                        res.command = t
+                        continue
+                    } // 首参 = 脚手架命令
+                    if (res.command === null && t.startsWith('-')) {
+                        res.flags['(错误)缺少命令'] = t
+                        break
+                    }
+                    if (t.startsWith('--')) {
+                        // --key value 或 --flag
+                        const key = t.slice(2)
+                        const next = tokens[i + 1]
+                        if (next && !next.startsWith('-')) {
+                            res.options[key] = next
+                            i++
+                        } else res.flags[key] = true
+                    } else if (t === '-t' || t === '-f') {
+                        // 短选项
+                        const key = t === '-t' ? 'template' : 'force'
+                        const next = tokens[i + 1]
+                        if (key === 'template' && next && !next.startsWith('-')) {
+                            res.options[key] = next
+                            i++
+                        } else res.flags[key] = true
+                    } else {
+                        res.positional.push(t) // 位置参数（如项目名）
+                    }
+                }
+                return res
+            }
+
+            function resolveWorkspace(opts) {
+                const target = opts.workspace
+                if (!target) return '（未启用 --workspace，无需本地解析）'
+                const lines = []
+                workspacePkgs.forEach(p => {
+                    if (p === target) lines.push('  ✓ workspace:' + p + ' 命中本地包，直接软链引用（无需从远端下载）')
+                    else lines.push('  · ' + p + ' 未命中，仍走远端安装')
+                })
+                return lines.join('\n')
+            }
+
+            function parse() {
+                const parsed = parseArgs(cmdEl.value)
+                // 根据 template 决定生成哪种骨架
+                const templateMap = { vue: 'vue-ts 模板', react: 'react-ts 模板', vanilla: 'vanilla 模板' }
+                const template = parsed.options.template || 'vue'
+
+                out.innerHTML =
+                    '一、解析出的结构化对象：\n' +
+                    '  command     = ' +
+                    parsed.command +
+                    '\n' +
+                    '  positional  = ' +
+                    JSON.stringify(parsed.positional) +
+                    '   (projectName 取首个)\n' +
+                    '  options     = ' +
+                    JSON.stringify(parsed.options) +
+                    '   (--key value)\n' +
+                    '  flags       = ' +
+                    JSON.stringify(parsed.flags) +
+                    '   (纯开关)\n\n' +
+                    '二、据此决策：\n' +
+                    '  选择模板 -> ' +
+                    (templateMap[template] || '未知模板：' + template) +
+                    '\n' +
+                    '  是否覆盖已存在目录 -> ' +
+                    (parsed.flags.force ? '是（--force）' : '否（存在则报错退出）') +
+                    '\n\n' +
+                    '三、workspace 依赖解析（类比 pnpm workspace）：\n' +
+                    resolveWorkspace(parsed.options)
+            }
+
+            document.getElementById('btnParse').addEventListener('click', parse)
+            document.getElementById('btnReset').addEventListener('click', () => {
+                cmdEl.value = 'my-create app -t vue --workspace @scope/sdk --force'
+                parse()
+            })
+            parse()
+        </script>
+    </body>
+</html>

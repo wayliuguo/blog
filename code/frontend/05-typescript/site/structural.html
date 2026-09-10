@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>结构类型（鸭子类型）</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>结构类型 / 鸭子类型 · 只关心“形状”</h1>
+        <p>
+            TypeScript 用<strong>结构性子类型化</strong>做判断：一个对象只要“形状”（属性名 +
+            类型）满足要求即可，不要求是某个类的新实例。运行时仍是普通 JS 对象。
+        </p>
+        <h2>TS 定义（编译期检查，编译后消失）</h2>
+        <pre>
+interface LabelledValue { label: string }
+function printLabel(obj: LabelledValue) { console.log(obj.label) }
+printLabel({ size: 10, label: 'Size 10 Object' }); // OK，多出的 size 不影响</pre
+        >
+        <h2>运行时实际看到的 JS（这些对象就是上面接口的“实例”）</h2>
+        <div id="log" class="box">// 见下方输出</div>
+        <script>
+            function printLabel(obj) {
+                return obj.label.toUpperCase()
+            }
+            // 结构兼容：只要 label 存在且是字符串即可，多出的字段不影响
+            const myObj = { size: 10, label: 'Size 10 Object' }
+            const another = { label: 'duck', extra: [1, 2, 3] }
+
+            const out = [
+                'printLabel(myObj)    => ' + printLabel(myObj),
+                'printLabel(another)  => ' + printLabel(another),
+                'myObj 是一个普通 JS 对象 => ' + Object.prototype.toString.call(myObj),
+                '类型在编译期被擦除，运行时只有一个 {} 对象 —— 这正是『TS 是类型层，运行是 JS』的体现'
+            ]
+            document.getElementById('log').textContent = '// ' + out.join('\n// ')
+        </script>
+        <p><a href="index.html">← 返回目录</a></p>
+    </body>
+</html>

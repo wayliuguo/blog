@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>02 package.json:语义化版本解析</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+            }
+            th,
+            td {
+                border: 1px solid #e1e4e8;
+                padding: 8px 12px;
+                text-align: left;
+            }
+            th {
+                background: #f6f8fa;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>02 package.json:语义化版本解析</h1>
+        <p>
+            package.json 里的 <code>^1.2.3</code> 与 <code>~1.2.3</code> 是谁在解析?是依赖解析器。下面用极简 JS 复现 npm
+            的核心解析规则,把"允许升级到哪个版本"算出来。
+        </p>
+
+        <h2>输入一批依赖声明</h2>
+        <pre id="input"></pre>
+
+        <h2>解析结果(允许的版本范围)</h2>
+        <table id="table">
+            <tr>
+                <th>声明</th>
+                <th>含义</th>
+                <th>允许的版本范围</th>
+            </tr>
+        </table>
+
+        <script>
+            const declarations = [
+                { range: '^1.2.3', desc: '右移主版本之前的所有更新:大版本不变,小版本和补丁可升' },
+                { range: '~1.2.3', desc: '只更新补丁版本:小版本和补丁都不变' },
+                { range: '1.2.3', desc: '精确版本:只能装这一个' },
+                { range: '*', desc: '任意版本' }
+            ]
+
+            function parseVersion(range) {
+                if (range === '*') return '任意版本 (0.x ~ 最新)'
+                const parts = range
+                    .replace(/^[\^~]/, '')
+                    .split('.')
+                    .map(Number)
+                const [major, minor, patch] = parts
+                if (range.startsWith('^')) {
+                    // 大版本保持不变,小版本与补丁允许升
+                    return major + '.x ~ 范围内 (>= major.minor.patch, < next major)'
+                }
+                if (range.startsWith('~')) {
+                    // 只允许补丁升级
+                    return major + '.' + minor + '.x (补丁可升)'
+                }
+                return '固定版本: ' + range
+            }
+
+            document.getElementById('input').textContent = JSON.stringify(declarations, null, 2)
+
+            const tbody = document.querySelector('#table')
+            for (const d of declarations) {
+                const tr = document.createElement('tr')
+                const c1 = document.createElement('td')
+                c1.textContent = d.range
+                const c2 = document.createElement('td')
+                c2.textContent = d.desc
+                const c3 = document.createElement('td')
+                c3.textContent = parseVersion(d.range)
+                tr.appendChild(c1)
+                tr.appendChild(c2)
+                tr.appendChild(c3)
+                tbody.appendChild(tr)
+            }
+        </script>
+    </body>
+</html>

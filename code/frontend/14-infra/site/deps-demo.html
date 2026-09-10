@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>依赖快照 / 硬链接 / 软链 Demo</title>
+        <style>
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 16px;
+                border-radius: 8px;
+                font-size: 14px;
+                line-height: 1.6;
+                overflow-x: auto;
+            }
+            button {
+                padding: 8px 14px;
+                margin-right: 8px;
+                cursor: pointer;
+                border: none;
+                border-radius: 6px;
+                background: #2563eb;
+                color: #fff;
+            }
+            button.alt {
+                background: #64748b;
+            }
+            .tip {
+                color: #475569;
+                max-width: 760px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>pnpm 依赖快照 / 硬链接 / 软链</h1>
+        <p class="tip">
+            pnpm 把真实文件按内容 hash <b>只存一份</b>（内容寻址存储），node_modules
+            里用<b>软链</b>指过去，同名目录内再<b>硬链接</b>到本地。相比 npm/yarn 的扁平
+            hoist，它<b>隔离</b>了依赖、省磁盘，也防住"幽灵依赖"。
+        </p>
+
+        <button id="btnInstall">安装依赖（pnpm 隔离式）</button>
+        <button id="btnFlatten" class="alt">对比 npm 扁平化</button>
+        <button id="btnReset" class="alt">清空</button>
+        <pre id="out">
+内容寻址存储（按内容 hash 存一份）：
+  .pnpm-store/sha-aaa  <-- "vue@3.4.0" 的内容
+  .pnpm-store/sha-bbb  <-- "axios@1.6.0" 的内容
+  .pnpm-store/sha-ccc  <-- "vue@3.5.0" 的内容
+
+点击按钮，观察依赖如何被安装、隔离。</pre
+        >
+
+        <script>
+            const out = document.getElementById('out')
+
+            function renderPnpm() {
+                out.textContent = [
+                    '全局内容寻址存储（一份内容、多处链接，省磁盘）：',
+                    '  .pnpm-store/sha-aaa  <== "vue@3.4.0"（内容 hash）',
+                    '  .pnpm-store/sha-bbb  <== "axios@1.6.0"',
+                    '  .pnpm-store/sha-ccc  <== "vue@3.5.0"（另一个版本，独立 hash，见上文 c 工程示例）',
+                    '',
+                    'node_modules（pnpm：仅暴露直接依赖，其余隔离）：',
+                    '  node_modules/',
+                    '    .pnpm/  <-- 真实的依赖扁平化中间层',
+                    '      vue@3.4.0_new/node_modules/vue   [硬链接] 指向 .pnpm-store/sha-aaa',
+                    '      axios@1.6.0/node_modules/axios   [硬链接] 指向 .pnpm-store/sha-bbb',
+                    '    app/  <-- 你的项目',
+                    '      node_modules/',
+                    '        vue/    [软链] -> ../../.pnpm/vue@3.4.0_new/node_modules/vue',
+                    '        axios/  [软链] -> ../../.pnpm/axios@1.6.0/node_modules/axios',
+                    '',
+                    '结果：项目里只能 require 声明过的依赖，安全性更高。'
+                ].join('\n')
+            }
+
+            function renderNpm() {
+                out.textContent = [
+                    'npm/yarn：扁平化 hoist（所有依赖拍平到根 node_modules）：',
+                    '  node_modules/',
+                    '    vue/      <-- 直接把真实文件放在这',
+                    '    axios/    <-- 同样拍平放这',
+                    '    （还有 vue 内部依赖 @vue/reactivity 也拍平到这）',
+                    '',
+                    '这样带来的"幽灵依赖"问题：',
+                    '  app 代码可以不声明就 require("vue")？——其实直接依赖得声明。',
+                    '  真正的问题：app 没声明 @vue/shared，但因 hoist 在根目录被拍到，',
+                    '  代码里偷偷 import 它也能跑，一旦某个库升级布局变化就崩。',
+                    '',
+                    'pnpm 的隔离结构让"你只能用声明过的依赖"，更安全、可维护。'
+                ].join('\n')
+            }
+
+            document.getElementById('btnInstall').addEventListener('click', renderPnpm)
+            document.getElementById('btnFlatten').addEventListener('click', renderNpm)
+            document.getElementById('btnReset').addEventListener('click', () => {
+                out.textContent = [
+                    '内容寻址存储（按内容 hash 存一份）：',
+                    '  .pnpm-store/sha-aaa  <-- "vue@3.4.0" 的内容',
+                    '  .pnpm-store/sha-bbb  <-- "axios@1.6.0" 的内容',
+                    '  .pnpm-store/sha-ccc  <-- "vue@3.5.0" 的内容',
+                    '',
+                    '点击按钮，观察依赖如何被安装、隔离。'
+                ].join('\n')
+            })
+        </script>
+    </body>
+</html>

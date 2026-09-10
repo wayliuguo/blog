@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>手写 new / instanceof · 原型与继承</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            .ok {
+                color: #15803d;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>原型与继承 · 手写 new / instanceof / 原型链</h1>
+        <p>
+            <strong>new</strong> 四件事：建对象 → 原型指向 Ctor.prototype → 以它为 this 执行构造 → 返回对象。<strong
+                >instanceof</strong
+            >
+            判断构造函数的 prototype 是否在实例原型链上。
+        </p>
+
+        <button id="btnNew">用手写 myNew 创建实例</button>
+        <button id="btnInstanceof">验证 instanceof 与原型链</button>
+        <div id="log" class="box">// 点击按钮查看结果</div>
+
+        <script>
+            // ---- 手写 new ----
+            function myNew(Ctor) {
+                var args = Array.prototype.slice.call(arguments, 1)
+                var obj = Object.create(Ctor.prototype) // 1. 建对象 + 连原型
+                var result = Ctor.apply(obj, args) // 2. 以 obj 为 this 执行
+                // 3. 构造函数返回引用类型则用返回值，否则返回新对象
+                return result !== null && (typeof result === 'object' || typeof result === 'function') ? result : obj
+            }
+
+            // ---- 手写 instanceof ----
+            function myInstanceof(left, right) {
+                var proto = Object.getPrototypeOf(left)
+                var target = right.prototype
+                while (proto !== null) {
+                    if (proto === target) return true
+                    proto = Object.getPrototypeOf(proto)
+                }
+                return false
+            }
+
+            function Animal(name) {
+                this.name = name
+            }
+            Animal.prototype.eat = function () {
+                return this.name + ' 在吃'
+            }
+
+            function Dog(name) {
+                Animal.call(this, name)
+            }
+            Dog.prototype = Object.create(Animal.prototype) // 寄生组合：接上父类原型
+            Dog.prototype.constructor = Dog
+
+            var box = document.getElementById('log')
+
+            document.getElementById('btnNew').onclick = function () {
+                var dog = myNew(Dog, '旺财')
+                box.textContent =
+                    'dog.name = ' +
+                    dog.name +
+                    '（属性来自借用构造函数）\n' +
+                    'dog.eat() = ' +
+                    dog.eat() +
+                    '（方法来自 Animal.prototype，原型链查找）\n' +
+                    'Dog.prototype.constructor === Dog -> ' +
+                    (Dog.prototype.constructor === Dog) +
+                    '\n' +
+                    'myInstanceof(dog, Dog) -> ' +
+                    myInstanceof(dog, Dog) +
+                    '\n' +
+                    'myInstanceof(dog, Animal) -> ' +
+                    myInstanceof(dog, Animal) +
+                    '（链上还有父类）\n' +
+                    'myInstanceof(dog, Object) -> ' +
+                    myInstanceof(dog, Object) +
+                    '（到 Object.prototype 为止）\n' +
+                    'myInstanceof(dog, Array) -> ' +
+                    myInstanceof(dog, Array) +
+                    '（不在链上，false）'
+            }
+
+            document.getElementById('btnInstanceof').onclick = function () {
+                var plain = { a: 1 }
+                box.textContent =
+                    'myInstanceof(plain, Object) -> ' +
+                    myInstanceof(plain, Object) +
+                    '\n' +
+                    'myInstanceof([], Array) -> ' +
+                    myInstanceof([], Array) +
+                    '\n' +
+                    'myInstanceof([], Object) -> ' +
+                    myInstanceof([], Object) +
+                    '（数组也是对象）\n' +
+                    '原生 instanceof 对照: [] instanceof Array -> ' +
+                    ([] instanceof Array)
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>15-低代码与无代码 · 最小实现 Demo</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'PingFang SC',
+                    'Microsoft YaHei',
+                    sans-serif;
+                background: #f5f7fa;
+                color: #1f2329;
+                line-height: 1.6;
+                padding: 40px 20px;
+            }
+            .wrap {
+                max-width: 820px;
+                margin: 0 auto;
+            }
+            h1 {
+                font-size: 26px;
+                margin-bottom: 6px;
+            }
+            .sub {
+                color: #6b7380;
+                margin-bottom: 28px;
+                font-size: 15px;
+            }
+            .card {
+                background: #fff;
+                border-radius: 12px;
+                padding: 22px 24px;
+                margin-bottom: 16px;
+                box-shadow: 0 1px 4px rgba(31, 35, 41, 0.06);
+            }
+            .card h2 {
+                font-size: 18px;
+                margin-bottom: 6px;
+            }
+            .card p {
+                color: #4b5563;
+                font-size: 14px;
+                margin-bottom: 12px;
+            }
+            .card a {
+                display: inline-block;
+                background: #2f6bff;
+                color: #fff;
+                padding: 8px 16px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 14px;
+            }
+            .card a:hover {
+                background: #1e53d8;
+            }
+            .tag {
+                display: inline-block;
+                background: #eef2ff;
+                color: #2f6bff;
+                border-radius: 999px;
+                padding: 2px 10px;
+                font-size: 12px;
+                margin-bottom: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <h1>15-低代码与无代码</h1>
+            <p class="sub">前端第 15 章 · 最小实现掌握原理。以下 demo 均为纯前端，浏览器打开即可运行。</p>
+
+            <div class="card">
+                <span class="tag">配置即界面 · 最小渲染器</span>
+                <h2>schema-driven-render.html</h2>
+                <p>
+                    一段 JSON Schema 描述一个表单与卡片组件，由 JS 渲染成可见 UI。演示低代码平台的核心：Schema 即源码。
+                </p>
+                <a href="schema-driven-render.html">打开 →</a>
+            </div>
+
+            <div class="card">
+                <span class="tag">搭积木式搭建 · 最小搭建器</span>
+                <h2>drag-palette.html</h2>
+                <p>左侧物料面板，点击或拖拽即可把按钮 / 输入框 / 卡片加入右侧画布，实时生成并打印页面 Schema。</p>
+                <a href="drag-palette.html">打开 →</a>
+            </div>
+
+            <div class="card">
+                <span class="tag">出码 · 配置转代码</span>
+                <h2>wire-to-code.html</h2>
+                <p>
+                    录一个操作（加一个按钮，点击提示 hello），一键转成等价的 Schema / HTML 代码片段。演示
+                    Parser→Compiler→Generator 最小剪影。
+                </p>
+                <a href="wire-to-code.html">打开 →</a>
+            </div>
+        </div>
+    </body>
+</html>

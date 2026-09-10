@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>语音合成 · speechSynthesis</title>
+        <style>
+            body {
+                font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                max-width: 720px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #2c3e50;
+                line-height: 1.7;
+            }
+            button {
+                font-size: 15px;
+                padding: 8px 16px;
+                margin: 4px 6px 4px 0;
+                cursor: pointer;
+                border: 1px solid #bdc3c7;
+                border-radius: 6px;
+                background: #fff;
+            }
+            button.primary {
+                background: #3498db;
+                border-color: #3498db;
+                color: #fff;
+            }
+            textarea {
+                width: 100%;
+                min-height: 90px;
+                box-sizing: border-box;
+                font-size: 14px;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+            }
+            select {
+                font-size: 14px;
+                padding: 6px;
+            }
+            .status {
+                margin-top: 12px;
+                padding: 12px;
+                border-radius: 6px;
+                background: #fdf3d7;
+                border: 1px solid #f0d48a;
+            }
+            .status.ok {
+                background: #eaf6eb;
+                border-color: #a9d6a9;
+            }
+            .note {
+                color: #7f8c8d;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>语音合成（TTS）</h1>
+        <p>
+            浏览器的 <code>speechSynthesis</code> API
+            可以把文本"读"出来，无需任何后端。选择一个中文语音，点「朗读」即可。
+        </p>
+        <textarea id="text">大家好，这是浏览器自带的语音合成示例，用 speechSynthesis 接口朗读本段文字。</textarea>
+        <div>
+            <label>选择语音：</label>
+            <select id="voices"></select>
+        </div>
+        <button id="speak" class="primary">朗读</button>
+        <button id="pause">暂停</button>
+        <button id="resume">继续</button>
+        <button id="cancel">停止</button>
+        <div id="status" class="status">语音列表会在页面加载后自动填充。若为空或未发声，请换一种语音重试。</div>
+        <p class="note">
+            原理：new SpeechSynthesisUtterance(text) 创建朗读任务，speechSynthesis.speak(u) 让浏览器按所选 voice.lang
+            出声；可用 voiceschanged 事件读取系统已安装的语音列表。
+        </p>
+
+        <script>
+            const statusBox = document.getElementById('status')
+            const textArea = document.getElementById('text')
+            const select = document.getElementById('voices')
+            let voicesList = []
+
+            function setStatus(msg, type) {
+                statusBox.textContent = msg
+                statusBox.className = 'status ' + (type || '')
+            }
+
+            function loadVoices() {
+                if (!('speechSynthesis' in window)) {
+                    setStatus('当前浏览器不支持 speechSynthesis。', 'ok')
+                    return
+                }
+                voicesList = speechSynthesis.getVoices()
+                select.innerHTML = ''
+                if (!voicesList.length) {
+                    setStatus('未检测到语音包，稍候系统加载后会再次尝试。', 'ok')
+                    return
+                }
+                voicesList.forEach(function (v, i) {
+                    const opt = document.createElement('option')
+                    opt.value = i
+                    opt.textContent = v.name + ' (' + v.lang + ')'
+                    select.appendChild(opt)
+                })
+                // 优先选中中文
+                for (let i = 0; i < voicesList.length; i++) {
+                    if (voicesList[i].lang && voicesList[i].lang.indexOf('zh') === 0) {
+                        select.selectedIndex = i
+                        break
+                    }
+                }
+                setStatus('已加载 ' + voicesList.length + ' 个语音，选择后点击「朗读」。')
+            }
+
+            if ('speechSynthesis' in window && 'onvoiceschanged' in speechSynthesis) {
+                speechSynthesis.onvoiceschanged = loadVoices
+            }
+            loadVoices()
+
+            document.getElementById('speak').addEventListener('click', () => {
+                if (!('speechSynthesis' in window)) {
+                    setStatus('当前浏览器不支持 speechSynthesis。', 'err')
+                    return
+                }
+                speechSynthesis.cancel()
+                const u = new SpeechSynthesisUtterance(textArea.value)
+                const idx = parseInt(select.value, 10)
+                if (!isNaN(idx) && voicesList[idx]) {
+                    u.voice = voicesList[idx]
+                    u.lang = voicesList[idx].lang
+                } else if (u.lang) {
+                    u.lang = 'zh-CN'
+                }
+                u.rate = 1
+                u.pitch = 1
+                u.onstart = () => setStatus('正在朗读……（请确认系统喇叭未静音）', 'ok')
+                u.onend = () => setStatus('朗读结束。')
+                u.onerror = () => setStatus('朗读出错：请换一种语音或降低语速后重试。', 'err')
+                speechSynthesis.speak(u)
+            })
+
+            document.getElementById('pause').addEventListener('click', () => {
+                if ('speechSynthesis' in window) speechSynthesis.pause()
+            })
+            document.getElementById('resume').addEventListener('click', () => {
+                if ('speechSynthesis' in window) speechSynthesis.resume()
+            })
+            document.getElementById('cancel').addEventListener('click', () => {
+                if ('speechSynthesis' in window) speechSynthesis.cancel()
+                setStatus('已停止朗读。')
+            })
+        </script>
+    </body>
+</html>

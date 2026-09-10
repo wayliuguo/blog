@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>sprite-anim · 精灵表逐帧动画</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                margin: 20px auto;
+                max-width: 760px;
+                padding: 0 16px;
+                color: #1f2937;
+            }
+            canvas {
+                background: #0f172a;
+                border-radius: 8px;
+                display: block;
+                margin-top: 8px;
+                border-bottom: 2px solid #334155;
+            }
+            p {
+                font-size: 14px;
+                line-height: 1.7;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 2px 5px;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>精灵表逐帧动画：切帧 + 帧率控制</h1>
+        <p>
+            这里不用任何库，把一个小角色画成 <strong>6 帧不同的姿态</strong>（相当于一张横向精灵表：每帧宽
+            40px，从左到右依次取）。 每帧用 <code>frameCount</code> 计数，达到 <code>FRAME_INTERVAL</code>（如
+            8）才切到下一帧，再配合 <code>tick</code> 播放速度更新位置。原理一句话：<strong
+                >精灵动画 = 按时间在若干张子图间切换</strong
+            >，帧率控制就是"隔几帧才换一张"。
+        </p>
+        <canvas id="game" width="720" height="160"></canvas>
+        <div id="info"></div>
+        <script>
+            const canvas = document.getElementById('game')
+            const ctx = canvas.getContext('2d')
+            const W = canvas.width,
+                H = canvas.height
+
+            const FRAME_W = 40,
+                FRAME_H = 60 // 每帧子图尺寸
+            const FRAMES = 6 // 精灵表帧数
+            const FRAME_INTERVAL = 8 // 每隔 8 帧才切一次（帧率控制）
+
+            // 精灵状态
+            const sprite = { x: 0, y: H - 80, frame: 0 }
+            let frameCount = 0
+            let tick = 0
+            const SPEED = 90
+
+            // 绘制第 n 帧小角色（一个简单的"跑动小人"）
+            function drawFrame(n) {
+                ctx.clearRect(0, 0, W, H + 20)
+                // 画精灵表（左上角缩略，方便"看见"6 帧）
+                ctx.save()
+                ctx.globalAlpha = 0.5
+                for (let i = 0; i < FRAMES; i++) {
+                    drawHero(W - (FRAMES - i) * 44, 8, i)
+                }
+                ctx.restore()
+                // 在播放位置画当前帧（放大 2 倍）
+                ctx.save()
+                ctx.translate(sprite.x, sprite.y)
+                ctx.scale(2, 2)
+                drawHero(0, 0, n)
+                ctx.restore()
+            }
+
+            // 画一个"小人"姿态（索引驱动四肢角度，模拟走跑帧）
+            function drawHero(ox, oy, n) {
+                const phase = (n / (FRAMES - 1)) * Math.PI * 2 // 0~2PI 走完一圈
+                ctx.beginPath()
+                ctx.moveTo(ox + 20, oy) // 头
+                ctx.arc(ox + 20, oy + 4, 6, 0, Math.PI * 2)
+                ctx.fillStyle = '#f59e0b'
+                ctx.fill()
+                ctx.fillStyle = '#38bdf8'
+                ctx.fillRect(ox + 12, oy + 12, 16, 22) // 身体
+                // 腿（用 sin 摆动做走跑帧差）
+                ctx.strokeStyle = '#f8fafc'
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.moveTo(ox + 16, oy + 30)
+                ctx.lineTo(ox + 16 + Math.sin(phase) * 6, oy + 46)
+                ctx.moveTo(ox + 24, oy + 30)
+                ctx.lineTo(ox + 24 - Math.sin(phase) * 6, oy + 46)
+                ctx.stroke()
+            }
+
+            function update() {
+                // 帧率控制：隔 FRAME_INTERVAL 帧切一次
+                frameCount++
+                if (frameCount >= FRAME_INTERVAL) {
+                    frameCount = 0
+                    sprite.frame = (sprite.frame + 1) % FRAMES
+                }
+                // 移动位置（用主循环时间推进）
+                tick += 1
+                sprite.x = (((SPEED * tick) / 60) % (W + 40)) - 40
+            }
+
+            function render() {
+                drawFrame(sprite.frame)
+            }
+
+            let last = performance.now()
+            function loop(now) {
+                const dt = now - last
+                last = now
+                // 用真实 dt 折算播放速度，保持快慢帧一致
+                const steps = Math.round(dt / (1000 / 60))
+                for (let i = 0; i < Math.max(1, steps); i++) update()
+                render()
+                document.getElementById('info').textContent =
+                    '当前帧: ' + sprite.frame + ' / 共 ' + FRAMES + ' 帧（每 ' + FRAME_INTERVAL + ' 游戏帧切一张）'
+                requestAnimationFrame(loop)
+            }
+            requestAnimationFrame(loop)
+        </script>
+    </body>
+</html>

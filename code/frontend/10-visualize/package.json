@@ -1,0 +1,9 @@
+{
+  "name": "chapter10-visualize",
+  "version": "1.0.0",
+  "private": true,
+  "description": "10-可视化与WebGL：Canvas / 坐标映射与 SVG / rAF 动画 / WebGL 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

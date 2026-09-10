@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>响应式：断点 + vw</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                margin: 1rem;
+            }
+            .grid {
+                display: grid;
+                gap: 8px;
+                grid-template-columns: 1fr;
+            } /* Mobile First：手机默认 1 列 */
+            .card {
+                background: #e0e7ff;
+                border-radius: 8px;
+                padding: 1rem;
+                text-align: center;
+            }
+            @media (min-width: 600px) {
+                .grid {
+                    grid-template-columns: 1fr 1fr;
+                }
+            } /* 平板 2 列 */
+            @media (min-width: 1000px) {
+                .grid {
+                    grid-template-columns: 1fr 1fr 1fr;
+                }
+            } /* 桌面 3 列 */
+            .vw-demo {
+                font-size: 5vw;
+                font-weight: 700;
+                color: #4338ca;
+            } /* 随视口宽变化 */
+            .px-demo {
+                font-size: 24px;
+                color: #6b7280;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>响应式：拖动窗口看变化</h1>
+        <p>用 <code>min-width</code> 断点向上递进，列数 1→2→3。</p>
+        <div class="grid">
+            <div class="card">卡片 1</div>
+            <div class="card">卡片 2</div>
+            <div class="card">卡片 3</div>
+            <div class="card">卡片 4</div>
+        </div>
+        <h2>vw 自适应字号</h2>
+        <p class="vw-demo">5vw 字号，随窗口缩放的文字</p>
+        <p class="px-demo">对比：24px 固定字号，不会变</p>
+    </body>
+</html>

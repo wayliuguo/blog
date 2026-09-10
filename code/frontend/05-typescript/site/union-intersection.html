@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>联合 / 交叉类型</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>联合类型 <code>|</code> vs 交叉类型 <code>&amp;</code></h1>
+        <p>
+            <strong>联合</strong
+            >：值可能是几种之一（多选一），只用“共有成员”；<strong>交叉</strong>：合并所有成员（全都要，类似
+            mixin）。下面用 JS 对象模拟这两类“类型结果”。
+        </p>
+        <div id="log" class="box">// 见下方输出</div>
+        <script>
+            const bird = {
+                fly: function () {
+                    return 'fly!'
+                },
+                layEggs: function () {
+                    return 'egg!'
+                }
+            }
+            const fish = {
+                swim: function () {
+                    return 'swim!'
+                },
+                layEggs: function () {
+                    return 'egg!'
+                }
+            }
+
+            // 交叉类型 Person & Loggable 的结果：把两边的成员“拼”到一个对象上
+            function mergePersonAndLoggable(person, loggable) {
+                return Object.assign({}, person, loggable)
+            }
+            const person = { name: 'Tom', age: 18 }
+            const loggable = {
+                record: function () {
+                    return 'recorded ' + this.name
+                }
+            }
+            const both = mergePersonAndLoggable(person, loggable) // 交叉：同时拥有 name/age/record
+
+            const lines = []
+            // 联合类型：pet 可能是 bird 或 fish，两者共有唯一成员 layEggs
+            const pet = Math.random() > 0.5 ? bird : fish
+            lines.push('联合 pet.layEggs()（共有的成员可用） => ' + pet.layEggs())
+            lines.push('联合 pet 只能访问两种类型都有的成员，fly/swim 需类型守卫收窄后才能调')
+            lines.push('--- 交叉类型 ---')
+            lines.push('both.name     => ' + both.name)
+            lines.push('both.age      => ' + both.age)
+            lines.push('both.record() => ' + loggable.record.call(both))
+            lines.push("交叉类型 'Person & Loggable' 拥有了两边的全部成员")
+            document.getElementById('log').textContent = lines.join('\n')
+        </script>
+        <p><a href="index.html">← 返回目录</a></p>
+    </body>
+</html>

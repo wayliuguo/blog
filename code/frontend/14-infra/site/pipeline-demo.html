@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>CI/CD 流水线可视化 Demo</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 24px auto;
+            }
+            .bar {
+                background: #f1f5f9;
+                padding: 14px;
+                border-radius: 10px;
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            button {
+                padding: 8px 14px;
+                cursor: pointer;
+                border: none;
+                border-radius: 6px;
+                background: #2563eb;
+                color: #fff;
+            }
+            button.danger {
+                background: #dc2626;
+            }
+            button:disabled {
+                background: #94a3b8;
+            }
+            label {
+                font-size: 14px;
+                color: #334155;
+            }
+            select {
+                padding: 6px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 16px;
+                border-radius: 8px;
+                font-size: 13px;
+                line-height: 1.7;
+                min-height: 240px;
+            }
+            .ok {
+                color: #4ade80;
+            }
+            .fail {
+                color: #f87171;
+            }
+            .info {
+                color: #93c5fd;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>CI/CD 流水线：build → test → deploy</h1>
+        <p>
+            点击"运行流水线"，每一步按门禁依次执行并输出日志。<b>任一步失败即终止</b>，全部通过才进入发布。<br />
+            发布阶段支持<b>灰度放量比例</b>与"模拟异常"；若异常，可用右下角<b>回滚</b>一键切回旧版本入口。
+        </p>
+
+        <div class="bar">
+            <button id="btnRun">运行流水线</button>
+            <button id="btnRollback" class="danger" disabled>一键回滚旧版本</button>
+            <label
+                >灰度放量：
+                <select id="ratio">
+                    <option value="5">5%</option>
+                    <option value="20" selected>20%</option>
+                    <option value="100">100% 全量</option>
+                </select>
+            </label>
+            <label><input type="checkbox" id="injectErr" /> 模拟发布后异常</label>
+        </div>
+
+        <pre id="log">等待运行……</pre>
+
+        <script>
+            const log = document.getElementById('log')
+            const btnRun = document.getElementById('btnRun')
+            const btnRollback = document.getElementById('btnRollback')
+            const ratioSel = document.getElementById('ratio')
+            const injectErr = document.getElementById('injectErr')
+
+            const lines = []
+            function info(msg) {
+                lines.push('  ' + msg)
+            }
+            function ok(msg) {
+                lines.push('  ✅ ' + msg)
+            }
+            function fail(msg) {
+                lines.push('  ❌ ' + msg)
+            }
+            function fresh() {
+                lines.length = 0
+            }
+            function flush() {
+                log.innerHTML = lines
+                    .join('\n')
+                    .replace(/✅/g, '<span class="ok">✅</span>')
+                    .replace(/❌/g, '<span class="fail">❌</span>')
+            }
+
+            const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+            // 流水线 = 按门禁依次编排的步骤序列
+            const steps = [
+                {
+                    name: 'build',
+                    time: 600,
+                    allowContinue: true,
+                    run: async () => {
+                        info('执行构建……')
+                        await sleep(300)
+                        info('产物已生成：dist/main-8f3c12b1.js（内容 hash，不可变）')
+                        ok('build 通过：产物可重复、无体积告警')
+                        return true
+                    }
+                },
+                {
+                    name: 'test',
+                    time: 600,
+                    allowContinue: true,
+                    run: async () => {
+                        info('执行单元测试 + 覆盖率门禁……')
+                        await sleep(300)
+                        if (Math.random() < 0.03) {
+                            fail('test 失败：覆盖率低于 80%')
+                            return false
+                        }
+                        ok('test 通过：覆盖率 86%，无失败用例')
+                        return true
+                    }
+                },
+                {
+                    name: 'deploy',
+                    time: 700,
+                    allowContinue: true,
+                    run: async () => {
+                        const p = ratioSel.value
+                        info('上传产物到 CDN + 更新入口 index.html')
+                        await sleep(300)
+                        info('灰度放量 ' + p + '：仅 ' + p + ' 用户拿到新版本入口')
+                        if (injectErr.checked) {
+                            fail('监控到 JS Error 率飙升至 5%，触发熔断')
+                            return false
+                        }
+                        info('观测 N 分钟：首屏/错误率健康，继续放量')
+                        ok('deploy 通过：灰度健康，放量至全量')
+                        return true
+                    }
+                }
+            ]
+
+            async function runPipeline() {
+                fresh()
+                btnRun.disabled = true
+                btnRollback.disabled = true
+                log.innerHTML = '<span class="info">流水线启动……</span>'
+                lines.push('\u2554\u2501\u2501 流水线启动 \u2557') // ╔══ 启动 ╗
+
+                const stepNames = steps.map(s => s.name).join(' → ')
+                info('本次流水线：' + stepNames)
+
+                for (const step of steps) {
+                    lines.push('\n—— 阶段【' + step.name + '】——')
+                    flush()
+                    const okFlag = await step.run()
+                    flush()
+                    if (!okFlag) {
+                        info('门禁未通过，终止后续阶段（尽早失败，避免浪费昂贵步骤）')
+                        break
+                    }
+                }
+
+                lines.push('\n\u255a\u2500\u2500 流水线结束 \u255d') // ╚══ 结束 ╝
+                if (!injectErr.checked) {
+                    ok('全部门禁通过，产物 = 旧入口 v1 + 新入口 v2（hash 隔离，可安全切换）')
+                }
+                flush()
+                btnRun.disabled = false
+                btnRollback.disabled = false
+            }
+
+            btnRun.addEventListener('click', runPipeline)
+            btnRollback.addEventListener('click', () => {
+                fresh()
+                lines.push('执行回滚：把 index.html 入口指回 v1 的旧 hash 资源（无需重新构建）')
+                ok('已回滚到 v1（不可变产物 + 入口映射 = 秒级回滚）')
+                lines.push('\n提示：前端回滚的基石是"不可变产物 + 入口映射"，旧版本资源需保留最近 N 个。')
+                flush()
+            })
+        </script>
+    </body>
+</html>

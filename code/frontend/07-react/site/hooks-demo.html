@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>hooks-demo：用数组实现 useState / useEffect</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                line-height: 1.6;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            pre {
+                background: #f1f5f9;
+                padding: 1rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            button {
+                margin-right: 0.5rem;
+                padding: 0.3rem 0.7rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>hooks-demo：用普通数组实现 useState 和 useEffect</h1>
+        <p>
+            React 的 hooks
+            之所以能工作，是因为它们在<strong>每次渲染时按固定顺序</strong>被调用，状态被存进一条链表/数组。这里用普通数组复刻了这个核心语义。
+        </p>
+        <ul>
+            <li><strong>useState</strong>：用下标 <code>hookIndex</code> 从数组里取出/写入状态。</li>
+            <li><strong>useEffect</strong>：每次渲染后对比依赖数组，变了才执行副作用。</li>
+            <li>
+                关键：<strong>每次渲染都要从第 0 个 hook 重新数起</strong>，顺序绝不能乱（所以 React 禁止把 hooks 放进
+                if / 循环里）。
+            </li>
+        </ul>
+
+        <div class="box" id="app"></div>
+
+        <script>
+            /* ---------- 极简 hooks：用数组保存所有 hook 的状态 ---------- */
+            var hookStates = [] // 依次保存每个 useState 的槽位（用数组模拟链表）
+            var hookIndex = 0 // 当前正在消费的 hook 下标
+
+            function useState(initValue) {
+                if (hookStates[hookIndex] === undefined) {
+                    hookStates[hookIndex] = { value: initValue } // 首次调用：初始化
+                }
+                var cursor = hookIndex // 闭包记住当前下标
+                var state = hookStates[cursor]
+                hookIndex = hookIndex + 1 // 移到下一个 hook 槽位
+
+                var setValue = function (next) {
+                    state.value = typeof next === 'function' ? next(state.value) : next
+                    renderWithBind() // 更新后重新渲染
+                }
+                return [state.value, setValue]
+            }
+
+            /* useEffect：在每次 render 后对比依赖数组，只有变化才执行副作用 */
+            var depsList = [] // 依次保存每个 useEffect 的依赖
+            var effIndex = 0
+            function useEffect(callback, deps) {
+                var cursor = effIndex
+                var prev = depsList[cursor]
+                var changed =
+                    !prev ||
+                    deps.some(function (d, i) {
+                        return d !== prev[i]
+                    })
+                if (changed) {
+                    callback()
+                    depsList[cursor] = deps
+                }
+                effIndex = effIndex + 1
+            }
+
+            /* ---------- 组件：把 setter 捕获到 window，便于绑定到按钮 ---------- */
+            function renderWithBind() {
+                hookIndex = 0 // 关键：每次渲染都从第一个 hook 重新数起
+                effIndex = 0
+
+                /* 真正的组件（每次渲染按相同顺序调用 hooks） */
+                function App() {
+                    var count = useState(0) // hook 0：count
+                    var name = useState('张三') // hook 1：name
+
+                    window.__add = count[1] // 捕获 setter 供按钮使用
+                    window.__rename = name[1]
+
+                    useEffect(
+                        function () {
+                            // 副作用：只在 count 变化时执行
+                            var log = document.getElementById('log')
+                            if (log) log.textContent = 'useEffect 执行副作用：count 变为 ' + count[0]
+                        },
+                        [count[0]]
+                    )
+
+                    return (
+                        '<h2>基于数组的 hooks 演示</h2>' +
+                        '<p>计数：<b>' +
+                        count[0] +
+                        '</b></p>' +
+                        '<p>名字：<b>' +
+                        name[0] +
+                        '</b></p>' +
+                        "<button id='inc'>count + 1</button> " +
+                        "<button id='rename'>改名李四</button> " +
+                        "<p id='log' style='color:#2563eb'></p>"
+                    )
+                }
+
+                var el = document.getElementById('app')
+                el.innerHTML = App()
+
+                document.getElementById('inc').onclick = function () {
+                    if (window.__add)
+                        window.__add(function (c) {
+                            return c + 1
+                        })
+                }
+                document.getElementById('rename').onclick = function () {
+                    if (window.__rename) window.__rename('李四')
+                }
+            }
+
+            renderWithBind()
+        </script>
+    </body>
+</html>

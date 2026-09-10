@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Flex + Grid</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .row {
+                display: flex;
+                gap: 8px;
+            }
+            .row > div {
+                background: #bfdbfe;
+                border-radius: 6px;
+                padding: 1rem;
+                text-align: center;
+            }
+            .grow1 {
+                flex: 1;
+            }
+            .grow2 {
+                flex: 2;
+            }
+            .grid {
+                display: grid;
+                gap: 8px;
+                margin-top: 1.5rem;
+            }
+            .grid .a {
+                background: #bbf7d0;
+                border-radius: 6px;
+                padding: 1rem;
+            }
+            .grid .b {
+                background: #fde68a;
+                border-radius: 6px;
+                padding: 1rem;
+            }
+            .grid {
+                grid-template-columns: 2fr 1fr 1fr;
+            }
+            .areas {
+                grid-template-areas: 'header header header' 'nav main aside' 'nav footer footer';
+            }
+            .areas .h {
+                grid-area: header;
+            }
+            .areas .n {
+                grid-area: nav;
+            }
+            .areas .m {
+                grid-area: main;
+            }
+            .areas .as {
+                grid-area: aside;
+            }
+            .areas .fd {
+                grid-area: footer;
+            }
+            h3 {
+                margin-top: 2rem;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Flex：剩余空间分配</h1>
+        <p><code>flex:1</code> 与 <code>flex:2</code> 按比例瓜分剩余空间。</p>
+        <div class="row">
+            <div class="grow1">flex:1</div>
+            <div class="grow2">flex:2</div>
+            <div class="grow1">flex:1</div>
+        </div>
+
+        <h1>Grid：1fr 均匀分列</h1>
+        <p><code>grid-template-columns: 2fr 1fr 1fr</code>，四份里"第一个元素占两份"。</p>
+        <div class="grid">
+            <div>a</div>
+            <div>b</div>
+            <div>c</div>
+        </div>
+
+        <h1>Grid：命名区域（经典后台布局）</h1>
+        <div class="grid areas">
+            <div class="h">header</div>
+            <div class="n">nav</div>
+            <div class="m">main</div>
+            <div class="as">aside</div>
+            <div class="fd">footer</div>
+        </div>
+    </body>
+</html>

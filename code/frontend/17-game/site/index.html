@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Web 游戏开发 · 最小实现 Demo 目录</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                margin: 40px auto;
+                max-width: 720px;
+                padding: 0 16px;
+                color: #1f2937;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            h2 {
+                font-size: 18px;
+                margin-top: 32px;
+            }
+            a {
+                color: #2563eb;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            .card {
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                padding: 16px 20px;
+                margin: 12px 0;
+            }
+            .card p {
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>17-Web游戏开发 · 最小实现 Demo</h1>
+        <p>本目录用<strong>零依赖的纯前端代码</strong>演示章节里的核心原理，浏览器打开即可运行。</p>
+
+        <div class="card">
+            <h2><a href="game-loop.html">① game-loop.html — 手写主循环与 deltaTime</a></h2>
+            <p>
+                用 <code>requestAnimationFrame</code> 手写主循环驱动一个小方块匀速移动并在边界反弹，演示"更新 +
+                渲染"分离与按时间缩放的 <code>deltaTime</code> 速度控制。
+            </p>
+        </div>
+
+        <div class="card">
+            <h2><a href="sprite-anim.html">② sprite-anim.html — 精灵表逐帧动画</a></h2>
+            <p>
+                用原生 Canvas 画几个角色帧并按帧率计数器切帧循环播放，等价于 PixiJS
+                <code>AnimatedSprite</code>，演示精灵表与帧率控制。
+            </p>
+        </div>
+
+        <div class="card">
+            <h2><a href="minigame.html">③ minigame.html — 接住下落的物品（实战）</a></h2>
+            <p>
+                一个可玩的小游戏：左右移动接住下落的物品，命中加分、漏接减命，演示 AABB 碰撞检测、计分与 Game Over /
+                重开流程。
+            </p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; margin-top: 32px">
+            启动方式：在 <code>code/frontend/17-game</code> 下执行 <code>npm start</code>（即
+            <code>node server.js</code>），然后浏览器访问 <code>http://localhost:5190/</code>。
+        </p>
+    </body>
+</html>

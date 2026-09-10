@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>原生 WebGL 旋转三角形 · 着色器原理</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            canvas {
+                display: block;
+                border: 1px solid #ddd;
+                background: #f8fafc;
+                margin: 0.5rem auto;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow-x: auto;
+                font-size: 0.85em;
+            }
+            .warn {
+                color: #b45309;
+                font-weight: 600;
+            }
+            code {
+                background: #f1f5f9;
+                padding: 0.1em 0.4em;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>原生 WebGL 旋转三角形 · 着色器原理</h1>
+        <div id="out" class="note" style="color: #475569"></div>
+        <canvas id="gl" width="360" height="360"></canvas>
+        <div id="fallback" class="warn"></div>
+        <h2>顶点着色器（vertex shader）</h2>
+        <pre>
+attribute vec2 a_position;
+attribute vec3 a_color;
+varying vec3 v_color;
+void main() {
+  v_color = a_color;                       // 传递给片元着色器，随像素插值
+  gl_Position = vec4(a_position, 0.0, 1.0); // 输出裁剪坐标
+}</pre
+        >
+        <h2>片元着色器（fragment shader）</h2>
+        <pre>
+precision mediump float;
+varying vec3 v_color;
+void main() {
+  gl_FragColor = vec4(v_color, 1.0); // 对该像素计算最终颜色
+}</pre
+        >
+        <h2>这段代码在做什么</h2>
+        <p>
+            <code>webgl-triangle.html</code> 用原生 WebGL 无任何第三方库画一个旋转三角形。三个顶点各带一个颜色，
+            顶点着色器把它们通过 <code>varying</code> 传给片元着色器；GPU
+            光栅化三角形时会把顶点色<b>逐像素线性插值</b>， 于是看到红→绿→蓝的平滑渐变——这正是 Three.js
+            材质与光照着色的最底层来源。每帧用 <code>requestAnimationFrame</code> 更新一个旋转矩阵（uniform
+            <code>u_rot</code>）并重新 <code>drawArrays</code>。
+        </p>
+        <script>
+            const out = document.getElementById('out')
+            const canvas = document.getElementById('gl')
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+            const fb = document.getElementById('fallback')
+
+            const VERT_SRC =
+                'attribute vec2 a_position;' +
+                'attribute vec3 a_color;' +
+                'uniform float u_rot;' +
+                'varying vec3 v_color;' +
+                'void main() {' +
+                '  v_color = a_color;' +
+                '  float c = cos(u_rot), s = sin(u_rot);' +
+                '  gl_Position = vec4(c * a_position.x - s * a_position.y,' +
+                '                    s * a_position.x + c * a_position.y, 0.0, 1.0);' +
+                '}'
+
+            const FRAG_SRC =
+                'precision mediump float;' +
+                'varying vec3 v_color;' +
+                'void main() { gl_FragColor = vec4(v_color, 1.0); }'
+
+            function compile(type, src) {
+                const sh = gl.createShader(type)
+                gl.shaderSource(sh, src)
+                gl.compileShader(sh)
+                if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+                    console.error(gl.getShaderInfoLog(sh))
+                }
+                return sh
+            }
+
+            function boot() {
+                // 三个未旋转顶点（以 0,0 为中心），每顶点带 r,g,b
+                const verts = new Float32Array([
+                    0.0,
+                    0.8,
+                    1.0,
+                    0.2,
+                    0.2, // 右上：红
+                    -0.8,
+                    -0.5,
+                    0.2,
+                    1.0,
+                    0.4, // 左下：绿
+                    0.8,
+                    -0.5,
+                    0.3,
+                    0.4,
+                    1.0 // 右下：蓝
+                ])
+
+                const vs = compile(gl.VERTEX_SHADER, VERT_SRC)
+                const fs = compile(gl.FRAGMENT_SHADER, FRAG_SRC)
+                const program = gl.createProgram()
+                gl.attachShader(program, vs)
+                gl.attachShader(program, fs)
+                gl.linkProgram(program)
+                gl.useProgram(program)
+
+                const buffer = gl.createBuffer()
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+                gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW)
+
+                const aPos = gl.getAttribLocation(program, 'a_position')
+                gl.enableVertexAttribArray(aPos)
+                gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 5 * 4, 0)
+
+                const aCol = gl.getAttribLocation(program, 'a_color')
+                gl.enableVertexAttribArray(aCol)
+                gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 5 * 4, 2 * 4)
+
+                gl.clearColor(0.97, 0.98, 0.99, 1.0)
+                const uRot = gl.getUniformLocation(program, 'u_rot')
+                let t = 0
+
+                function frame(now) {
+                    t = now * 0.001 // 秒
+                    gl.uniform1f(uRot, t * 1.2) // 每帧更新旋转角
+                    gl.viewport(0, 0, canvas.width, canvas.height)
+                    gl.clear(gl.COLOR_BUFFER_BIT)
+                    gl.drawArrays(gl.TRIANGLES, 0, 3)
+                    requestAnimationFrame(frame)
+                }
+                requestAnimationFrame(frame)
+            }
+
+            if (!gl) {
+                // 无 WebGL 时的友好降级：页面文字与说明始终可见
+                fb.textContent =
+                    '当前环境不支持 WebGL（或浏览器已禁用硬件加速），画布无法渲染，但下方着色器原理与文字说明仍完整可见。'
+                out.textContent = 'WebGL 不可用，已降级为纯文字演示。'
+            } else {
+                boot()
+                out.textContent =
+                    'WebGL 最小示例运行中：红色/绿色/蓝色三个顶点的颜色经 varying 被 GPU 逐像素插值，形成一个渐变的旋转三角形。'
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>手写实现 Partial / Exclude</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>手写实现 <code>Partial</code> / <code>Exclude</code></h1>
+        <p>
+            映射类型把对象每个属性变可选（Partial）；条件分发把「拿来取出的类型」剔除（Exclude）。我们用 JS
+            对象模拟出这两个工具类型在「值层面会怎么变化」。
+        </p>
+        <h2>TS 定义（编译期运算）</h2>
+        <pre>
+type MyPartial&lt;T&gt; = { [K in keyof T]?: T[K] };   // 每个键变可选
+type MyExclude&lt;T, U&gt; = T extends U ? never : T;   // 从 T 里剔除属于 U 的成员
+type Keys = MyExclude&lt;'id'|'name'|'email', 'email'&gt;; // 'id' | 'name'</pre
+        >
+        <div id="log" class="box">// 见下方输出</div>
+        <script>
+            // Partial：运行时就是把值变成「可能缺字段」——这里演示「字段可缺省」结果
+            const user = { id: 1, name: 'Tom', email: 'tom@x.com' }
+            function partial(obj) {
+                return { ...obj } // 值层仍是同一组字段；可选性是类型层的声明
+            }
+
+            // Exclude：从键集合中剔除某些键（值层：拿集合做差集）
+            const allKeys = ['id', 'name', 'email']
+            function exclude(keys, remove) {
+                return keys.filter(function (k) {
+                    return remove.indexOf(k) === -1
+                })
+            }
+
+            const lines = [
+                '原始 user => ' + JSON.stringify(user),
+                'Partial<User>：运行时对象形态不变（可选性在类型层） => ' + JSON.stringify(partial(user)),
+                "Exclude<'id'|'name'|'email','email'> 的键集合 => " + exclude(allKeys, ['email']).join(' | '),
+                '配合 Pick/Omit 可在类型层自由裁剪对象形状，运行时不产生额外开销'
+            ]
+            document.getElementById('log').textContent = lines.join('\n')
+        </script>
+        <p><a href="index.html">← 返回目录</a></p>
+    </body>
+</html>

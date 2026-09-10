@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>声音频谱可视化 · Web Audio</title>
+        <style>
+            body {
+                font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                max-width: 720px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #2c3e50;
+                line-height: 1.7;
+            }
+            button {
+                font-size: 15px;
+                padding: 8px 16px;
+                cursor: pointer;
+                border: 1px solid #bdc3c7;
+                border-radius: 6px;
+                background: #fff;
+            }
+            button.primary {
+                background: #3498db;
+                border-color: #3498db;
+                color: #fff;
+                margin-right: 8px;
+            }
+            canvas {
+                width: 100%;
+                max-width: 640px;
+                height: 200px;
+                background: #111;
+                border-radius: 8px;
+                margin-top: 12px;
+                display: block;
+            }
+            .status {
+                margin-top: 12px;
+                padding: 12px;
+                border-radius: 6px;
+                background: #fdf3d7;
+                border: 1px solid #f0d48a;
+            }
+            .status.ok {
+                background: #eaf6eb;
+                border-color: #a9d6a9;
+            }
+            .note {
+                color: #7f8c8d;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>声音频谱可视化</h1>
+        <p>
+            点击「开始播放 + 频谱」会合成一段振荡器音（无需任何音频文件），并用 AnalyserNode 实时把各频段能量画到下方
+            canvas。
+        </p>
+        <button id="play" class="primary">开始播放 + 频谱</button>
+        <button id="stop" disabled>停止</button>
+        <div id="status" class="status">未播放时页面文字与说明始终可见。</div>
+        <canvas id="canvas" width="640" height="200"></canvas>
+        <p class="note">
+            原理：OscillatorNode 生成音源 → GainNode 控音量 → AnalyserNode 读取频谱（getByteFrequencyData）→
+            requestAnimationFrame 里画到 canvas。
+        </p>
+
+        <script>
+            const statusBox = document.getElementById('status')
+            const btnPlay = document.getElementById('play')
+            const btnStop = document.getElementById('stop')
+            const canvas = document.getElementById('canvas')
+            const ctx = canvas.getContext('2d')
+
+            let audioCtx = null
+            let analyser = null
+            let rafId = null
+
+            function setStatus(msg, type) {
+                statusBox.textContent = msg
+                statusBox.className = 'status ' + (type || '')
+            }
+
+            function draw() {
+                const freqData = new Uint8Array(analyser.frequencyBinCount)
+                analyser.getByteFrequencyData(freqData)
+                ctx.fillStyle = '#111'
+                ctx.fillRect(0, 0, canvas.width, canvas.height)
+                const barCount = Math.min(freqData.length, 160)
+                const barWidth = canvas.width / barCount
+                for (let i = 0; i < barCount; i++) {
+                    const v = freqData[i] / 255
+                    const h = v * canvas.height
+                    const hue = 220 - v * 200
+                    ctx.fillStyle = 'hsl(' + hue + ', 90%, 60%)'
+                    ctx.fillRect(i * barWidth, canvas.height - h, barWidth - 1, h)
+                }
+                rafId = requestAnimationFrame(draw)
+            }
+
+            document.getElementById('play').addEventListener('click', () => {
+                if (!window.AudioContext && !window.webkitAudioContext) {
+                    setStatus('当前浏览器不支持 Web Audio API。', 'ok')
+                    return
+                }
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+
+                const osc1 = audioCtx.createOscillator()
+                osc1.type = 'sawtooth'
+                osc1.frequency.value = 220 // A3，含丰富谐波便于画出频谱
+
+                const osc2 = audioCtx.createOscillator()
+                osc2.type = 'square'
+                osc2.frequency.value = 330
+
+                const gain = audioCtx.createGain()
+                gain.gain.value = 0.25 // 避免过响
+
+                analyser = audioCtx.createAnalyser()
+                analyser.fftSize = 256
+                analyser.smoothingTimeConstant = 0.8
+
+                osc1.connect(gain)
+                osc2.connect(gain)
+                gain.connect(analyser)
+                analyser.connect(audioCtx.destination)
+
+                osc1.start()
+                osc2.start()
+
+                btnPlay.disabled = true
+                btnStop.disabled = false
+                setStatus('正在播放合成音并绘制频谱。请确认音量未被静音。', 'ok')
+                draw()
+            })
+
+            document.getElementById('stop').addEventListener('click', () => {
+                if (rafId) cancelAnimationFrame(rafId)
+                if (audioCtx) {
+                    audioCtx.close().catch(function () {})
+                    audioCtx = null
+                }
+                ctx.fillStyle = '#111'
+                ctx.fillRect(0, 0, canvas.width, canvas.height)
+                btnPlay.disabled = false
+                btnStop.disabled = true
+                setStatus('已停止。')
+            })
+        </script>
+    </body>
+</html>

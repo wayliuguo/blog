@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>读取并展示性能指标（FCP / LCP / DOMContentLoaded / TTFB）</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 640px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+                line-height: 1.7;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+            }
+            button {
+                cursor: pointer;
+                padding: 6px 14px;
+                margin: 4px 6px 4px 0;
+            }
+            .ok {
+                color: #15803d;
+            }
+            .warn {
+                color: #b45309;
+            }
+            .dim {
+                color: #6b7280;
+            }
+            .bar {
+                height: 10px;
+                background: #e5e7eb;
+                border-radius: 5px;
+                margin: 4px 0 16px;
+            }
+            .bar i {
+                display: block;
+                height: 100%;
+                background: #2563eb;
+                border-radius: 5px;
+                transition: width 0.6s;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>读取并展示性能指标</h1>
+        <p>
+            本页用浏览器真实采集的性能数据填充下面的结果——先显示
+            waiting，加载与交互过程中会逐步写入真实值。所有读取都来自 <code>performance</code> 缓冲区。
+        </p>
+
+        <h2>1. 已在缓冲区、立即读取的指标</h2>
+        <pre>waiting…（页面加载后自动填充 FCP / navigation 相关数值）</pre>
+
+        <h2>2. 需要等待出现、用 PerformanceObserver 订阅的指标</h2>
+        <div id="lcp-box"><pre>waiting…（监听 largest-contentful-paint）</pre></div>
+
+        <h2 id="nav-box">3. 手动标记与测量（performance.mark / measure）</h2>
+        <button id="btn-mark">执行两次 mark + measure</button>
+        <pre id="measure-box">（点击按钮后在此展示自定义耗时测量）</pre>
+
+        <script>
+            // 统一的输出函数：优先用标题可见的容器追加一行 pre
+            function out(box, text, cls) {
+                var p = document.createElement('pre')
+                p.textContent = text
+                if (cls) p.className = cls
+                document.querySelector(box).appendChild(p)
+            }
+
+            // ---- 1. 立即读取：paint（FP/FCP）与 navigation（DOMContentLoaded/TTFB）----
+            // 页面通常已过 load 事件，这些条目悠然已在缓冲区里，直接 getEntriesByType 即可
+            function showImmediate() {
+                var box = document.querySelector('body > pre')
+                var lines = []
+
+                var paint = performance.getEntriesByType('paint')
+                paint.forEach(function (p) {
+                    lines.push('paint[' + p.name + ']: ' + p.startTime.toFixed(1) + ' ms')
+                })
+                if (!paint.length) lines.push('本次未抓到 paint 条目（可在地址栏刷新一次重试）')
+
+                var nav = performance.getEntriesByType('navigation')[0]
+                if (nav) {
+                    lines.push(
+                        'navigation.domContentLoadedEventEnd : ' + nav.domContentLoadedEventEnd.toFixed(1) + ' ms'
+                    )
+                    lines.push(
+                        'navigation.responseStart - requestStart（TTFB）: ' +
+                            (nav.responseStart - nav.requestStart).toFixed(1) +
+                            ' ms'
+                    )
+                } else {
+                    lines.push('无 navigation 条目')
+                }
+
+                box.textContent = lines.join('\n')
+            }
+
+            // ---- 2. 走 PerformanceObserver 订阅 LCP：不能轮询 getEntries，只能异步监听 ----
+            var lcpShown = false
+            function observeLCP() {
+                out('#lcp-box', '正在监听 largest-contentful-paint …', 'dim')
+                if (!('PerformanceObserver' in window)) {
+                    out('#lcp-box', '当前浏览器不支持 PerformanceObserver', 'warn')
+                    return
+                }
+                try {
+                    new PerformanceObserver(function (list) {
+                        var entries = list.getEntries()
+                        var e = entries[entries.length - 1]
+                        if (e)
+                            out(
+                                '#lcp-box',
+                                'LCP = ' +
+                                    e.startTime.toFixed(1) +
+                                    ' ms（元素: ' +
+                                    (e.element ? e.element.tagName : '?') +
+                                    '）',
+                                'ok'
+                            )
+                        lcpShown = true
+                    }).observe({ type: 'largest-contentful-paint', buffered: true })
+                } catch (err) {
+                    out('#lcp-box', '订阅 LCP 失败：' + err.message, 'warn')
+                }
+            }
+
+            // ---- 3. mark / measure 手动测量 ----
+            document.querySelector('#btn-mark').addEventListener('click', function () {
+                var box = document.querySelector('#measure-box')
+                box.textContent = ''
+
+                performance.mark('task-start')
+                // 故意制造一点工作量
+                var n = 0
+                for (var i = 0; i < 2000000; i++) n += i
+                performance.mark('task-end')
+                performance.measure('task-duration', 'task-start', 'task-end')
+
+                var m = performance.getEntriesByName('task-duration')[0]
+                var line = 'task-duration = ' + (m ? m.duration.toFixed(2) : '?') + ' ms'
+                var p = document.createElement('pre')
+                p.textContent = line
+                p.className = 'ok'
+                box.appendChild(p)
+            })
+
+            showImmediate()
+            observeLCP()
+        </script>
+    </body>
+</html>

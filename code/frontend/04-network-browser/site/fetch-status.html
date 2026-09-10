@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>HTTP Fetch 状态码 + Promise 回显</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 640px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+            }
+            button {
+                cursor: pointer;
+                padding: 6px 14px;
+                margin: 4px 6px 4px 0;
+            }
+            .ok {
+                color: #15803d;
+            }
+            .bad {
+                color: #b91c1c;
+            }
+            .warn {
+                color: #b45309;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Fetch 发请求：状态码 + Promise 状态回显</h1>
+        <p>
+            即使没有外网也能看到效果：页面先展示 Promise 状态机，再尝试调用在线回显接口（如
+            jsonplaceholder），接口不通时给出友好提示，页面本身始终可见。
+        </p>
+
+        <h2>1. Promise 状态机演示（不依赖网络）</h2>
+        <div id="promise-box">
+            <pre>（点击下方按钮后在此展示微任务/宏任务的 resolve 顺序）</pre>
+        </div>
+        <button id="btn-promise">执行 Promise 时序</button>
+
+        <h2>2. 真实 Fetch 请求（可离线）</h2>
+        <div id="fetch-box">
+            <pre>
+（点击下方按钮尝试请求 https://jsonplaceholder.typicode.com/todos/1 ，网络不可用时将显示友好提示）</pre
+            >
+        </div>
+        <button id="btn-fetch">发一次 Fetch 请求</button>
+
+        <script>
+            // 统一出口：优先用标题可见的容器输出
+            function out(id, text, cls) {
+                var box = document.querySelector(id)
+                var p = document.createElement('pre')
+                p.textContent = text
+                if (cls) p.className = cls
+                box.appendChild(p)
+            }
+
+            // 1) Promise 状态机：pending -> resolved / rejected，以及微任务 vs 宏任务顺序
+            document.querySelector('#btn-promise').addEventListener('click', function () {
+                var box = document.querySelector('#promise-box')
+                box.innerHTML = ''
+
+                out('#promise-box', '同步代码开始（宏任务栈中）')
+                Promise.resolve('微任务成功值')
+                    .then(function (v) {
+                        out('#promise-box', 'then 回调（这是微任务）: ' + v, 'ok')
+                    })
+                    .catch(function (e) {
+                        out('#promise-box', 'catch(e): ' + e, 'bad')
+                    })
+                setTimeout(function () {
+                    out('#promise-box', 'setTimeout 回调（宏任务，最后执行）', 'warn')
+                }, 0)
+                out('#promise-box', '同步代码结束（微任务要先于宏任务执行）')
+            })
+
+            // 2) 真实 Fetch 请求，离线时给出友好提示，仅更新 #fetch-box 而不影响页面其它部分
+            document.querySelector('#btn-fetch').addEventListener('click', function () {
+                var box = document.querySelector('#fetch-box')
+                box.innerHTML = ''
+                out('#fetch-box', 'fetch() 发起请求，promise 进入 pending 状态…')
+
+                var url = 'https://jsonplaceholder.typicode.com/todos/1'
+                fetch(url)
+                    .then(function (res) {
+                        out('#fetch-box', '响应到达：HTTP 状态码 = ' + res.status + '（ok=' + res.ok + '）', 'ok')
+                        return res.json()
+                    })
+                    .then(function (data) {
+                        out(
+                            '#fetch-box',
+                            '回显数据：{ id=' +
+                                data.id +
+                                ', title="' +
+                                data.title +
+                                '", completed=' +
+                                data.completed +
+                                ' }',
+                            'ok'
+                        )
+                    })
+                    .catch(function (err) {
+                        out('#fetch-box', '网络不可用或接口被拦截，提示：' + err.message, 'bad')
+                        out(
+                            '#fetch-box',
+                            '不必担心：这正是 fetch 的 reject 路径——只有网络层错误才会走到 catch，HTTP 4xx/5xx 仍会走到 then。',
+                            'warn'
+                        )
+                    })
+            })
+        </script>
+    </body>
+</html>

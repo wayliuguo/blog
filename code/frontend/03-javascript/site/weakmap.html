@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WeakMap vs Map · 内存与 GC</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            button {
+                padding: 0.4rem 0.8rem;
+                margin-right: 0.5rem;
+                cursor: pointer;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>内存与垃圾回收 · WeakMap vs Map 弱引用</h1>
+        <p>
+            <strong>Map</strong> 强持有键，阻止 GC；<strong>WeakMap</strong> 弱持有键，不阻止回收。WeakMap
+            的键必须为对象，不可迭代。
+        </p>
+
+        <button id="btnMap">Map 强引用对比</button>
+        <button id="btnWeak">WeakMap 弱引用对比</button>
+        <button id="btnGC">触发一次观察</button>
+        <div id="log" class="box">// 点击按钮查看结果</div>
+
+        <script>
+            var box = document.getElementById('log')
+            function show(msg) {
+                box.textContent = msg + '\n' + box.textContent
+            }
+
+            document.getElementById('btnGC').onclick = function () {
+                if (window.gc) {
+                    window.gc()
+                    show('已调用 window.gc()（仅需在 Chrome 打开 --js-flags=--expose-gc 时可用，浏览器一般手动触发）')
+                } else
+                    show(
+                        '浏览器不暴露手动 GC，' +
+                            (typeof performance !== 'undefined' && performance.memory
+                                ? '可看 performance.memory 粗略观测'
+                                : '请用 DevTools Memory 面板观察')
+                    )
+            }
+
+            // Map：强引用，删除外部引用后键仍被缓存强持有，无法回收（旧浏览器可导致泄漏）
+            document.getElementById('btnMap').onclick = function () {
+                var cache = new Map()
+                var key = { id: 1 }
+                cache.set(key, '我是 Map 的值')
+                show('Map: cache.size = ' + cache.size + '（强持有，key 外部置空后仍可被 cache.get 命中）')
+                key = null // 外部引用清除，但 cache 仍强持有原键对象
+                show('Map: 即使外部 key 置 null，条目仍在，不会被 GC 回收（潜在泄漏）')
+            }
+
+            // WeakMap：弱引用，键可被 GC
+            document.getElementById('btnWeak').onclick = function () {
+                var wcache = new WeakMap()
+                var key = { id: 2 }
+                wcache.set(key, '我是 WeakMap 的值')
+                show('WeakMap: 键必须对象，且不可迭代（无 size/keys）')
+                show('WeakMap: 当外部 key 置 null 后，条目自动成为垃圾，可被 GC 回收')
+                key = null
+                show('WeakMap: 适合「给对象挂元数据 / 临时缓存」，用完自动清，不泄漏')
+            }
+        </script>
+    </body>
+</html>

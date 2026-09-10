@@ -1,0 +1,9 @@
+{
+  "name": "chapter08-vue",
+  "version": "1.0.0",
+  "private": true,
+  "description": "08-Vue 前端框架：手写响应式 / VNode diff / 模板编译 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

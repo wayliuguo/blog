@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>同步阻塞演示：为什么主线程忙会卡住页面</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 680px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 10px;
+                border-radius: 6px;
+                white-space: pre-wrap;
+            }
+            button {
+                cursor: pointer;
+                padding: 8px 16px;
+                margin-right: 6px;
+            }
+            .bar {
+                height: 18px;
+                background: #2563eb;
+                width: 2%;
+                transition: width 0.05s;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>同步阻塞 vs 渲染：主线程忙时页面为什么卡</h1>
+        <p>
+            渲染与 JS 共享渲染进程的主线程。下面的"阻塞 2s"会同步空转约 2
+            秒，期间进度条不动、定时器被推迟——这是事件循环与渲染阻塞的最小体现。
+        </p>
+
+        <h2>进度条（正常时用 requestAnimationFrame 更新）</h2>
+        <div class="bar" id="bar"></div>
+
+        <h2>对比</h2>
+        <button id="btn-block">同步阻塞约 2 秒（期间页面卡住）</button>
+        <button id="btn-rnd">恢复：用 requestAnimationFrame 前进</button>
+
+        <pre id="out"></pre>
+
+        <script>
+            var bar = document.querySelector('#bar')
+            var outEl = document.querySelector('#out')
+            var width = 2
+
+            document.querySelector('#btn-rnd').addEventListener('click', function () {
+                function step() {
+                    width = Math.min(width + 1, 98)
+                    bar.style.width = width + '%'
+                    if (width < 98) requestAnimationFrame(step)
+                }
+                step()
+                outEl.textContent += '开始用 rAF 逐帧前进（工作被拆分到每帧绘制前执行，不阻塞渲染）\n'
+            })
+
+            document.querySelector('#btn-block').addEventListener('click', function () {
+                var t0 = performance.now()
+                // 同时记一个 setTimeout，观察它在主线程阻塞期间被推迟
+                setTimeout(function () {
+                    outEl.textContent +=
+                        'setTimeout 回调执行：原定约 100ms 后触发，实际在阻塞结束后才轮到（顺序上被推到队列末尾）\n'
+                }, 100)
+
+                // 同步空转约 2 秒：这段期间事件循环无法推进、页面无法重绘
+                var until = performance.now() + 2000
+                while (performance.now() < until) {
+                    /* busy loop */
+                }
+
+                var cost = performance.now() - t0
+                outEl.textContent +=
+                    '同步阻塞耗时约 ' + cost.toFixed(0) + 'ms。期间页面标题/滚动/动画都无响应，渲染被冻结。\n'
+                outEl.textContent += '原理：JS 任务不结束，渲染和交给队列的宏任务都得排队等待。\n'
+            })
+        </script>
+    </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "chapter05-typescript",
+  "version": "1.0.0",
+  "private": true,
+  "description": "05-TypeScript：结构类型/联合交叉/泛型与infer/手写Partial·Exclude 最小实现 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

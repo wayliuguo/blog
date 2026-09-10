@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>媒体采集与回显 · getUserMedia</title>
+        <style>
+            body {
+                font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                max-width: 720px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #2c3e50;
+                line-height: 1.7;
+            }
+            button {
+                font-size: 15px;
+                padding: 8px 16px;
+                margin: 4px 6px 4px 0;
+                cursor: pointer;
+                border: 1px solid #bdc3c7;
+                border-radius: 6px;
+                background: #fff;
+            }
+            button.primary {
+                background: #3498db;
+                border-color: #3498db;
+                color: #fff;
+            }
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            video {
+                width: 100%;
+                max-width: 640px;
+                background: #000;
+                border-radius: 8px;
+                margin-top: 10px;
+            }
+            .status {
+                margin-top: 12px;
+                padding: 12px;
+                border-radius: 6px;
+                background: #fdf3d7;
+                border: 1px solid #f0d48a;
+            }
+            .status.ok {
+                background: #eaf6eb;
+                border-color: #a9d6a9;
+            }
+            .status.err {
+                background: #fbeaea;
+                border-color: #e2a3a3;
+            }
+            .note {
+                color: #7f8c8d;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>媒体采集与实时回显</h1>
+        <p>
+            点击「开启摄像头」后会请求摄像头与麦克风权限，并实时回显本地画面与声音（延迟约几十毫秒）。这是 WebRTC
+            通话链路的第一环。
+        </p>
+        <button id="start" class="primary">开启摄像头</button>
+        <button id="stop" disabled>停止</button>
+        <div id="status" class="status">
+            页面说明始终可见：若未点按钮，这里会保持提示。浏览器会弹窗请求授权，请允许后再次点击。
+        </div>
+        <video id="preview" autoplay muted playsinline></video>
+        <p class="note">
+            原理：getUserMedia 返回一个 MediaStream，里面可能包含视频轨（摄像头）和音频轨（麦克风）；把它赋给
+            video.srcObject 即可回显。
+        </p>
+
+        <script>
+            let stream = null
+            const video = document.getElementById('preview')
+            const statusBox = document.getElementById('status')
+            const btnStart = document.getElementById('start')
+            const btnStop = document.getElementById('stop')
+
+            function setStatus(msg, type) {
+                statusBox.textContent = msg
+                statusBox.className = 'status ' + (type || '')
+            }
+
+            document.getElementById('start').addEventListener('click', async () => {
+                setStatus('正在请求摄像头与麦克风权限，请在弹出的对话框中选择允许……')
+                // 兼容旧前缀
+                const md = navigator.mediaDevices
+                if (!md || !md.getUserMedia) {
+                    setStatus(
+                        '当前浏览器不支持 getUserMedia（或在非安全上下文 http 下被禁用，请使用 localhost 或 https）。无法演示采集。',
+                        'err'
+                    )
+                    return
+                }
+                try {
+                    stream = await md.getUserMedia({ video: { facingMode: 'user' }, audio: { echoCancellation: true } })
+                    video.srcObject = stream
+                    btnStart.disabled = true
+                    btnStop.disabled = false
+                    const vTrack = stream.getVideoTracks()[0]
+                    const aTrack = stream.getAudioTracks()[0]
+                    setStatus(
+                        '已开启：视频轨 ' +
+                            (vTrack ? vTrack.label : '无') +
+                            '；音频轨 ' +
+                            (aTrack ? aTrack.label : '无') +
+                            '。音视频正实时回显。',
+                        'ok'
+                    )
+                } catch (err) {
+                    let msg = '权限被拒绝或设备不可用：' + (err && err.name ? err.name : err)
+                    if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                        msg = '权限被拒绝。请在浏览器地址栏的站点设置里允许摄像头 / 麦克风后重试。'
+                    } else if (err && err.name === 'NotFoundError') {
+                        msg = '未找到可用摄像头或麦克风设备。'
+                    }
+                    setStatus(msg, 'err')
+                }
+            })
+
+            document.getElementById('stop').addEventListener('click', () => {
+                if (stream) {
+                    stream.getTracks().forEach(t => t.stop())
+                    stream = null
+                }
+                video.srcObject = null
+                btnStart.disabled = false
+                btnStop.disabled = true
+                setStatus('已停止采集。页面文字始终可见。')
+            })
+        </script>
+    </body>
+</html>

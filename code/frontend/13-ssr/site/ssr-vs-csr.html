@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>01 模拟 SSR vs CSR：首屏 HTML 里有没有内容</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1 {
+                color: #2c3e50;
+            }
+            .panel {
+                border: 1px solid #e3e8ee;
+                border-radius: 10px;
+                padding: 14px 18px;
+                margin: 16px 0;
+            }
+            .ssr {
+                border-left: 4px solid #2ea44f;
+            }
+            .csr {
+                border-left: 4px solid #d73a49;
+            }
+            .head {
+                font-weight: 700;
+                margin-bottom: 4px;
+            }
+            .box {
+                min-height: 90px;
+                padding: 10px 14px;
+                border: 1px dashed #ccc;
+                border-radius: 6px;
+                background: #fafbfc;
+            }
+            button {
+                margin: 8px 8px 0 0;
+                padding: 8px 14px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                color: #fff;
+            }
+            .b-ssr {
+                background: #2ea44f;
+            }
+            .b-csr {
+                background: #d73a49;
+            }
+            .b-reset {
+                background: #6a737d;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 10px;
+                border-radius: 6px;
+                font-size: 13px;
+                overflow: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>01 模拟 SSR vs CSR：首屏 HTML 里有没有内容</h1>
+        <p>
+            真正的 SSR 在服务端把组件渲染成 HTML 字符串再返回，所以浏览器拿到的 HTML
+            里<strong>已经包含正文</strong>；CSR 则是浏览器先拿到空壳，再由 JS 运行时把 DOM
+            填进去。下面用两个"模拟服务器"与"模拟客户端"函数，把这两条渲染路径搬到浏览器里直观对比。
+        </p>
+
+        <div class="panel ssr">
+            <div class="head">① 模拟服务端渲染：先拼好整段 HTML 再 insert</div>
+            <p>
+                这一段假装"服务器把文章渲染成了完整 HTML 字符串"，随后一次性写入页面。此刻它的
+                HTML（即爬虫能看到的内容）是满的。
+            </p>
+            <div class="box" id="ssr-out">（尚未渲染）</div>
+            <button class="b-ssr" onclick="renderSSR()">模拟服务端 renderToString 后 insert</button>
+            <button class="b-reset" onclick="clearBox('ssr-out')">清空</button>
+            <p id="ssr-seo" style="font-weight: 600"></p>
+        </div>
+
+        <div class="panel csr">
+            <div class="head">② 模拟客户端渲染：先挂空壳，再由 JS 填充</div>
+            <p>
+                这一段假装"服务器只返回一个空壳 div"，正文要等 JS（模拟
+                client.js）执行后才被动态创建出来。渲染空壳那一刻，它的 HTML（爬虫看到的内容）是空的。
+            </p>
+            <div class="box" id="csr-out"><div id="csr-root">（这里只是空壳，正文还没来）</div></div>
+            <button class="b-csr" onclick="renderCSR()">模拟下载并执行 client.js 后填充</button>
+            <button class="b-reset" onclick="clearBox('csr-root')">清空</button>
+            <p id="csr-seo" style="font-weight: 600"></p>
+        </div>
+
+        <h3>爬虫（crawler）视角：此刻看到的首屏 HTML</h3>
+        <p id="crawler-note"></p>
+        <pre id="crawler-view"></pre>
+
+        <button class="b-reset" onclick="resetAll()" style="background: #959da5">重置两个面板</button>
+        <p style="font-size: 13px; color: #888">
+            点击右侧按钮后，观察每个框内"当前 HTML 里有没有正文"以及上方爬虫视角的差别，那就是 SEO 与首屏快慢的关键。
+        </p>
+
+        <script>
+            // 模拟"服务端"：把数据渲染成一段完整 HTML 字符串（renderToString 的玩具版）
+            function simulateServerRender() {
+                return (
+                    '<h4>这是一篇服务端直出的文章</h4>' +
+                    '<p>正文内容在返回给浏览器的 HTML 里就已存在。</p>' +
+                    '<p>爬虫无需执行任何 JS 就能读到这些文字，可完整索引。</p>'
+                )
+            }
+
+            // SSR 视角：直接把服务端的字符串 insert 进页面（没有中间的空壳阶段）
+            function renderSSR() {
+                const out = document.getElementById('ssr-out')
+                out.innerHTML = simulateServerRender()
+                document.getElementById('ssr-seo').textContent =
+                    '结论：渲染后本块 HTML 直接含正文，首屏即得内容（SEO 好、FCP 早）。'
+                refreshCrawler()
+            }
+
+            // CSR 视角：先只有空壳，模拟"下载并执行 client.js"后再动态填充
+            function renderCSR() {
+                const root = document.getElementById('csr-root')
+
+                // 模拟浏览器拿到 index.html 那一刻：只有空壳 div，没有正文
+                logCrawlerOnce('空壳阶段', 'body 里只有一个空 div，爬虫 看不到任何正文。')
+
+                setTimeout(function () {
+                    // 模拟 client.js 在浏览器端把 DOM 建出来并挂载
+                    root.innerHTML =
+                        '<h4>这是客户端 JS 渲染出来的文章</h4>' +
+                        '<p>在 JS 下载并执行之前，这一块对爬虫而言是空的。</p>'
+                    document.getElementById('csr-seo').textContent =
+                        '结论：空壳阶段无正文；只有等 JS 执行后内容才出现。'
+                    refreshCrawler()
+                }, 600)
+            }
+
+            function clearBox(id) {
+                if (id === 'csr-root') {
+                    document.getElementById('csr-root').innerHTML = ''
+                    document.getElementById('csr-seo').textContent =
+                        '结论：空壳阶段无正文；只有等 JS 执行后内容才出现。'
+                } else {
+                    document.getElementById('ssr-out').innerHTML = '（尚未渲染）'
+                    document.getElementById('ssr-seo').textContent = ''
+                }
+                refreshCrawler()
+            }
+
+            function resetAll() {
+                document.getElementById('ssr-out').innerHTML = '（尚未渲染）'
+                document.getElementById('csr-root').innerHTML = ''
+                document.getElementById('ssr-seo').textContent = ''
+                document.getElementById('csr-seo').textContent = ''
+                document.getElementById('crawler-note').textContent = ''
+                document.getElementById('crawler-view').textContent = '点击上方两个渲染按钮，看看正文在哪一刻出现。'
+            }
+
+            function currentHtml(id) {
+                return document.getElementById(id).innerHTML
+            }
+
+            // 把此刻两个框内的 HTML 拼给"爬虫视角"看
+            function refreshCrawler() {
+                const ssrBox = currentHtml('ssr-out')
+                const csrBox = currentHtml('csr-root')
+                const hasSsr = ssrBox.indexOf('文章') !== -1
+                const hasCsr = csrBox.indexOf('文章') !== -1
+                document.getElementById('crawler-note').textContent =
+                    '爬虫读到的正文（SSR 框是否有正文：' +
+                    (hasSsr ? '有' : '无') +
+                    '；CSR 框是否有正文：' +
+                    (hasCsr ? '有' : '无') +
+                    '）'
+                document.getElementById('crawler-view').textContent =
+                    'SSR 框 HTML 片段:\n' + ssrBox + '\n\nCSR 框 HTML 片段:\n- ' + csrBox
+            }
+
+            var crawlerLogged = false
+            function logCrawlerOnce(label, msg) {
+                if (crawlerLogged) return
+                crawlerLogged = true
+                var pre = document.getElementById('crawler-view')
+                pre.textContent += '\n[' + label + '] ' + msg
+            }
+
+            // 初次展示：抓取到现状
+            resetAll()
+        </script>
+    </body>
+</html>

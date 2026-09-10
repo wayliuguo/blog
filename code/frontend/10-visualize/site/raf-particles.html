@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>requestAnimationFrame 粒子动画</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            canvas {
+                display: block;
+                border: 1px solid #ddd;
+                background: #0f172a;
+                margin: 0.5rem 0;
+            }
+            code {
+                background: #f1f5f9;
+                padding: 0.1em 0.4em;
+                border-radius: 4px;
+            }
+            .note {
+                color: #475569;
+                font-size: 0.92em;
+            }
+            #fps {
+                color: #10b981;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>requestAnimationFrame 粒子动画</h1>
+        <div id="out" class="note"></div>
+        <canvas id="scene" width="640" height="280"></canvas>
+        <p>当前帧率：<span id="fps">--</span> FPS　剩余粒子：<span id="count">--</span></p>
+        <h2>这段代码在做什么</h2>
+        <p>
+            <code>raf-particles.html</code> 演示 Canvas 动画的本质——「清屏 → 重绘 → 循环」。每次
+            <code>requestAnimationFrame</code> 回调拿到浏览器按屏幕刷新率（通常 60Hz）给出的时间戳， 先
+            <code>clearRect</code> 清空上一帧，再更新所有粒子的坐标，最后把它全部画上去，然后请求下一帧。 正因为 rAF
+            与帧率同步、页面不可见时自动暂停，它才是做动画/可视化主循环的标准姿势。
+        </p>
+        <script>
+            const canvas = document.getElementById('scene')
+            const ctx = canvas.getContext('2d')
+            const W = canvas.width,
+                H = canvas.height
+            const particles = []
+            const fpsEl = document.getElementById('fps')
+            const countEl = document.getElementById('count')
+
+            function randomParticle() {
+                return {
+                    x: W / 2,
+                    y: H / 2,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3 - 1,
+                    r: Math.random() * 3 + 1,
+                    life: 1,
+                    decay: 0.006 + Math.random() * 0.01
+                }
+            }
+            for (let i = 0; i < 180; i++) particles.push(randomParticle())
+
+            let last = performance.now()
+            let frames = 0
+            let acc = 0
+
+            // 主循环: 清屏 -> 更新 -> 重绘 -> 请求下一帧
+            function tick(now) {
+                // 时间片 = dt(ms)，用 dt 计算位移保证任何刷新率下速度一致
+                const dt = now - last
+                last = now
+
+                ctx.clearRect(0, 0, W, H) // 清屏
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i]
+                    p.x += p.vx * (dt / 16)
+                    p.y += p.vy * (dt / 16)
+                    p.life -= p.decay
+                    if (p.life <= 0) {
+                        particles.splice(i, 1)
+                        continue
+                    }
+                    ctx.globalAlpha = p.life
+                    ctx.fillStyle = '#6ee7b7'
+                    ctx.beginPath()
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+                    ctx.fill()
+                }
+                ctx.globalAlpha = 1
+
+                // 统计 FPS
+                frames++
+                acc += dt
+                if (acc >= 500) {
+                    fpsEl.textContent = Math.round((frames * 1000) / acc)
+                    frames = 0
+                    acc = 0
+                }
+                countEl.textContent = particles.length
+
+                requestAnimationFrame(tick) // 请求下一帧
+            }
+            requestAnimationFrame(tick)
+
+            document.getElementById('out').textContent =
+                '帧循环最小形态：每帧 清屏 -> 更新粒子状态 -> 重新绘制，配合 rAF 时间戳把位移换算成与刷新率无关的速率。'
+        </script>
+    </body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FPS 帧率指示器与主线程阻塞对比</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 640px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+                line-height: 1.7;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+            }
+            button {
+                cursor: pointer;
+                padding: 8px 16px;
+                margin: 4px 8px 4px 0;
+                font-size: 1rem;
+            }
+            .ok {
+                color: #15803d;
+            }
+            .bad {
+                color: #b91c1c;
+            }
+            .warn {
+                color: #b45309;
+            }
+            .dim {
+                color: #6b7280;
+            }
+            .meter {
+                font-size: 2rem;
+                font-weight: 700;
+            }
+            #bar {
+                height: 14px;
+                width: 100%;
+                background: #e5e7eb;
+                border-radius: 7px;
+                overflow: hidden;
+            }
+            #bar i {
+                display: block;
+                height: 100%;
+                width: 0;
+                background: #22c55e;
+                transition: width 0.4s;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>FPS 帧率指示器 与 主线程阻塞对比</h1>
+        <p>
+            用 <code>requestAnimationFrame</code> 统计当前帧率。正常应接近显示器刷新率（如 60）；点击"阻塞
+            300ms"后主线程被长任务占用，掉帧会明显拉低 FPS。
+        </p>
+
+        <div id="bar"><i></i></div>
+        <p id="fps-line" class="meter" style="color: #15803d">运行中…</p>
+
+        <p>
+            <button id="btn-block-300">同步阻塞约 300ms</button>
+            <button id="btn-block-1500">同步阻塞约 1500ms</button>
+            <button id="btn-reset">刷新显示</button>
+        </p>
+
+        <pre id="log">（阻塞结束后把掉帧记录输出在这）</pre>
+
+        <script>
+            var last = performance.now();
+            var frames = 0;
+            var fpsText = document.querySelector("#fps-line");
+            var barFill = document.querySelector("#bar i");
+
+            // rAF 回调在主线程每一帧绘制前触发：记录两次回调间隔即可估算 FPS
+            function tick(now) {
+              frames++;
+              var diff = now - last;
+              if (diff >= 500) {
+                var fps = (frames * 1000) / diff;
+                fps = Math.round(fps);
+                fpsText.textContent = fps + " FPS";
+                fpsText.style.color = fps >= 45 ? "#15803d" : fps >= 20 ? "#b45309" : "#b91c1c";
+                // 用宽度直观反映 FPS（上限 60）
+                barFill.style.width = Math.min(100, (fps / 60) * 100) + "%";
+                frames = 0;
+                last = now;
+              }
+              requestAnimationFrame(tick);
+            }
+
+            // 同步阻塞主线程一段时间（毫秒）
+            function block(ms) {
+              var end = performance.now() + ms;
+              var n = 0;
+              while (performance.now() < end) n += 1; // 忙等，占住主线程
+              return n;
+            }
+
+            function logLine(line, cls) {
+              var p = document.createElement("pre");
+              p.textContent = line;
+              if (cls) p.className = cls;
+              document.querySelector("#log").appendChild(p);
+            }
+
+            document.querySelector("#btn-block-300").addEventListener("click", function () {
+              var before = fpsText.textContent;
+              block(300);
+              // 阻塞回落后，下一拍 tick 会统计到受影响的帧率
+              logLine("阻塞完成。阻塞前显示为 " + before + "，请观察随后的 FPS 变化——这正是长任务触发 React/Vue 掉帧的机理。", "warn");
+            });
+
+            document.querySelector("#btn-block-1500").addEventListener("click", function () {
+              var before = fpsText.textContent;
+              var loops = block(1500);
+              logLine("阻塞 1500ms 完成（忙等了 " + loops + " 次循环）。阻塞前显示为 " + before + "，期间按钮点击、动画都会明显卡顿——这就是"主线程被占住"的直观体验。", "bad");
+            });
+
+            document.querySelector("#btn-reset").addEventListener("click", function () {
+              document.querySelector("#log").textContent = "";
+            });
+
+            requestAnimationFrame(tick);
+        </script>
+    </body>
+</html>

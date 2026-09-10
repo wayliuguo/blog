@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>事件循环 · 宏任务 / 微任务</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+                min-height: 3rem;
+            }
+            button {
+                padding: 0.4rem 0.8rem;
+                margin-right: 0.5rem;
+                cursor: pointer;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>异步与事件循环 · 宏任务 / 微任务顺序</h1>
+        <p>
+            口诀：<strong>同步立即执行 → 微任务清空（可含新增）→ 下一个宏任务</strong>。Promise.then
+            是微任务，setTimeout 是宏任务。
+        </p>
+
+        <div>
+            <button id="btnRun">执行一段混合任务</button>
+            <button id="btnClear">清空</button>
+        </div>
+        <div id="log" class="box">// 点击「执行一段混合任务」</div>
+
+        <script>
+            var box = document.getElementById('log')
+            function print(msg) {
+                box.textContent += msg + '\n'
+            }
+            function reset() {
+                box.textContent = ''
+            }
+
+            document.getElementById('btnClear').onclick = reset
+
+            document.getElementById('btnRun').onclick = function () {
+                reset()
+                print('— 演示开始 —')
+
+                print('同步 1') // 同步
+                setTimeout(function () {
+                    // 宏任务 A
+                    print('宏任务 setTimeout-A')
+                }, 0)
+
+                Promise.resolve().then(function () {
+                    // 微任务 1
+                    print('微任务 Promise-1')
+                    Promise.resolve().then(function () {
+                        // 微任务内部再新增微任务：本轮内继续清空
+                        print('微任务 Promise-1 内嵌套的微任务')
+                    })
+                })
+
+                print('同步 2') // 同步
+
+                setTimeout(function () {
+                    // 宏任务 B
+                    print('宏任务 setTimeout-B')
+                }, 0)
+
+                // 预期顺序：同步1 → 同步2 → Promise-1 → 嵌套微任务 → setTimeout-A → setTimeout-B
+                print('— 同步执行完毕，下面是调度结果（自动按事件循环顺序打印） —')
+                box.textContent += '（结果以实际打印顺序为准，微任务始终先于宏任务）\n'
+            }
+        </script>
+    </body>
+</html>

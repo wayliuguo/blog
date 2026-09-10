@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>vdom-diff：虚拟 DOM diff 生成 patch</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                line-height: 1.6;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            pre {
+                background: #f1f5f9;
+                padding: 1rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .old,
+            .new {
+                background: #f8fafc;
+                padding: 0.6rem;
+                border-radius: 6px;
+            }
+            .patch {
+                background: #ecfdf5;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>vdom-diff：两棵虚拟 DOM 树的差异比较</h1>
+        <p>
+            下面用两棵轻量的虚拟 DOM 树做一次最小 diff，把变化输出成 <strong>patch（补丁）列表</strong>。这就是 React
+            虚拟 DOM + diff 缩小真实 DOM 操作范围的思路雏形。
+        </p>
+
+        <h2>旧树 oldVDOM</h2>
+        <pre class="old" id="old"></pre>
+
+        <h2>新树 newVDOM</h2>
+        <pre class="new" id="new"></pre>
+
+        <h2>diff 结果 patches</h2>
+        <pre class="patch" id="out"></pre>
+
+        <h2>diff 实现</h2>
+        <pre id="code"></pre>
+
+        <script>
+            /* 虚拟节点：{ type, props, children } */
+            function v(type, props, children) {
+                return { type: type, props: props || {}, children: children || [] }
+            }
+
+            // 旧树：文案是 A，只有一个子节点
+            var oldVDOM = v('div', {}, [
+                v('h1', {}, ['标题']),
+                v('p', { className: 'text' }, ['我是文案 A']),
+                v('ul', {}, [v('li', { key: 'a' }, ['苹果']), v('li', { key: 'b' }, ['香蕉'])])
+            ])
+
+            // 新树：文案改成 B，新增图片，且列表里多了"橘子"
+            var newVDOM = v('div', {}, [
+                v('h1', {}, ['标题']),
+                v('p', { className: 'text' }, ['我是文案 B']),
+                v('img', { src: 'not-found.png', alt: '图片' }, []),
+                v('ul', {}, [
+                    v('li', { key: 'a' }, ['苹果']),
+                    v('li', { key: 'b' }, ['香蕉']),
+                    v('li', { key: 'c' }, ['橘子'])
+                ])
+            ])
+
+            /* ---------- 最小 diff：按顺序逐节点比较，产出 patch ---------- */
+            function diff(oldNode, newNode, patches, path) {
+                path = path || [] // 记录当前节点在树中的位置（path）
+                if (!newNode) return // 新节点为空则跳过
+
+                // 场景 1：类型不同 -> 替换整个节点
+                if (!oldNode || oldNode.type !== newNode.type) {
+                    patches.push({ type: 'REPLACE', path: join(path), target: newNode.type })
+                    return
+                }
+
+                // 场景 2：文本内容变化 -> 打"更新文本"补丁
+                if (
+                    oldNode.children.length &&
+                    newNode.children.length &&
+                    typeof oldNode.children[0] === 'string' &&
+                    typeof newNode.children[0] === 'string' &&
+                    oldNode.children[0] !== newNode.children[0]
+                ) {
+                    patches.push({
+                        type: 'TEXT',
+                        path: join(path),
+                        from: wrap(oldNode.children[0]),
+                        to: wrap(newNode.children[0])
+                    })
+                }
+
+                // 场景 3：同类型元素，逐个递归比较 children（按 key 定位的完整算法这里省略）
+                var len = Math.max(oldNode.children.length, newNode.children.length)
+                for (var i = 0; i < len; i++) {
+                    diff(oldNode.children[i], newNode.children[i], patches, path.concat(i))
+                }
+            }
+
+            function join(path) {
+                return path.length ? path.join('.') : 'root'
+            }
+            function wrap(t) {
+                return t
+            }
+
+            var patches = []
+            diff(oldVDOM, newVDOM, patches)
+
+            // 展示到页面
+            var oldText = JSON.stringify(oldVDOM.children[1].children[0])
+            var newText = JSON.stringify(newVDOM.children[1].children[0])
+            document.getElementById('old').textContent =
+                '旧树的 <p> 文案 = ' + oldText + '\n旧树子节点数 = ' + oldVDOM.children.length
+            document.getElementById('new').textContent =
+                '新树的 <p> 文案 = ' + newText + '\n新树子节点数 = ' + newVDOM.children.length
+
+            var out = document.getElementById('out')
+            out.textContent = ''
+            patches.forEach(function (p) {
+                if (p.type === 'TEXT') {
+                    out.textContent += 'TEXT   @ ' + p.path + '：我是文案 ' + p.from + ' → 文案 ' + p.to + '\n'
+                } else if (p.type === 'REPLACE') {
+                    out.textContent += 'REPLACE @ ' + p.path + '：把旧节点替换为 <' + p.target + '>\n'
+                }
+            })
+
+            document.getElementById('code').textContent =
+                'function diff(oldNode, newNode, patches, path) {\n' +
+                '  // 1) 类型不同 -> REPLACE\n' +
+                '  // 2) 文本变化 -> TEXT（记录 from -> to）\n' +
+                '  // 3) 同类型 -> 递归比较 children\n' +
+                '}\n' +
+                '// 结果示例：\n' +
+                '// TEXT    @ 1 : 我是文案 A -> 文案 B\n' +
+                '// REPLACE @ 2 : 把旧节点替换为 <img>（新增图片）\n' +
+                '// REPLACE @ 3 : 替换为新增的 <li>（新增"橘子"）'
+        </script>
+    </body>
+</html>

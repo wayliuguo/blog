@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>手写坐标系映射与 SVG 元素生成</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            svg {
+                display: block;
+                border: 1px solid #ddd;
+                background: #f8fafc;
+                margin: 0.5rem 0;
+            }
+            code {
+                background: #f1f5f9;
+                padding: 0.1em 0.4em;
+                border-radius: 4px;
+            }
+            .note {
+                color: #475569;
+                font-size: 0.92em;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>手写坐标系映射与 SVG 元素生成</h1>
+        <div id="out" class="note"></div>
+        <svg id="chart" viewBox="0 0 640 300" width="640" height="300"></svg>
+        <p>
+            蓝色是 <code>&lt;rect&gt;</code> 柱状图，橙色是 <code>&lt;polyline&gt;</code> 折线。每个图形都是真实的 DOM
+            节点，可单独绑定事件——下方两个按钮就是"改一个属性即局部更新"。
+        </p>
+        <div>
+            <label>高亮柱 #3 <input type="checkbox" onchange="highlight(this.checked)" /></label>
+            <button onclick="restart()">重新生成数据</button>
+        </div>
+        <h2>这段代码在做什么</h2>
+        <p>
+            <code>svg-chart.html</code> 演示"数据 → 像素坐标 → SVG 元素"的最小链路：先求出数据 min/max
+            做线性映射得到每个节点的坐标， 再用 <code>createElementNS</code> 创建 <code>&lt;rect&gt;</code>（柱子）与
+            <code>&lt;polyline&gt;</code>（折线）并设置其绘图属性。 因为 SVG
+            是保留模式、节点常驻文档，想改一根柱子就只需改它一个元素的属性，无需像 Canvas 那样重绘整块——这是它与 Canvas
+            的核心差异。
+        </p>
+        <script>
+            const svgNS = 'http://www.w3.org/2000/svg'
+            const W = 640,
+                H = 300,
+                padL = 40,
+                padR = 20,
+                padT = 20,
+                padB = 40
+            const svg = document.getElementById('chart')
+            let rects = []
+
+            function restart() {
+                const data = Array.from({ length: 8 }, () => Math.round(Math.random() * 90 + 10))
+                render(data)
+                document.getElementById('out').textContent =
+                    '坐标映射与 Canvas 完全相同，但改为生成 SVG 节点：「声明式 / 保留模式」，图形即 DOM，可缩放不失真。'
+            }
+
+            function render(data) {
+                svg.replaceChildren()
+                const min = Math.min(...data),
+                    max = Math.max(...data),
+                    range = max - min || 1
+                const slot = (W - padL - padR) / data.length
+                const barW = slot * 0.6
+                rects = []
+                data.forEach((v, i) => {
+                    const barH = ((v - min) / range) * (H - padT - padB - 1)
+                    const x = padL + slot * i + slot * 0.2
+                    const y = H - padB - barH
+                    const r = document.createElementNS(svgNS, 'rect')
+                    r.setAttribute('x', x)
+                    r.setAttribute('y', y)
+                    r.setAttribute('width', barW)
+                    r.setAttribute('height', barH)
+                    r.setAttribute('fill', '#4a90d9')
+                    r.addEventListener('click', function () {
+                        this.setAttribute('fill', '#2ecc71')
+                    })
+                    svg.appendChild(r)
+                    rects.push(r)
+
+                    // 数值标签（用一个简单的 text 节点）
+                    const t = document.createElementNS(svgNS, 'text')
+                    t.setAttribute('x', x + barW / 2)
+                    t.setAttribute('y', y - 4)
+                    t.setAttribute('text-anchor', 'middle')
+                    t.setAttribute('font-size', '11')
+                    t.textContent = v
+                    svg.appendChild(t)
+
+                    // 刻度
+                    const ax = document.createElementNS(svgNS, 'text')
+                    ax.setAttribute('x', x + barW / 2)
+                    ax.setAttribute('y', H - 14)
+                    ax.setAttribute('text-anchor', 'middle')
+                    ax.setAttribute('font-size', '11')
+                    ax.textContent = i
+                    svg.appendChild(ax)
+                })
+
+                // 折线 polyline
+                const pts = data
+                    .map((v, i) => {
+                        const x = padL + slot * i + slot / 2
+                        const y = H - padB - ((v - min) / range) * (H - padT - padB - 1)
+                        return x + ',' + y
+                    })
+                    .join(' ')
+                const poly = document.createElementNS(svgNS, 'polyline')
+                poly.setAttribute('points', pts)
+                poly.setAttribute('fill', 'none')
+                poly.setAttribute('stroke', '#e67e22')
+                poly.setAttribute('stroke-width', '2')
+                svg.appendChild(poly)
+            }
+
+            function highlight(on) {
+                if (!rects[3]) return
+                rects[3].setAttribute('fill', on ? '#e74c3c' : '#4a90d9')
+            }
+
+            restart()
+        </script>
+    </body>
+</html>

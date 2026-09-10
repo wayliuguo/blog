@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>MediaSource Extensions 原理 · MSE</title>
+        <style>
+            body {
+                font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #2c3e50;
+                line-height: 1.8;
+            }
+            h1 {
+                border-bottom: 2px solid #3498db;
+                padding-bottom: 8px;
+            }
+            code {
+                background: #f0f2f5;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            pre {
+                background: #f8f9fa;
+                border: 1px solid #e3e7eb;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+                font-size: 13px;
+            }
+            .flow {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                background: #eaf2fb;
+                padding: 12px;
+                border-radius: 6px;
+                margin: 12px 0;
+            }
+            .flow .node {
+                background: #fff;
+                border: 1px solid #9cc3e3;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-weight: 600;
+            }
+            .flow .arrow {
+                color: #2980b9;
+                font-weight: bold;
+            }
+            .status {
+                margin-top: 12px;
+                padding: 12px;
+                border-radius: 6px;
+                background: #fdf3d7;
+                border: 1px solid #f0d48a;
+            }
+            .status.ok {
+                background: #eaf6eb;
+                border-color: #a9d6a9;
+            }
+            .status.err {
+                background: #fbeaea;
+                border-color: #e2a3a3;
+            }
+            video {
+                width: 100%;
+                max-width: 480px;
+                background: #000;
+                border-radius: 8px;
+                margin-top: 10px;
+            }
+            .note {
+                color: #7f8c8d;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>MediaSource Extensions（MSE）流式播放原理</h1>
+        <p>
+            <strong>核心问题</strong>：浏览器原生
+            <code>&lt;video src="..."&gt;</code> 只能播放"整段、自带解码能力"的文件，不认 HLS（m3u8+TS 分片）或 FLV
+            分片。MSE 让 JS 把分片数据 <code>appendBuffer</code> 进 <code>SourceBuffer</code>，浏览器则退化为纯"解封装 +
+            解码 + 渲染"引擎。这就是 hls.js / flv.js 能在浏览器里播协议流的底层来源。
+        </p>
+
+        <h3>数据流</h3>
+        <div class="flow">
+            <span class="node">网络分片</span><span class="arrow">→</span> <span class="node">fetch() 拉取</span
+            ><span class="arrow">→</span> <span class="node">appendBuffer(ArrayBuffer)</span
+            ><span class="arrow">→</span> <span class="node">SourceBuffer</span><span class="arrow">→</span>
+            <span class="node">&lt;video&gt; 解码渲染</span>
+        </div>
+
+        <h3>受控样例说明</h3>
+        <p>
+            真实播放需要合法、已切片、连"首帧即为 IDR 关键帧"的 fMP4 分片数据。为在零依赖、离线环境演示
+            <em>MSE 的工作机理</em>，下面的样例不造假流，而是展示标准接入代码骨架（可对照第一章的 MSE 概念）：
+        </p>
+        <pre>
+const ms = new MediaSource();
+video.src = URL.createObjectURL(ms);
+const codec = 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"';
+ms.addEventListener('sourceopen', () =&gt; {
+  const sb = ms.addSourceBuffer(codec);
+  fetch('seg-0.m4s').then(r=&gt;r.arrayBuffer()).then(buf=&gt;{
+    sb.appendBuffer(buf);          // 把分片喂给浏览器
+    sb.addEventListener('updateend', () =&gt; { /* 继续拉下一片，并做 Buffer 水位管理 */ });
+  });
+});
+  </pre
+        >
+
+        <button id="check">检测当前浏览器 MSE 支持情况</button>
+        <div id="status" class="status">
+            点击按钮检测浏览器对 MediaSource / addSourceBuffer 的支持。结果与说明会在下方展示，页面文字始终可见。
+        </div>
+        <video id="demo" controls muted playsinline></video>
+        <p class="note">
+            原理一句话：MSE 把"数据从哪来、何时喂"的控制权交给
+            JS——浏览器只做解封装、解码、渲染。想真正在线看到画面，需要接入 hls.js 等把 TS/FLV 转成 fMP4
+            的库并使用真实流地址。
+        </p>
+
+        <script>
+            const statusBox = document.getElementById('status')
+            const video = document.getElementById('demo')
+
+            function setStatus(msg, type) {
+                statusBox.textContent = msg
+                statusBox.className = 'status ' + (type || '')
+            }
+
+            function inspectMSE() {
+                const lines = []
+                const hasMSE = 'MediaSource' in window
+                lines.push('MediaSource 是否可用：' + (hasMSE ? '是' : '否'))
+                if (hasMSE) {
+                    lines.push(
+                        'isTypeSupported(video/mp4 H.264)：' +
+                            (MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E"') ? '是' : '否')
+                    )
+                    lines.push(
+                        'isTypeSupported(audio/mp4 AAC)：' +
+                            (MediaSource.isTypeSupported('audio/mp4; codecs="mp4a.40.2"') ? '是' : '否')
+                    )
+                }
+                return lines
+            }
+
+            document.getElementById('check').addEventListener('click', () => {
+                const lines = inspectMSE()
+                const supportVideo = lines[0].indexOf('是') > -1
+                let msg = lines.join('；') + '。'
+                if (supportVideo) {
+                    msg += '当前浏览器支持 MSE，可运行 hls.js / flv.js 播放协议流。'
+                    setStatus(msg, 'ok')
+                } else {
+                    msg += '当前环境不支持/未启用 MSE（可能为非安全上下文，请用 localhost 或 https 访问）。'
+                    setStatus(msg, 'err')
+                }
+            })
+        </script>
+    </body>
+</html>

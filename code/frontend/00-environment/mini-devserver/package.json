@@ -1,0 +1,9 @@
+{
+  "name": "chapter00-environment-mini-devserver",
+  "version": "1.0.0",
+  "private": true,
+  "description": "00-入门与环境：手写最小 DevServer（静态服务 + 文件监听 + SSE 自动刷新）",
+  "scripts": {
+    "start": "node dev-server.js"
+  }
+}

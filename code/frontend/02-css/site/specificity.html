@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>选择器优先级</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 620px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            /* 四种选择器命中同一元素，各自定颜色 / 边框 */
+            div {
+                color: #71717a;
+            } /* 标签    (0,0,0,1) */
+            .cls {
+                color: #2563eb;
+            } /* 类      (0,0,1,0) */
+            #uid {
+                color: #dc2626;
+            } /* ID      (0,1,0,0) */
+            div.cls {
+                border: 2px solid #fbbf24;
+            } /* 组合    (0,0,1,1) */
+            .cls#uid {
+                background: #fef3c7;
+            } /* (0,1,1,0) 更高 */
+            p {
+                font-size: 0.9rem;
+                color: #6b7280;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>优先级：谁更"重"谁生效</h1>
+        <div class="cls" id="uid">我是被四种选择器同时命中的元素</div>
+        <p>
+            上方的文字颜色由下面哪一个决定？
+            <br />– <code>div</code>（标签）<code>(0,0,0,1)</code> <br />– <code>.cls</code>（类）<code>(0,0,1,0)</code>
+            <br />– <code>#uid</code>（ID）<code>(0,1,0,0)</code> ✔（ID 权重最高）
+        </p>
+        <p>
+            规则一句话：内联样式 &gt; ID &gt; (类/属性/伪类) &gt;
+            (标签/伪元素)；<strong>权重相同时，后写的源码获胜</strong>。
+            <br />DevTools 里看到被划掉的样式，就是"优先级输了"或"在样式表中更早"。
+        </p>
+    </body>
+</html>

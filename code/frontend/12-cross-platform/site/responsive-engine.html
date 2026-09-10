@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>02 极简响应式引擎 · 跨端最小实现</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 900px;
+                margin: 30px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+            .panel {
+                border: 1px solid #e3e8ee;
+                border-radius: 8px;
+                padding: 14px 16px;
+                background: #fafbfc;
+                margin-bottom: 16px;
+            }
+            .presets button {
+                background: #eef1f5;
+                color: #333;
+                border: 1px solid #ccd;
+                padding: 6px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                margin-right: 8px;
+            }
+            .presets button.active {
+                background: #0366d6;
+                color: #fff;
+                border-color: #0366d6;
+            }
+            .kv {
+                display: inline-block;
+                background: #eef1f5;
+                border-radius: 4px;
+                padding: 2px 8px;
+                margin-right: 8px;
+                font-size: 13px;
+            }
+            .stage {
+                border: 1px dashed #c5cdd6;
+                border-radius: 8px;
+                padding: 12px;
+                background: #fff;
+            }
+            .grid {
+                display: grid;
+                gap: 10px;
+            }
+            .cell {
+                border-radius: 6px;
+                padding: 12px;
+                color: #fff;
+                opacity: 0.92;
+            }
+            .cell b {
+                display: block;
+                margin-bottom: 4px;
+            }
+            hr {
+                border: none;
+                border-top: 1px solid #eee;
+                margin: 14px 0;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            td,
+            th {
+                border: 1px solid #e3e8ee;
+                padding: 6px 10px;
+                text-align: left;
+            }
+            th {
+                background: #f0f3f7;
+            }
+            code {
+                background: #eef1f5;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            input[type='range'] {
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>02 · 极简响应式引擎</h1>
+        <p>
+            响应式的本质是"<b>一套代码，适配不同宽度</b>"。这里我们用最小代码手写一个响应式引擎：媒体查询断点决定"宽到哪个挡换布局"，视口比例换算决定"字号/间距按什么比例缩放"。拖动宽度，观察两套机制如何协同。
+        </p>
+
+        <div class="panel presets">
+            <b>目标设备宽度（单位 px）：</b>
+            <button type="button" data-w="375">iPhone 375</button>
+            <button type="button" data-w="768">平板 768</button>
+            <button type="button" data-w="1280">桌面 1280</button>
+            <button type="button" data-w="2560">4K 2560</button>
+            <span id="previewNote" style="color: #888; font-size: 13px; margin-left: 8px"></span>
+            <br /><br />
+            <input type="range" id="width" min="320" max="2560" step="1" value="375" />
+            <div style="text-align: right; color: #555; font-size: 14px">当前宽度 <b id="curW"></b>px</div>
+        </div>
+
+        <div class="panel">
+            <b>引擎判定结果：</b>
+            <span class="kv" id="bp"></span>
+            <span class="kv" id="cols"></span>
+            <span class="kv" id="fontPx"></span>
+            <br /><br />
+            <b>视口比例换算（设计稿 375px => 目标宽度）：</b>
+            <table>
+                <tr>
+                    <th>设计稿像素</th>
+                    <th>换算到当前宽度</th>
+                    <th>换算公式</th>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td id="c12"></td>
+                    <td rowspan="5">px = 设计px × (目标宽 / 设计宽375)</td>
+                </tr>
+                <tr>
+                    <td>16</td>
+                    <td id="c16"></td>
+                </tr>
+                <tr>
+                    <td>24</td>
+                    <td id="c24"></td>
+                </tr>
+                <tr>
+                    <td>100</td>
+                    <td id="c100"></td>
+                </tr>
+            </table>
+        </div>
+
+        <h2>渲染结果（同一套模板，引擎决定列数与字号）</h2>
+        <div class="stage"><div id="grid" class="grid"></div></div>
+
+        <hr />
+        <div class="tip" style="background: #fff8e6; border: 1px solid #f5d589; border-radius: 6px; padding: 10px 14px">
+            <b>原理一句话：</b>响应式 = 断点（媒体查询，宽度跨阈值就切换布局结构）+ 视口换算（用 vw/rem
+            等把设计稿尺寸按当前宽度等比缩放）。真实工程只多了一层基于 rem/媒体查询的封装，骨架就是这个 demo。
+        </div>
+
+        <script>
+            // ---- 1. 引擎：媒体查询断点表（Mobile First，向上递进）----
+            var breakpoints = [
+                { min: 0, max: 600, name: '手机档 (<600)', cols: 1, cellBg: '#7cb342' },
+                { min: 601, max: 1024, name: '平板档 (601-1024)', cols: 2, cellBg: '#039be5' },
+                { min: 1025, max: 99999, name: '桌面档 (>=1025)', cols: 3, cellBg: '#8e24aa' }
+            ]
+
+            var DESIGN_W = 375 // 设计稿基准宽度
+            var baseFontDesignPx = 16 // 设计稿上字体为 16px
+
+            // ---- 2. 引擎：断点命中 ----
+            function matchBreakpoint(width) {
+                for (var i = 0; i < breakpoints.length; i++) {
+                    if (width >= breakpoints[i].min && width <= breakpoints[i].max) return breakpoints[i]
+                }
+                return breakpoints[breakpoints.length - 1]
+            }
+
+            // ---- 3. 引擎：视口比例换算 vw 风格 ----
+            function toPx(designPx, width) {
+                // 等价于 width 内的 100vw 中，设计稿像素所占比例
+                return Math.round(designPx * (width / DESIGN_W) * 10) / 10
+            }
+
+            var cards = []
+            for (var i = 1; i <= 6; i++) {
+                cards.push({ title: '卡片 ' + i, desc: '同一份模板数据' })
+            }
+
+            function render(width) {
+                var bp = matchBreakpoint(width)
+                var fontPx = toPx(baseFontDesignPx, width)
+
+                document.getElementById('curW').textContent = width
+                document.getElementById('bp').textContent = '断点：' + bp.name
+                document.getElementById('cols').textContent = '列数：' + bp.cols
+                document.getElementById('fontPx').textContent = '基准字号 ≈ ' + fontPx + 'px'
+
+                document.getElementById('c12').textContent = toPx(12, width) + 'px'
+                document.getElementById('c16').textContent = toPx(16, width) + 'px'
+                document.getElementById('c24').textContent = toPx(24, width) + 'px'
+                document.getElementById('c100').textContent = toPx(100, width) + 'px'
+
+                var grid = document.getElementById('grid')
+                grid.style.gridTemplateColumns = 'repeat(' + bp.cols + ', 1fr)'
+                grid.innerHTML = ''
+                cards.forEach(function (card) {
+                    var cell = document.createElement('div')
+                    cell.className = 'cell'
+                    cell.style.background = bp.cellBg
+                    cell.style.fontSize = fontPx + 'px'
+                    cell.innerHTML = '<b>' + card.title + '</b>' + card.desc
+                    grid.appendChild(cell)
+                })
+
+                // 高亮当前预设按钮
+                document.querySelectorAll('.presets button').forEach(function (b) {
+                    var w = Number(b.getAttribute('data-w'))
+                    b.classList.toggle('active', w === width)
+                })
+            }
+
+            var slider = document.getElementById('width')
+            slider.addEventListener('input', function () {
+                render(Number(slider.value))
+            })
+
+            document.querySelectorAll('.presets button').forEach(function (b) {
+                b.onclick = function () {
+                    slider.value = b.getAttribute('data-w')
+                    render(Number(slider.value))
+                }
+            })
+
+            render(375)
+        </script>
+    </body>
+</html>

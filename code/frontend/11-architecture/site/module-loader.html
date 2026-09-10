@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>03 模块化/微前端:按需加载模块</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            pre {
+                background: #f6f8fa;
+                border: 1px solid #e1e4e8;
+                border-radius: 6px;
+                padding: 12px;
+                overflow: auto;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+            card,
+            .card {
+                border: 1px solid #e3e8ee;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin: 12px 0;
+                display: block;
+            }
+            .card strong {
+                color: #0366d6;
+            }
+            button {
+                margin: 4px 8px 4px 0;
+                padding: 6px 12px;
+                cursor: pointer;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+            }
+            th,
+            td {
+                border: 1px solid #e1e4e8;
+                padding: 8px;
+                text-align: left;
+                font-size: 14px;
+            }
+            th {
+                background: #f6f8fa;
+            }
+            .ok {
+                color: #22863a;
+            }
+            .warn {
+                color: #b08800;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>03 模块化/微前端：按需加载模块</h1>
+        <p>
+            微前端的本质之一,就是<b>模块可以独立、按需地加载</b>:业务不需要某个模块时,绝不去下载/执行它;一旦用到,才把它拉进来并缓存。下面用一个"远程模块注册表"模拟这套机制。
+        </p>
+
+        <h2>按需加载机制(点击按钮体验)</h2>
+        <div class="card">
+            已加载的模块:<strong id="loadedStates"></strong> <span id="loadedHint"></span><br />
+            <button onclick="load('auth')">加载 auth 模块</button>
+            <button onclick="load('cart')">加载 cart 模块</button>
+            <button onclick="load('ads')">加载 ads 模块</button>
+            <button onclick="runAuth()">auth:登录模拟</button>
+            <button onclick="runCart()">cart:加入购物车</button>
+        </div>
+        <pre id="log"></pre>
+
+        <h2>模块注册表(约 15 行)</h2>
+        <pre id="registryCode"></pre>
+
+        <h2>import map 与按需加载对比</h2>
+        <p>
+            ES Module 里,import map 的作用是把"裸模块名"(如 <code>import React from 'react'</code>)在运行时映射成真正的
+            URL;而按需加载/代码分割则是"用到才 import"。两者配合,就能做到"一个运行时里,各微模块各自版本、按需现取"。
+        </p>
+        <table>
+            <tr>
+                <th>机制</th>
+                <th>解决什么</th>
+                <th>怎么工作</th>
+                <th>前端场景</th>
+            </tr>
+            <tr>
+                <td>import map</td>
+                <td>运行时解析裸模块名</td>
+                <td>浏览器按映射表替换 specifier 为 URL</td>
+                <td>微前端运行时、共享第三方库</td>
+            </tr>
+            <tr>
+                <td>动态 import 按需加载</td>
+                <td>用到才取、少下载</td>
+                <td>import() 返回 Promise,触发 fetch 并缓存</td>
+                <td>路由懒加载、组件懒加载</td>
+            </tr>
+            <tr>
+                <td>远程模块(Webpack Module Federation)</td>
+                <td>让多个应用在运行时共享模块</td>
+                <td>应用暴露/引用其他应用的模块,按需加载</td>
+                <td>微前端多个子应用共享与隔离</td>
+            </tr>
+        </table>
+
+        <p class="ok">
+            尝试顺序:先点"加载
+            auth"再点"auth:登录模拟"——你会在日志里看到"首次加载并执行";再点一次则直接命中缓存,不再重新执行。这就是"按需
+            + 缓存"的最小形态。
+        </p>
+
+        <script>
+            // ---- 远程模块注册表:每个模块 = 名称 + 一个"工厂函数"(相当于远程代码) ----
+            var registry = {
+                auth: {
+                    dep: [],
+                    factory: function () {
+                        return {
+                            login: function (u) {
+                                return '欢迎,' + u
+                            }
+                        }
+                    }
+                },
+                cart: {
+                    dep: ['auth'],
+                    factory: function () {
+                        return {
+                            add: function () {
+                                return '已加入购物车'
+                            }
+                        }
+                    }
+                },
+                ads: {
+                    dep: [],
+                    factory: function () {
+                        return {
+                            show: function () {
+                                return '广告已展示'
+                            }
+                        }
+                    }
+                }
+            }
+            document.getElementById('registryCode').textContent = JSON.stringify(registry, null, 2)
+
+            var loaded = {}
+            function log(msg) {
+                var pre = document.getElementById('log')
+                pre.textContent = msg + '\n' + pre.textContent
+            }
+            function renderLoaded() {
+                var names = Object.keys(loaded)
+                document.getElementById('loadedStates').textContent = names.length ? names.join(', ') : '(尚未加载)'
+                document.getElementById('loadedHint').textContent = '共 ' + names.length + ' 个模块'
+            }
+            // ---- 真正意义上的"按需加载":首次用到才执行,之后命中缓存 ----
+            function load(name) {
+                var mod = registry[name]
+                if (!mod) return log('Error: 未知模块 ' + name)
+                if (loaded[name]) {
+                    log('按需加载: ' + name + ' 已在缓存,直接复用(不重新执行,factory 未运行)')
+                    return loaded[name]
+                }
+                // 先加载它的依赖(递归的按需)
+                ;(mod.dep || []).forEach(function (d) {
+                    load(d)
+                })
+                log('按需加载: 首次加载并执行 ' + name + ' 的 factory')
+                loaded[name] = mod.factory()
+                renderLoaded()
+                return loaded[name]
+            }
+            function runAuth() {
+                var m = load('auth')
+                log('调用 auth.login -> ' + m.login('张三'))
+            }
+            function runCart() {
+                var m = load('cart')
+                log('调用 cart.add  -> ' + m.add() + '(依赖的 auth 也已就绪)')
+            }
+            renderLoaded()
+        </script>
+    </body>
+</html>

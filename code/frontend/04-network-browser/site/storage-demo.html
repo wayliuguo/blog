@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>浏览器存储：localStorage / sessionStorage / Cookie</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 680px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 10px;
+                border-radius: 6px;
+                white-space: pre-wrap;
+            }
+            button {
+                cursor: pointer;
+                padding: 6px 14px;
+                margin: 4px 6px 4px 0;
+            }
+            .warn {
+                background: #fffbeb;
+                color: #92400e;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>浏览器存储：localStorage / sessionStorage / Cookie</h1>
+        <p>
+            演示三者读写。刷新页面看 localStorage 还在、sessionStorage 仍在本标签页；关掉标签页后 sessionStorage
+            消失、localStorage 保留；Cookie 会随请求携带。
+        </p>
+
+        <div>
+            <h2>写入</h2>
+            <button id="btn-ls">写入 localStorage（key=note_ls）</button>
+            <button id="btn-ss">写入 sessionStorage（key=note_ss）</button>
+            <button id="btn-c">写入 Cookie（key=note_cookie）</button>
+        </div>
+
+        <div>
+            <h2>读取</h2>
+            <button id="btn-r">读取三者</button>
+            <button id="btn-clear-ls">清空 localStorage</button>
+        </div>
+
+        <pre id="out"></pre>
+
+        <p class="warn">
+            提示：Cookie 的 HttpOnly 属性在本页由 JS 写入时看不到；真正的防御性设置由服务端响应头下发（见正文）。
+        </p>
+
+        <script>
+            var outEl = document.querySelector('#out')
+            function show(prefix, value) {
+                outEl.textContent += prefix + ' = ' + value + '\n'
+            }
+
+            document.querySelector('#btn-ls').addEventListener('click', function () {
+                localStorage.setItem('note_ls', '我会持久保存，直到被手动清除')
+                outEl.textContent += '已写入 localStorage.note_ls\n'
+            })
+            document.querySelector('#btn-ss').addEventListener('click', function () {
+                sessionStorage.setItem('note_ss', '关闭标签页后我就没了')
+                outEl.textContent += '已写入 sessionStorage.note_ss\n'
+            })
+            document.querySelector('#btn-c').addEventListener('click', function () {
+                document.cookie = 'note_cookie=随请求携带; Path=/; Max-Age=86400'
+                outEl.textContent += '已写入 Cookie.note_cookie（会话内有效）\n'
+            })
+
+            document.querySelector('#btn-r').addEventListener('click', function () {
+                outEl.textContent += '----- 读取结果 -----\n'
+                show('localStorage.note_ls', localStorage.getItem('note_ls'))
+                show('sessionStorage.note_ss', sessionStorage.getItem('note_ss'))
+                show('document.cookie', document.cookie)
+            })
+
+            document.querySelector('#btn-clear-ls').addEventListener('click', function () {
+                localStorage.removeItem('note_ls')
+                outEl.textContent += '已清空 localStorage.note_ls\n'
+            })
+        </script>
+    </body>
+</html>

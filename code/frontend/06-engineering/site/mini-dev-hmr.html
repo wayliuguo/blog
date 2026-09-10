@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>04 热更新思路:轮询本地信号</title>
+        <style>
+            body {
+                font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                max-width: 760px;
+                margin: 40px auto;
+                padding: 0 20px;
+                color: #333;
+                line-height: 1.7;
+            }
+            code {
+                background: #f6f8fa;
+                padding: 2px 5px;
+                border-radius: 4px;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 15px;
+                cursor: pointer;
+            }
+            .ok {
+                color: #1a7f37;
+            }
+            .warn {
+                color: #cf222e;
+            }
+            h1,
+            h2 {
+                color: #2c3e50;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>04 热更新思路:轮询本地信号</h1>
+        <p>
+            真实 HMR 依赖 WebSocket 推送"变更信号"。这里退而求其次,用最朴素的思路复现同样效果:<b
+                >定时 fetch 一份 json 作为"文件变更信号"</b
+            >,版本一变就触发"更新"。这串流程就是 dev-server 的最小骨架。
+        </p>
+
+        <h2>轮询状态</h2>
+        <p id="status">初始化中...</p>
+
+        <h2>当前"产物版本"</h2>
+        <p id="version">-</p>
+
+        <h2>操作</h2>
+        <p>
+            <button onclick="bumpVersion()">模拟 dev-server 重新编译(版本 +1)</button>
+            <button onclick="resetTimer()">重置本轮观察</button>
+        </p>
+
+        <h2>更新记录</h2>
+        <pre id="log"></pre>
+
+        <script>
+            var url = 'signal.json'
+            var currentVersion = -1
+            var baseVersion = 1
+            var logEl = document.getElementById('log')
+            var statusEl = document.getElementById('status')
+            var versionEl = document.getElementById('version')
+
+            function appendLog(text) {
+                var pre = logEl.textContent
+                logEl.textContent = (pre ? pre + '\n' : '') + text
+            }
+
+            function render(version) {
+                currentVersion = version
+                versionEl.textContent = 'v' + version
+                statusEl.textContent = '已同步最新版本 v' + version + ',正在等待下一个变更信号...'
+                statusEl.className = 'ok'
+                appendLog('[HMR] 应用新版本 v' + version + '(热更新:仅替换变了的部分,不整页刷新)')
+            }
+
+            // 模拟"fetch 到本地 json 里的版本号",版本变化视作文件被改动
+            function poll() {
+                fetch(url)
+                    .then(function (r) {
+                        return r.json()
+                    })
+                    .then(function (data) {
+                        var v = data.version
+                        if (currentVersion === -1) {
+                            appendLog('[HMR] 首次连上 dev-server,同步最新版本 v' + v)
+                            render(v)
+                        } else if (v !== currentVersion) {
+                            appendLog('[FETCH] 检测到文件变更信号 (v' + currentVersion + ' -> v' + v + ')')
+                            render(v)
+                        } else {
+                            appendLog('[POLL] 无变更,仍在 v' + v)
+                        }
+                    })
+                    .catch(function (e) {
+                        statusEl.textContent = '无法 fetch 本地信号: ' + e.message
+                        statusEl.className = 'warn'
+                    })
+            }
+
+            function bumpVersion() {
+                baseVersion += 1
+                appendLog('--- 用户点击:模拟 dev-server 重编译生成 v' + baseVersion + ' ---')
+                render(baseVersion)
+            }
+
+            function resetTimer() {
+                appendLog('=== 重置本轮观察 ===')
+            }
+
+            // 每 2 秒轮询一次(fetch 本地 signal.json)
+            var timer = setInterval(poll, 2000)
+            poll()
+        </script>
+    </body>
+</html>

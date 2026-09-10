@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>出码 · 操作转代码/JSON</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    'PingFang SC',
+                    'Microsoft YaHei',
+                    sans-serif;
+                background: #f5f7fa;
+                color: #1f2329;
+                padding: 24px;
+                line-height: 1.6;
+            }
+            h1 {
+                font-size: 22px;
+                margin-bottom: 6px;
+            }
+            .desc {
+                color: #6b7380;
+                font-size: 14px;
+                margin-bottom: 18px;
+            }
+            .cols {
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+            }
+            .panel {
+                flex: 1 1 360px;
+                background: #fff;
+                border-radius: 12px;
+                padding: 18px 20px;
+                box-shadow: 0 1px 4px rgba(31, 35, 41, 0.06);
+            }
+            h2 {
+                font-size: 15px;
+                margin-bottom: 12px;
+                color: #374151;
+            }
+            .row {
+                margin-bottom: 14px;
+            }
+            .row label {
+                display: block;
+                font-size: 13px;
+                color: #4b5563;
+                margin-bottom: 5px;
+            }
+            .row input,
+            .row select,
+            .row textarea {
+                width: 100%;
+                padding: 8px 10px;
+                border: 1px solid #d0d5dd;
+                border-radius: 8px;
+                font-size: 14px;
+            }
+            textarea {
+                min-height: 64px;
+                resize: vertical;
+            }
+            button {
+                background: #2f6bff;
+                color: #fff;
+                border: none;
+                padding: 9px 18px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                margin-right: 8px;
+            }
+            button:hover {
+                background: #1e53d8;
+            }
+            button.alt {
+                background: #6b7280;
+            }
+            pre {
+                background: #1e2530;
+                color: #d7e0ff;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 13px;
+                overflow: auto;
+                margin-top: 12px;
+            }
+            .tab {
+                display: none;
+            }
+            .tab.active {
+                display: block;
+            }
+            .tabs {
+                display: flex;
+                gap: 6px;
+                margin-bottom: 4px;
+            }
+            .tab-btn {
+                background: #eef2ff;
+                color: #2f6bff;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 14px;
+                cursor: pointer;
+                font-size: 13px;
+            }
+            .tab-btn.active {
+                background: #2f6bff;
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>出码 · 把一个操作转成可复用代码</h1>
+        <p class="desc">
+            低代码“出码”：把语义操作归一成 DSL，再映射成目标代码。下面录入一个交互需求，一键产出 Schema 与等价 HTML/JS。
+        </p>
+
+        <div class="cols">
+            <div class="panel">
+                <h2>1. 录入操作（配置）</h2>
+                <div class="row">
+                    <label>组件</label>
+                    <select id="component">
+                        <option value="button">按钮 Button</option>
+                        <option value="link">文字链接 Link</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <label>文字</label>
+                    <input id="text" value="点我出 hello" />
+                </div>
+                <div class="row">
+                    <label>点击动作</label>
+                    <select id="action">
+                        <option value="alert">弹出提示 alert()</option>
+                        <option value="console">打印到控制台</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <label>提示内容</label>
+                    <input id="payload" value="hello" />
+                </div>
+                <button id="gen">生成代码</button>
+            </div>
+
+            <div class="panel">
+                <h2>2. 出码产物</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="tabSchema">Schema</button>
+                    <button class="tab-btn" data-tab="tabHtml">HTML/JS</button>
+                </div>
+                <div id="tabSchema" class="tab active"><pre id="schemaOut">{}</pre></div>
+                <div id="tabHtml" class="tab"><pre id="htmlOut">&lt;!-- 生成后显示 --&gt;</pre></div>
+            </div>
+        </div>
+
+        <script>
+            // —— Parser：操作配置 → DSL（Schema）——
+            function parseToSchema() {
+                const comp = document.getElementById('component').value
+                const text = document.getElementById('text').value || '按钮'
+                const action = document.getElementById('action').value
+                const payload = document.getElementById('payload').value || 'hello'
+                return {
+                    version: 1,
+                    component: comp === 'button' ? 'Button' : 'Link',
+                    props: { text: text },
+                    events: { onClick: { type: action === 'alert' ? 'alert' : 'console', payload: payload } }
+                }
+            }
+
+            // —— Compiler + Generator：Schema → 目标代码 ——
+            function generateHtml(schema) {
+                const tag = schema.component === 'Button' ? 'button' : 'a'
+                const text = schema.props.text
+                const ev = schema.events.onClick
+                const handler =
+                    ev.type === 'alert' ? 'alert("' + ev.payload + '")' : 'console.log("' + ev.payload + '")'
+                return '<' + tag + ' onclick="' + handler + '">' + text + '</' + tag + '>'
+            }
+
+            function render() {
+                const schema = parseToSchema()
+                document.getElementById('schemaOut').textContent = JSON.stringify(schema, null, 2)
+                document.getElementById('htmlOut').textContent = generateHtml(schema)
+            }
+
+            document.getElementById('gen').addEventListener('click', render)
+
+            // 产物 tab 切换
+            document.querySelectorAll('.tab-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.tab-btn').forEach(function (b) {
+                        b.classList.remove('active')
+                    })
+                    document.querySelectorAll('.tab').forEach(function (t) {
+                        t.classList.remove('active')
+                    })
+                    btn.classList.add('active')
+                    document.getElementById(btn.dataset.tab).classList.add('active')
+                })
+            })
+
+            render()
+        </script>
+    </body>
+</html>
