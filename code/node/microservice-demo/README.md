@@ -60,3 +60,11 @@ curl -X POST http://localhost:3000/orders \
 - 网关与微服务、微服务之间均使用 `@nestjs/microservices` 的 `Transport.TCP` 传输。
 - 各服务通过 `ClientsModule.register` 注册 `ClientProxy`，再用 `client.send({ cmd }, payload)` 发起请求。
 - 控制端通过 `firstValueFrom` 将 Observable 转为 Promise 以便 `async/await` 调用。
+
+## 预期输出
+
+- 前置：`npm install`；按序启动 `user-service`(3001) → `order-service`(3002) → `api-gateway`(3000)。
+- 各服务启动后分别打印 TCP 监听端口；网关额外打印 HTTP 监听 `http://localhost:3000`。
+- `curl http://localhost:3000/users/1` 经网关 TCP 调用 user-service 返回对应用户信息。
+- `POST http://localhost:3000/orders`（body `{"userId":1,...}`）触发 order-service 再 TCP 调用 user-service 校验 userId，校验通过返回创建结果。
+- 若先启动网关而下游微服务未起，调用会因 TCP 连接失败报错，印证「先起下游再起网关」的顺序要求。

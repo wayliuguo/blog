@@ -190,3 +190,10 @@ npm run migration:show
 | price | decimal(10,2) | 价格 |
 | stock | int | 库存，默认 0 |
 | createdAt | datetime | 创建时间 |
+
+## 预期输出
+
+- 前置：Node 18+、MySQL 8.0+、Redis 6+；`npm install` → `npm run migration:run` 建表 → `npm start`（默认 3000）。
+- 启动日志显示服务监听 `http://localhost:3000`，中间件（cors / 日志 / 认证 / 校验）按序挂载。
+- `POST /api/auth/register` 注册、`POST /api/auth/login` 返回 JWT；带 Token 访问 `/api/users` 返回用户列表，未带 Token 返回 401。
+- 强依赖外部 MySQL/Redis，未配置或不可达时会在启动或首次查询报连接错误，请先保证两个服务可达。

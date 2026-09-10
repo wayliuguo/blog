@@ -1,0 +1,19 @@
+{
+  "name": "redis-demo",
+  "version": "1.0.0",
+  "description": "《Node.js 后端知识体系》模块四 数据与缓存 / Redis 配套可运行示例",
+  "main": "src/client.js",
+  "scripts": {
+    "types": "node src/01-data-types.js",
+    "expire": "node src/02-expire.js",
+    "cache": "node src/03-cache.js",
+    "lock": "node src/04-lock.js",
+    "limit": "node src/05-rate-limit.js",
+    "rank": "node src/06-rank.js",
+    "pubsub": "node src/07-pubsub.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ioredis": "^5.4.1"
+  }
+}
