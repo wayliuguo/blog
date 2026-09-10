@@ -1,0 +1,21 @@
+{
+  "name": "net-lab",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 模块二「网络底层」配套实验（TCP/粘包拆包/HTTP/SSE/WebSocket）",
+  "type": "commonjs",
+  "scripts": {
+    "01": "node src/01-tcp-server.js",
+    "02": "node src/02-tcp-client.js",
+    "03": "node src/03-sticky-packet.js",
+    "04s": "node src/04-protocol-server.js",
+    "04c": "node src/04-protocol-client.js",
+    "05": "node src/05-http-server.js",
+    "06": "node src/06-keepalive.js",
+    "07": "node src/07-sse.js",
+    "08": "node src/08-websocket.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "MIT"
+}

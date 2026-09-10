@@ -1,0 +1,24 @@
+{
+  "name": "node-basics",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 模块一「运行环境」配套实验（事件循环/Buffer/Stream/进程线程/优雅关闭）",
+  "type": "commonjs",
+  "scripts": {
+    "01cjs": "node src/01-module-cjs.cjs",
+    "01esm": "node src/01-module-esm.mjs",
+    "02": "node src/02-async-serial.js",
+    "03": "node src/03-async-parallel.js",
+    "04": "node src/04-eventloop-order.js",
+    "05": "node src/05-microtask-checkpoint.js",
+    "06": "node src/06-nexttick-starve.js",
+    "07": "node src/07-buffer.js",
+    "08": "node src/08-stream-copy.js",
+    "09": "node src/09-backpressure.js",
+    "10": "node src/10-child-process.js",
+    "11": "node src/11-worker-thread.js",
+    "12": "node src/12-graceful-shutdown.js",
+    "13": "node src/13-fs-dir.js",
+    "14": "node src/14-error-fallback.js"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "mysql-demo",
+  "version": "1.0.0",
+  "description": "《Node.js 后端知识体系》模块四「数据与缓存 / 数据库」MySQL 配套示例，刻意不用 ORM，直接用 mysql2 原生驱动。",
+  "type": "commonjs",
+  "main": "src/db.js",
+  "scripts": {
+    "crud": "node src/01-crud.js",
+    "join": "node src/02-join.js",
+    "index": "node src/03-index.js",
+    "explain": "node src/04-explain.js",
+    "tx": "node src/05-transaction.js",
+    "oversell": "node src/06-oversell.js",
+    "lock": "node src/07-lock.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.11.0"
+  }
+}

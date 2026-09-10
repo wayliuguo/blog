@@ -147,3 +147,10 @@ Authorization: Bearer <accessToken>
 | updatedAt | datetime | 更新时间 |
 
 > 开发阶段 `DB_SYNCHRONIZE=true` 可自动建表；生产环境请设为 `false` 并使用 TypeORM migration 管理表结构。
+
+## 预期输出
+
+- 前置：Node 20+、MySQL 8.0+、Redis 6+；`npm install` → `npm run migration:run`（或 `DB_SYNCHRONIZE=true` 自动建表）→ `npm run start:dev`（默认 3000，`/api` 前缀）。
+- 启动后 Swagger 文档在 `http://localhost:3000/api/docs`；`POST /api/auth/login` 返回 JWT。
+- 带 Token 访问 `GET /api/users` 返回用户列表；`GET /api/health` 返回健康状态；缺 Token 返回 401。
+- 强依赖外部数据库/缓存，未配置或不可达时启动或首请求报错，请先保证服务可达。
