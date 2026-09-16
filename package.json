@@ -14,7 +14,7 @@
         "commit": "git-cz"
     },
     "lint-staged": {
-        "code/**/*.{js,jsx,ts,tsx}": [
+        "**/code/**/*.{js,jsx,ts,tsx}": [
             "echo 'Linting started for staged files...'",
             "prettier --write .",
             "echo 'Linting finished for staged files...'"

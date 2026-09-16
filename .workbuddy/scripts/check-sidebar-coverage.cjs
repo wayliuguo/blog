@@ -10,8 +10,11 @@ const files = []
 ;(function walk(d) {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
         const p = path.join(d, e.name)
-        if (e.isDirectory()) walk(p)
-        else if (e.name.endsWith('.md')) files.push(path.relative(ROOT, p).replace(/\\/g, '/'))
+        // 各模块目录下的 code/ 是配套示例代码，不是站点页面，不参与侧边栏覆盖检查
+        if (e.isDirectory()) {
+            if (e.name === 'code') continue
+            walk(p)
+        } else if (e.name.endsWith('.md')) files.push(path.relative(ROOT, p).replace(/\\/g, '/'))
     }
 })(path.join(ROOT, 'node'))
 
