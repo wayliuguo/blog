@@ -399,33 +399,24 @@ async function search(queryVector: number[], topK = 5) {
 
 > 决策模型：纯业务系统、强一致性交易 → MySQL；需要 JSONB 灵活建模、复杂分析或向量相似度检索 → PostgreSQL。一个常见后端组合是"MySQL 管账户与订单 + PostgreSQL 管业务运行数据与文档向量"。
 
----
+## 小结
 
-## 面试题
-
-### Q1: PostgreSQL 的 JSONB 和 MySQL 的 JSON 有什么区别？为什么业务场景常用 JSONB？
-
-JSONB 以二进制解析后存储，支持建 GIN 索引做包含查询，读取快；JSON 是文本原样存，每次查询都要解析，难以高效索引。业务系统的接口调用参数、运行 metadata 结构不稳定且需要按字段检索，JSONB + GIN 正好匹配。
-
-### Q2: 用 pgvector 做向量检索的基本流程是什么？
-
-文本切块（Chunk）→ 用 Embedding 模型转成向量存入 `VECTOR(1536)` → 用户查询同样转向量 → 用 `<=>` 余弦距离做相似度排序取 TopK → 把最相关文本块作为相似度结果返回。
-
-### Q3: PG 的 MVCC 和 MySQL 有什么不同？为什么会有"表膨胀"？
-
-MySQL 旧版本存在 undo log 里，由 purge 自动清理；PG 的旧行直接留在表里变成 dead tuple，需要 VACUUM 回收。频繁 UPDATE/DELETE 又不及时 VACUUM，dead tuple 堆积导致表膨胀、查询变慢。
-
-### Q4: 什么时候该用 PostgreSQL 而不是 MySQL？
-
-需要 JSONB 灵活建模、复杂窗口函数/CTE 分析、地理信息（PostGIS）、或向量检索（pgvector）时选 PG；纯交易型业务选 MySQL 即可。两者常组合使用。
-
-### Q5: 部分索引（Partial Index）解决什么问题？
-
-只对满足 WHERE 条件的一部分行建索引，体积更小、写入更快。适合"大部分数据不常被查、只有小部分状态热门"的场景，例如只对 `status = 'running'` 的运行记录建索引。
+- **PG 与 MySQL 的定位差异**：MySQL 管业务交易，PG 强在标准、强类型与扩展生态，处理半结构化与分析负载更顺手
+- **强数据类型**：UUID 主键避免自增 ID 被遍历、`TEXT[]` 数组省掉关联表、ENUM 限定取值、JSONB 承载半结构化字段
+- **JSON 与 JSONB 的差别**：JSON 文本原样存、不能建索引；JSONB 二进制存、可建 GIN 索引，用 `->` / `->>` 取值、`@>` 做包含判断
+- **窗口函数、CTE 与 UPSERT**：`ROW_NUMBER() OVER (PARTITION BY ...)` 取组内最新一条，`WITH` 让多步逻辑可读，`ON CONFLICT (run_id) DO UPDATE SET ... = EXCLUDED....` 做幂等写入
+- **PG 的索引家族**：B-Tree 管等值与范围、GIN 管 JSONB 与数组、GiST 管几何与范围重叠；部分索引只索引一部分行，表达式索引对函数结果建索引
+- **EXPLAIN ANALYZE 读法**：它会真执行并给真实耗时；大表出现 `Seq Scan` 先问为什么没走索引，`rows` 与 `actual rows` 偏差大说明统计信息过期、要 ANALYZE
+- **MVCC 与 VACUUM 的差异**：MySQL 旧版本存在 undo log 由 purge 线程清理；PG 旧行就是表里的 dead tuple，必须 VACUUM 回收，否则表持续膨胀、越查越慢
+- **向量相似度检索**：把文本转成定长向量（如 1536 维）存进 `VECTOR(1536)` 列，用余弦距离 `<=>` 取 TopK；百万级以内用 IVFFlat，新项目直接用 HNSW
+- **NestJS + Prisma 集成 PG**：Prisma 没有 VECTOR 原生类型，用 `Unsupported("vector(1536)")` 透传；写入与 TopK 查询走 `$executeRaw` / `$queryRaw`，HNSW 索引在 migration 里手写
+- **PG 与 MySQL 选型决策**：纯业务系统与强一致交易选 MySQL；要 JSONB 灵活建模、复杂分析或相似度检索选 PG，常见组合是两者并存
 
 ---
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MongoDB 进阶](./06-MongoDB%20进阶)
 - 下一篇：[Redis 基础与数据类型](../06-Redis/01-Redis%20基础与数据类型)

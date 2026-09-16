@@ -150,23 +150,21 @@ export class AppController {
 }
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q1: 依赖注入的好处是什么？
-
-降低耦合度（类不直接创建依赖，只声明需要什么）、提高可测试性（可以注入 Mock 对象）、提高代码可维护性（修改依赖实现方式不影响使用者）。
-
-### Q2: `@Injectable()` 和 `@Controller()` 的区别？
-
-`@Controller()` 标记一个类为控制器，负责处理请求和返回响应，它本身也是一个 Provider。`@Injectable()` 标记一个类为普通的 Provider，可以被注入到其他类中。两者最终都由 DI 容器管理。
+- **手动 new 的三个代价**：与实现紧耦合、没法替换 Mock 做单测、改构造方式要改所有调用点
+- **@Injectable() 真正的作用**：把类登记进 DI 容器的"可被注入"名单，没有它容器根本不认识这个类
+- **构造函数注入一行三用**：`private readonly userService: UserService` 同时声明了字段、类型和依赖
+- **容器解析的四步流程**：发现 `@Injectable` → 分析构造参数类型 → 递归创建依赖实例 → 注入并返回
+- **useClass**：`{ provide: UserService, useClass: UserService }`，Token 就是类本身，最常用的一种
+- **useValue**：`{ provide: 'CONFIG', useValue: { port: 3000 } }` 注入常量或配置对象，取值要配 `@Inject('CONFIG')`
+- **useFactory**：`{ provide: 'DB_CONNECTION', useFactory: cfg => ..., inject: [ConfigService] }`，用于需要运行时逻辑或异步的实例
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/nestjs-mini`。
+本篇的可运行示例在仓库 `node/07-NestJS 入门/code/nestjs-mini`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -179,5 +177,7 @@ export class AppController {
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[快速上手](./01-快速上手)
 - 下一篇：[模块与提供器](./03-模块与提供器)

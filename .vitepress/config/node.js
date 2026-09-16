@@ -1,19 +1,17 @@
 export default [
     {
-        text: '阅读顺序',
-        link: '/node/index'
-    },
-    {
         text: '模块一 · 运行环境',
         collapsed: false,
         items: [
             { text: '01-Node.js 是什么', link: '/node/01-运行环境/01-Node.js 是什么' },
             { text: '02-模块系统与包管理', link: '/node/01-运行环境/02-模块系统与包管理' },
-            { text: '03-事件循环', link: '/node/01-运行环境/03-事件循环' },
+            { text: '03-事件循环：六个阶段与微任务', link: '/node/01-运行环境/03-事件循环：六个阶段与微任务' },
             { text: '04-异步编程与事件驱动', link: '/node/01-运行环境/04-异步编程与事件驱动' },
-            { text: '05-内置模块与文件操作', link: '/node/01-运行环境/05-内置模块与文件操作' },
+            { text: '05-Buffer 与 Stream', link: '/node/01-运行环境/05-Buffer 与 Stream' },
             { text: '06-进程线程与优雅退出', link: '/node/01-运行环境/06-进程线程与优雅退出' },
-            { text: '07-运行机制收束', link: '/node/01-运行环境/07-运行机制收束' }
+            { text: '07-运行机制收束', link: '/node/01-运行环境/07-运行机制收束' },
+            { text: '模块总结（运行环境）', link: '/node/01-运行环境/总结' },
+            { text: '模块面试题（运行环境）', link: '/node/01-运行环境/面试题' }
         ]
     },
     {
@@ -24,7 +22,9 @@ export default [
             { text: '01-TCP 与 Socket 编程', link: '/node/03-网络编程与实时通信/01-TCP 与 Socket 编程' },
             { text: '02-HTTP 与 HTTPS 深入', link: '/node/03-网络编程与实时通信/02-HTTP 与 HTTPS 深入' },
             { text: '03-WebSocket 与 SSE 实时通信', link: '/node/03-网络编程与实时通信/03-WebSocket 与 SSE 实时通信' },
-            { text: '04-一次请求完整经历了什么', link: '/node/03-网络编程与实时通信/04-一次请求完整经历了什么' }
+            { text: '04-一次请求完整经历了什么', link: '/node/03-网络编程与实时通信/04-一次请求完整经历了什么' },
+            { text: '模块总结（网络底层）', link: '/node/03-网络编程与实时通信/总结' },
+            { text: '模块面试题（网络底层）', link: '/node/03-网络编程与实时通信/面试题' }
         ]
     },
     {
@@ -36,7 +36,9 @@ export default [
             { text: '03-Express 项目模板', link: '/node/04-Express 与 Koa/03-Express 项目模板' },
             { text: '04-Express 源码分析', link: '/node/04-Express 与 Koa/04-Express 源码分析' },
             { text: '05-Koa 项目模板', link: '/node/04-Express 与 Koa/05-Koa 项目模板' },
-            { text: '06-Koa 源码分析', link: '/node/04-Express 与 Koa/06-Koa 源码分析' }
+            { text: '06-Koa 源码分析', link: '/node/04-Express 与 Koa/06-Koa 源码分析' },
+            { text: '模块总结（Web 框架基础）', link: '/node/04-Express 与 Koa/总结' },
+            { text: '模块面试题（Web 框架基础）', link: '/node/04-Express 与 Koa/面试题' }
         ]
     },
     {
@@ -66,7 +68,9 @@ export default [
                     { text: '04-Redis 缓存实战', link: '/node/06-Redis/04-Redis 缓存实战' },
                     { text: '05-Redis 进阶', link: '/node/06-Redis/05-Redis 进阶' }
                 ]
-            }
+            },
+            { text: '模块总结（数据与缓存）', link: '/node/05-数据库/总结' },
+            { text: '模块面试题（数据与缓存）', link: '/node/05-数据库/面试题' }
         ]
     },
     {
@@ -106,7 +110,9 @@ export default [
                     },
                     { text: '12-IoC 与依赖注入原理', link: '/node/08-NestJS 进阶/12-IoC 与依赖注入原理' }
                 ]
-            }
+            },
+            { text: '模块总结（后端架构）', link: '/node/07-NestJS 入门/总结' },
+            { text: '模块面试题（后端架构）', link: '/node/07-NestJS 入门/面试题' }
         ]
     },
     {
@@ -145,22 +151,16 @@ export default [
                     { text: '06-系统设计', link: '/node/11-进阶主题/06-系统设计' },
                     { text: '07-Git 与协作', link: '/node/11-进阶主题/07-Git 与协作' }
                 ]
-            }
+            },
+            { text: '模块总结（工程化与拓展）', link: '/node/09-部署与工程化/总结' },
+            { text: '模块面试题（工程化与拓展）', link: '/node/09-部署与工程化/面试题' }
         ]
     },
     {
-        text: '附录',
+        text: '面试方法论',
         collapsed: true,
         items: [
-            { text: '01-面试自测题（纯题目）', link: '/node/90-附录/01-面试自测题' },
-            { text: '02-学习路径图', link: '/node/90-附录/02-学习路径图' },
-            { text: '03-答案-初级篇', link: '/node/90-附录/03-答案-初级' },
-            { text: '04-答案-中级篇', link: '/node/90-附录/04-答案-中级' },
-            { text: '05-答案-高级篇', link: '/node/90-附录/05-答案-高级' },
-            { text: '06-场景设计题', link: '/node/90-附录/06-场景设计题' },
-            { text: '07-面试方法论', link: '/node/90-附录/07-面试方法论' },
-            { text: '08-自测记录表', link: '/node/90-附录/08-自测记录表' },
-            { text: '09-配套代码索引', link: '/node/90-附录/09-配套代码索引' }
+            { text: '01-面试方法论', link: '/node/12-面试方法论/01-面试方法论' }
         ]
     }
 ]

@@ -168,23 +168,24 @@ app.use((err, req, res, next) => {
 | 模块化 | 无 | @Module |
 | 适合场景 | 小型项目、学习 | 中大型项目、企业级 |
 
----
+## 小结
 
-## 面试题
-
-### Q1: Express 中间件中 `next()` 不调用会发生什么？
-
-请求会一直挂起，不会返回响应。客户端会一直等待直到超时。
-
-### Q2: 错误处理中间件为什么有 4 个参数？
-
-Express 通过 `fn.length`（函数参数个数）来判断是否是错误处理中间件。4 个参数 `(err, req, res, next)` 告诉 Express 这是一个错误处理器。
+- **Express 的定位**：不提供 `node:http` 之外的新能力，只把路由分发、请求体读取、响应封装收敛成约定；手写 `if (req.url === ...)` 变成 `app.get('/user', handler)`
+- **Hello World 的五个动作**：`require('express')` → `express()` 建应用 → `app.get('/')` 注册路由 → `res.send()` 输出 → `app.listen(3000)`，5 行起服务
+- **路由的两维与占位符**：`app.get/post/put/delete(path, handler)` 按方法与路径两个维度分发，`:id` 是路径里的占位符
+- **req.params 恒为字符串**：`/users/123` 命中 `/users/:id` 后 `req.params.id === '123'`，当数字用必须先 `Number()` 转换
+- **req.query 与 req.body 的来源差异**：`?page=1` 自动解析进 `req.query.page`；`req.body` 必须挂了 `express.json()` / `urlencoded()` 才存在，`multipart/form-data` 要另上 multer
+- **中间件与 next()**：`app.use(fn)` 每个请求都会执行，签名 `(req, res, next)`，只有调用 `next()` 才推进到下一环，否则请求挂起
+- **app.use 与 app.get 的匹配差异**：`use` 匹配所有方法且路径是前缀匹配（`/user` 命中 `/user/123`），`get` 只匹配 GET 且路径精确匹配
+- **内置与第三方中间件**：`express.json()` / `urlencoded({ extended: true })` / `static('public')` 内置；`cors()` 等跨域、鉴权、限流都要第三方
+- **错误处理中间件必须 4 参数**：靠 `fn.length === 4` 识别，链上任意位置 `next(err)` 会跳过后面全部普通中间件，直奔错误处理器
+- **Express 与 NestJS 的对比**：Express 无架构约束、TS 可选、无依赖注入；NestJS 强制 MVC / TypeScript / DI / `@Module`，适合中大型长期项目
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/express-template`。
+本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/express-template`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -197,5 +198,7 @@ Express 通过 `fn.length`（函数参数个数）来判断是否是错误处理
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[WebSocket 与 SSE 实时通信](../03-网络编程与实时通信/03-WebSocket%20与%20SSE%20实时通信)
 - 下一篇：[Koa 快速入门](./02-Koa%20快速入门)

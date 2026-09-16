@@ -572,11 +572,24 @@ cp .env.example .env
 npm run dev
 ```
 
+## 小结
+
+- **目录结构与 Express 模板的差异**：分层同名同构，只多一个 `middleware/responseTime.js`，因为洋葱模型让"耗时统计"能顺手写成独立中间件
+- **package.json 的依赖替换**：koa / @koa/router / koa-body / @koa/cors 替掉 express / cors，其余依赖栈（typeorm + mysql2 + ioredis + jsonwebtoken + bcrypt + joi + winston）与 Express 模板完全一致
+- **@koa/router 的前缀挂载**：`new Router({ prefix: '/api' })` 统一前缀，子路由用 `api.use(userRoutes.routes())` 挂上，最后 `app.use(api.routes())` + `app.use(api.allowedMethods())`
+- **入口的洋葱堆叠顺序**：`cors()` → `errorHandler` → `responseTime` → `logger` → `koaBody()` → 路由 → 健康检查；越先注册越靠外层，所以错误处理能包住整条链
+- **errorHandler 靠 try/catch 包链**：最外层中间件 `try { await next() } catch (err)`，按 `err.statusCode || err.status || 500` 写 `ctx.status`，最后 `ctx.app.emit('error', err, ctx)` 交给应用级日志
+- **logger 与 responseTime 是洋葱的典型用法**：进入时记 `start`，`await next()` 之后才算差值、写响应头，这正是线性模型做不到的"响应的上半场"
+- **ctx.state 在中间件间传数据**：auth 中间件把解码结果写到 `ctx.state.user`，控制器读 `ctx.state.user.userId`；等价于 Express 挂在 `req.user` 上
+- **控制器不用逐个 try/catch**：Koa 控制器直接 `await userService.xxx()`，异常顺着 `await next()` 的 Promise rejection 回到最外层统一处理，这是两端模板写法差异的根因
+- **业务错误约定与 Express 保持一致**：服务层依旧抛 `statusCode` + `isOperational`，所以同一套错误判据能同时用在两套模板上
+- **404 与真错误必须分开**：没有路由命中时什么都没抛，`catch` 不会触发；自定义 404 要靠路由之后的兜底判断，或用 `allowedMethods()` 统一处理未匹配的方法与路径
+
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/koa-template`。
+本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/koa-template`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -591,5 +604,7 @@ npm run dev
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Express 源码分析](./04-Express%20源码分析)
 - 下一篇：[Koa 源码分析](./06-Koa%20源码分析)

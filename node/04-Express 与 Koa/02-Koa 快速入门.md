@@ -113,23 +113,22 @@ app.use(router.routes())
 app.listen(3000)
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q1: 解释 Koa 的洋葱模型？
-
-Koa 中间件通过 `await next()` 将控制权交给下一个中间件，执行完后再返回继续执行当前中间件的剩余代码。这种"进入→处理→返回"的模型像洋葱一样层层穿透。
-
-### Q2: Express 和 Koa 的核心区别？
-
-Express 中间件是线性的，功能更丰富（内置路由、静态文件等）；Koa 中间件是洋葱模型，原生支持 async/await，更轻量但需要自行组装中间件。
+- **Koa 的定位**：Express 原班人马打造的继任者，极简内核只给 `ctx` 封装，路由、模板引擎、静态文件、body 解析全部外置
+- **Hello World 的写法**：`app.use(async ctx => { ctx.body = 'Hello World' })`，不写 `res.end`，给 `ctx.body` 赋值即完成响应
+- **async/await 原生支持**：中间件都是 async 函数，`const data = await database.query(...)` 后直接 `ctx.body = data`，无需回调
+- **洋葱模型的顺序**：进入按注册顺序、返回按逆序，两个中间件夹一个处理函数时输出「1 进入 → 2 进入 → 处理请求 → 2 返回 → 1 返回」
+- **洋葱成立的前提是 await**：`await next()` 等待的是下游整条链 resolve；写成 `next()` 而不 await，返回段提前执行，洋葱立刻被拉平成线性模型
+- **洋葱模型的价值**：请求处理前后都能介入，天然适合请求耗时统计、事务管理、统一响应包装这类跨切面逻辑
+- **Express 与 Koa 的七项差异**：中间件模型（线性 / 洋葱）、异步支持（回调 / async）、体积、路由、body 解析、静态文件、社区生态
+- **Koa 要额外装的中间件**：`@koa/router` 管路由、`koa-body` 管请求体、`koa-static` 管静态文件，用 `app.use(router.routes())` 挂载
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/koa-template`。
+本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/koa-template`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -142,5 +141,7 @@ Express 中间件是线性的，功能更丰富（内置路由、静态文件等
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Express 快速入门](./01-Express%20快速入门)
 - 下一篇：[Express 项目模板](./03-Express%20项目模板)

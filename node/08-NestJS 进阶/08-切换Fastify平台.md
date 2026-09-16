@@ -136,19 +136,19 @@ await app.register(fastifyHelmet)
 // Fastify 结果：约 40,000 req/s
 ```
 
-## 面试题
+## 小结
 
-### Q1: NestJS 切换 Fastify 后，中间件和拦截器还能用吗？
-
-NestJS 的 Guard、Interceptor、Pipe、Filter 与平台无关，可以正常使用。但 Express 风格的中间件（`req/res` 类型）不兼容，需要改用 Fastify 插件或使用 `@nestjs/platform-fastify` 提供的适配器。
-
-### Q2: 什么情况下应该切换 Fastify？
-
-高并发场景（如商品详情页、秒杀接口）、I/O 密集型服务。如果项目重度依赖 Express 中间件生态（如 `passport`、`multer`），建议继续使用 Express。
+- **Fastify 快 2~3 倍**：内置 JSON Schema 序列化替代 `JSON.stringify`，压测约 40000 req/s 对比 Express 的 15000 req/s
+- **切换只改入口**：装 `@nestjs/platform-fastify` 后换成 `NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())`
+- **静态资源写法不同**：Express 是 `useStaticAssets(path, { prefix })`，Fastify 是 `useStaticAssets({ root, prefix })`
+- **文件上传要额外注册解析器**：Fastify 下需要 `app.register(contentParser)` 才能接收 multipart 请求
+- **Express 中间件不能直接搬**：Fastify 不兼容 Express 的 req/res，`cookie-parser`/`helmet` 要换成 `@fastify/cookie`、`@fastify/helmet`
 
 ---
 
 ## 参考
 
+- 本模块总结：[总结](../07-NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
 - 上一篇：[微服务架构](./07-微服务架构)
 - 下一篇：[NestJS 源码分析](./09-NestJS%20源码分析)

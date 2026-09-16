@@ -1,324 +1,438 @@
 # TCP 与 Socket 编程
 
-> 承上：[导读与全景图：网络层为什么在这里](./00-导读与全景图) —— 先在导读里拿到那张全景图，本篇把其中的"HTTP → TCP"这一跳拆开
-> 启下：[HTTP 与 HTTPS 深入](./02-HTTP%20与%20HTTPS%20深入) —— 能用手写 node:http 读出请求体（chunks + Buffer.concat），并解释 ECONNRESET 与 Keep-Alive 的关系
-> 在全景图里：传输层。全景图从浏览器往下数，"HTTP → TCP" 这一跳就是本篇的内容；再往下是 Socket 与内核（epoll 等机制已移至模块一《事件循环》）。
+## TCP/IP 分层模型：数据是怎么一层层往下走的？
 
----
-
-## TCP/IP 分层模型
-
-网络协议按职责分层，每一层只解决一类问题：
-
-| 层 | 协议代表 | 解决什么问题 |
-|----|---------|-------------|
-| 应用层 | HTTP、WebSocket、DNS、FTP | 数据"是什么、怎么用"（资源、消息格式） |
-| 传输层 | TCP、UDP | 端到端可靠/不可靠传输（端口寻址、流量控制） |
-| 网络层 | IP | 主机到主机的寻址与路由（IP 地址、跨网段） |
-| 网络接口层 | Ethernet、Wi-Fi | 相邻设备间比特流传输（MAC 地址、网卡驱动） |
-
-回到导读里的全景图：HTTP 跑在应用层，它依赖传输层的 TCP，TCP 依赖网络层的 IP，IP 最终通过 Ethernet/Wi-Fi 在网线上跑。
-
-```txt
-应用层    HTTP / WebSocket / 你的业务协议
-─────────────────────────────────────────
-传输层    TCP（可靠、有序）  /  UDP（快、不可靠）
-─────────────────────────────────────────
-网络层    IP（寻址 + 路由）
-─────────────────────────────────────────
-网络接口层  Ethernet / Wi-Fi（网卡把 0/1 变成电信号）
+```
+┌──────────────────────────────────────────┐
+│ 应用层   HTTP / HTTPS / WebSocket / 你的业务协议  │
+├──────────────────────────────────────────┤
+│ 传输层   TCP（可靠、有序）   /   UDP（快、不可靠）  │
+├──────────────────────────────────────────┤
+│ 网络层   IP（主机寻址 + 路由）                    │
+├──────────────────────────────────────────┤
+│ 网络接口层  Ethernet / Wi-Fi（网卡把 0/1 变电信号） │
+└──────────────────────────────────────────┘
 ```
 
-> 关键结论：HTTP 不是一个"独立在网络上跑"的协议，它只是 TCP 之上的一段"约定好的文本格式"。WebSocket 同理——它建立在 TCP 之上，而不是替代 TCP。
+你写的那句 `GET /users` 属于**应用层**（HTTP 的约定格式）。但 HTTP 自己并不负责把数据可靠地从服务器 A 送到服务器 B——经典情况下它依赖 TCP 把字节流可靠送达，TCP 又依赖 IP 找路，IP 最终通过 Ethernet/Wi-Fi 在网线上跑。所以链路是：
 
----
+```
+GET /users （应用层：HTTP 定义"要什么"）
+      │
+      ▼
+   HTTP  ──定义好报文格式，但不管送达
+      ▼
+    TCP   ──负责把字节流可靠、有序送达
+      ▼
+    IP    ──负责寻址 + 路由到目标主机
+      ▼
+ Network  ──网卡把比特流变成电信号
+```
 
-## TCP 解决了什么问题
+## TCP 到底解决了什么问题？
 
-TCP（Transmission Control Protocol）在不可靠的 IP 网络之上，提供了三种保证：
+TCP（Transmission Control Protocol，传输控制协议）在不可靠的 IP 网络之上，主要提供了三种保证：
 
 | 特性 | 含义 | 没有它会怎样 |
 |------|------|-------------|
 | 面向连接 | 通信前先建立连接（三次握手） | 直接发数据，对方可能根本没准备好 |
 | 可靠 | 丢包重传、校验和、确认应答 | 数据丢了你不知道，文件下载残缺 |
-| 有序 | 序号保证到达顺序 | 后发的包先到，消息乱序 |
+| 有序 | 序号保证到达顺序 | 后发的包先到，消息会乱序 |
 
-### 三次握手：为什么不是两次
+### 三次握手：为什么不能只有两次？
 
 建立连接需要三次交互：
 
-```txt
-客户端                              服务端
-  │  SYN（我想连你，seq=x）            │
-  │ ───────────────────────────────▶ │
-  │                                   │  收到 SYN，分配资源
-  │  SYN + ACK（好的，我也行，seq=y）  │
-  │ ◀─────────────────────────────── │
-  │                                   │
-  │  ACK（收到，开始传数据）           │
-  │ ───────────────────────────────▶ │
-  │                                   │  连接建立
+```
+客户端                                  服务端
+  │  SYN（我想连你，seq=x）               │
+  │ ─────────────────────────────────▶ │
+  │                                      │  收到 SYN，分配资源
+  │  SYN + ACK（好的，我也行，seq=y）     │
+  │ ◀───────────────────────────────── │
+  │                                      │
+  │  ACK（收到，开始传数据）              │
+  │ ─────────────────────────────────▶ │
+  │                                      │  连接建立
 ```
 
-为什么不能两次握手？
+核心原因只有一个：建立连接时，**双方都必须确认"我发得出去、也收得到"这两个方向都通**。
 
 - 两次握手时，服务端收到 SYN 就认为连接已建立并分配资源（缓冲区、端口）。
-- 如果客户端的 SYN 是**迟到/重复的旧报文**（网络里滞留过），服务端会一直空等，直到超时，造成资源浪费（SYN Flood 攻击正是利用这一点）。
-- 第三次握手让服务端确认"客户端确实收到了我的回应"，才真正分配资源。相当于双方都确认了彼此的收发能力。
+- 如果客户端的 SYN 是网络上滞留的**旧/重复报文**（比如之前某次连接残留、或网络延迟很久才到），服务端会一直空等直到超时，造成资源浪费——SYN Flood 攻击正是利用这一点。
+- 第三次握手让服务端确认"客户端确实收到了我的回应"，才真正放心投入资源。相当于双方都验证了彼此的收发能力。
 
-> 心智模型：三次握手 = "你听得到吗？/ 听得到，你呢？/ 我也听得到，开聊"。缺了第三次，服务端不确定客户端是否在线，不敢轻易投入资源。
+## TCP 提供的是可靠字节流
 
----
+你调用 `socket.write('Hello Node.js')`，最终在网络里被处理的不是字符串，而是一个个**字节**：
 
-## TCP 是"字节流"，不是"消息协议"
-
-这是初学者最容易踩的坑：**TCP 不保证你 `send` 一次，对方 `recv` 一次**。
-
-### Buffer 与粘包/拆包
-
-Node.js 里，`socket.on('data', chunk)` 收到的 `chunk` 是一个 `Buffer`，而不是你发送的"完整字符串"。TCP 只负责把字节流可靠、有序地送达，它不认识你的"消息边界"。
-
-```txt
-发送方连续发送：  "hello"          "world"
-                    ↓                ↓
-TCP 字节流：      h e l l o w o r l d   （连在一起）
-                    ↓
-接收方可能收到：
-  情况 A（粘包）： 一次收到 "helloworld"
-  情况 B（拆包）： 第一次 "hel"  第二次 "loworld"
-  情况 C（混合）： 第一次 "hello" 第二次 "wor" 第三次 "ld"
+```
+Hello Node.js
+      │
+      ▼
+   Network ── 线缆里流动的是字节：H e l l o (空格) N o d e . j s
+      │
+      ▼
+    Bytes ── 一串没有"消息边界"的 0/1
+      │
+      ▼
+   Buffer ── Node.js 把字节收进 Buffer
+      │
+      ▼
+JavaScript ── 你需要手动 .toString() 才能得到字符串
 ```
 
-这就是**粘包 / 拆包**问题。它会让 `JSON.parse(chunk.toString())` 直接报错——因为半条消息根本不是合法 JSON。
-
-### 自定义协议来分包
-
-解决思路：在字节流里自己定义"消息边界"。最常见的是 `长度 + 正文` 方案：
-
-```txt
-┌────────────┬───────────────────────┐
-│ Length(4B) │        Body           │
-│  整数 N    │      N 字节的内容      │
-└────────────┴───────────────────────┘
-```
-
-接收方先读 4 字节得到 Body 长度 N，再精确读取后续 N 字节，凑齐一条完整消息才交给业务处理，多余的留在缓冲区等下一条。
-
-| 分包方案 | 做法 | 适用场景 |
-|---------|------|---------|
-| 长度前缀 | 先发 N（定长），再发 N 字节 Body | 二进制协议、RPC（最主流） |
-| 分隔符 | 用 `\n` 或 `\r\n` 作为消息结尾 | 文本日志、Redis 协议 |
-| 定长 | 每条消息固定长度，不足补位 | 极简单、低效 |
-
-> 关键结论：HTTP 之所以"看起来"没有粘包问题，是因为它自己定义了边界（Content-Length 头 或 chunked 分块）。你写的 TCP 协议也要自己定义边界，否则永远不可靠。
-
----
-
-## Socket 是什么
-
-Socket（套接字）是**应用程序使用操作系统网络能力的抽象接口**。你可以把它理解成"操作系统开给你的一扇门"——通过这扇门，你的 JS 代码能收发网络字节。
-
-一条 TCP 连接由"四元组"唯一确定：
-
-```txt
-(源 IP : 源 Port)  →  (目标 IP : 目标 Port)
-  客户端 192.168.1.2:51234  →  服务端 10.0.0.1:8080
-```
-
-- 服务端通常是固定端口（如 8080），等待连接。
-- 客户端的端口由操作系统随机分配（51234），用完后回收复用。
-- 同一台机器上，即使目标端口都是 8080，只要源 IP:源 Port 不同，就是不同的连接——这正是单机支撑"成千上万连接"的原因。
-
-> 心智模型：Port 像大楼的房间号，IP 像大楼地址。Socket 就是"你与大楼某个房间之间那条已经接通的电话线"。
-
----
-
-## 用 node:net 写 TCP Server / Client
-
-`node:net` 是 Node.js 最底层的网络模块，NestJS/Express/HTTP 最终都建立在其之上。下面实现一个支持"长度前缀分包"的回显服务。
-
-### TCP Server
+Node.js 网络编程里 `socket.on('data', cb)` 拿到的 `data` 是 **Buffer**，而不是天然的字符串：
 
 ```js
-// server.js
-const net = require('node:net');
-const { EventEmitter } = require('node:events');
+socket.on('data', (buffer) => {
+  console.log(buffer);                 // <Buffer 48 65 6c 6c 6f ...>
+  console.log(buffer.toString('utf8')); // Hello Node.js
+});
+```
 
-// 简单的协议：4 字节大端整数表示 Body 长度 + Body
-const HEADER_LEN = 4;
+结论：Buffer 是 Node.js 的 JavaScript 世界与底层二进制字节流之间最重要的桥梁。忘掉它，后面所有粘包、编码问题都会踩坑。
 
-class Connection extends EventEmitter {
-  constructor(socket) {
-    super();
-    this.socket = socket;
-    this.buffer = Buffer.alloc(0); // 累积尚未处理完的字节
+## 粘包与拆包：TCP 为什么不保证"你发几次、我收几次"？
 
-    socket.on('data', (chunk) => {
-      this.buffer = Buffer.concat([this.buffer, chunk]);
-      this.parse();
-    });
+客户端连续调用两次发送：
 
-    socket.on('close', () => this.emit('close'));
-    socket.on('error', (err) => this.emit('error', err));
-  }
+```js
+socket.write('hello');
+socket.write('world');
+```
 
-  // 不断从 buffer 中拆出完整消息
-  parse() {
-    while (this.buffer.length >= HEADER_LEN) {
-      const bodyLen = this.buffer.readUInt32BE(0);
-      const need = HEADER_LEN + bodyLen;
-      if (this.buffer.length < need) return; // 还没收齐，等下一批
-      const body = this.buffer.subarray(HEADER_LEN, need);
-      this.buffer = this.buffer.subarray(need); // 去掉已消费部分
-      this.emit('message', body); // 抛出一条完整消息
-    }
-  }
+很多人的第一反应是：服务端会收到两次，第一次 `hello`，第二次 `world`。**但 TCP 不保证这一点。**
 
-  send(data) {
-    const body = Buffer.isBuffer(data) ? data : Buffer.from(data);
-    const header = Buffer.alloc(HEADER_LEN);
-    header.writeUInt32BE(body.length, 0);
-    this.socket.write(Buffer.concat([header, body]));
-  }
-}
+```
+情况 A（粘包）：  一次 data 事件收到 "helloworld"
+情况 B（拆包）：  第一次收到 "hel"  第二次收到 "loworld"
+情况 C（混合）：  第一次 "hello" 第二次 "wor" 第三次 "ld"
+```
+
+原因只有一句话：TCP 保证的是"可靠、有序"，但它**不知道** `hello` 和 `world` 是两个业务消息；对它来说，那只是同一串字节流里连续的字节。所以：
+
+```
+TCP ≠ 消息协议
+TCP 只提供"可靠字节流"
+消息边界，要你自己定义
+```
+
+### 自己定义消息边界：长度前缀方案
+
+最经典的做法是给每条消息加一个固定长度的"头"，先告诉接收方后面有多长：
+
+```
+┌──────────────┬───────────────────────┐
+│  Length      │        Body            │
+│  4 Bytes     │        N Bytes         │
+└──────────────┴───────────────────────┘
+│← 前 4 字节 →│← 真正的消息内容，长度由头决定 →│
+```
+
+接收方先读 4 字节得到 `N`，再精确读取后续 `N` 字节；凑齐一条完整消息才交给业务处理，多余的字节留在缓冲区等下一条。
+
+其它常见边界方案还有：定长（每条消息固定长度、不足补位，极简单但低效）、分隔符（用 `\r\n` 或 `\n` 标记结尾，常见于文本日志、Redis 协议）。为什么长度前缀最通用？因为它不依赖内容里是否"恰好出现分隔符"，也不浪费补齐字节，对二进制数据（图片、压缩包、序列化结构）同样适用。HTTP 之所以"看起来"没有粘包，正是因为它用 `Content-Length` 头（或 chunked 分块）自己定义了边界——你写的 TCP 协议也要自己定义，否则永远不可靠。
+
+## Socket 是什么？
+
+Socket（套接字）可以简单理解为：**应用程序使用操作系统网络能力的接口抽象**，通过它你的 JS 代码就能收发网络字节。
+
+一条 TCP 连接由**四元组**唯一区分：
+
+```
+( 源 IP    : 源 Port )   →   ( 目标 IP    : 目标 Port )
+  192.168.1.20 : 53241   →   192.168.1.10 : 3000
+```
+
+- 服务端通常是固定端口（如 3000），`server.listen(3000)` 背后就是操作系统建立并监听一个 Socket。
+- 客户端的端口由操作系统随机分配（上面的 53241），用完后回收复用。
+- 同一台机器上，即使目标都是 `:3000`，只要源 IP:源 Port 不同，就是不同的连接——这正是单机支撑"成千上万连接"的原因。
+
+## 用 node:net 写 TCP Server 与 Client
+
+`node:net` 是 Node.js 最底层的网络模块，NestJS/Express/HTTP 最终都建立在它之上。下面给出最小可运行的服务端和客户端。
+
+```js
+import net from 'node:net';
 
 const server = net.createServer((socket) => {
-  const conn = new Connection(socket);
+  console.log('客户端连接');
 
-  console.log('客户端连入：', socket.remoteAddress, socket.remotePort);
-
-  conn.on('message', (body) => {
-    console.log('收到：', body.toString());
-    conn.send('echo: ' + body.toString()); // 回显
+  socket.on('data', (buffer) => {
+    // 注意：这里的 buffer 是 Buffer，不是字符串
+    console.log('收到数据：', buffer.toString('utf8'));
+    socket.write('Hello Client');
   });
 
-  conn.on('close', () => console.log('客户端断开'));
-  conn.on('error', (err) => console.error('连接出错', err));
+  socket.on('end', () => {
+    console.log('客户端断开');
+  });
+
+  socket.on('error', (error) => {
+    console.error('连接出错：', error);
+  });
 });
 
-server.listen(8080, () => console.log('TCP Server 监听 8080'));
+server.listen(3000, () => {
+  console.log('TCP Server running at 3000');
+});
 ```
-
-> 生产代码建议用 TypeScript 并配合单测覆盖分包边界（半包、粘包、跨包消息）。
-
-### TCP Client
 
 ```js
-// client.js
-const net = require('node:net');
+import net from 'node:net';
 
-const socket = net.createConnection({ host: '127.0.0.1', port: 8080 }, () => {
-  console.log('已连接');
-  // 连续发送两条消息，演示粘包场景
-  socket.write(encode('hello'));
-  socket.write(encode('world'));
+const client = net.createConnection(
+  { host: '127.0.0.1', port: 3000 },
+  () => {
+    client.write('Hello Server'); // 发送的是字节流
+  },
+);
+
+client.on('data', (buffer) => {
+  console.log(buffer.toString('utf8'));
 });
 
-function encode(str) {
-  const body = Buffer.from(str);
-  const header = Buffer.alloc(4);
-  header.writeUInt32BE(body.length, 0);
-  return Buffer.concat([header, body]);
-}
-
-// 客户端也要做分包，否则可能一次收到 "helloworld"
-let buf = Buffer.alloc(0);
-socket.on('data', (chunk) => {
-  buf = Buffer.concat([buf, chunk]);
-  while (buf.length >= 4) {
-    const len = buf.readUInt32BE(0);
-    if (buf.length < 4 + len) return;
-    const body = buf.subarray(4, 4 + len).toString();
-    buf = buf.subarray(4 + len);
-    console.log('服务端回：', body);
-  }
+client.on('error', (error) => {
+  console.error('出错：', error);
 });
-
-socket.on('close', () => console.log('断开'));
 ```
 
-运行：
+下面这条关系链是理解整篇的钥匙：
 
-```bash
-node server.js   # 终端 1
-node client.js   # 终端 2
+```
+TCP  →  Socket  →  Buffer  →  Stream
+（可靠字节流）（OS 接口）（二进制）（数据运输方式）
 ```
 
-### net.Socket 本质是 Duplex Stream
+## Socket 为什么又和 Stream 联系起来了？
 
-`net.Socket` 同时实现了 Readable 和 Writable 接口，是一个**双工流（Duplex Stream）**——既可以 `write()` 写入（发往对方），也可以 `on('data')` 读取（来自对方）。这正是 TCP"全双工"特性的体现：收发可以同时进行，互不阻塞。
+Node.js 里的 `net.Socket` 本质上是一个 **Duplex Stream（双工流）**——它同时是 Readable 和 Writable。
+
+```
+             net.Socket
+            ╱            ╲
+           ╱              ╲
+     Readable          Writable
+        │                 │
+    socket.on('data')   socket.write()
+        │                 │
+     接收数据           发送数据
+```
+
+- 可读 → `socket.on('data', (chunk) => ...)` 拿到来自对端的字节。
+- 可写 → `socket.write(chunk)` 把字节发往对端。
+
+这正是 TCP "全双工"特性的体现：收发可以同时进行、互不阻塞。这也回答了"Stream 为什么不仅用于文件"——你用 `fs.createReadStream()` 读文件是流，网络 Socket 同样是流。理解了 Stream，才算摸到 Node.js 网络 I/O 的门把手。
+
+## 内核与 epoll：谁在替你盯着上万个 Socket？
+
+继续往底层走一层。Node.js 本身**不能直接操作网卡**，中间隔着操作系统内核（Kernel）。真正盯着成千上万个 Socket 的，是内核。
+
+假设你的 Node.js 服务端同时维护 10,000 个 TCP Socket。一个绕不开的问题是：**此刻哪些 Socket 有数据可读？**
+
+最笨的办法是逐个轮询：
+
+```
+检查 socket1
+检查 socket2
+检查 socket3
+...
+检查 socket10000
+（然后无限循环）
+```
+
+连接一多，这种忙轮询的效率极低。Linux 提供了 `epoll`：你可以把大量文件描述符交给内核"关注"，有数据时由**内核主动通知**，而不是程序挨个问。
+
+```
+ 10000 个 Socket
+        │  全部交给内核关注
+        ▼
+      epoll
+        │  有数据时
+        ▼
+  Linux Kernel ──→ 通知你："Socket 583 有数据了"
+```
+
+## libuv 为什么存在？
+
+不同操作系统提供的网络 I/O 机制并不一样：
+
+```
+   Node.js
+      │
+      ▼
+    libuv
+      │
+  ┌───┼──────────┐
+  ▼       ▼        ▼
+Linux   macOS    Windows
+  ▼       ▼        ▼
+epoll   kqueue     IOCP
+```
+
+而 Node.js 需要跨平台，不可能让你写三套代码。libuv 把这层差异抽象掉，统一成一套异步接口。所以我们写 `socket.on('data', callback)` 时，完全不需要关心当前系统用的是 epoll、kqueue 还是 IOCP——libuv 在底下替你切换。
+
+## 单线程为什么能扛万连接？
+
+现在可以正面回答那个经典问题：Node.js 单线程，为什么能处理大量并发连接？
+
+关键在于：所谓"单线程"，指的是 JavaScript 默认主要跑在一个**主线程**，**并不是**所有网络工作都由它自己完成。
+
+```
+ 10000 Clients
+      │
+      ▼
+ Operating System  （内核盯着所有 Socket）
+      │
+      ▼
+ epoll / kqueue / IOCP  （就绪了才通知）
+      │
+      ▼
+    libuv  （跨平台抽象 + 事件派发）
+      │
+      ▼
+  Event Loop  （主线程的事件循环）
+      │
+      ▼
+ JavaScript Callback  （只处理"已经就绪"的事件）
+```
+
+大量 Socket 的等待和事件通知交给操作系统与 libuv，JavaScript 主线程只负责处理**已经就绪**的事件。等待不占用主线程，所以单线程也能扛住海量连接。
+
+## 误区：网络 I/O 与 libuv 线程池不要混淆
+
+这是学习 libuv 后最容易产生的误解：很多人以为"异步任务 → libuv 线程池"。**并不是所有异步操作都进线程池。**
+
+典型网络 Socket I/O 依赖操作系统提供的事件通知机制，并不占用线程：
+
+```
+        Async
+         │
+   ┌─────┴─────────┐
+   ▼               ▼
+Network I/O      某些其他任务
+   │               │
+   ▼               ▼
+  OS            Thread Pool
+(epoll等)     (libuv 线程池)
+```
+
+- **网络 I/O**（`net` / `http` / `https` 连接与收发）走操作系统事件通知，由事件循环在主线程回调，全程无线程切换。
+- 只有**无法用同类异步机制完成**的工作，libuv 才可能丢进线程池，例如：部分文件系统操作、部分 DNS 解析、`crypto`、`zlib`。
+
+所以不要记成"异步 = 线程池"。关于哪些 I/O 会进线程池、线程池默认几个线程，见第 03 篇《事件循环：单线程为什么能扛并发》。
+
+## 网络侧的背压：为什么管道另一端很慢会撑爆内存？
+
+回到 Stream。假设把一个大文件读出来通过网络发出去：
 
 ```js
-// net.Socket 既是可读流也是可写流
-socket.write('hi');          // Writable：向对端发送
-socket.on('data', (b) => {}); // Readable：接收对端数据
-socket.pipe(anotherSocket); // 因为是流，可以直接管道转发
+fs.createReadStream('./big-file.zip').pipe(socket);
 ```
 
-> 关键结论：你在第 2 篇会看到 `req` / `res`，它们也都是流。理解 Stream 是理解 Node 网络 I/O 的钥匙，而 net.Socket 是这一切的起点。
+如果磁盘读取速度是 `500 MB/s`，而客户端网络只能收 `10 MB/s`，不做任何控制会怎样？
 
----
+```
+Disk（生产 500 MB/s）
+   │
+   ▼
+ Memory（数据越堆越多，一路上涨）
+   │
+   ▼
+ Network（消费只有 10 MB/s）
+   │
+   ▼
+  OOM（内存耗尽，进程崩溃）
+```
 
-## 内核与 libuv：只留结论
+生产速度远快于消费速度，数据会不断积压在内存里，最终内存涨爆。
 
-网络 I/O 真正"扛并发"的底层，是操作系统提供的 I/O 多路复用机制：
+`Writable` 提供了背压机制来化解：`socket.write(buffer)` 返回一个 **boolean**。
 
-- epoll（Linux）/ kqueue（macOS、BSD）/ IOCP（Windows）解决的是同一件事：**1 万个 socket 不要靠忙轮询去挨个问"有数据吗"**，而是让内核在 socket 就绪时主动通知，进程只处理真正就绪的那几个。
-- libuv 的存在，是把上述三套各不相同的 OS 机制，统一封装成一套一致的异步接口。于是 Node.js 一份代码，在 Linux 走 epoll、macOS 走 kqueue、Windows 走 IOCP，开发者完全无感。
+```js
+const canContinue = socket.write(buffer);
+// canContinue === false 表示内部缓冲已达压力阈值
+```
 
-> 这一段为什么排在这里、epoll 具体怎么通知就绪 fd，已在模块一《[事件循环：单线程为什么能扛并发](../01-运行环境/03-事件循环)》里讲透；模块二只负责用它们解释网络连接。
+返回 `false` 意味着 Writable 内部缓冲已经积压到阈值，**此时不应继续疯写**，而应等待 `'drain'` 事件——它表示缓冲已排空，可以继续写：
 
----
+```js
+socket.write(buffer);
+socket.on('drain', () => {
+  // 缓冲排空，可以继续生产
+});
+```
 
-## 网络 I/O 通常不走 libuv 线程池
+整个模型的闭环是这样的：
 
-网络 I/O（TCP/UDP/HTTP 连接与收发）走的是 OS 异步机制，内核通过 epoll/kqueue 通知就绪后由事件循环在主线程回调，全程无线程切换。需要进 libuv 线程池的是**文件 I/O、DNS 解析、crypto 计算**这类阻塞或 CPU 密集操作。
+```
+Producer ──▶ Writable Buffer ──▶ Consumer
+   │              │
+   │        消费慢 → 缓冲到阈值
+   │              │
+   │         Producer 暂停（write 返回 false）
+   │              │
+   │         Consumer 慢慢消费
+   │              │
+   │         drain 事件触发
+   ▼              │
+Producer 继续生产 ◀─┘
+```
 
-> 哪些 I/O 会进 libuv 线程池、线程池默认几个线程，已在模块一《[事件循环：单线程为什么能扛并发](../01-运行环境/03-事件循环)》的 `## 哪些 I/O 会进 libuv 线程池` 一节讲透；调大 `UV_THREADPOOL_SIZE` 不会提升 HTTP 吞吐。
+这就是背压（Backpressure）：上下游速度不匹配时，下游反向"压"住上游，避免内存被冲垮。
 
----
+## 为什么推荐 pipe / pipeline？
 
-## 面试题
+上面的背压逻辑如果自己写，很容易写错：
 
-### Q1: TCP 为什么是三次握手而不是两次？
+```js
+// 反例：丢掉了背压
+readStream.on('data', (chunk) => {
+  socket.write(chunk); // write 返回 false 也不管，照样写
+});
+```
 
-两次握手时服务端收到 SYN 就分配资源，若 SYN 是网络上滞留的旧报文，服务端会空等造成资源浪费（SYN Flood）。第三次握手让服务端确认客户端确实在线后才分配资源，双方都验证了彼此收发能力。
+而 `pipe()` 会**内部协调**生产者与消费者的速度：下游（Socket）消费跟不上，就自动暂停上游读取；等 `drain` 后再继续。
 
-### Q2: 什么是粘包/拆包？怎么解决？
+```js
+readStream.pipe(socket); // 自带背压协调
+```
 
-TCP 是字节流，不保证 send 与 recv 次数对应，"hello"+"world"可能被合并或拆开。解决方法是自定义消息边界，如长度前缀（4 字节 N + N 字节 Body）、分隔符（\n）或定长，接收方按规则拼出完整消息。
+更进一步，**生产代码更推荐 `pipeline()`**：它在出错时能统一销毁整条链路（某个环节出错，上下游一起清理），避免资源泄漏。`pipe` 出错时链路不会自动销毁，需要你手动处理。关于 `pipeline` 的用法与边界处理，详见第 06 篇《Buffer 与 Stream》。
 
-### Q3: net.Socket 是什么？为什么说是 Duplex Stream？
+TCP 只给你一条可靠字节流，那"我要 `GET /users`"这层语义该由谁来定义？答案就是下一篇的 HTTP——它在 TCP 之上约定好了请求行、头、体的格式，让字节流变成可读的请求与响应。
 
-它是应用层使用 OS 网络能力的抽象，代表一条 TCP 连接。它同时实现 Readable 与 Writable，既可读（on('data') 收）也可写（write 发），对应 TCP 全双工，因此是双工流。
+## 小结
 
-### Q4: epoll 解决了什么？libuv 又解决了什么？
-
-epoll 让内核在 socket 就绪时主动通知，避免遍历上万 socket 的忙轮询，使单进程支撑海量连接。libuv 在 epoll/kqueue/IOCP 之上做跨平台统一抽象，让 Node.js 一套代码各 OS 通用。
-
-### Q5: 网络 I/O 走 libuv 线程池吗？为什么？
-
-不走。网络 I/O 是异步事件驱动，内核通过 epoll 通知就绪后由事件循环在主线程回调，无线程切换。libuv 线程池只兜底文件 I/O、DNS 解析、crypto 等阻塞/CPU 密集操作。
-
----
+- **TCP/IP 分层模型**：应用层（HTTP）定义要什么 → 传输层（TCP）保证可靠有序送达 → 网络层（IP）寻址路由 → 网络接口层把比特变成电信号。
+- **分层模型的价值在定位问题**：每层只解决一件事，HTTP 定义报文却不管送达、TCP 保证可靠有序却不管语义，排查时先确定故障落在哪一层再往下钻
+- **TCP 的三重保证**：面向连接（三次握手）、可靠（丢包重传 + 校验和 + 确认应答）、有序（序号）；缺一条就是下载残缺或消息乱序。
+- **三次握手为什么不能省成两次**：两次时服务端收到 SYN 就分配缓冲区与端口，遇上网络里滞留的旧 SYN 会空等超时，SYN Flood 打的正是这一点。
+- **TCP 提供的是可靠字节流，不是消息流**：`write('hello')` + `write('world')` 可能并成一次 `data`，也可能拆成 `hel` + `loworld`；`data` 拿到的是 Buffer。
+- **粘包 / 拆包与长度前缀**：`4 字节长度 + N 字节 Body` 最通用，另有分隔符（`\n` / `\r\n`）与定长；半包要缓存等下一段，凑齐一条才交给业务。
+- **Socket 是操作系统网络能力的接口抽象**：`server.listen(3000)` 背后就是内核建立并监听一个 Socket，服务端端口固定，客户端端口由内核随机分配、用完回收复用
+- **Socket 与四元组**：源 IP:Port → 目标 IP:Port 唯一区分一条连接，所以同一台机器上目标都是 `:3000`，源端口不同就是不同连接。
+- **`node:net` 与 Duplex Stream**：`net.createServer` / `createConnection` 是最底层的出入口；`net.Socket` 可读对应 `on('data')`、可写对应 `write()`，这是 TCP 全双工的形态，也是"Stream 不只用于文件"的由来。
+- **TCP → Socket → Buffer → Stream 关系链**：TCP 给可靠字节流、Socket 是操作系统接口、Buffer 承载二进制、Stream 是数据运输方式，这条链是理解网络编程的钥匙
+- **epoll 与 libuv 各解决一件事**：epoll 让内核替你盯上万个 fd、就绪时主动通知；libuv 把 epoll / kqueue / IOCP 的差异抽象成一套异步接口。
+- **单线程扛万连接的关键是"等待不占线程"**：内核用 epoll 盯着上万个 Socket，就绪后才经 libuv 通知事件循环，主线程只处理已经就绪的事件
+- **网络 I/O 不走 libuv 线程池**：走的是操作系统就绪通知，主线程只在就绪时被唤醒；进线程池的是 `fs`、`dns.lookup`、`crypto`、`zlib` 这类没有同类异步机制的工作。
+- **网络侧背压与 `pipe` / `pipeline`**：`write()` 返回 `false` 表示内部缓冲到阈值，应停下等 `'drain'`；`pipe` 自带速率协调，`pipeline` 还能在任一环出错时统一销毁整条链路。
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/net-lab`。
-
 | 文件 | 演示什么 |
 | --- | --- |
-| `01-tcp-server.js` | net.createServer 与连接、数据事件 |
-| `02-tcp-client.js` | 客户端写入与字节流视角 |
-| `03-sticky-packet.js` | 粘包复现实验 |
-| `04-protocol-server.js` | Length(4B) + Body 分包协议服务端 |
-| `04-protocol-client.js` | 自定义协议客户端 |
-
-运行方式见 `net-lab/README.md`。
-
----
+| `./code/net-lab/src/01-tcp-server.js` | 用 `node:net` 写最小 TCP Server，`data` 事件收到的是 Buffer |
+| `./code/net-lab/src/02-tcp-client.js` | TCP 客户端：`createConnection` + `write` + 接收响应 |
+| `./code/net-lab/src/03-sticky-packet.js` | 复现粘包：两次 `write` 被合并成一次 `data` |
+| `./code/net-lab/src/04-protocol-server.js` | 自定义分包协议服务端：`Length(4B) + Body(NB)` |
+| `./code/net-lab/src/04-protocol-client.js` | 自定义分包协议客户端：按长度边界正确切分消息 |
 
 ## 参考
 
-- 上一篇：[导读与全景图：网络层为什么在这里](./00-导读与全景图)
-- 下一篇：[HTTP 与 HTTPS 深入](./02-HTTP%20与%20HTTPS%20深入)
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[导读与全景图：网络层为什么在这里](./00-导读与全景图.md)
+- 下一篇：[HTTP 与 HTTPS 深入](./02-HTTP%20与%20HTTPS%20深入.md)

@@ -302,36 +302,24 @@ db.orders.find({ status: 'pending' }).explain('executionStats')
 //   如果 totalDocsExamined >> nReturned → 需要优化
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q1: MongoDB 聚合管道中的 `$lookup` 和 MySQL 的 JOIN 有什么区别？
-
-`$lookup` 在功能上类似 LEFT JOIN，但 MongoDB 的聚合管道是分阶段处理的，每个阶段产生新的文档集合。`$lookup` 性能不如 MySQL 的 JOIN，不建议在频繁查询中使用。
-
-### Q2: 什么时候应该使用 MongoDB 的副本集？
-
-当需要高可用和数据冗余时使用副本集。副本集至少需要 3 个节点，主节点故障时自动选举新主节点，从节点可提供读服务。
-
-### Q3: 副本集为什么建议奇数个节点？
-
-因为选举需要"大多数"同意才能当选。偶数个节点可能出现票数相同，无法选出新主节点，导致脑裂。奇数个节点（3、5）可以避免这种情况。如果总共有 4 个节点，建议加一个仲裁节点，变成 5 个。
-
-### Q4: 如何选择合适的分片键？
-
-1. 数据分布均匀（避免热点分片）
-2. 大多数查询包含分片键（避免全分片扫描）
-3. 分片键不可变（选定后无法修改）
-4. 避免单调递增字段导致热点写入（时间戳分片是常见坑）
-
-### Q5: MongoDB 如何处理事务？
-
-MongoDB 4.0+ 支持多文档事务，但是性能比 MySQL 差。事务开销大，不适合高频写入场景。一般单文档操作是原子的，不需要事务；只有需要多个文档原子性时才使用事务。
+- **索引创建**：`createIndex({ name: 1 })` 单字段、`{ age: 1, name: 1 }` 复合、`{ unique: true }` 唯一索引，`1` 升序 `-1` 降序
+- **explain 关键指标**：`totalDocsExamined` 是扫描文档数、`nReturned` 是返回数、`IXSCAN` 走索引、`COLLSCAN` 是全集合扫描
+- **聚合管道常用阶段**：`$match` → `$group` → `$sort` → `$project` → `$limit`；`$lookup` 相当于 LEFT JOIN，`$unwind` 展开数组
+- **多文档事务**：`startSession` 加 `startTransaction`，出错 `abortTransaction`；MongoDB 4.0+ 支持但性能低于 MySQL 事务
+- **副本集三种角色**：Primary 唯一可写、Secondary 异步复制且可读、Arbiter 只参与选举不存数据
+- **选举与大多数原则**：主节点心跳超时（默认 10 秒）触发选举，需过半数票，所以节点数取奇数 3 / 5 / 7
+- **读写分离配置**：连接串带 `replicaSet` 与 `readPreference`，`secondaryPreferred` 优先读从；故障转移一般 10-30 秒完成
+- **什么时候才分片**：数据超单机内存（300GB 以上）、写入超 1 万 QPS、垂直扩展到头，三者满足其一才考虑
+- **分片键常见坑**：时间戳分片造成写入热点，自增 ID 哈希分片让范围查询跨全部分片；user_id 哈希或"区域 + 时间"更稳
+- **跨分片分页与索引失效**：分页要各分片返回 N 条再聚合排序；正则包含匹配、对索引列用函数都会退化为 COLLSCAN，范围条件才走索引
 
 ---
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MongoDB 入门](./05-MongoDB%20入门)
 - 下一篇：[PostgreSQL 与 pgvector](./07-PostgreSQL%20与%20pgvector)

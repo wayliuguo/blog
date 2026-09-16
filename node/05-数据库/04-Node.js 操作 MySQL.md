@@ -216,23 +216,21 @@ export class OrderService {
 }
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q1: 什么是 N+1 查询问题，如何解决？
-
-N+1 查询指先查 N 条数据，再循环查每条数据的关联数据，导致 1+N 次查询。解决方法：使用 TypeORM 的 `relations` 或 `QueryBuilder` 的 `leftJoinAndSelect` 一次查出所有数据。
-
-### Q2: ORM 和直接写 SQL 的优缺点？
-
-ORM 优点：开发效率高、类型安全、数据库无关；缺点：复杂查询性能差、黑盒不易调试。直接写 SQL 优点：性能可控、可以优化；缺点：代码量大、易出 SQL 注入。实际项目中一般混合使用。
+- **mysql2 连接池**：`createPool` 复用连接，`connectionLimit: 10` 控上限，比每次新建单连接省下大量握手开销
+- **参数化查询防注入**：用 `?` 占位符传参，绝不把变量拼进 SQL 字符串
+- **ORM 的定位**：把数据库表映射成带装饰器的 Entity 类，用 Repository 方法操作数据而不手写 SQL
+- **TypeORM 核心装饰器**：`@Entity('users')` 对应表、`@PrimaryGeneratedColumn()` 自增主键、`@Column({ unique: true })` 加约束
+- **实体关系映射**：`@OneToMany` 与 `@ManyToOne` 配合 `@JoinColumn({ name: 'user_id' })` 表达一对多
+- **N+1 查询问题**：循环里逐个查关联表会变成 1+N 次查询；用 `relations: ['orders']` 或 QueryBuilder 的 `leftJoinAndSelect` 压成一次
+- **QueryRunner 事务**：`startTransaction` → 业务操作 → `commitTransaction`，出错 `rollbackTransaction`，`finally` 里必须 `release`
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/mysql-demo`。
+本篇的可运行示例在仓库 `node/05-数据库/code/mysql-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -246,5 +244,7 @@ ORM 优点：开发效率高、类型安全、数据库无关；缺点：复杂�
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MySQL 高级实战](./03-MySQL%20高级实战)
 - 下一篇：[MongoDB 入门](./05-MongoDB%20入门)

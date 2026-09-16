@@ -765,11 +765,26 @@ npm run start:prod
 6. **统一响应格式**：通过拦截器统一包装返回，前后端交互更清晰
 7. **全局异常处理**：统一捕获异常，日志记录，友好返回
 
+## 小结
+
+- **src 五大块划分**：`common` 公共基础设施、`config` 配置、`constants` 常量、`modules` 按业务分模块、`shared` 共享第三方服务
+- **模块内部自成一体**：每个业务模块自带 `dto`/`entities`/`guards`/`services`/`strategies` 加 controller、module、service 三件套
+- **package.json 示例的结构**：`scripts` 含 `start:dev` / `build` / `test` 与三条 TypeORM 迁移命令，依赖分 `dependencies` 与 `devDependencies` 两组
+- **配置集中在 config/**：`index.ts` 读 `.env` 并给每项默认值，`database.config.ts` 由它派生出 `TypeOrmModuleOptions`
+- **全局装配写在根模块**：`APP_FILTER`/`APP_INTERCEPTOR`/`APP_PIPE` 用 Provider 方式注册，这样才能注入依赖
+- **实体与模块示例的结构**：实体演示主键、唯一列、`select: false` 隐藏密码和 `ManyToOne` 级联删除，业务模块演示 dto / module / controller / service 的组合
+- **统一响应与统一异常**：`ResponseModel` + `TransformInterceptor` 包装返回值，`@Catch()` 过滤器兜住所有异常并记录日志
+- **@Global() 的 RedisModule**：用 `useFactory` 加自定义 Token `'REDIS_CLIENT'` 提供客户端，`exports` 后全局可用
+- **健康检查查两头**：`/health` 里分别跑 `dataSource.query('SELECT 1')` 与 `redis.ping()`，任一失败就把状态改成 degraded
+- **.env 示例的结构**：`PORT` / `NODE_ENV` 之外按数据库、Redis、JWT 三组给出变量，如 `DB_HOST` / `REDIS_PORT` / `JWT_SECRET` / `JWT_EXPIRES`
+- **使用方式六步**：用 Nest CLI 建项目 → 装依赖 → `cp .env.example .env` → 确认 MySQL 与 Redis 已启动 → `start:dev` 开发 → `build` + `start:prod` 上线
+- **最佳实践七条**：按功能划分模块、共享模块下沉、基础设施进 common、全局校验、统一响应、统一异常、依赖注入
+
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/nestjs-template`。
+本篇的可运行示例在仓库 `node/08-NestJS 进阶/code/nestjs-template`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -782,5 +797,7 @@ npm run start:prod
 
 ## 参考
 
+- 本模块总结：[总结](../07-NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
 - 上一篇：[NestJS 源码分析](./09-NestJS%20源码分析)
 - 下一篇：[认证进阶：双 Token 与多设备会话](./11-认证进阶-双Token与多设备会话)

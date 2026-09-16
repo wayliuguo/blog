@@ -140,21 +140,21 @@ export class NotificationService {
 }
 ```
 
-## 面试题
+## 小结
 
-### Q1: WebSocket 和 HTTP 轮询的优缺点？
-
-WebSocket 全双工通信，实时性高，适合聊天/推送；HTTP 轮询实现简单但延迟高、浪费带宽。NestJS 的 Gateway 封装了连接管理，开发者只需关注业务逻辑。
-
-### Q2: Gateway 如何在 HTTP 控制器中推送消息？
-
-通过共享服务持有 `Server` 实例，在控制器中注入该服务调用 `server.emit()`。
+- **Gateway 就是 WebSocket 层的 Controller**：`@WebSocketGateway({ cors, namespace })` 声明，并且要作为 provider 写进模块
+- **两个连接钩子**：实现 `OnGatewayConnection` 的 `handleConnection` 与 `OnGatewayDisconnect` 的 `handleDisconnect`
+- **@WebSocketServer() 拿到服务端实例**：`server.emit` 全局广播，`client.to(room).emit` 定向推送给房间
+- **@SubscribeMessage 处理客户端消息**：回调签名 `(client, payload)`，房间用 `client.join(room)` 加入
+- **连接时就要校验 token**：从 `client.handshake.auth.token` 取令牌，验证失败直接 `client.disconnect()` 断开
+- **用户信息挂在 client.data 上**：验证通过后 `client.data.user = user`，后续的消息处理器里随取随用
+- **HTTP 与 WS 共享同一个 Service**：把 server 注入 NotificationService，HTTP 控制器也能触发 WebSocket 广播
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/net-lab`。
+本篇的可运行示例在仓库 `node/03-网络编程与实时通信/code/net-lab`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -166,5 +166,7 @@ WebSocket 全双工通信，实时性高，适合聊天/推送；HTTP 轮询实�
 
 ## 参考
 
+- 本模块总结：[总结](../07-NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
 - 上一篇：[文件上传实战](./04-文件上传实战)
 - 下一篇：[定时任务与队列](./06-定时任务与队列)

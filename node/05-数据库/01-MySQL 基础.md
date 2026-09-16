@@ -140,23 +140,21 @@ LEFT JOIN orders ON users.id = orders.user_id;
 
 > 实际项目中，**大多数情况下适当反范式是可接受的**，以查询性能换取数据一致性。
 
----
+## 小结
 
-## 面试题
-
-### Q1: INNER JOIN 和 LEFT JOIN 的区别？
-
-INNER JOIN 只返回两个表都匹配的行；LEFT JOIN 返回左表所有行，右表没有匹配的显示 NULL。
-
-### Q2: 什么是主键和外键？
-
-主键是唯一标识一行数据的字段（通常为自增 ID），外键是关联到其他表主键的字段，用于建立表间关系。
+- **关系型数据库的构成**：数据存在表里，表之间靠外键关联，行是记录、列是字段，可类比 Excel 工作表
+- **CRUD 四条语句**：SELECT / INSERT / UPDATE / DELETE，其中 UPDATE 与 DELETE 漏写 WHERE 会作用于全表
+- **分页写法**：`LIMIT 10 OFFSET 20` 取第 21-30 条，OFFSET 越大扫描行数越多，深度分页要换游标
+- **建表与约束**：`INT PRIMARY KEY AUTO_INCREMENT` 做自增主键，`NOT NULL` / `DEFAULT` / `UNIQUE` 把脏数据拦在库层
+- **表关系三种形态**：1:1 与 1:N 直接加外键字段，N:N 必须建中间表
+- **INNER JOIN 与 LEFT JOIN 的差别**：INNER 只留两表都匹配的行；LEFT 保留左表全部，右表缺失的列补 NULL
+- **三大范式与反范式**：1NF 列不可再分、2NF 非主键完全依赖主键、3NF 不依赖其他非主键列；实际项目多数接受适度反范式换查询性能
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/mysql-demo`。
+本篇的可运行示例在仓库 `node/05-数据库/code/mysql-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -169,5 +167,7 @@ INNER JOIN 只返回两个表都匹配的行；LEFT JOIN 返回左表所有行�
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Koa 源码分析](../04-Express%20与%20Koa/06-Koa%20源码分析)
 - 下一篇：[MySQL 进阶](./02-MySQL%20进阶)
