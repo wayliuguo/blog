@@ -286,23 +286,24 @@ executeMiddlewareChain(req, res, middlewares, callback)
 | 错误处理 | 简单 4 参数 | 支持异步错误、多层错误传播 |
 | 性能 | 每次请求线性遍历 | 路由压缩（trie/radix tree）、Layer 缓存 |
 
----
+## 小结
 
-## 面试题
-
-### Q1: Express 中间件的 `next('route')` 和 `next('router')` 有什么区别？
-
-`next('route')` 跳过当前路由的剩余中间件，跳转到下一个匹配的路由。`next('router')` 跳出当前 Router 实例，跳转到外层中间件。
-
-### Q2: 为什么 Express 的错误处理中间件必须有 4 个参数？
-
-Express 通过 `fn.length` 判断函数参数个数。4 个参数的函数被识别为错误处理中间件，只在 `next(err)` 被调用时执行。
+- **Express 的核心只有三件事**：路由注册、中间件链、响应封装；不到 100 行就能写出能跑的最小版本
+- **两个核心数据结构**：`middlewares = [{ path, handler }]` 由 `app.use` 填充，`routes = [{ method, path, handler }]` 由 `app.get` 等方法填充
+- **app.use 的可选路径重载**：靠 `handler === undefined` 区分 `app.use(fn)` 与 `app.use(path, fn)`，前者补上 `path = '/'`
+- **动态路由转正则**：`/users/:id` 把 `:id` 替换成 `([^/]+)` 拼成 `^/users/([^/]+)$`，`url.match(regex)` 后按顺序把捕获组写回 `req.params`
+- **中间件链的线性递归**：`executeMiddlewareChain` 内维护 `let index = 0`，每次 `next()` 取走 `middlewareList[index++]`；走到末尾就执行回调（路由匹配阶段）
+- **中间件的前缀匹配**：`mw.path !== '/' && !req.url.startsWith(mw.path)` 时直接 `next()` 跳过，这是最小实现里唯一的路径判断
+- **next 的双重语义**：`next` 既是"推进下一个中间件"，也是"错误传递通道"——`next(err)` 有值时跳过剩余中间件直接调 `errorHandler`，没注册处理器就回落 500
+- **enhanceRes 增强响应对象**：给原生 `res` 挂 `status(code)`（设状态码并 `return res` 支持链式）、`json(data)`（设 JSON 头 + `end`）、`send(body)`（对象走 json，其余走 text/html）
+- **同步 try/catch 的能力边界**：最小实现里普通中间件与路由 handler 都包在 `try/catch` 内并 `next(err)`，所以只能接住**同步**抛出的异常
+- **最小实现 vs Express 源码**：真源码有 `Router` 类（子路由、路由级中间件、参数解码）、Layer 缓存与路由压缩（trie / radix tree），不是每次请求线性遍历；"100 行跑通"不等于"100 行能上生产"
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/express-mini`。
+本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/express-mini`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -316,5 +317,7 @@ Express 通过 `fn.length` 判断函数参数个数。4 个参数的函数被识
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Express 项目模板](./03-Express%20项目模板)
 - 下一篇：[Koa 项目模板](./05-Koa%20项目模板)

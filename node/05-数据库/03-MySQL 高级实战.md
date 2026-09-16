@@ -461,35 +461,24 @@ mysqlbinlog \
 □ 监控告警：备份失败 5 分钟内通知值班人员
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q1: 主从复制的原理是什么？Binlog 有哪几种格式？
-
-主库将变更写入 Binlog，从库的 I/O 线程拉取并写入 Relay Log，SQL 线程重放。Binlog 有三种格式：STATEMENT（记录 SQL）、ROW（记录行变更，推荐）、MIXED（混合）。
-
-### Q2: 主从延迟怎么排查和解决？
-
-排查：`SHOW SLAVE STATUS` 查看 `Seconds_Behind_Master`。常见原因：从库硬件差、主库大事务、从库慢查询。解决：优化从库硬件、拆分大事务、开启并行复制、关键业务读主库。
-
-### Q3: 分库分表后，全局唯一 ID 怎么生成？
-
-常用方案：雪花算法（Snowflake，高性能趋势递增）、Redis INCR（简单可靠）、数据库号段（不依赖外部组件）、UUID（不推荐，太长且无序）。
-
-### Q4: 大表 DDL 有哪些方案？
-
-MySQL 5.6+ 的 Online DDL（INPLACE 算法，部分操作不锁表）；大表推荐 gh-ost（GitHub 开源工具，通过 Binlog 同步，零停机修改表结构）。
-
-### Q5: 数据库备份策略怎么设计？
-
-每周全量（XtraBackup）+ 每天增量 + 实时 Binlog 备份。关键：异地备份、定期恢复测试、监控告警。
+- **主从复制四步流程**：主库写 Binlog → dump 线程推给从库 → 从库 I/O 线程写 Relay Log → SQL 线程重放，以此实现读写分离
+- **Binlog 三种格式**：STATEMENT 日志量小但遇非确定性函数会主从不一致；ROW 最精确、日志量大；生产推荐 ROW
+- **主从延迟排查**：看 `Seconds_Behind_Master` 与 `Slave_IO_Running` / `Slave_SQL_Running`；靠拆大事务、并行复制、关键业务强制读主来解决
+- **垂直拆分、水平拆分与分片键**：垂直按业务分库；水平按分片键取模拆表，按时间分片会有写入热点，user_id / order_id 哈希取模更均匀
+- **分库分表的 SQL 限制**：跨分片 JOIN、跨分片事务、无分片键的查询都不可用；用广播表、ER 分片、外部索引表绕开
+- **全局唯一 ID 四方案**：雪花算法（依赖时钟）、Redis INCR（依赖 Redis）、数据库号段（要维护号段表）、UUID（无序且长、伤索引）
+- **Online DDL 与 gh-ost**：加索引、加列、删列可 `ALGORITHM=INPLACE, LOCK=NONE`，改列类型与主键要锁表；千万级大表用影子表分批切换
+- **零停机迁移五步**：搭主从 → 数据校验 → 灰度切读 → 切写（窗口 1-5 分钟）→ 保留旧库 3-7 天观察回滚
+- **连接池调参与故障排查**：`connectionLimit` / `queueLimit` / `idleTimeout` 是核心参数；溢出看慢查询、泄漏看有没有 release、超时看 MySQL 的 `wait_timeout`
+- **备份与恢复策略**：小库 mysqldump、大库 XtraBackup、时间点恢复靠 Binlog 回放；备份必须每周做一次恢复验证
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/mysql-demo`。
+本篇的可运行示例在仓库 `node/05-数据库/code/mysql-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -503,5 +492,7 @@ MySQL 5.6+ 的 Online DDL（INPLACE 算法，部分操作不锁表）；大表�
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MySQL 进阶](./02-MySQL%20进阶)
 - 下一篇：[Node.js 操作 MySQL](./04-Node.js%20操作%20MySQL)

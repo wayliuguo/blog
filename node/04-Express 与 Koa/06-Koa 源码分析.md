@@ -333,23 +333,24 @@ dispatch(0)  ← 启动递归
 | 文件上传 | 不支持 | 通过 `koa-body` 中间件 |
 | 路由 | 手动 if/else | 需 `@koa/router`，支持 RESTful 参数 |
 
----
+## 小结
 
-## 面试题
-
-### Q1: Koa 的洋葱模型有什么实际应用场景？
-
-洋葱模型最大的优势是可以在请求处理前后都执行逻辑。典型场景：请求耗时统计（进入时记录时间，返回时计算差值）、数据库事务（进入时开启事务，返回时提交/回滚）、响应格式统一包装。
-
-### Q2: 为什么 Koa 使用 `async/await` 而 Express 使用回调？
-
-Koa 的 `async/await` 让中间件链天然支持异步且保持顺序——`await next()` 等待后续中间件完成后再继续。Express 的回调 `next()` 无法直接等待，异步中间件的行为更难预测。这是 Koa 最核心的设计优势。
+- **Koa 的核心只有两件事**：洋葱模型中间件链（`compose`）与 Context 封装（`createContext`），比 Express 更精简
+- **app.use 支持链式调用**：`middlewares.push(fn)` 之后 `return app`，所以能连续 `app.use(...).use(...)`
+- **compose 的结构与递归终点**：返回 `function (ctx)`，内部 `let index = -1` 后从 `dispatch(0)` 启动；`const fn = middlewareList[i]; if (!fn) return Promise.resolve()` 是递归的自然终点
+- **dispatch 把下一个自己当作 next**：`Promise.resolve(fn(ctx, () => dispatch(i + 1)))`——`await next()` 之所以能等到下游完成，全靠这一句把 `dispatch(i+1)` 包成 Promise 返回
+- **index 用于防重入**：每次 `dispatch(i)` 先判 `if (i <= index)` 就 `reject(new Error('next() 被多次调用'))`，再 `index = i`；同一中间件里写两个 `await next()` 会直接报错而不是把下游重跑一遍
+- **await next() 决定回程顺序**：`await` 等到的是下游整条链的 Promise resolve，所以 A、B 的"返回段"只能在内层 C 结束之后才开始执行
+- **createContext 封装 ctx**：挂上 method / url / path（`?` 之前）/ query / headers / status / body 与 `ctx.set()`；`ctx.body` 的 setter 在赋值时标记 `_respond`
+- **respond 按类型自动响应**：string → `text/html; charset=utf-8`；对象 → `application/json` + `JSON.stringify`；Buffer → 原样 `end`；`null` / `undefined` → 状态码改成 **204** 且不发 body
+- **错误统一靠 Promise catch**：`fn(ctx).then(respond).catch(...)`，任意中间件 reject 都落到同一个 catch 里返回 500
+- **最小实现 vs Koa 源码**：真源码用 `koa-compose` 包、ctx 的 request / response 双层属性委托、`ctx.onerror` 与 `app.on('error')` 事件、支持 stream 作为 `ctx.body` 与文件上传，路由则交给 `@koa/router`
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/koa-mini`。
+本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/koa-mini`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -361,5 +362,7 @@ Koa 的 `async/await` 让中间件链天然支持异步且保持顺序——`awa
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Koa 项目模板](./05-Koa%20项目模板)
 - 下一篇：[MySQL 基础](../05-数据库/01-MySQL%20基础)

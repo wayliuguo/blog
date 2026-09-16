@@ -1,0 +1,45 @@
+{
+  "name": "node-basics",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 模块一「运行环境」配套实验（模块系统/事件循环/Buffer/Stream/进程线程/优雅关闭）",
+  "type": "commonjs",
+  "scripts": {
+    "01": "node src/01-io-cost.js",
+
+    "02cjs": "node src/02-module-cjs.cjs",
+    "02esm": "node src/02-module-esm.mjs",
+
+    "03phases": "node src/03-eventloop-phases.js",
+    "03order": "node src/03-eventloop-order.js",
+    "03check": "node src/03-microtask-checkpoint.js",
+    "03starve": "node src/03-nexttick-starve.js",
+    "03pool": "node src/03-uv-threadpool.js",
+
+    "04serial": "node src/04-async-serial.js",
+    "04parallel": "node src/04-async-parallel.js",
+
+    "05buffer": "node src/05-buffer.js",
+    "05copy": "node src/05-stream-copy.js",
+    "05backpressure": "node src/05-backpressure.js",
+    "05pipeline": "node src/05-stream-pipeline.js",
+    "05fs": "node src/05-fs-dir.js",
+
+    "06child": "node src/06-child-process.js",
+    "06worker": "node src/06-worker-thread.js",
+    "06pool": "node src/06-worker-pool.js",
+    "06shutdown": "node src/06-graceful-shutdown.js",
+    "06fallback": "node src/06-error-fallback.js",
+
+    "mr01": "node src/02-module-realm/01-cache.cjs",
+    "mr02": "node src/02-module-realm/02-exports-trap.cjs",
+    "mr03": "node src/02-module-realm/03-cjs-value-vs-esm-binding.mjs",
+    "mr04": "node src/02-module-realm/04-esm-import-cjs.mjs",
+    "mr05": "node src/02-module-realm/05-cjs-require-esm.cjs",
+    "mr06": "node src/02-module-realm/06-dynamic-import.cjs",
+    "mr07": "node src/02-module-realm/07-resolve-path.cjs",
+    "mr08": "node src/02-module-realm/08-type-switch/run.cjs",
+    "mr09": "node src/02-module-realm/09-parse-time.mjs",
+    "mr10": "node src/02-module-realm/10-sync-vs-async.mjs"
+  },
+  "license": "MIT"
+}

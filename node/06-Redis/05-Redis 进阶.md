@@ -237,35 +237,24 @@ INFO replication
 # master_last_io_seconds_ago: 0  ← 距上次同步秒数，> 30 表示延迟严重
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q11: 哨兵模式和 Cluster 集群的区别？
-
-哨兵模式解决高可用问题（自动故障转移），但不解决数据分片。Cluster 集群解决分布式存储问题（自动分片 + 高可用）。数据量小用哨兵，数据量大用 Cluster。
-
-### Q12: Stream 和 List 做消息队列的区别？
-
-List 简单但不支持消费组和 ACK，消息可能丢失。Stream 支持消费组、ACK 机制、消息持久化，功能更完善，适合生产环境。
-
-### Q13: Redis 如何实现附近的人？
-
-使用 GEO 数据结构存储地理位置，通过 GEORADIUS 命令查询指定半径内的位置。
-
-### Q14: Redis 6.0 的多线程 IO 是怎么回事？
-
-Redis 6.0 引入了多线程 IO，但命令执行仍然是单线程。多线程只用于网络 IO 读写处理，适合大量并发连接场景。CPU 密集场景或命令执行慢的场景，多线程 IO 没有帮助。
-
-### Q15: Redis 缓存命中率多少算正常？如何提升？
-
-一般缓存命中率应该在 90% 以上，低于 80% 需要优化。提升方法：增大缓存容量、延长过期时间、缓存预热、优化缓存策略（如 LFU 替代 LRU）。
+- **主从复制的五步流程**：从节点发 `SYNC` → 主节点 `BGSAVE` 出 RDB → 传 RDB → 从节点加载 → 之后持续同步写命令；作用是读写分离、数据备份与高可用基础
+- **哨兵模式与故障转移**：`sentinel monitor mymaster host port 2` 里的 2 是判定主观下线所需票数；流程是主观下线 → 多哨兵协商确认客观下线 → 选新主 → 重指向 → 通知客户端
+- **Cluster 与哈希槽**：数据被分到 16384 个哈希槽，用 `CRC16(key) % 16384` 定位节点；相比哨兵多了自动分片与水平扩展，节点间靠 Gossip 协议通信
+- **Bitmap 做日活统计**：`SETBIT user:日期 用户ID 1` 记录访问，`BITCOUNT` 统计当天访问人数，内存占用极小
+- **HyperLogLog 做 UV**：`PFADD` / `PFCOUNT` 统计独立用户数，固定只占 12KB，误差约 0.81%
+- **GEO 做地理位置**：`GEOADD` 存坐标、`GEODIST` 算两点距离、`GEORADIUS` 查半径内目标，底层复用 ZSet
+- **Stream 做消息队列**：Redis 5.0+ 提供，支持持久化、消费组与 ACK；`XADD` 生产、`XREADGROUP` 消费、`XGROUP CREATE` 建消费组
+- **安全配置**：`requirepass` 设强密码、`bind` 只留内网地址、用 `rename-command` 禁用 FLUSHALL / FLUSHDB / CONFIG、改掉默认 6379 端口
+- **慢查询日志与多线程 IO**：`slowlog-log-slower-than 10000` 记录超过 10ms 的命令，`SLOWLOG GET` 查看；Redis 6.0 的 `io-threads` 只多线程化网络 IO，命令执行仍是单线程
+- **关键监控指标**：`INFO clients` 看连接数、`INFO stats` 算命中率、`INFO commandstats` 看单命令耗时、`INFO replication` 的 `master_last_io_seconds_ago` 看复制延迟
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/redis-demo`。
+本篇的可运行示例在仓库 `node/06-Redis/code/redis-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -280,5 +269,7 @@ Redis 6.0 引入了多线程 IO，但命令执行仍然是单线程。多线程�
 
 ## 参考
 
+- 本模块总结：[总结](../05-数据库/总结.md)
+- 本模块面试题：[面试题](../05-数据库/面试题.md)
 - 上一篇：[Redis 缓存实战](./04-Redis%20缓存实战)
 - 下一篇：[学习地图与边界：NestJS 该学到什么程度](../07-NestJS%20入门/00-NestJS%20学习地图与边界)

@@ -238,35 +238,22 @@ async logoutAllDevices(userId: number) {
 | Refresh Token 明文入库 | 拖库即失陷 | 永远只存 SHA-256 哈希 |
 | 轮换后旧 Token 还能用 | 没置位 `revoked` | 每次刷新先把旧记录 `revoked = true` |
 
----
+## 小结
 
-## 面试题
-
-### Q1: 为什么 Refresh Token 不能像密码一样用 bcrypt 存库？
-
-bcrypt 只处理输入的前 72 字节，而 Refresh Token 往往更长，超出部分被截断会导致"内容不同但前 72 字节相同的 Token 校验误判为真"。Refresh Token 只需单向校验、无需还原，应用 SHA-256 哈希入库。
-
-### Q2: 什么是 Refresh Token Rotation？它解决了什么问题？
-
-每次刷新都签发新的 Refresh Token 并让旧的立即失效。被窃取的旧 Token 一旦被攻击者重放，会因库里对应记录已 `revoked` 而校验失败（401），实现"重放即失效"，降低 Token 泄露的横向危害。
-
-### Q3: 为什么需要 AuthSession 表，而不是只发 JWT？
-
-JWT 本身无法被服务端主动吊销。AuthSession 表（User 1:N）让服务端能按设备记录会话、主动吊销（登出/轮换）、设置服务端侧过期，从而支持多设备互不踢下线且可管控。
-
-### Q4: 用户点了"退出登录"，为什么手里的 Access Token 还可能短期有效？
-
-登出只吊销了 Refresh Token 对应的会话记录，Access Token 在其短生命周期（如 15m）内仍可被无状态校验通过。这是双 Token 设计的固有取舍，通常用"接受短窗口"或"高敏接口加版本号/黑名单"来应对。
-
-### Q5: HttpOnly Cookie 能防住 XSS 吗？
-
-不能。它只防止 JS 直接读取 Token 明文，降低窃取风险，但不解决 XSS 本身——被注入的脚本仍可以借用户浏览器带着 Cookie 发请求。根本办法是修复 XSS 漏洞。
+- **单 Token 的死穴**：有效期长则泄露危害大、短则体验差，且客户端存不住、服务端管不了（无法主动吊销），所以要拆成双 Token
+- **Cookie 四个选项的边界**：`httpOnly` 挡 XSS 窃取但不解决 XSS 本身，`secure` 防明文抓包，`sameSite` 缓解 CSRF，`path` 缩小暴露面
+- **Refresh Token 必须哈希入库**：用 SHA-256 单向哈希存库，明文只在响应里给客户端一次，拖库也拿不到可用 Token
+- **别用 bcrypt 存长 Token**：bcrypt 只处理输入的前 72 字节，超长 Token 会被截断，导致不同 Token 哈希相同、校验误判
+- **AuthSession 表支持多设备**：User 1:N AuthSession，关键字段是 `userId`、`refreshTokenHash`、`deviceId`、`expiresAt`、`revoked`
+- **轮换做到"重放即失效"**：每次刷新先把旧记录 `revoked = true` 再签新的一对，偷来的旧 Token 一用就 401
+- **登出就是会话作废**：单设备按 `refreshTokenHash` 更新，全设备按 `userId` 批量置 `revoked`，都是软删除
+- **Prisma 与 TypeORM 同层**：本篇用 Prisma 只是图类型推导完整，哈希入库、轮换、多设备登出的设计思路完全一致
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/nestjs-template`。
+本篇的可运行示例在仓库 `node/08-NestJS 进阶/code/nestjs-template`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -279,5 +266,7 @@ JWT 本身无法被服务端主动吊销。AuthSession 表（User 1:N）让服�
 
 ## 参考
 
+- 本模块总结：[总结](../07-NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
 - 上一篇：[NestJS 项目模板](./10-NestJS%20项目模板)
 - 下一篇：[IoC 与依赖注入原理](./12-IoC%20与依赖注入原理)

@@ -222,9 +222,24 @@ docker compose -f docker-compose.infra.prod.yml --env-file .env.production up -d
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
 
+## 小结
+
+- **docker run 的混乱**：参数记不住、网络手动 link、重启要重新组织命令、无法版本化。
+- **一个文件声明全栈**：app + mysql + redis 用一份 YAML 描述，`up -d` 一条命令全部拉起。
+- **服务名互访**：Compose 自动建网络并做 DNS 解析，容器间直接用服务名当主机名，这是与 docker run 的本质区别。
+- **命名卷持久化**：`volumes: mysql_data:/var/lib/mysql`，容器删了数据还在。
+- **生产堆栈分离**：`infra.prod.yml` 管 MySQL/Redis（一次性启动）、`prod.yml` 管迁移与应用（日常更新）。
+- **为什么要拆**：数据库几年不动、应用天天更新，生命周期不同；拆开后切换自建/云 RDS 只需改 env，不动编排文件。
+- **depends_on 的 condition**：`service_completed_successfully` 等迁移 Job 成功完成才启动应用，比默认"只等容器启动"严格。
+- **同镜像不同入口**：迁移 Job 与业务容器共用镜像，只靠 `entrypoint` 覆盖区分，`restart: 'no'` 让一次性任务失败就失败。
+- **端口只绑 127.0.0.1 与跨宿主机访问**：应用端口不暴露公网、对外只留 Nginx；容器访问宿主机靠 `host.docker.internal` + `extra_hosts`。
+- **三种部署场景**：全 Docker（先 infra 再应用）、混合（infra 注释掉 mysql，DB_HOST 填云地址）、全云（只用 prod）。
+
 ---
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Docker 容器化](./04-Docker%20容器化)
 - 下一篇：[Nginx 反向代理与网关](./06-Nginx%20反向代理与网关)

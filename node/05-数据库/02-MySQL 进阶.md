@@ -779,39 +779,24 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 □ 优化后验证：rows 是否明显减少，Extra 是否更优
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q1: 什么是索引的最左前缀原则？
-
-联合索引 `(a, b, c)` 相当于按 a → b → c 排序，查询条件必须从最左列开始才能用到索引。`where a = 1` 和 `where a = 1 and b = 2` 能用索引，`where b = 2` 用不到。
-
-### Q2: 事务隔离级别中，MySQL 默认的是哪个？解决了什么问题？
-
-MySQL InnoDB 默认是可重复读（Repeatable Read），解决了脏读和不可重复读，但可能出现幻读。InnoDB 通过间隙锁（Gap Lock）在可重复读级别下部分解决了幻读问题。
-
-### Q3: 什么是死锁？如何排查和预防？
-
-死锁是两个事务互相等待对方持有的锁，导致无法继续执行。排查：`SHOW ENGINE INNODB STATUS` 查看死锁日志。预防：所有事务按相同顺序访问资源、保持事务简短、使用 `NOWAIT` 跳过等待。
-
-### Q4: 索引失效的常见场景有哪些？
-
-1. 隐式类型转换（`phone = 13800138000`，phone 是 VARCHAR）
-2. 函数包裹索引列（`DATE(created_at) = '2024-01-01'`）
-3. LIKE 前缀模糊（`'%张三'`）
-4. OR 条件中有未索引列
-5. 不等于条件（`!=`, `NOT IN`）
-
-### Q5: WHERE 和 HAVING 有什么区别？
-
-WHERE 在 GROUP BY 之前过滤行，不能使用聚合函数；HAVING 在 GROUP BY 之后过滤组，只能使用聚合函数或 GROUP BY 中的列。
+- **聚簇索引与非聚簇索引**：InnoDB 主键即聚簇索引、数据按主键物理存放；普通索引叶子存主键值，查完还要回表
+- **联合索引最左前缀**：索引 `(name, age)` 支持 `name` 与 `name+age` 查询，单独查 `age` 用不上
+- **索引字段顺序怎么定**：等值高频列放最左、范围列放在其后、把排序列放末尾可免 filesort，如 `(user_id, status, created_at)`
+- **EXPLAIN 三列读法**：`type` 看 ALL / range / ref，`rows` 越小越好，`Extra` 出现 Using index 是覆盖索引、Using filesort 是额外排序
+- **SQL 执行顺序**：FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT；WHERE 过滤行、HAVING 过滤组
+- **EXISTS 与 IN 的取舍**：外层小、子查询结果集大用 EXISTS；外层大、子查询结果集小用 IN；关联子查询只能用 EXISTS，现代写法可用窗口函数替代
+- **ACID 与四种隔离级别**：InnoDB 默认可重复读（RR）；RR 挡不住幻读，靠间隙锁与 Next-Key Lock 兜底
+- **快照读与当前读**：普通 SELECT 读 MVCC 快照、不加锁；UPDATE / DELETE / `FOR UPDATE` 是当前读并加锁，写并发控制必须用当前读
+- **防超卖的原子 UPDATE**：把判断下推到 `WHERE ... AND balance >= 1`，用 affectedRows 判定成败；需要跨表校验时才上 `FOR UPDATE` 悲观锁
+- **索引失效的五大原因**：隐式类型转换、函数或运算包住索引列、`%x` 前缀模糊、OR 里有一列无索引、低区分度列单独建索引
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/mysql-demo`。
+本篇的可运行示例在仓库 `node/05-数据库/code/mysql-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -825,5 +810,7 @@ WHERE 在 GROUP BY 之前过滤行，不能使用聚合函数；HAVING 在 GROUP
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MySQL 基础](./01-MySQL%20基础)
 - 下一篇：[MySQL 高级实战](./03-MySQL%20高级实战)

@@ -187,9 +187,23 @@ Nginx (80/443)  ← 宿主机，唯一公网入口
 | [Docker Compose 编排](./05-Docker%20Compose%20编排) | compose 里端口绑定 `127.0.0.1`，正是为了只让 Nginx 访问 |
 | [生产部署实战](./08-生产部署实战) | 完整架构如何落地 |
 
+## 小结
+
+- **正向 vs 反向代理**：正向代理代理客户端去访问外部，反向代理代理服务端接收请求，后端说的"加一层"基本都是后者。
+- **不设入口的四个问题**：没有域名路由、无法多服务共享 80/443、没有 SSL、没有负载均衡。
+- **基本转发三件套**：`proxy_pass` 指向后端，配合 `Host` / `X-Real-IP` / `X-Forwarded-For` 三个头。
+- **真实 IP 的坑**：装了代理后应用日志与限流看到的是代理 IP，必须在应用层解析 `X-Forwarded-For`。
+- **WebSocket 代理**：`Upgrade` + `Connection: upgrade` + `proxy_http_version 1.1` + 300s 读写超时，缺一条就握手失败。
+- **静态资源处理**：`try_files $uri $uri/ /index.html` 支撑前端 History 模式回退，Gzip 压 `gzip_types` 指定的文本类 MIME。
+- **负载均衡策略**：默认轮询、`least_conn` 分给连接最少的实例、`ip_hash` 把同一 IP 固定到同一实例（需要 Session 时）。
+- **各组件职责**：Nginx 负责入口与 SSL 终结，PM2 负责进程，Docker 负责隔离与编排，MySQL/Redis 负责数据。
+- **三种部署架构**：纯 Docker、PM2 + Nginx 传统部署、Docker 容器内 PM2；演进主线是 Nginx 始终是唯一入口。
+
 ---
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Docker Compose 编排](./05-Docker%20Compose%20编排)
 - 下一篇：[数据库迁移与发布](./07-数据库迁移与发布)

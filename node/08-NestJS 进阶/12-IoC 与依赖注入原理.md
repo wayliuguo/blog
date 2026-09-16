@@ -179,35 +179,22 @@ export class YyyModule {}
 
 > 口诀：**要被用，先注册；要跨模块，先导出；要用别人，先导入**。三步走完还报错，再检查 `emitDecoratorMetadata` 是否开启、构造参数类型是否可解析（比如用了接口而非具体类却没给 Token）。
 
----
+## 小结
 
-## 面试题
-
-### Q1: IoC 和 DI 的区别是什么？
-
-IoC（控制反转）是设计思想：把对象创建与依赖管理的控制权交给容器。DI（依赖注入）是实现方式：容器创建好依赖后通过构造函数注入给使用者。IoC 回答"为什么交出去"，DI 回答"怎么交出去"。
-
-### Q2: 为什么 NestJS 必须开启 `emitDecoratorMetadata`？
-
-只有开启它，TypeScript 才会在编译产物里生成 `design:paramtypes` 元数据，记录构造函数的参数类型。NestJS 依赖这份元数据来解析"该注入哪个类型的实例"，否则会报"无法解析依赖"。
-
-### Q3: 为什么类上要加 `@Injectable()`？
-
-`@Injectable()` 把类登记为"可被容器管理的 Provider"。没有它，容器不认识这个类，不会为其创建实例，注入时就会失败。
-
-### Q4: Provider 的 Singleton / Request / Transient 作用域有什么区别？
-
-Singleton（默认）整个应用一个实例、所有请求共享；Request 每个请求一个实例，适合绑定请求上下文；Transient 每次注入都新建实例，适合有状态不可共享的对象。Request/Transient 会增加开销且不能被 Singleton 依赖。
-
-### Q5: 出现循环依赖导致启动失败，怎么办？
-
-用 `forwardRef()` 打破依赖环：在相互引用的两侧用 `forwardRef(() => XxxModule)` 延迟引用，并在 Provider 构造参数用 `@Inject(forwardRef(() => XxxService))`。更优解是重构，让依赖单向化。
+- **没有 IoC 的代价**：手动 new 出整条依赖网，改一个构造参数上层全要跟着改，越写越乱
+- **IoC 与 DI 是两个层面**：IoC 是"为什么把控制权交给容器"的思想，DI 是"怎么交出去"的具体实现方式
+- **注入链路的完整路径**：装饰器编译期 emit `design:paramtypes` → reflect-metadata 挂到类上 → 启动扫描 → 容器解析实例化 → 注入使用方
+- **@Injectable 与 emitDecoratorMetadata 缺一不可**：前者让零件进"可注入"名单，后者让容器看得见零件类型，否则报 can't resolve dependencies
+- **四种 Provider 声明方式**：`useClass` 类作 Token、`useValue` 注入常量、`useFactory` 需要运行时逻辑、`useExisting` 给同一实例起别名
+- **非类 Token 必须 @Inject 指名**：Token 是字符串或 Symbol 时，使用方要写 `@Inject(CONFIG)` 才能对上，否则容器无从匹配
+- **启动流程的文字图**：扫描 Module 树 → 收集元数据 → 建依赖关系图 → 建 IoC 容器 → 按依赖顺序实例化 → 注入 → 绑路由与 Guard → 监听端口
+- **DI 报错排查三步法**：该 Provider 在 providers 里注册了吗 → 跨模块时导出/导入了吗 → 提供方 `exports` 与使用方 `imports` 是否配对
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/nestjs-mini`。
+本篇的可运行示例在仓库 `node/07-NestJS 入门/code/nestjs-mini`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -220,5 +207,7 @@ Singleton（默认）整个应用一个实例、所有请求共享；Request 每
 
 ## 参考
 
+- 本模块总结：[总结](../07-NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
 - 上一篇：[认证进阶：双 Token 与多设备会话](./11-认证进阶-双Token与多设备会话)
 - 下一篇：[环境管理与配置](../09-部署与工程化/01-环境管理与配置)

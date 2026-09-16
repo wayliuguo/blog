@@ -72,8 +72,17 @@ chore: update dependencies
 - 指出问题，同时给出建议
 - 尊重作者，用"建议"代替"要求"
 
+## 小结
+
+- **三种工作流**：GitHub Flow（main + feature + PR，小团队持续部署）、Git Flow（多出 develop/release，中大型版本发布）、Trunk-Based（短命分支，CI/CD 成熟时用）。
+- **合并策略取舍**：merge 保留完整历史但多一个合并提交，rebase 得到线性历史但改写提交，squash 把多个提交压成一个。
+- **提交信息规范**：Conventional Commits 的 `<type>(<scope>): <subject>`，用 feat / fix / docs / refactor / test / chore 分类。
+- **Code Review**：单次 PR 控制在 200~300 行以内，先看整体逻辑再看细节，指出问题的同时给建议，并检查规范、复杂度、异常处理、安全与测试覆盖。
+
 ---
 
 ## 参考
 
+- 本模块总结：[总结](../09-部署与工程化/总结.md)
+- 本模块面试题：[面试题](../09-部署与工程化/面试题.md)
 - 上一篇：[系统设计](./06-系统设计)

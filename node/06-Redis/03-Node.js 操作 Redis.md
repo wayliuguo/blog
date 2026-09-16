@@ -299,27 +299,22 @@ class RedisMonitor {
 }
 ```
 
----
+## 小结
 
-## 面试题
-
-### Q6: ioredis 和 node-redis 的区别？
-
-ioredis 更流行，支持 Promise、集群、哨兵、Pipeline、Lua 脚本等特性，API 更现代化。node-redis 是官方客户端，但功能相对较少。
-
-### Q7: Pipeline 的作用是什么？
-
-将多个命令批量发送到 Redis 服务器，减少网络往返次数，提高吞吐量。适合需要批量操作的场景。
-
-### Q8: Lua 脚本在 Redis 中有什么作用？
-
-Lua 脚本在 Redis 中原子执行，所有命令要么全部执行，要么全部不执行。适合需要保证多个命令原子性的场景，如库存扣减、分布式锁释放等。
+- **ioredis 连接与重连**：`new Redis({ host, port, retryStrategy })`，重连策略返回 `Math.min(times * 50, 2000)` 做指数退避
+- **ioredis 内置连接池**：自带连接管理与自动重连；集群模式用 `new Redis.Cluster([...])` 传节点列表
+- **各数据类型的 Node 写法**：String 用 `setex` 缓存 JSON、Hash 用 `hset` / `hgetall` 存对象、List 用 `lpush` / `rpop` 做队列、Set 做标签、ZSet 用 `zrevrange` 做排行榜
+- **NestJS 全局 Redis 模块**：用 `@Global()` 模块的 `useFactory` 提供 `'REDIS'` token 并 exports，Service 用 `@Inject('REDIS')` 取
+- **RedisService 封装**：把 JSON 序列化反序列化、`set` 的 TTL 分支、`del`、`lock` 与 `unlock` 收进一个服务，业务侧不碰连接细节
+- **管道 Pipeline**：`redis.pipeline()` 批量发送命令减少网络往返，`exec()` 返回 `[[err, result], ...]` 结构的数组
+- **Lua 脚本的原子性**：`redis.eval(script, 1, key)` 在 Redis 内原子执行，适合"判断 + 扣减库存"这类跨多条命令的逻辑
+- **连接健康监控**：定时 `ping()` 与 `info()`，对连接数过千、内存超 1GB、`evicted_keys` 增长三类情况告警
 
 ---
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `code/node/redis-demo`。
+本篇的可运行示例在仓库 `node/06-Redis/code/redis-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -332,5 +327,7 @@ Lua 脚本在 Redis 中原子执行，所有命令要么全部执行，要么全
 
 ## 参考
 
+- 本模块总结：[总结](../05-数据库/总结.md)
+- 本模块面试题：[面试题](../05-数据库/面试题.md)
 - 上一篇：[Redis 持久化与淘汰策略](./02-Redis%20持久化与淘汰策略)
 - 下一篇：[Redis 缓存实战](./04-Redis%20缓存实战)

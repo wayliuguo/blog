@@ -269,9 +269,24 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 | [Docker Compose 编排](./05-Docker%20Compose%20编排) | Dockerfile 是"单容器怎么造"，Compose 是"多容器怎么编排" |
 | [生产部署实战](./08-生产部署实战) | 完整部署链路：构建 → 迁移 → 启动 → 健康检查 |
 
+## 小结
+
+- **要解决的问题**："在我机器上是好的"——把应用和它的运行环境一起打包，一次构建到处运行。
+- **镜像 vs 容器 vs 仓库**：镜像是只读模板（类），容器是运行实例（对象），仓库负责存储分发；镜像按指令分层，层不变就复用缓存。
+- **单阶段 Dockerfile 的三个问题**：带源码和 devDependencies（约 1GB、攻击面大）、装全量依赖慢、没有健康检查。
+- **多阶段构建**：构建用的环境不进运行镜像，最终只 `COPY` dist 与 node_modules，体积从约 1GB 降到约 200MB。
+- **层缓存顺序与锁文件**：先 `COPY package*.json` 再装依赖，描述文件不变就命中缓存；`--frozen-lockfile` 保证各环境依赖一致。
+- **deps → build → prod-deps → runtime**：四阶段分工，runtime 从 deps 继承系统工具、从 prod-deps 取依赖、从 build 取产物。
+- **固定版本与 cache mount**：基础镜像写死 `node:20.16.0-alpine` 保证构建可复现；`--mount=type=cache` 让依赖缓存不进镜像层却能复用。
+- **非 root 与最小权限**：`USER node` 运行，`chown` 只授权 logs 与 dist，不遍历 node_modules 以免拖慢构建。
+- **端点级 HEALTHCHECK 与 ENTRYPOINT**：探 `/api/health` 而不是探端口；entrypoint 用 exec 形式才能成为 PID 1、收到 SIGTERM 优雅关闭。
+- **特殊依赖独立阶段**：Playwright 浏览器拆成独立阶段 + cache mount，锁文件不变就跳过整个下载。
+
 ---
 
 ## 参考
 
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[PM2 进程管理](./03-PM2%20进程管理)
 - 下一篇：[Docker Compose 编排](./05-Docker%20Compose%20编排)
