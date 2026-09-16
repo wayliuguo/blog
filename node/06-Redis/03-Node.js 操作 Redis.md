@@ -301,14 +301,23 @@ class RedisMonitor {
 
 ## 小结
 
-- **ioredis 连接与重连**：`new Redis({ host, port, retryStrategy })`，重连策略返回 `Math.min(times * 50, 2000)` 做指数退避
-- **ioredis 内置连接池**：自带连接管理与自动重连；集群模式用 `new Redis.Cluster([...])` 传节点列表
-- **各数据类型的 Node 写法**：String 用 `setex` 缓存 JSON、Hash 用 `hset` / `hgetall` 存对象、List 用 `lpush` / `rpop` 做队列、Set 做标签、ZSet 用 `zrevrange` 做排行榜
-- **NestJS 全局 Redis 模块**：用 `@Global()` 模块的 `useFactory` 提供 `'REDIS'` token 并 exports，Service 用 `@Inject('REDIS')` 取
-- **RedisService 封装**：把 JSON 序列化反序列化、`set` 的 TTL 分支、`del`、`lock` 与 `unlock` 收进一个服务，业务侧不碰连接细节
-- **管道 Pipeline**：`redis.pipeline()` 批量发送命令减少网络往返，`exec()` 返回 `[[err, result], ...]` 结构的数组
-- **Lua 脚本的原子性**：`redis.eval(script, 1, key)` 在 Redis 内原子执行，适合"判断 + 扣减库存"这类跨多条命令的逻辑
-- **连接健康监控**：定时 `ping()` 与 `info()`，对连接数过千、内存超 1GB、`evicted_keys` 增长三类情况告警
+- **连接与重连（ioredis）**
+  - **连接配置**：`new Redis({ host, port, retryStrategy })`，重连策略返回 `Math.min(times * 50, 2000)` 做指数退避
+  - **内置连接池与集群**：ioredis 自带连接管理与自动重连；集群模式用 `new Redis.Cluster([...])` 传节点列表
+- **各数据类型的 Node 写法**
+  1. **String**：用 `setex` 缓存 JSON，用 `incr` / `incrby` 做计数器
+  2. **Hash**：用 `hset` / `hgetall` / `hget` 存对象
+  3. **List**：用 `lpush` / `rpop` 做消息队列
+  4. **Set**：用 `sadd` / `sismember` 做标签系统
+  5. **ZSet**：用 `zadd` / `zrevrange` 做排行榜
+- **NestJS 集成与 RedisService 封装**
+  - **全局 Redis 模块**：用 `@Global()` 模块的 `useFactory` 提供 `'REDIS'` token 并 exports，Service 用 `@Inject('REDIS')` 取
+  - **RedisService 封装**：把 JSON 序列化反序列化、`set` 的 TTL 分支、`del`、`lock` 与 `unlock` 收进一个服务，业务侧不碰连接细节
+- **管道与 Lua 脚本**
+  - **管道 Pipeline**：`redis.pipeline()` 批量发送命令减少网络往返，`exec()` 返回 `[[err, result], ...]` 结构的数组
+  - **Lua 脚本的原子性**：`redis.eval(script, 1, key)` 在 Redis 内原子执行，适合"判断 + 扣减库存"这类跨多条命令的逻辑
+- **连接健康监控**
+  - **定时探测与三类告警**：定时 `ping()` 与 `info()`，对连接数过千、内存超 1GB、`evicted_keys` 增长三类情况告警
 
 ---
 

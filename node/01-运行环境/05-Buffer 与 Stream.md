@@ -409,20 +409,41 @@ path.resolve('/etc', 'x');    // '/etc/x'（遇到绝对路径 /etc 即停止）
 
 ## 小结
 
-- **Buffer 是固定长度的字节序列**：容量创建时定死，是 `Uint8Array` 的子类；字节本身没有编码，同一段字节用 utf8 / hex / base64 解读得到不同结果
-- **十六进制与字符串互转**：`Buffer.from('hello')` 打印成 `68 65 6c 6c 6f`，对应 ASCII 里每个字母一字节；字节本身没有编码，hex / base64 只是解读视角
-- **Buffer.alloc 与 Buffer.from 的区别**：alloc(n) 分配并清零、适合待填充缓冲，from(x) 从已有数据编码；不要用未清零的 `Buffer(size)` 旧构造，会残留堆上旧数据
-- **字符长度 ≠ 字节长度**：`'你好'.length` 是 2，`Buffer.from('你好').length` 是 6（UTF-8 每汉字 3 字节），算 Content-Length 必须用字节数
-- **Buffer 的五个应用场景**：fs.readFile 不指定编码、TCP socket 的 data chunk、图片音视频、AES/RSA 加解密、Base64 编解码
-- **Stream 是一块一块地搬**：10GB 文件用 readFile 会撑爆内存，Stream 一次搬一块（通常 64KB），内存恒定在几十 KB 到几 MB；Buffer 是水桶、Stream 是水管
-- **Stream 与 Buffer 的关系**：Buffer 是水桶里那桶水（一块字节），Stream 是不断把一桶桶水运走的水管；没有 Buffer 就没东西可运，没有 Stream 就只能整块堆在内存
-- **四种 Stream**：Readable（只读）、Writable（只写）、Duplex（双向，典型是 TCP Socket）、Transform（Duplex + 转换，如 gzip、加解密）
-- **复制大文件要用 Stream**：readFile + writeFile 会把整个文件读进内存、大文件直接 OOM；`createReadStream` 配 `pipe` 到 `createWriteStream` 边读边写，内存恒定在几 KB 到几 MB
-- **背压**：`writable.write()` 返回 false 表示内部缓冲到顶、上游应暂停，缓冲降下来触发 `'drain'` 再恢复；`highWaterMark`（默认 64KB）决定触发点
-- **pipe 与 pipeline 的取舍**：pipe 自动协调背压但下游出错不会销毁上游；pipeline 任一环出错统一销毁所有流，链路长或要错误兜底时用它
-- **流式推送必须用 Stream**：日志/进度/大文件做成 Readable 边产生边推，客户端立刻开始消费，`res` 本身就是 Writable
-- **fs 的三种风格与 path**：回调版、`fs/promises`、`*Sync`；同步版本阻塞事件循环，只适合启动初始化与 CLI。拼路径永远用 `path.join`，要基于 cwd 的绝对路径才用 `path.resolve`
-- **永远用 path.join 拼路径**：手写 `/` 或 `\` 在跨平台时必翻车；`basename` / `dirname` / `extname` / `parse` 能把路径拆成结构化字段，`path.sep` 给出当前系统分隔符
+- **Buffer 的内存模型与"编码只是视角"**
+  - **固定长度的字节序列**：容量在创建时就定死，不能无限追加；Node 4+ 的 `Buffer` 是 `Uint8Array` 的子类，能与整个 TypedArray 体系互操作（`buf instanceof Uint8Array` 为 `true`）
+  - **字节本身没有编码**：`Buffer.from('hello')` 打印成 `<Buffer 68 65 6c 6c 6f>`，正好是 ASCII 的 `h e l l o`、每个字母一字节；同一段字节用 `'utf8'` / `'hex'` / `'base64'` 解读分别得到 `hello` / `68656c6c6f` / `aGVsbG8=`，这正是 `Buffer.from(str)` 与 `buf.toString()` 成对出现的原因
+  - **`Buffer.alloc(n)` 与 `Buffer.from(x)` 的区别**：`alloc(n)` 分配 n 个字节并清零，适合作为待填充的缓冲区；`from(x)` 从已有数据（字符串、数组、`ArrayBuffer`）编码而来，不清零；不要用未清零的 `Buffer(size)` 旧构造，它残留堆上的随机旧数据、可能泄漏敏感信息
+- **字符长度 ≠ 字节长度（`Content-Length` 的坑）**
+  - **基本差异**：`'你好'.length` 是 2（字符数），`Buffer.from('你好').length` 是 6（UTF-8 下每个汉字 3 字节）
+  - **中英混合**：`'中文abc'.length` 是 5，对应字节数是 9（中 3×2 + 英 1×3）
+  - **结论**：算 HTTP 响应头的 `Content-Length`、切分二进制协议帧、限制上传体积时，必须用 `Buffer.length`（字节数）而不是 `string.length`（字符数），否则长度会被算小、下游按错误长度截断导致数据错乱
+- **Buffer 的五个应用场景**
+  1. **文件读取**：`fs.readFile` 不指定 encoding 时，回调拿到的 `data` 就是 `Buffer`
+  2. **TCP Socket 的 `data` 事件**：网络收到的原始字节，`chunk` 通常就是 `Buffer`
+  3. **图片 / 音频 / 视频**：JPEG、PNG、MP3、MP4 本质都是二进制字节流
+  4. **加密**：明文先变成 `Buffer`，交给 `AES` / `RSA` 处理，产出的密文也是 `Buffer`
+  5. **Base64 编解码**：把任意二进制安全地塞进只认文本的协议（邮件、JSON、Data URL）
+- **Stream 的本质，以及它与 Buffer 的关系**
+  - **一块一块地搬**：`fs.readFile` 读 10GB 视频意味着整个文件进内存、进程直接被撑爆；Stream 一次只搬一小块（通常 64KB），内存占用始终维持在几十 KB 到几 MB
+  - **水桶与水管**：`Buffer` 是一块数据（水桶里装的那桶水），`Stream` 是数据的运输方式（水管）；Stream 不断输送一个又一个 Buffer chunk——没有 Buffer 就没东西可运，没有 Stream 就只能整块整块堆在内存里
+- **四种 Stream**
+  1. **`Readable`（只读）**：只生产数据，如 `fs.createReadStream('./a.txt')`、HTTP 请求体
+  2. **`Writable`（只写）**：只消费数据，如 `fs.createWriteStream('./b.txt')`、HTTP 响应
+  3. **`Duplex`（双向）**：同时可读可写，**典型是 TCP Socket**
+  4. **`Transform`（双向 + 转换）**：`Duplex` 的一种，输入经过"转换"再输出，如 `gzip` 压缩、加解密、数据格式转换
+- **Stream 的工程实践：复制、背压与 `pipe` / `pipeline`**
+  - **复制大文件必须用 Stream**：`fs.readFile` + `fs.writeFile` 会把整个文件读进内存、大文件直接 OOM；`createReadStream` 配 `pipe` 到 `createWriteStream` 后数据沿 `Disk → Buffer → Readable Stream → Writable Stream → Disk` 流动，内存恒定在几 KB 到几 MB
+  - **背压是 Stream 真正高级的地方**：速度不匹配时（磁盘 500MB/s、网络 10MB/s），`writable.write(chunk)` 返回 `true` 表示内部缓冲未到阈值可继续写、返回 `false` 表示**缓冲已达上限、调用方应暂停读取**，否则内存照样涨到 OOM；缓冲降下来后触发 `'drain'` 事件再恢复写入，闭环是 `write() 返回 false → pause → 缓冲下降 → 'drain' → resume`
+  - **`highWaterMark` 决定背压触发点**：`createReadStream` 的 `highWaterMark` 默认 64KB，阈值越小内存越省但搬运次数越多；手写 `pause` / `resume` 容易出错，直接用 `pipe` / `pipeline`，它们内部已自动协调背压
+  - **`pipe` 与 `pipeline` 的取舍**：`pipe` 会自动协调读取速度、写入速度、缓存与背压，但**下游出错时不会自动销毁上游**，可能留下悬挂的流与未释放的文件描述符、Socket；`pipeline`（`node:stream/promises`）在任意一环出错时统一销毁所有流并抛出错误，还能顺序串联多个 Transform（读 → 压缩 → 加密 → 写）——简单搬运用 `pipe`，链路更长、需要错误兜底或串联多个转换时用 `pipeline`
+- **流式推送为什么必须用 Stream**
+  - **问题**：日志流、进度百分比、大文件传输、实时监控数据这类**持续产生**的数据，用 `readFile` 或先拼成大字符串再一次性返回，会让客户端干等到全部生成完、服务端内存还被撑着
+  - **做法**：把数据源做成 Readable Stream 边产生边推，客户端每收到一段就消费一段；`res` 本身就是 `Writable` Stream，`stream.pipe(res)` 即可
+- **落地 `fs` 与 `path`：读写、目录遍历与拼路径**
+  - **`fs` 的三种风格**：老式回调版（深层嵌套易成回调地狱）、`fs/promises`（配 `async/await` 与 `try/catch` 统一兜底，现在的主流）、`*Sync` 同步版——同步版会**阻塞事件循环**直到 I/O 完成，只适合启动初始化、CLI 这类不在请求热路径上的场景
+  - **常用 API**：`readFile` / `writeFile` / `mkdir({ recursive: true })` / `readdir`（配 `withFileTypes` 拿 `Dirent` 判断类型，避免反复 `stat`）/ `stat`（`isFile()` / `isDirectory()` 与 `size`）/ `rm({ recursive: true })`
+  - **拼路径永远用 `path.join`**：手写 `'/'` 或 `'\\'` 在跨平台（Linux `/`、Windows `\`）时必翻车；`basename` / `dirname` / `extname` / `parse` 能把路径拆成结构化字段，`path.sep` 给出当前系统分隔符
+  - **`path.resolve` 与 `path.join` 的区别**：`join` 只按顺序拼接并规范化，不引入当前工作目录；`resolve` 从右往左拼、**遇到绝对路径就停下来**，并把结果解析成基于 cwd 的绝对路径（相当于对每段依次 `cd`）——只是拼路径用 `join`，要"从项目根出发的绝对路径"才用 `resolve`
 
 ## 配套代码
 

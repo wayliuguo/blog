@@ -220,16 +220,34 @@ curl https://api.example.com/api/health
 
 ## 小结
 
-- **手动部署的四个问题**：易漏步骤、构建吃服务器资源、无法快速回滚、多人发版不可控。
-- **核心区别**：构建从服务器挪到云端 CI，服务器只做拉新镜像、重启容器这一件事。
-- **workflow 三概念**：触发条件（on）、任务（jobs）、步骤（steps）。
-- **推荐双流水线**：build 负责构建推送，deploy 等 build 成功后再 SSH 部署；构建失败就不会触发部署，deploy 还能多机复用。
-- **流水线一**：`on: push: tags: ['v*']` 触发，登录仓库后构建并推 `stable` 与 `v1.0.0` 两个 tag。
-- **流水线二**：`workflow_run` 监听构建完成，且 `conclusion == 'success'` 才执行 SSH 部署。
-- **pull 替代 --build**：服务器只 `docker compose pull` + `up -d`，不本地构建，压力大幅下降。
-- **Secrets 管理**：镜像账号、镜像名、服务器地址与 SSH 私钥全放仓库 Secrets，并为流水线单独生成密钥对。
-- **迁移进流水线**：安全迁移（新增表/字段/索引）自动执行，破坏性迁移（删除/重命名）必须人工确认后手动跑。
-- **回滚就是再发一次旧 tag**：拉旧版本镜像重新部署，秒级完成。
+- **手动部署的问题与 CI/CD 的核心区别**
+  - **四个问题**：易漏步骤、构建消耗服务器资源、无法快速回滚、多人发版不可控
+  - **核心区别**：**构建从服务器挪到云端 CI**，服务器只做一件事——拉新镜像、重启容器
+  - **对应关系**：触发方式从 SSH 敲命令变成 `git tag v1.0.0` 推送；构建位置从服务器本地变成 GitHub Actions 云端；镜像从本地构建变成从仓库拉取；回滚从 `git checkout` 重新构建变成切回旧 tag 镜像（秒级）
+- **workflow 的三个概念（`.github/workflows/*.yml`）**
+  1. **触发条件（`on`）**：什么时候跑——`push`、`tag`、手动
+  2. **任务（`jobs`）**：一个流水线的步骤集合，可并行
+  3. **步骤（`steps`）**：具体动作——`checkout`、`build`、`deploy`
+- **为什么推荐双流水线**
+  - **build 负责构建推送，deploy 等 build 成功后再 SSH 部署**
+  - 构建失败就不会触发部署；deploy 还能在多台服务器上复用
+- **流水线一：构建镜像并推送（build-stable.yml）**
+  - `on: push: tags: ['v*']` 触发，`docker/login-action@v3` 登录 Docker Hub 后由 `docker/build-push-action@v5` 构建并 `push: true`
+  - 同时打两个 tag：`stable` 表示"最新稳定版"，`v1.0.0`（`github.ref_name`）表示"此版本"；**回滚时直接拉旧 tag 的镜像**
+- **流水线二：SSH 部署（deploy.yml）**
+  - `on: workflow_run` 监听 `Build Stable Image` 工作流的 `completed`，且 `if: conclusion == 'success'` 才执行，连接由 `appleboy/ssh-action@v1` 完成
+  - 服务器上只跑 `docker compose -f docker-compose.prod.yml --env-file .env --env-file .env.production pull` + `up -d`
+  - **`pull`（从仓库拉取）替代 `--build`（服务器本地构建）**，这就是"构建挪到云端"的关键，服务器压力大幅下降
+- **Secrets：密钥不进代码**
+  - 在仓库 **Settings → Secrets and variables → Actions** 配置 `DOCKER_USERNAME` / `DOCKER_PASSWORD`、`DOCKER_IMAGE`、`SERVER_HOST` / `SERVER_USER`、`SERVER_SSH_KEY`
+  - 建议为 CI/CD 单独生成密钥对（`ssh-keygen -t ed25519 -C "github-actions-deploy"` + `ssh-copy-id`），不要用日常账号
+- **迁移进流水线**
+  - **安全迁移**（新增表 / 字段 / 索引）在 deploy 中自动执行，且用隔离容器：`docker compose -f docker-compose.prod.yml run --rm --entrypoint "" my-app node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/data-source.js`
+  - **破坏性迁移**（删除 / 重命名）不可逆，自动化执行没有"看一眼"的机会，必须人工确认后手动执行——安全的变更全自动，危险的变更留人工
+- **触发、回滚与验证**
+  - **发版 / 删 tag**：`git tag v1.0.0 && git push origin master && git push origin v1.0.0`；`git tag -d v1.0.0 && git push origin --delete v1.0.0`
+  - **回滚 = 用旧 tag 再部署一次**：CI 重新构建旧代码镜像并部署，秒级完成
+  - **验证**：GitHub Actions 页面看运行日志；服务器上 `docker ps | grep my-app`、`docker logs -f my-app-server`、`curl https://api.example.com/api/health`
 
 ---
 

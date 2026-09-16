@@ -170,16 +170,23 @@ app.use((err, req, res, next) => {
 
 ## 小结
 
-- **Express 的定位**：不提供 `node:http` 之外的新能力，只把路由分发、请求体读取、响应封装收敛成约定；手写 `if (req.url === ...)` 变成 `app.get('/user', handler)`
-- **Hello World 的五个动作**：`require('express')` → `express()` 建应用 → `app.get('/')` 注册路由 → `res.send()` 输出 → `app.listen(3000)`，5 行起服务
-- **路由的两维与占位符**：`app.get/post/put/delete(path, handler)` 按方法与路径两个维度分发，`:id` 是路径里的占位符
-- **req.params 恒为字符串**：`/users/123` 命中 `/users/:id` 后 `req.params.id === '123'`，当数字用必须先 `Number()` 转换
-- **req.query 与 req.body 的来源差异**：`?page=1` 自动解析进 `req.query.page`；`req.body` 必须挂了 `express.json()` / `urlencoded()` 才存在，`multipart/form-data` 要另上 multer
-- **中间件与 next()**：`app.use(fn)` 每个请求都会执行，签名 `(req, res, next)`，只有调用 `next()` 才推进到下一环，否则请求挂起
-- **app.use 与 app.get 的匹配差异**：`use` 匹配所有方法且路径是前缀匹配（`/user` 命中 `/user/123`），`get` 只匹配 GET 且路径精确匹配
-- **内置与第三方中间件**：`express.json()` / `urlencoded({ extended: true })` / `static('public')` 内置；`cors()` 等跨域、鉴权、限流都要第三方
-- **错误处理中间件必须 4 参数**：靠 `fn.length === 4` 识别，链上任意位置 `next(err)` 会跳过后面全部普通中间件，直奔错误处理器
-- **Express 与 NestJS 的对比**：Express 无架构约束、TS 可选、无依赖注入；NestJS 强制 MVC / TypeScript / DI / `@Module`，适合中大型长期项目
+- **Express 的定位与心智模型**
+  - **不提供 `node:http` 之外的新能力**：只把路由分发、请求体读取、响应封装收敛成约定，手写 `if (req.url === ...)` 变成 `app.get('/user', handler)`
+  - **Hello World 的五个动作**：`require('express')` → `express()` 建应用 → `app.get('/')` 注册路由 → `res.send()` 输出 → `app.listen(3000)`，5 行起服务
+- **路由匹配规则**
+  - **两个维度**：`app.get/post/put/delete(path, handler)` 按 HTTP 方法与路径分发，`:id` 是路径里的占位符
+  - **`app.use` 与 `app.get` 的匹配差异**：`use` 匹配所有方法且路径是前缀匹配（`/user` 命中 `/user/123`），`get` 只匹配 GET 且路径精确匹配
+- **请求数据的三个来源**
+  1. **`req.params`**：路径占位符的值，恒为字符串——`/users/123` 命中 `/users/:id` 后 `req.params.id === '123'`，当数字用必须先 `Number()` 转换
+  2. **`req.query`**：查询串自动解析，`?page=1` 进 `req.query.page`
+  3. **`req.body`**：必须挂了 `express.json()` / `urlencoded()` 才存在，`multipart/form-data` 要另上 multer
+- **中间件的执行模型**
+  - **签名与推进**：`app.use(fn)` 注册的中间件每个请求都会执行，签名 `(req, res, next)`，只有调用 `next()` 才推进到下一环，否则请求挂起
+  - **错误处理中间件必须 4 参数**：靠 `fn.length === 4` 识别，链上任意位置 `next(err)` 会跳过后面全部普通中间件，直奔错误处理器
+- **中间件生态**
+  - **内置**：`express.json()` 解析 JSON 请求体、`urlencoded({ extended: true })` 解析 URL 编码请求体、`static('public')` 提供静态文件服务
+  - **第三方**：`cors()` 等跨域、鉴权、限流都要第三方包
+- **框架选型（Express 与 NestJS）**：Express 无架构约束、TS 可选、无依赖注入，适合小型项目与学习；NestJS 强制 MVC / TypeScript / DI / `@Module`，适合中大型长期项目
 
 ---
 

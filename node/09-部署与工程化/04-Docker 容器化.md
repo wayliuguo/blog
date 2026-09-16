@@ -271,16 +271,37 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 
 ## 小结
 
-- **要解决的问题**："在我机器上是好的"——把应用和它的运行环境一起打包，一次构建到处运行。
-- **镜像 vs 容器 vs 仓库**：镜像是只读模板（类），容器是运行实例（对象），仓库负责存储分发；镜像按指令分层，层不变就复用缓存。
-- **单阶段 Dockerfile 的三个问题**：带源码和 devDependencies（约 1GB、攻击面大）、装全量依赖慢、没有健康检查。
-- **多阶段构建**：构建用的环境不进运行镜像，最终只 `COPY` dist 与 node_modules，体积从约 1GB 降到约 200MB。
-- **层缓存顺序与锁文件**：先 `COPY package*.json` 再装依赖，描述文件不变就命中缓存；`--frozen-lockfile` 保证各环境依赖一致。
-- **deps → build → prod-deps → runtime**：四阶段分工，runtime 从 deps 继承系统工具、从 prod-deps 取依赖、从 build 取产物。
-- **固定版本与 cache mount**：基础镜像写死 `node:20.16.0-alpine` 保证构建可复现；`--mount=type=cache` 让依赖缓存不进镜像层却能复用。
-- **非 root 与最小权限**：`USER node` 运行，`chown` 只授权 logs 与 dist，不遍历 node_modules 以免拖慢构建。
-- **端点级 HEALTHCHECK 与 ENTRYPOINT**：探 `/api/health` 而不是探端口；entrypoint 用 exec 形式才能成为 PID 1、收到 SIGTERM 优雅关闭。
-- **特殊依赖独立阶段**：Playwright 浏览器拆成独立阶段 + cache mount，锁文件不变就跳过整个下载。
+- **Docker 要解决的问题**
+  - "在我机器上是好的"：把应用和它的运行环境一起打包，实现**一次构建，到处运行**
+- **镜像 / 容器 / 仓库的心智模型**
+  - **镜像**是只读模板（类比类 / 光盘），**容器**是镜像的运行实例（类比实例 / 光驱），**仓库**负责存储分发（如 Docker Hub）
+  - **分层缓存**：每条指令生成一个只读层，层不变就复用缓存——所以指令顺序直接影响构建速度
+- **单阶段 Dockerfile 的三个问题**
+  - 镜像里带着源码和 devDependencies（约 1GB、攻击面大）、`npm install` 装全量依赖导致构建慢、没有健康检查（容器"起来了"但应用没就绪）
+- **多阶段构建为什么能瘦身**
+  - 核心思想：**构建用的环境不进运行镜像**；runtime 只用 `COPY --from=builder` 拿 `dist` 与 `node_modules`，体积从约 1GB 降到约 200MB，攻击面同步减小
+  - 其他手段：选 Alpine 基础镜像（约 120MB vs Ubuntu 约 1GB）、`.dockerignore` 给构建上下文瘦身、合并 `RUN` 减少层数（`npm ci --only=production && npm cache clean --force`）
+- **层缓存顺序与锁文件**
+  - 先 `COPY package*.json` 再装依赖：**依赖描述文件不变 → 缓存命中 → 跳过整段安装**
+  - **`--frozen-lockfile`**：严格按 lockfile 安装，所有环境依赖版本一致
+  - **`--prod`**：只装 `dependencies`，跳过 TypeScript / ESLint / Jest 等 devDependencies
+- **四阶段分工：deps → build → prod-deps → runtime**
+  - **deps**：装好 pnpm、pm2、时区工具等系统依赖，供后续阶段继承
+  - **build**：装全量依赖并 `nest build` 出 `dist`
+  - **prod-deps**：只装生产依赖，不含 devDependencies
+  - **runtime**：从 deps 继承系统工具、从 prod-deps 取依赖、从 build 取产物
+- **可复现构建与 cache mount**
+  - 基础镜像写死 `node:20.16.0-alpine` 而非 `node:20-alpine`，保证今天构建和半年后构建结果一致
+  - **`--mount=type=cache`**：依赖缓存挂载为构建缓存，不落入镜像层却能被后续构建复用
+  - **`ARG TZ=Asia/Shanghai`** 设置时区，日志时间戳与定时任务才正确
+- **安全、健康检查与元数据**
+  - **非 root 与最小权限**：`USER node` 运行，`chown` 只授权 `logs` 与 `dist`（不遍历 `node_modules`，构建不拖慢）
+  - **端点级 HEALTHCHECK**：`wget --spider http://localhost:$APP_PORT/api/health`，验证应用真正就绪，而非仅仅端口在监听
+  - **`ARG` + `LABEL`**：版本号与构建时间写入镜像元数据，`docker inspect` 可溯源
+  - **`ENTRYPOINT` 用 exec 形式**：entrypoint 成为 PID 1，才能正确接收 SIGTERM 实现优雅关闭
+- **特殊依赖独立阶段**
+  - Playwright 浏览器下载 184MB：装进 build 阶段白装、装进 runtime 每次重下
+  - 拆成独立阶段 + `cache mount`（`PLAYWRIGHT_DOWNLOAD_HOST` 走 npmmirror 加速）：浏览器缓存可复用、runtime 只复制一次、锁文件不变就跳过整个下载
 
 ---
 

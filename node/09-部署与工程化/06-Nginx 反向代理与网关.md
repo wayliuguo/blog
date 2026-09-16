@@ -189,15 +189,33 @@ Nginx (80/443)  ← 宿主机，唯一公网入口
 
 ## 小结
 
-- **正向 vs 反向代理**：正向代理代理客户端去访问外部，反向代理代理服务端接收请求，后端说的"加一层"基本都是后者。
-- **不设入口的四个问题**：没有域名路由、无法多服务共享 80/443、没有 SSL、没有负载均衡。
-- **基本转发三件套**：`proxy_pass` 指向后端，配合 `Host` / `X-Real-IP` / `X-Forwarded-For` 三个头。
-- **真实 IP 的坑**：装了代理后应用日志与限流看到的是代理 IP，必须在应用层解析 `X-Forwarded-For`。
-- **WebSocket 代理**：`Upgrade` + `Connection: upgrade` + `proxy_http_version 1.1` + 300s 读写超时，缺一条就握手失败。
-- **静态资源处理**：`try_files $uri $uri/ /index.html` 支撑前端 History 模式回退，Gzip 压 `gzip_types` 指定的文本类 MIME。
-- **负载均衡策略**：默认轮询、`least_conn` 分给连接最少的实例、`ip_hash` 把同一 IP 固定到同一实例（需要 Session 时）。
-- **各组件职责**：Nginx 负责入口与 SSL 终结，PM2 负责进程，Docker 负责隔离与编排，MySQL/Redis 负责数据。
-- **三种部署架构**：纯 Docker、PM2 + Nginx 传统部署、Docker 容器内 PM2；演进主线是 Nginx 始终是唯一入口。
+- **为什么必须有入口网关**
+  - 直接把 `3000` 暴露给公网有四个问题：**没有域名路由、无法多服务共享 80/443、没有 SSL、没有负载均衡**
+  - 用户只跟 Nginx 打交道，Nginx 把请求分发给背后的服务，并隐藏内部网络结构
+- **正向代理 vs 反向代理**
+  - **正向代理代理客户端**去访问外部资源（翻墙、公司内网出口）；**反向代理代理服务端**接收请求（网关、负载均衡）——后端语境说的"加一层"基本都是后者
+- **基本转发与真实 IP**
+  - **转发三件套**：`proxy_pass` 指向后端，配合 `Host $host`（保留原始域名，后端才能正确生成链接）、`X-Real-IP`（客户端真实 IP）、`X-Forwarded-For`（转发链上所有 IP，供日志/风控分析）
+  - **真实 IP 的坑**：装了代理后应用日志与限流看到的是代理 IP，必须在应用层解析 `X-Forwarded-For`
+- **WebSocket 代理**
+  - `proxy_set_header Upgrade $http_upgrade` + `Connection "upgrade"` + `proxy_http_version 1.1` + `proxy_read_timeout 300s`（连同 `proxy_send_timeout 300s`），缺一条前端就握手失败
+- **静态资源与 Gzip**
+  - **History 模式回退**：`try_files $uri $uri/ /index.html` 让前端路由刷新时也能命中 `index.html`
+  - **Gzip**：`gzip on` 配合 `gzip_http_version 1.1`、`gzip_types` 指定的文本类 MIME、`gzip_min_length 1000`、`gzip_comp_level 9`，减小传输体积
+- **负载均衡策略（`upstream` 组 + `proxy_pass http://backend/` 转发给整组）**
+  1. **默认轮询**：依次分发，权重相同
+  2. **`least_conn`**：分给当前连接最少的实例
+  3. **`ip_hash`**：同一 IP 固定到同一实例（需要 Session 的场景）
+- **各组件职责**
+  - **Nginx**：接收请求、SSL 终结、静态文件、反向代理、负载均衡
+  - **PM2**：Node 进程管理、故障恢复、内存管理
+  - **Docker**：环境隔离、一致性部署、服务编排
+  - **MySQL / Redis**：数据持久化 / 缓存
+- **三种部署架构**
+  1. **纯 Docker 部署**（现代默认）：Nginx、Server、Redis、MySQL 都在同一套 Compose 网络里
+  2. **PM2 + Nginx 传统部署**：Nginx(80/443) 反代与负载均衡 → 多个 PM2 cluster 实例 → MySQL / Redis
+  3. **Docker + 容器内 PM2**：Nginx 在宿主机做唯一公网入口 → Docker 容器（PM2 fork 管理单进程）× N 副本 → 宿主机 Docker 或云上的 MySQL / Redis
+  - 演进主线：**Nginx 始终保持"唯一入口"**；变化的只是背后的 Node 进程由谁管理（裸机 PM2 → 容器 → 编排平台）
 
 ---
 

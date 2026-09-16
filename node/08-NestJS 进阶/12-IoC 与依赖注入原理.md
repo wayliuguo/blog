@@ -181,14 +181,31 @@ export class YyyModule {}
 
 ## 小结
 
-- **没有 IoC 的代价**：手动 new 出整条依赖网，改一个构造参数上层全要跟着改，越写越乱
-- **IoC 与 DI 是两个层面**：IoC 是"为什么把控制权交给容器"的思想，DI 是"怎么交出去"的具体实现方式
-- **注入链路的完整路径**：装饰器编译期 emit `design:paramtypes` → reflect-metadata 挂到类上 → 启动扫描 → 容器解析实例化 → 注入使用方
-- **@Injectable 与 emitDecoratorMetadata 缺一不可**：前者让零件进"可注入"名单，后者让容器看得见零件类型，否则报 can't resolve dependencies
-- **四种 Provider 声明方式**：`useClass` 类作 Token、`useValue` 注入常量、`useFactory` 需要运行时逻辑、`useExisting` 给同一实例起别名
-- **非类 Token 必须 @Inject 指名**：Token 是字符串或 Symbol 时，使用方要写 `@Inject(CONFIG)` 才能对上，否则容器无从匹配
-- **启动流程的文字图**：扫描 Module 树 → 收集元数据 → 建依赖关系图 → 建 IoC 容器 → 按依赖顺序实例化 → 注入 → 绑路由与 Guard → 监听端口
-- **DI 报错排查三步法**：该 Provider 在 providers 里注册了吗 → 跨模块时导出/导入了吗 → 提供方 `exports` 与使用方 `imports` 是否配对
+- **从手动 new 到 IoC**
+  - **没有 IoC 的代价**：手动 new 出整条依赖网，改一个构造参数上层全要跟着改，越写越乱
+  - **IoC 与 DI 是两个层面**：IoC 是"为什么把控制权交给容器"的思想，DI 是"怎么交出去"的具体实现方式
+- **容器怎么"看得见"依赖**
+  - **注入链路的完整路径**：装饰器在编译期 emit `design:paramtypes` → `reflect-metadata` 挂到类上 → 启动扫描 → 容器解析并实例化 → 注入使用方
+  - **`@Injectable()` 与 `emitDecoratorMetadata` 缺一不可**：前者让零件进"可注入"名单，后者让容器看得见零件类型，否则运行时报 `Nest can't resolve dependencies`
+- **Provider Token 与四种声明方式**
+  1. **`useClass`**：`{ provide: UserService, useClass: UserService }`，最常用，Token 即类
+  2. **`useValue`**：`{ provide: 'CONFIG', useValue: { secret: 'x' } }`，注入常量或配置对象
+  3. **`useFactory`**：`{ provide: Repo, useFactory: () => new Repo(...) }`，需要运行时逻辑、异步或依赖其他 Provider
+  4. **`useExisting`**：`{ provide: 'Alias', useExisting: RealService }`，给同一个实例起别名
+  - **非类 Token 必须 `@Inject` 指名**：Token 是字符串或 `Symbol` 时，使用方要写 `@Inject(CONFIG)` 才能对上，否则容器无从匹配
+- **Provider 作用域（Scope）**
+  1. **`Scope.DEFAULT`（Singleton）**：整个应用一个实例、所有请求共享，绝大多数无状态服务用它
+  2. **`Scope.REQUEST`**：每个请求新建一个实例，适合绑定请求上下文（如按租户隔离）
+  3. **`Scope.TRANSIENT`**：每次注入都新建实例，适合有状态、不可共享的工具类
+  - **代价**：Request/Transient 绕过 Singleton 的复用，高频接口上增加创建开销，且无法被 Singleton 依赖（作用域语义冲突）
+- **启动流程与循环依赖**
+  - **`NestFactory.create` 的顺序**：扫描 Module 树（imports/providers/controllers）→ 收集元数据 → 建依赖关系图 → 建 IoC 容器 → 按依赖顺序实例化 → 注入 Controller 与其他 Provider → 绑路由与 Guard/Pipe → 启动 HTTP Server
+  - **循环依赖会让启动直接失败**：依赖图里出现环，容器无法确定先实例化谁，要用 `forwardRef()` 打破
+- **DI 报错排查三步法**（口诀：要被用先注册、要跨模块先导出、要用别人先导入）
+  1. **该 Provider 是否在 `providers` 里注册**：没注册就补上
+  2. **它来自别的 Module 吗、是否通过 `exports` 导出**：提供方 Module 要写 `exports: [XxxService]`
+  3. **使用方 Module 是否 `imports` 了提供方 Module**：没导入就补上
+  - 三步走完还报错，再检查 `emitDecoratorMetadata` 是否开启、构造参数类型是否可解析（比如用了接口而非具体类却没给 Token）
 
 ---
 

@@ -218,13 +218,18 @@ export class OrderService {
 
 ## 小结
 
-- **mysql2 连接池**：`createPool` 复用连接，`connectionLimit: 10` 控上限，比每次新建单连接省下大量握手开销
-- **参数化查询防注入**：用 `?` 占位符传参，绝不把变量拼进 SQL 字符串
-- **ORM 的定位**：把数据库表映射成带装饰器的 Entity 类，用 Repository 方法操作数据而不手写 SQL
-- **TypeORM 核心装饰器**：`@Entity('users')` 对应表、`@PrimaryGeneratedColumn()` 自增主键、`@Column({ unique: true })` 加约束
-- **实体关系映射**：`@OneToMany` 与 `@ManyToOne` 配合 `@JoinColumn({ name: 'user_id' })` 表达一对多
-- **N+1 查询问题**：循环里逐个查关联表会变成 1+N 次查询；用 `relations: ['orders']` 或 QueryBuilder 的 `leftJoinAndSelect` 压成一次
-- **QueryRunner 事务**：`startTransaction` → 业务操作 → `commitTransaction`，出错 `rollbackTransaction`，`finally` 里必须 `release`
+- **mysql2 连接与查询**
+  - **连接池**：`createPool` 复用连接，`connectionLimit: 10` 控上限、`queueLimit: 0` 不限队列、`waitForConnections: true` 没空闲连接就排队，比每次新建单连接省下大量握手开销
+  - **参数化查询防注入**：用 `?` 占位符传参（`pool.query('... WHERE id = ?', [userId])`），绝不把变量拼进 SQL 字符串
+- **TypeORM 的 ORM 建模**
+  - **ORM 的定位**：把数据库表映射成带装饰器的 Entity 类，用 Repository 方法操作数据而不手写 SQL
+  - **核心装饰器**：`@Entity('users')` 对应表、`@PrimaryGeneratedColumn()` 自增主键、`@Column({ length: 50 })` / `{ default: 0 }` 定列、`@Column({ unique: true })` 加约束
+  - **实体关系映射**：`@OneToMany` 与 `@ManyToOne` 配合 `@JoinColumn({ name: 'user_id' })` 表达一对多
+- **关联查询与 N+1 问题**
+  - **N+1 问题**：循环里逐个查关联表会变成 1+N 次查询，N 是用户数量
+  - **解决办法**：用 `relations: ['orders']` 一次带出，或用 QueryBuilder 的 `.leftJoinAndSelect('user.orders', 'order').getMany()` 压成一次
+- **QueryRunner 事务**
+  - **流程**：`createQueryRunner()` → `connect()` → `startTransaction()` → 业务操作（`manager.decrement` / `manager.save`）→ `commitTransaction()`，出错 `rollbackTransaction()`，`finally` 里必须 `release()`
 
 ---
 

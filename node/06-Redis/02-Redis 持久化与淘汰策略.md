@@ -219,16 +219,21 @@ EXEC
 
 ## 小结
 
-- **RDB 快照**：靠 `save 900 1` 这类规则或 `BGSAVE` 定期落盘；文件紧凑、恢复快，但可能丢最后一次快照之后的数据
-- **AOF 日志**：每个写命令追加落盘，`appendfsync everysec` 是默认且推荐的折中，最多丢 1 秒数据，代价是文件更大、恢复更慢
-- **AOF 重写与混合持久化**：`auto-aof-rewrite-percentage 100` 加 `min-size 64mb` 触发重写；`aof-use-rdb-preamble yes` 用 RDB 前缀换恢复速度
-- **过期策略**：惰性删除（访问时判断）加定期删除（每 100ms 随机抽一批），`hz` 控制每秒的检查次数
-- **八种内存淘汰策略**：默认 `noeviction` 写操作直接报错；纯缓存用 `allkeys-lru`，只想淘汰带 TTL 的 key 用 `volatile-*`
-- **内存监控指标**：`used_memory` 与 `maxmemory` 看水位、内存碎片率超过 1.5 要告警、`evicted_keys` 持续增长说明容量不足
-- **Big Key 的判定与危害**：String 超过 10KB 或集合类超过 5000 元素；会阻塞 Redis、造成集群数据倾斜与网络开销
-- **Big Key 怎么处理**：拆成多个子 Hash、压缩大 JSON、用 `UNLINK` 异步删除，List 可用 `LTRIM` 分批清理
-- **Hot Key 的判定与处理**：单 key QPS 过万、某节点 CPU 明显偏高即是热点；用本地缓存、读写分离、副本分片、限流四种手段分散
-- **Redis 事务**：`MULTI` / `EXEC` 只保证打包执行、不支持回滚，`WATCH` 做乐观锁；语法错误整批不执行，运行时错误只影响出错那条
+- **三种持久化方式（RDB / AOF / 混合）**
+  1. **RDB 快照**：靠 `save 900 1` 这类规则或 `BGSAVE` 定期落盘；文件紧凑、恢复快，但可能丢最后一次快照之后的数据
+  2. **AOF 日志**：每个写命令追加落盘，`appendfsync everysec` 是默认且推荐的折中，最多丢 1 秒数据，代价是文件更大、恢复更慢
+  3. **AOF 重写**：`auto-aof-rewrite-percentage 100` 加 `auto-aof-rewrite-min-size 64mb` 触发，或手动 `BGREWRITEAOF`，去掉冗余命令压小文件
+  4. **混合持久化**：`aof-use-rdb-preamble yes` 让 RDB 快照充当 AOF 前缀，同时拿到 RDB 的恢复速度与 AOF 的高安全性
+- **过期策略与内存淘汰**
+  - **惰性删除 + 定期删除**：访问时才判断过期并删除；另外每 100ms 随机抽一批带 TTL 的 key 检查，`hz` 控制每秒检查次数（默认 10）
+  - **八种内存淘汰策略**：默认 `noeviction` 写操作直接报错；纯缓存场景用 `allkeys-lru`，只想淘汰带 TTL 的 key 用 `volatile-*`，`maxmemory` 划定内存上限
+- **生产场景：内存监控与热点排查**
+  - **内存监控指标**：`used_memory` 与 `maxmemory` 看水位、内存碎片率超过 1.5 要告警、`evicted_keys` 持续增长说明容量不足
+  - **Big Key 的判定与危害**：String 超过 10KB 或集合类超过 5000 元素；会阻塞 Redis、造成集群数据倾斜与网络开销
+  - **Big Key 怎么处理**：拆成多个子 Hash、压缩大 JSON、用 `UNLINK` 异步删除，List 可用 `LTRIM` 分批清理
+  - **Hot Key 的判定与处理**：单 key QPS 过万、某节点 CPU 明显偏高即是热点；用本地缓存、读写分离、副本分片、限流四种手段分散
+- **Redis 事务**
+  - **打包执行但不回滚**：`MULTI` / `EXEC` 只保证把命令打包执行、不支持回滚，`WATCH` 做乐观锁；语法错误整批不执行，运行时错误只影响出错那条
 
 ---
 
