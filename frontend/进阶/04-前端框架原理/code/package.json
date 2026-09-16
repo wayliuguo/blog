@@ -1,0 +1,9 @@
+{
+  "name": "chapter04-framework-principle",
+  "version": "1.0.0",
+  "private": true,
+  "description": "04-前端框架原理：手写 mini-react / vdom diff / hooks / Vue 响应式 / 编译 / diff 最小原理 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

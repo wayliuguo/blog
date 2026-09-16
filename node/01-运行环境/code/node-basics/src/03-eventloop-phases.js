@@ -15,73 +15,73 @@
 // 运行：node src/03-eventloop-phases.js
 // 本机 Node 22 实测输出与阶段归属见文件末尾注释。
 
-const fs = require('node:fs');
-const net = require('node:net');
+const fs = require('node:fs')
+const net = require('node:net')
 
-console.log('==== 同步代码开始 ====');
+console.log('==== 同步代码开始 ====')
 
 // 观测点 1：timers 阶段的宏任务
 setTimeout(() => {
-    console.log('[timers] setTimeout callback');
+    console.log('[timers] setTimeout callback')
     // 回调里注册的微任务，会在本回调返回时立刻被清空 —— 这就是微任务检查点
     Promise.resolve().then(() => {
-        console.log('[微任务] setTimeout promise then');
-    });
-}, 0);
+        console.log('[微任务] setTimeout promise then')
+    })
+}, 0)
 
 // 观测点 2：poll 阶段 —— fs.readFile 的 I/O 回调在 poll 阶段执行
 fs.readFile(__filename, () => {
-    console.log('[poll] fs.readFile I/O callback');
+    console.log('[poll] fs.readFile I/O callback')
 
     // 此刻正处在 poll 阶段内部：
     //   setImmediate 会在本轮的 check 阶段执行（poll 的下一步就是 check，所以很近）
     //   setTimeout 虽然延时 0，但要等到下一轮的 timers 阶段
     setImmediate(() => {
-        console.log('[check] readFile 里的 setImmediate');
-    });
+        console.log('[check] readFile 里的 setImmediate')
+    })
     setTimeout(() => {
-        console.log('[timers] readFile 里的 setTimeout');
-    }, 0);
+        console.log('[timers] readFile 里的 setTimeout')
+    }, 0)
 
     Promise.resolve().then(() => {
-        console.log('[微任务] readFile promise then');
-    });
-});
+        console.log('[微任务] readFile promise then')
+    })
+})
 
 // 观测点 3：check 阶段 —— setImmediate 的回调
 setImmediate(() => {
-    console.log('[check] 顶层 setImmediate');
-});
+    console.log('[check] 顶层 setImmediate')
+})
 
 // 观测点 4：close callbacks 阶段 —— 真实 socket 被销毁后的 'close' 事件
-const server = net.createServer();
+const server = net.createServer()
 server.listen(0, () => {
     const client = net.createConnection(server.address().port, () => {
         // 连上之后主动销毁这条真实连接，让底层 handle 走一次 uv_close
-        client.destroy();
-    });
+        client.destroy()
+    })
     client.on('close', () => {
-        console.log('[close callbacks] client socket close');
-        server.close();
-    });
-});
+        console.log('[close callbacks] client socket close')
+        server.close()
+    })
+})
 
 // 对照实验：无连接的服务端，close() 触发的 'close' 事件并不在 close callbacks 阶段
-const idle = net.createServer().listen(0);
-idle.on('listening', () => idle.close());
+const idle = net.createServer().listen(0)
+idle.on('listening', () => idle.close())
 idle.on('close', () => {
-    console.log('[对照] 无连接 server 的 close（由 nextTick 派发，不是 close callbacks 阶段）');
-});
+    console.log('[对照] 无连接 server 的 close（由 nextTick 派发，不是 close callbacks 阶段）')
+})
 
 // 两条微任务队列：nextTick 优先级高于 Promise
 process.nextTick(() => {
-    console.log('[nextTick] 顶层 nextTick');
-});
+    console.log('[nextTick] 顶层 nextTick')
+})
 Promise.resolve().then(() => {
-    console.log('[微任务] 顶层 promise then');
-});
+    console.log('[微任务] 顶层 promise then')
+})
 
-console.log('==== 同步代码结束 ====');
+console.log('==== 同步代码结束 ====')
 
 // 预期输出（本机 Node 22 连跑 5 次稳定）：
 //
