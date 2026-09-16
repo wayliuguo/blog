@@ -1,0 +1,9 @@
+{
+  "name": "chapter07-delivery-quality",
+  "version": "1.0.0",
+  "private": true,
+  "description": "07-交付与质量：极简 lint / CI-CD 流水线可视化 demo",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

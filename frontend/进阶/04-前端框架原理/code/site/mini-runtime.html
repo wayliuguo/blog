@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>mini-runtime：手写极简 React 渲染器</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                line-height: 1.6;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            pre {
+                background: #f1f5f9;
+                padding: 1rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            button {
+                margin-right: 0.5rem;
+                padding: 0.4rem 0.8rem;
+            }
+            .box {
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>mini-runtime：手写极简 React 渲染器</h1>
+        <p>下面的计数器<strong>完全用原生 JS 手写</strong>，不引入 React。它展示了两个核心思想：</p>
+        <ul>
+            <li>
+                <strong>虚拟 DOM</strong>：先用普通对象描述界面（createElement），再一次性渲染成真实 DOM（render）。
+            </li>
+            <li>
+                <strong>声明式更新</strong>：改动状态后再次调用 render，把新虚拟 DOM 渲染到页面，你不需要手动操作 DOM。
+            </li>
+        </ul>
+
+        <h2>代码</h2>
+        <pre id="code"></pre>
+
+        <h2>运行效果</h2>
+        <div class="box" id="app"></div>
+
+        <script>
+            /* ---------- 1. createElement：把"标签、属性、子元素"变成一个普通的节点对象（虚拟 DOM） ---------- */
+            function createElement(type, props) {
+                const children = Array.prototype.slice.call(arguments, 2) // 第 3 个及之后的参数都是子节点
+                return {
+                    type: type, // 标签名，如 "h2" / "button"
+                    props: props || {}, // 属性对象，如 { id, className }
+                    children: children.length === 1 ? children[0] : children
+                }
+            }
+
+            /* ---------- 2. render：把一个虚拟 DOM 节点渲染成真实 DOM，并挂到容器上 ---------- */
+            function render(node, container) {
+                container.textContent = '' // 清空旧的（极简版用全量替换）
+
+                const dom = document.createElement(node.type) // 根据 type 新建真实元素
+
+                // 除 children 外，把所有属性应用到真实 DOM
+                Object.keys(node.props).forEach(function (name) {
+                    dom[name] = node.props[name]
+                })
+
+                // 子节点可能是文本，也可能是嵌套的虚拟 DOM，递归处理
+                const children = Array.isArray(node.children) ? node.children : [node.children]
+                children.forEach(function (child) {
+                    if (child === null || child === undefined) return
+                    if (typeof child === 'string') {
+                        dom.textContent = child // 文本节点直接赋值
+                    } else {
+                        render(child, dom) // 元素节点递归渲染
+                    }
+                })
+
+                container.appendChild(dom)
+            }
+
+            /* ---------- 3. 模拟一个带状态的组件 ---------- */
+            var state = { count: 0 } // 用一个普通对象保存状态
+
+            function Counter() {
+                // 用虚拟 DOM 描述界面（描述性与 React 的 JSX 编译产物一致）
+                return createElement(
+                    'div',
+                    null,
+                    createElement('h2', null, '计数器：count = ' + state.count),
+                    createElement('p', null, '这是由 createElement + render 渲染出来的，没有使用任何框架。'),
+                    createElement('button', { id: 'add' }, '+ 加一'),
+                    createElement('button', { id: 'sub' }, '- 减一')
+                )
+            }
+
+            /* ---------- 4. onUpdate：改状态，再声明式重渲染 ---------- */
+            function onUpdate(nextState) {
+                state = nextState // 更新状态
+                render(Counter(), document.getElementById('app')) // 重新渲染（不需要手动操作 DOM）
+            }
+
+            // 首次渲染
+            render(Counter(), document.getElementById('app'))
+
+            // 绑定按钮事件：点击后更改状态并重新渲染
+            document.getElementById('add').addEventListener('click', function () {
+                onUpdate({ count: state.count + 1 })
+            })
+            document.getElementById('sub').addEventListener('click', function () {
+                onUpdate({ count: state.count - 1 })
+            })
+
+            // 把源码展示到页面（便于对照阅读）
+            document.getElementById('code').textContent =
+                'function createElement(type, props, ...children) {\n' +
+                '  return { type, props: props || {}, children };\n' +
+                '}\n' +
+                'function render(node, container) {\n' +
+                '  container.textContent = "";\n' +
+                '  const dom = document.createElement(node.type);\n' +
+                '  Object.keys(node.props).forEach(k => dom[k] = node.props[k]);\n' +
+                '  const kids = Array.isArray(node.children) ? node.children : [node.children];\n' +
+                '  kids.forEach(child => {\n' +
+                '    if (typeof child === "string") dom.textContent = child;\n' +
+                '    else if (child) render(child, dom);\n' +
+                '  });\n' +
+                '  container.appendChild(dom);\n' +
+                '}\n' +
+                '// 点击按钮 -> 更新状态 -> 重新 render，界面自动变化（声明式更新）\n' +
+                'document.getElementById("add").onclick = () => update({ count: state.count + 1 });'
+        </script>
+    </body>
+</html>

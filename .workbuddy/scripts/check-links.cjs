@@ -66,7 +66,10 @@ for (const file of walk(DOC_ROOT)) {
 const configDir = path.join(ROOT, '.vitepress', 'config')
 const configRe = /(?:^|\s)link:\s*'([^']+)'/gm
 let configCount = 0
-for (const name of fs.readdirSync(configDir).filter((f) => f.endsWith('.js')).sort()) {
+for (const name of fs
+    .readdirSync(configDir)
+    .filter(f => f.endsWith('.js'))
+    .sort()) {
     const file = path.join(configDir, name)
     const text = fs.readFileSync(file, 'utf8')
     let m
@@ -112,9 +115,7 @@ for (const name of ['index.md']) {
         if (/^(https?:|mailto:|#)/.test(raw)) continue
         landingCount++
         const decoded = decode(raw.split('#')[0])
-        const abs = raw.startsWith('/')
-            ? path.join(ROOT, decoded.replace(/^\//, ''))
-            : path.resolve(ROOT, decoded)
+        const abs = raw.startsWith('/') ? path.join(ROOT, decoded.replace(/^\//, '')) : path.resolve(ROOT, decoded)
         if (!exists(abs)) {
             problems.push({ file: name, link: raw, resolved: path.relative(ROOT, abs) })
         }

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>响应式原理 · 最小实现</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            pre {
+                background: #f6f8fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .box {
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+                white-space: pre-wrap;
+            }
+            .view {
+                background: #ecfdf5;
+                border: 1px solid #a7f3d0;
+                border-radius: 8px;
+                padding: 0.8rem 1rem;
+                margin: 0.5rem 0;
+            }
+            button {
+                padding: 0.4rem 0.8rem;
+                margin-right: 0.5rem;
+                cursor: pointer;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>响应式原理 · 手写 track / trigger（数据驱动视图）</h1>
+        <p>
+            这是 Vue 响应式的本质：用 Proxy 拦截 get / set。读取属性时把当前「副作用」记进依赖（track），
+            修改属性时取出依赖并重新执行（trigger）。这就是「数据变了，视图自动更新」的最小内核，无需依赖 Vue。
+        </p>
+
+        <p>
+            <button id="btnAdd">count 加 1</button>
+            <button id="btnReset">重置为 0</button>
+        </p>
+
+        <div id="view" class="view">当前视图输出会自动更新到这里</div>
+        <div id="log" class="box">// 点击按钮查看依赖追踪过程</div>
+
+        <script>
+            // ---------- 极简响应式：Proxy + track / trigger ----------
+            let activeEffect = null // 当前正在运行的副作用
+            const bucket = new WeakMap() // 容器：对象 -> (属性 -> Set[effect])
+
+            function isObj(v) {
+                return v !== null && typeof v === 'object'
+            }
+
+            // 依赖收集：get 时把 activeEffect 记进依赖集合
+            function track(target, key) {
+                if (!activeEffect) return
+                let depsMap = bucket.get(target)
+                if (!depsMap) {
+                    bucket.set(target, (depsMap = new Map()))
+                }
+                let deps = depsMap.get(key)
+                if (!deps) {
+                    depsMap.set(key, (deps = new Set()))
+                }
+                deps.add(activeEffect)
+            }
+
+            // 触发更新：set 时取出依赖并依次重新执行
+            function trigger(target, key) {
+                const depsMap = bucket.get(target)
+                if (!depsMap) return
+                const deps = depsMap.get(key)
+                if (deps) {
+                    ;[...deps].forEach(fn => fn())
+                }
+            }
+
+            // reactive：把对象代理成响应式
+            function reactive(obj) {
+                return new Proxy(obj, {
+                    get(target, key, receiver) {
+                        track(target, key) // 读 -> 收集依赖
+                        const res = Reflect.get(target, key, receiver)
+                        return isObj(res) ? reactive(res) : res // 深层也响应式
+                    },
+                    set(target, key, value, receiver) {
+                        const result = Reflect.set(target, key, value, receiver)
+                        trigger(target, key) // 改 -> 触发更新
+                        return result
+                    }
+                })
+            }
+
+            // effect：注册一个会读取响应式数据的副作用
+            function effect(fn) {
+                activeEffect = fn
+                fn() // 首次执行即完成依赖收集
+                activeEffect = null
+                return fn
+            }
+
+            // ---------- 应用：数据驱动视图 ----------
+            const state = reactive({ count: 0 }) // 普通对象，被 Proxy 包成响应式
+
+            function render() {
+                const el = document.getElementById('view')
+                el.textContent = 'count = ' + state.count + '（依赖收集目标：' + bucket.has(state) + '）'
+            }
+            effect(render) // 注册副作用，render 自动重跑
+
+            let step = 0
+            function show(label, val) {
+                step++
+                const log = document.getElementById('log')
+                log.textContent = '// ' + step + ') ' + label + '\n' + log.textContent
+            }
+
+            document.getElementById('btnAdd').onclick = function () {
+                state.count++ // set 触发 trigger -> render 重新执行
+                show('state.count++ → render 自动重新执行，无需手动操作 DOM', 'count = ' + state.count)
+            }
+            document.getElementById('btnReset').onclick = function () {
+                state.count = 0
+                show('state.count = 0 → 再次触发更新', 'count = ' + state.count)
+            }
+        </script>
+    </body>
+</html>
