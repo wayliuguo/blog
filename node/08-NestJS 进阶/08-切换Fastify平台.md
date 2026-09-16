@@ -138,11 +138,14 @@ await app.register(fastifyHelmet)
 
 ## 小结
 
-- **Fastify 快 2~3 倍**：内置 JSON Schema 序列化替代 `JSON.stringify`，压测约 40000 req/s 对比 Express 的 15000 req/s
-- **切换只改入口**：装 `@nestjs/platform-fastify` 后换成 `NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())`
-- **静态资源写法不同**：Express 是 `useStaticAssets(path, { prefix })`，Fastify 是 `useStaticAssets({ root, prefix })`
-- **文件上传要额外注册解析器**：Fastify 下需要 `app.register(contentParser)` 才能接收 multipart 请求
-- **Express 中间件不能直接搬**：Fastify 不兼容 Express 的 req/res，`cookie-parser`/`helmet` 要换成 `@fastify/cookie`、`@fastify/helmet`
+- **换 Fastify 的收益**
+  - **性能约 2~3 倍**：压测约 40000 req/s 对比 Express 的 15000 req/s
+  - **快在哪**：内置 JSON Schema 序列化替代 `JSON.stringify`
+- **切换要改的三处**
+  1. **入口**：装 `@nestjs/platform-fastify` 后换成 `NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())`
+  2. **静态资源写法不同**：Express 是 `useStaticAssets(path, { prefix })`，Fastify 是 `useStaticAssets({ root, prefix })`；视图引擎也从 `setViewEngine('hbs')` 换成 `setViewEngine({ engine, templates })`
+  3. **文件上传要额外注册解析器**：Fastify 下需要 `app.register(contentParser)`（来自 `fastify-multer`）才能接收 multipart 请求
+- **Express 中间件不能直接搬**：Fastify 不兼容 Express 的 `req`/`res`，`cookie-parser`/`helmet` 要换成 `@fastify/cookie`、`@fastify/helmet`，用 `app.register()` 注册
 
 ---
 

@@ -920,14 +920,19 @@ NestJS 利用 TypeScript 的 `emitDecoratorMetadata` 和 `reflect-metadata` 库�
 
 ## 小结
 
-- **前置知识三件套**：TypeScript 装饰器、reflect-metadata、`design:paramtypes`，缺一个就读不懂依赖注入
-- **四类装饰器的签名**：类 `(target)`、方法 `(target, key, descriptor)`、属性 `(target, key)`、参数 `(target, key, parameterIndex)`
-- **reflect-metadata 的意义**：用 `Reflect.defineMetadata`/`getMetadata` 隔离存储元数据，不像 `target._x = x` 那样污染类原型
-- **design:paramtypes 怎么被读到**：开启 `emitDecoratorMetadata` 后编译产物带上构造参数类型，容器靠它知道该注入什么
-- **元数据生成有前提**：`emitDecoratorMetadata` 只对**至少有一个装饰器**的类生效，没装饰器就没有 paramtypes
-- **启动调用链**：`new Container` → 递归收集模块的 controller/provider → `resolve()` 读 paramtypes 递归注入 → 扫路由 → `createServer`
-- **请求调用链**：路由正则匹配 `:param` → Guard → 解析参数装饰器 → Pipe → Interceptor → Handler → 统一 `res.json`
-- **与真实源码的差距**：最小实现手动遍历 paramtypes，NestJS 用 `InstanceLoader`/`ModuleScanner`/`RoutesResolver`，并额外支持作用域与循环依赖
+- **前置知识三件套**：TypeScript 装饰器、`reflect-metadata`、`design:paramtypes`，缺一个就读不懂依赖注入
+  - **四类装饰器的签名**：类 `(target)`、方法 `(target, key, descriptor)`、属性 `(target, key)`、参数 `(target, key, parameterIndex)`
+  - **`reflect-metadata` 的意义**：用 `Reflect.defineMetadata`/`getMetadata` 隔离存储元数据，不像 `target._x = x` 那样污染类原型
+  - **`design:paramtypes` 怎么被读到**：开启 `emitDecoratorMetadata` 后编译产物带上构造参数类型，容器靠它知道该注入什么
+  - **元数据生成有前提**：`emitDecoratorMetadata` 只对**至少有一个装饰器**的类生效，没装饰器就没有 `paramtypes`
+- **启动调用链**
+  - **顺序**：`new Container` → 递归收集模块的 controller/provider → `resolve()` 读 `design:paramtypes` 递归注入 → 扫路由 → `http.createServer`
+  - **装饰器写元数据的时机**：类定义时立即执行，`@Module` 存配置、`@Controller` 存 `prefix`、`@Get` 往路由数组 push、`@Param` 按参数位置记 `{ type, key }`，方法装饰器的元数据挂在 `target.constructor` 上而不是原型
+- **请求调用链**
+  - **顺序**：路由正则匹配 `:param` → Guard → 解析参数装饰器 → Pipe → Interceptor → Handler → 统一 `res.json`
+  - **每个环节都是可选的**：按实例上有没有 `canActivate`/`transform`/`intercept` 方法决定是否执行
+  - **三个出口**：Guard 返回 `false` 出 403，路由匹配不上出 404，Handler 抛错被捕获出 500
+- **与真实源码的差距**：最小实现手动遍历 `paramtypes`，NestJS 用 `InstanceLoader`/`ModuleScanner`/`RoutesResolver`，并额外支持作用域与循环依赖
 
 ---
 

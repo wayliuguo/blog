@@ -781,16 +781,46 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 
 ## 小结
 
-- **聚簇索引与非聚簇索引**：InnoDB 主键即聚簇索引、数据按主键物理存放；普通索引叶子存主键值，查完还要回表
-- **联合索引最左前缀**：索引 `(name, age)` 支持 `name` 与 `name+age` 查询，单独查 `age` 用不上
-- **索引字段顺序怎么定**：等值高频列放最左、范围列放在其后、把排序列放末尾可免 filesort，如 `(user_id, status, created_at)`
-- **EXPLAIN 三列读法**：`type` 看 ALL / range / ref，`rows` 越小越好，`Extra` 出现 Using index 是覆盖索引、Using filesort 是额外排序
-- **SQL 执行顺序**：FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT；WHERE 过滤行、HAVING 过滤组
-- **EXISTS 与 IN 的取舍**：外层小、子查询结果集大用 EXISTS；外层大、子查询结果集小用 IN；关联子查询只能用 EXISTS，现代写法可用窗口函数替代
-- **ACID 与四种隔离级别**：InnoDB 默认可重复读（RR）；RR 挡不住幻读，靠间隙锁与 Next-Key Lock 兜底
-- **快照读与当前读**：普通 SELECT 读 MVCC 快照、不加锁；UPDATE / DELETE / `FOR UPDATE` 是当前读并加锁，写并发控制必须用当前读
-- **防超卖的原子 UPDATE**：把判断下推到 `WHERE ... AND balance >= 1`，用 affectedRows 判定成败；需要跨表校验时才上 `FOR UPDATE` 悲观锁
-- **索引失效的五大原因**：隐式类型转换、函数或运算包住索引列、`%x` 前缀模糊、OR 里有一列无索引、低区分度列单独建索引
+- **索引原理**
+  - **聚簇索引**：InnoDB 主键即聚簇索引、数据按主键物理存放，一个表只能有一个
+  - **非聚簇索引**：单独维护索引结构、叶子节点存主键值，查完还要回表取数据
+  - **联合索引最左前缀**：索引 `(name, age)` 支持 `name` 与 `name+age` 查询，单独查 `age` 用不上
+  - **索引字段顺序怎么定**：等值高频列放最左、范围列放在其后、把排序列放末尾可免 filesort，如 `(user_id, status, created_at)`
+- **用 EXPLAIN 定位慢在哪**
+  - **`type`**：ALL（全表扫描）/ range（索引范围扫描）/ ref（索引查找）/ eq_ref（唯一索引）
+  - **`rows`**：预估扫描行数，越小越好
+  - **`Extra`**：Using index 是覆盖索引、Using filesort 是需要额外排序
+- **SQL 执行顺序**
+  - **顺序**：FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT
+  - **WHERE 与 HAVING 的分工**：WHERE 在分组前过滤行、不能用聚合函数；HAVING 在分组后过滤组，只能用聚合函数或 `GROUP BY` 的列
+- **子查询的取舍**
+  - **EXISTS 与 IN**：外层小、子查询结果集大用 EXISTS；外层大、子查询结果集小用 IN；关联子查询只能用 EXISTS
+  - **现代写法**：取"每个用户的最新一笔"可用 `ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC)` 窗口函数替代关联子查询
+- **事务与锁**
+  - **ACID 与四种隔离级别**：InnoDB 默认可重复读（RR）；RR 挡不住幻读，靠间隙锁与 Next-Key Lock 兜底
+  - **MVCC**：每行有 Undo Log 版本链、每个事务有 Read View，让"读"不阻塞"写"、"写"不阻塞"读"
+  - **锁的粒度**：`WHERE` 走索引才是行锁，不走索引会锁住所有行（等价表锁）
+- **快照读与当前读**
+  - **快照读**：普通 `SELECT` 读事务开始时的 MVCC 快照、不加锁
+  - **当前读**：`UPDATE` / `DELETE` / `SELECT ... FOR UPDATE` 读最新已提交版本并加锁，写并发控制必须用当前读
+  - **常见误区**：以为"我刚 UPDATE 别人就能看到"（RR 下看不到未提交改动）、以为"`FOR UPDATE` 只是加锁"（它同时把读升级成当前读）
+- **防超卖的原子 UPDATE**
+  - **做法**：把判断下推到 `WHERE ... AND balance >= 1`，用 affectedRows 判定成败（1 成功、0 余额不足）
+  - **反面写法**：先 `SELECT` 再判断再 `UPDATE`，两步之间别的请求插进来就会扣成负数
+  - **悲观锁与乐观锁的取舍**：需要跨表校验时才上 `FOR UPDATE`；偶发并发更新用 version 乐观锁，冲突则重试
+- **索引失效的五大原因**
+  1. **隐式类型转换**：`WHERE phone = 13800138000`（列为 VARCHAR）等价于对列用函数，要写成 `phone = '13800138000'`
+  2. **函数或运算包住索引列**：`DATE(created_at) = '2024-01-01'`、`amount * 1.1 > 100`，改成范围条件或把运算挪到常量侧
+  3. **`%x` 前缀模糊**：`LIKE '%张三'` 用不了 B-Tree 有序性，改成 `LIKE '张三%'`，或上 FULLTEXT / ES
+  4. **`OR` 里有一列无索引**：改成 `UNION`，或给另一列也建索引走 index_merge
+  5. **低区分度列单独建索引**：优化器认为扫全表更快，应放进联合索引或改用部分索引
+- **COUNT 与分页优化**
+  - **三种 COUNT**：`COUNT(*)` 与 `COUNT(1)` 等价、InnoDB 做了优化；`COUNT(列)` 只数该列非 `NULL` 的行，结果可能不同
+  - **大表 COUNT**：选最小的非空二级索引 `USE INDEX`、`SHOW TABLE STATUS` 取估算值、Redis 维护计数，或分页场景直接用 `EXISTS` 判"是否有下一页"
+  - **深度分页**：`LIMIT 10 OFFSET 100000` 越翻越慢，换游标 `WHERE id > 100000 ORDER BY id LIMIT 10`
+- **慢查询排查流程**
+  - **开启日志**：`slow_query_log = ON`、`long_query_time = 1`、`log_queries_not_using_indexes = ON`，生产用 `pt-query-digest` 分析
+  - **定位到优化**：`EXPLAIN` 确认是否走索引 → 把 `DATE(created_at) = '2024-01-01'` 改成范围查询，`type` 从 ALL 变 range、`rows` 从 50 万降到 1200，耗时 3.2s → 0.02s
 
 ---
 

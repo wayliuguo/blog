@@ -142,13 +142,16 @@ export class NotificationService {
 
 ## 小结
 
-- **Gateway 就是 WebSocket 层的 Controller**：`@WebSocketGateway({ cors, namespace })` 声明，并且要作为 provider 写进模块
-- **两个连接钩子**：实现 `OnGatewayConnection` 的 `handleConnection` 与 `OnGatewayDisconnect` 的 `handleDisconnect`
-- **@WebSocketServer() 拿到服务端实例**：`server.emit` 全局广播，`client.to(room).emit` 定向推送给房间
-- **@SubscribeMessage 处理客户端消息**：回调签名 `(client, payload)`，房间用 `client.join(room)` 加入
-- **连接时就要校验 token**：从 `client.handshake.auth.token` 取令牌，验证失败直接 `client.disconnect()` 断开
-- **用户信息挂在 client.data 上**：验证通过后 `client.data.user = user`，后续的消息处理器里随取随用
-- **HTTP 与 WS 共享同一个 Service**：把 server 注入 NotificationService，HTTP 控制器也能触发 WebSocket 广播
+- **Gateway 的声明与注册**
+  - **Gateway 就是 WebSocket 层的 Controller**：`@WebSocketGateway({ cors, namespace })` 声明，并且要作为 provider 写进模块
+  - **两个连接钩子**：实现 `OnGatewayConnection` 的 `handleConnection` 与 `OnGatewayDisconnect` 的 `handleDisconnect`
+- **消息收发与房间模型**
+  - **`@WebSocketServer()` 拿到服务端实例**：`server.emit` 全局广播，`client.to(room).emit` 定向推送给房间
+  - **`@SubscribeMessage` 处理客户端消息**：回调签名 `(client, payload)`，房间用 `client.join(room)` 加入
+- **连接时就要完成身份校验**
+  - **取令牌**：从 `client.handshake.auth.token` 取，验证失败直接 `client.disconnect()` 断开
+  - **用户信息挂在 `client.data` 上**：验证通过后 `client.data.user = user`，后续的消息处理器里随取随用
+- **HTTP 与 WS 共享同一个 Service**：把 `server` 注入 `NotificationService`，HTTP 控制器也能触发 WebSocket 广播
 
 ---
 

@@ -74,10 +74,22 @@ chore: update dependencies
 
 ## 小结
 
-- **三种工作流**：GitHub Flow（main + feature + PR，小团队持续部署）、Git Flow（多出 develop/release，中大型版本发布）、Trunk-Based（短命分支，CI/CD 成熟时用）。
-- **合并策略取舍**：merge 保留完整历史但多一个合并提交，rebase 得到线性历史但改写提交，squash 把多个提交压成一个。
-- **提交信息规范**：Conventional Commits 的 `<type>(<scope>): <subject>`，用 feat / fix / docs / refactor / test / chore 分类。
-- **Code Review**：单次 PR 控制在 200~300 行以内，先看整体逻辑再看细节，指出问题的同时给建议，并检查规范、复杂度、异常处理、安全与测试覆盖。
+- **三种工作流怎么选**
+  1. **GitHub Flow**：main + feature 分支，PR 合并；适合小型团队、持续部署
+  2. **Git Flow**：main + develop + feature + release 分支；适合中大型项目、版本发布
+  3. **Trunk-Based**：所有人在 main 上开发、用短命分支；适合高频发布、CI/CD 成熟
+- **合并策略的取舍**
+  1. **Merge**：`git merge feature` 保留完整历史，但多一个合并提交
+  2. **Rebase**：`git rebase main` 得到线性历史、无合并提交，但会改写提交
+  3. **Squash**：合并时把多个提交压缩为一个
+- **提交信息规范（Conventional Commits）**
+  - **格式**：`<type>(<scope>): <subject>`
+  - **type 分类**：`feat` / `fix` / `docs` / `refactor` / `test` / `chore`
+- **Code Review 实践**
+  - **PR 粒度**：单次 PR 不要太大，控制在 200~300 行以内
+  - **审查顺序**：先理解整体逻辑，再看细节
+  - **沟通方式**：指出问题的同时给出建议，尊重作者，用"建议"代替"要求"
+  - **审查清单**：代码规范、是否有不必要的复杂性、异常处理是否完善、是否有安全漏洞、测试是否覆盖
 
 ---
 
