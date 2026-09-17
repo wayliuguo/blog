@@ -204,6 +204,42 @@ create(42) // Error
 create('string') // Error
 ```
 
+### symbol
+
+`symbol` 表示独一无二的值，用 `Symbol()` 生成，即使传入相同的描述字符串也不相等：
+
+```typescript
+const s1 = Symbol('ts')
+const s2 = Symbol('ts')
+s1 === s2 // false，两个 symbol 永不相等
+```
+
+它常被用作**对象属性名**（计算属性），且不会被 `for...in`、`Object.keys`、`JSON.stringify` 枚举到——需要 `Object.getOwnPropertySymbols` 或 `Reflect.ownKeys` 才能取到：
+
+```typescript
+const title = Symbol('title')
+const obj = { [title]: 'TypeScript', age: 18 }
+Object.keys(obj) // ['age']，取不到 symbol 属性
+Object.getOwnPropertySymbols(obj) // [Symbol(title)]
+```
+
+`Symbol.for(key)` 会在全局注册表中按字符串查找并返回同一个 symbol（重复调用返回同一个），`Symbol.keyFor(sym)` 则取回该 symbol 的注册键名。
+
+### bigInt
+
+`bigint` 用于安全地存储和操作超出 `Number.MAX_SAFE_INTEGER` 的大整数。普通 number 在大数运算时会出现精度丢失：
+
+```typescript
+const max = Number.MAX_SAFE_INTEGER
+max + 1 === max + 2 // true，number 精度已丢失
+
+const big1 = BigInt(Number.MAX_SAFE_INTEGER) + 1n
+const big2 = BigInt(Number.MAX_SAFE_INTEGER) + 2n
+big1 === big2 // false，bigint 精度安全
+```
+
+写法用 `10n` 或 `BigInt(10)`；需要 `target: "ES2020"` 或更高版本，且不能与 number 直接混用运算（需显式转换）。
+
 ## 类型断言
 
 有时你会比 TypeScript 更了解某个值的类型。类型断言告诉编译器「相信我，我知道自己在干什么」，它没有运行时影响，只在编译阶段起作用。
@@ -738,6 +774,30 @@ interface Point3d extends Point {
 
 let point3d: Point3d = { x: 1, y: 2, z: 3 }
 ```
+
+### 装饰器（Decorators）
+
+装饰器是一种特殊声明，可以附加在类、方法、属性、参数上，用来监视、修改或替换被装饰的目标（在 Angular、NestJS、Vue2 类组件中常见）。使用前需在 tsconfig 开启 `experimentalDecorators`。
+
+- **类装饰器**：接收构造函数，可为其扩展属性或方法；写成工厂形式（`@factory('参数')`）可以带参复用。
+- **属性/方法装饰器**：装饰实例属性/方法时 `target` 是构造函数原型，装饰静态成员时是构造函数本身；方法装饰器可通过改写 `descriptor.value` 实现 AOP（如统一参数预处理）。
+
+```typescript
+function upperCase(target: any, propertyKey: string) {
+  let value = target[propertyKey]
+  const setter = (newVal: string) => { value = newVal.toUpperCase() }
+  Object.defineProperty(target, propertyKey, { get: () => value, set: setter })
+}
+
+class Person {
+  @upperCase
+  name: string = 'well'
+}
+new Person().name // 'WELL'
+```
+
+- **参数装饰器**：用于给参数附加元信息，接收 `(target, methodName, paramIndex)`。
+- **执行顺序**：属性/方法装饰器按书写顺序执行；同一方法上参数装饰器先于方法装饰器；类装饰器最后执行，且多个类装饰器**自下而上**（后写的先执行）。
 
 ## 函数
 
