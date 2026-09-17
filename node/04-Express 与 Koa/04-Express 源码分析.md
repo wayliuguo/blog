@@ -8,199 +8,253 @@
 
 ## 最小实现
 
+> 摘自 `./code/express-mini/index.js`（运行：`npm start`）
+
 ```javascript
+/**
+ * 最小 Express 实现
+ *
+ * 核心机制：
+ * 1. app.use() 注册中间件 → 存入 middlewares 数组
+ * 2. app.get()/post() 注册路由 → 存入 routes 数组
+ * 3. 请求到达时，先执行中间件链（递归 next），再路由匹配
+ * 4. next(err) 跳过剩余中间件，直接进入错误处理
+ */
+
 const http = require('http')
 
-// ===== 最小 Express 实现 =====
-
 function createApp() {
-  // 存储所有中间件和路由
-  const middlewares = []   // 普通中间件 [{ path, handler }]
-  const routes = []        // 路由中间件 [{ method, path, handler }]
-  let errorHandler = null  // 错误处理中间件
+    const middlewares = []
+    const routes = []
+    let errorHandler = null
 
-  const app = {}
+    const app = {}
 
-  // --- 注册中间件 ---
-  app.use = (path, handler) => {
-    if (handler === undefined) {
-      handler = path      // 用法: app.use(fn)
-      path = '/'
-    }
-    middlewares.push({ path, handler })
-  }
-
-  // --- 注册路由 ---
-  const methods = ['get', 'post', 'put', 'delete', 'patch']
-  methods.forEach(method => {
-    app[method] = (path, handler) => {
-      routes.push({ method, path, handler })
-    }
-  })
-
-  // --- 封装响应对象 ---
-  function enhanceRes(res) {
-    res.status = function (code) {
-      res.statusCode = code
-      return res
-    }
-
-    res.json = function (data) {
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify(data))
-    }
-
-    res.send = function (body) {
-      if (typeof body === 'object') {
-        res.json(body)
-      } else {
-        res.setHeader('Content-Type', 'text/html; charset=utf-8')
-        res.end(String(body))
-      }
-    }
-    return res
-  }
-
-  // --- 匹配路由 ---
-  function matchRoute(method, url) {
-    for (const route of routes) {
-      if (route.method !== method.toLowerCase()) continue
-
-      // 将 /users/:id 转为正则 /^\/users\/([^/]+)$/
-      const paramNames = []
-      const regexStr = route.path.replace(/:([^/]+)/g, (_, name) => {
-        paramNames.push(name)
-        return '([^/]+)'
-      })
-      const regex = new RegExp(`^${regexStr}$`)
-      const match = url.match(regex)
-
-      if (match) {
-        const params = {}
-        paramNames.forEach((name, i) => { params[name] = match[i + 1] })
-        return { handler: route.handler, params }
-      }
-    }
-    return null
-  }
-
-  // --- 中间件链执行（线性模型） ---
-  function executeMiddlewareChain(req, res, middlewareList, done) {
-    let index = 0
-
-    function next(err) {
-      if (err) {
-        // 有错误，交给错误处理
-        if (errorHandler) {
-          return errorHandler(err, req, res, next)
+    // --- 注册中间件 ---
+    app.use = (path, handler) => {
+        if (handler === undefined) {
+            handler = path
+            path = '/'
         }
-        // 没有错误处理，返回 500
-        res.statusCode = 500
-        res.end('Internal Server Error')
-        return
-      }
-
-      if (index >= middlewareList.length) {
-        return done ? done(req, res) : notFound(req, res)
-      }
-
-      const mw = middlewareList[index++]
-      // 检查路径是否匹配（中间件默认匹配 / 或匹配前缀）
-      if (mw.path !== '/' && !req.url.startsWith(mw.path)) {
-        return next()  // 跳过不匹配的中间件
-      }
-
-      try {
-        mw.handler(req, res, next)
-      } catch (err) {
-        next(err)
-      }
+        middlewares.push({ path, handler })
     }
 
-    next()
-  }
-
-  function notFound(req, res) {
-    res.statusCode = 404
-    res.json({ message: 'Not Found' })
-  }
-
-  // --- 处理 HTTP 请求 ---
-  app.handle = (req, res) => {
-    enhanceRes(res)
-
-    // 1. 先执行所有普通中间件
-    // 2. 最后执行路由匹配
-    executeMiddlewareChain(req, res, middlewares, (req, res) => {
-      const matched = matchRoute(req.method, req.url)
-      if (matched) {
-        req.params = matched.params
-        try {
-          matched.handler(req, res)
-        } catch (err) {
-          if (errorHandler) errorHandler(err, req, res, next)
+    // --- 注册路由 ---
+    const methods = ['get', 'post', 'put', 'delete', 'patch']
+    methods.forEach(method => {
+        app[method] = (path, handler) => {
+            routes.push({ method, path, handler })
         }
-      } else {
-        notFound(req, res)
-      }
     })
-  }
 
-  // --- 设置错误处理中间件 ---
-  app.useError = (handler) => {
-    errorHandler = handler
-  }
+    // --- 封装响应对象 ---
+    function enhanceRes(res) {
+        res.status = function (code) {
+            res.statusCode = code
+            return res
+        }
 
-  // --- 启动服务 ---
-  app.listen = (port, cb) => {
-    const server = http.createServer(app.handle)
-    return server.listen(port, cb)
-  }
+        res.json = function (data) {
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(data))
+        }
 
-  return app
+        res.send = function (body) {
+            if (typeof body === 'object') {
+                res.json(body)
+            } else {
+                res.setHeader('Content-Type', 'text/html; charset=utf-8')
+                res.end(String(body))
+            }
+        }
+        return res
+    }
+
+    // --- 匹配路由 ---
+    function matchRoute(method, url) {
+        for (const route of routes) {
+            if (route.method !== method.toLowerCase()) continue
+
+            const paramNames = []
+            const regexStr = route.path.replace(/:([^/]+)/g, (_, name) => {
+                paramNames.push(name)
+                return '([^/]+)'
+            })
+            const regex = new RegExp(`^${regexStr}$`)
+            const match = url.match(regex)
+
+            if (match) {
+                const params = {}
+                paramNames.forEach((name, i) => {
+                    params[name] = match[i + 1]
+                })
+                return { handler: route.handler, params }
+            }
+        }
+        return null
+    }
+
+    // --- 中间件链执行 ---
+    function executeMiddlewareChain(req, res, middlewareList, done) {
+        let index = 0
+
+        function next(err) {
+            if (err) {
+                if (errorHandler) {
+                    return errorHandler(err, req, res, next)
+                }
+                res.statusCode = 500
+                res.end('Internal Server Error')
+                return
+            }
+
+            if (index >= middlewareList.length) {
+                return done ? done(req, res) : notFound(req, res)
+            }
+
+            const mw = middlewareList[index++]
+            if (mw.path !== '/' && !req.url.startsWith(mw.path)) {
+                return next()
+            }
+
+            try {
+                mw.handler(req, res, next)
+            } catch (err) {
+                next(err)
+            }
+        }
+
+        next()
+    }
+
+    function notFound(req, res) {
+        res.statusCode = 404
+        res.json({ message: 'Not Found' })
+    }
+
+    // --- 处理请求 ---
+    app.handle = (req, res) => {
+        enhanceRes(res)
+
+        executeMiddlewareChain(req, res, middlewares, (req, res) => {
+            const matched = matchRoute(req.method, req.url)
+            if (matched) {
+                req.params = matched.params
+                try {
+                    matched.handler(req, res)
+                } catch (err) {
+                    if (errorHandler) errorHandler(err, req, res, next)
+                }
+            } else {
+                notFound(req, res)
+            }
+        })
+    }
+
+    // --- 设置错误处理 ---
+    app.useError = handler => {
+        errorHandler = handler
+    }
+
+    // --- 启动 ---
+    app.listen = (port, cb) => {
+        const server = http.createServer(app.handle)
+        return server.listen(port, cb)
+    }
+
+    return app
 }
 
 // ===== 使用示例 =====
-
 const app = createApp()
 
-// 中间件
 app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.url}`)
-  next()
+    console.log(`[${req.method}] ${req.url}`)
+    next()
 })
 
 app.use((req, res, next) => {
-  const start = Date.now()
-  res.on('finish', () => {
-    console.log(`耗时: ${Date.now() - start}ms`)
-  })
-  next()
+    const start = Date.now()
+    res.on('finish', () => {
+        console.log(`耗时: ${Date.now() - start}ms`)
+    })
+    next()
 })
 
-// 路由
 app.get('/users', (req, res) => {
-  res.json([{ id: 1, name: '张三' }, { id: 2, name: '李四' }])
+    res.json([
+        { id: 1, name: '张三' },
+        { id: 2, name: '李四' }
+    ])
 })
 
 app.get('/users/:id', (req, res) => {
-  res.json({ id: Number(req.params.id), name: '用户' + req.params.id })
+    res.json({ id: Number(req.params.id), name: '用户' + req.params.id })
 })
 
 app.post('/users', (req, res) => {
-  res.status(201).json({ message: '创建成功' })
+    res.status(201).json({ message: '创建成功' })
 })
 
-// 错误处理
 app.useError((err, req, res, next) => {
-  console.error(err)
-  res.status(500).json({ message: '服务器错误' })
+    console.error(err)
+    res.status(500).json({ message: '服务器错误' })
 })
 
 app.listen(3000, () => {
-  console.log('最小 Express 运行在 http://localhost:3000')
+    console.log('最小 Express 运行在 http://localhost:3000')
 })
 ```
+
+实测输出（`npm start` 起服务，另开一个终端用 `curl -i` 依次打三个接口）。先看服务端日志：
+
+```
+最小 Express 运行在 http://localhost:3000
+[GET] /users
+耗时: 4ms
+[GET] /users/42
+耗时: 1ms
+[GET] /nope
+耗时: 1ms
+```
+
+再看 `curl -i` 拿到的完整响应：
+
+```
+$ curl -i http://localhost:3000/users
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Thu, 17 Sep 2026 05:47:21 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Content-Length: 51
+
+[{"id":1,"name":"张三"},{"id":2,"name":"李四"}]
+
+$ curl -i http://localhost:3000/users/42
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Thu, 17 Sep 2026 05:47:21 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Content-Length: 27
+
+{"id":42,"name":"用户42"}
+
+$ curl -i http://localhost:3000/nope
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+Date: Thu, 17 Sep 2026 05:47:21 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Content-Length: 23
+
+{"message":"Not Found"}
+```
+
+三条结果正好把三个分支都走了一遍：`/users` 命中列表路由返回 200；`/users/42` 命中动态路由 `'/users/:id'`，把 `:id` 匹配到的 `"42"` 经 `Number()` 转成数字 42（**不做转换的话这里会是字符串**）；`/nope` 一个路由都没命中，于是落到 `notFound()` 返回 404 JSON。
+
+服务端那两行 `[GET] /users` 和 `耗时: 4ms` 来自脚本注册的两个中间件：前一个打印方法 + URL，后一个监听 `res.on('finish')` 统计耗时；它们对所有路由都生效，因为用的是不带路径的 `app.use`。
 
 ## 函数调用流程
 
@@ -309,15 +363,14 @@ executeMiddlewareChain(req, res, middlewares, callback)
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/express-mini`。
+本篇的代码块逐字摘自仓库 `node/04-Express 与 Koa/code/express-mini/index.js`（全文 194 行，零第三方依赖，纯 `node:http` 实现）。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `index.js` | 200 行还原 Express 核心（中间件链、路由匹配、res 封装） |
+| 文件 | 对应小节 | 演示什么 |
+| --- | --- | --- |
+| `./code/express-mini/index.js` | 最小实现 · 函数调用流程 · 核心机制解析 | 194 行还原 Express 核心：`middlewares` / `routes` 两个数组、`app.use` 的重载、`:param` 转正则、递归 `next(err)`、`enhanceRes` 响应封装 |
 
+运行方式见 `express-mini/README.md`（`npm start` 起服务，默认监听 3000）；
 建议对照本篇的讲解顺序读源码，先看 `app.use`，再看 `next` 递归。
-
-运行方式见 `express-mini/README.md`。
 
 ---
 

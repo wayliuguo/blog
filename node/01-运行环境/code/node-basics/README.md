@@ -18,17 +18,23 @@ Node.js 后端知识体系 —— 模块一「运行环境」配套实验代码�
 | `01-io-cost.js` | 一次请求的耗时账：墙上时间 vs CPU 时间 | `npm run 01` | 每段等待耗时对照表 + 总墙上时间（演示约 580ms）、CPU 实际占用（几毫秒），CPU/墙上比值极低，结论“等待占绝大多数” |
 | `02-module-cjs.cjs` | CommonJS 侧的两个本质特征：值拷贝 + 互引 ESM | `npm run 02cjs` | 6 行输出：`module.exports` 的键、`count` 快照恒为 0、`cjs.peek()` 却是 1；ESM 侧 `inc()` 后活绑定立刻变 1 |
 | `02-module-esm.mjs` | ES Module 侧的两个本质特征：活绑定 + 互引 CJS | `npm run 02esm` | 与 `npm run 02cjs` **逐行相同**（同一对模块，只是入口不同） |
-| `03-eventloop-phases.js` | 事件循环多阶段观测：timers / poll / check / close callbacks | `npm run 03phases` | 12 行输出、连跑 5 次稳定：同步代码 → nextTick → 对照 close → Promise → timers → 微任务检查点 → check → poll → 微任务 → check → timers → close callbacks |
+| `03-eventloop-phases.js` | 事件循环多阶段观测：timers / poll / check / close callbacks | `npm run 03phases` | 13 行输出。稳定部分：同步代码 → nextTick → 对照 close → Promise → timers → 微任务检查点 → check；随后 `[close callbacks] client socket close` 与 `[poll] fs.readFile I/O callback` 的相对顺序随计时抖动（连跑 10 次约 9 次 close 在前、1 次 poll 在前） |
 | `03-eventloop-order.js` | 经典事件循环输出顺序 | `npm run 03order` | 顺序固定为 `start → end → nextTick → promise → timeout` |
 | `03-microtask-checkpoint.js` | 微任务在每次回调检查点执行 | `npm run 03check` | 第一个 timer 内的微任务夹在它与第二个 timer 之间 |
 | `03-nexttick-starve.js` | nextTick 递归导致饥饿 | `npm run 03starve` | 10 次 nextTick 先打印，最后才打印 setTimeout |
 | `03-uv-threadpool.js` | libuv 线程池默认只有 4 个线程 | `npm run 03pool` | 10 个 pbkdf2 呈 4/4/2 三批完成；用 `UV_THREADPOOL_SIZE=8` 再跑一次变 8/2 两批 |
 | `04-async-serial.js` | 串行 await 三个任务 | `npm run 04serial` | 总耗时约 700ms（100+100+500） |
 | `04-async-parallel.js` | Promise.all 并行 | `npm run 04parallel` | 总耗时约 500ms（=最慢一个），比串行写法快约 200ms |
-| `05-buffer.js` | 字节 vs 字符、各种编码 | `npm run 05buffer` | `'你好'.length=2` 但字节长度=6（UTF-8 每字 3 字节） |
-| `05-stream-copy.js` | readFile vs stream 内存对比 | `npm run 05copy` | 两种复制都成功，stream 的 RSS 明显更平稳 |
-| `05-backpressure.js` | 背压：write 返回 false + drain | `npm run 05backpressure` | 打印触发了几次背压、几次 drain |
-| `05-stream-pipeline.js` | pipe() vs pipeline() + 出错统一销毁 | `npm run 05pipeline` | pipe 复制成功(RSS 峰值)、pipeline 出错时 `rs.destroyed=true`(整链销毁)、pipe 出错时 `rs.destroyed=false`(不自动销毁上游)、pipeline+gzip 压缩成功；跑完自动清临时目录 |
+| `04-callback-hell.js` | error-first 回调与回调地狱 | `npm run 04callback` | 先打印读取成功的内容；再用两层嵌套把业务结果挤到最右列（`[ 'p1', 'p2' ]`），直观展示"横向增长" |
+| `04-promise-chain.js` | Promise 链与错误传播 | `npm run 04promise` | `.then` 链里第 2 步 throw 被后面的 `.catch` 接住（打印"第 2 步炸了"），`.finally` 无论成败都执行 |
+| `04-async-await.js` | await 只挂起 async 函数，不阻塞外层同步代码 | `npm run 04await` | 4 行顺序：`0` 调用前 → `1` 进入 async 函数 → `2` async 之后的同步代码（先跑完）→ `3` 拿到 await 结果 |
+| `04-all-settled.js` | `Promise.all` 快速失败 vs `Promise.allSettled` 逐项状态 | `npm run 04settled` | `allSettled` 三项都列出来（2 个成功 + 1 个失败）；`all` 遇到第一个失败立刻抛错（"report 1 挂了"） |
+| `04-eventemitter.js` | `EventEmitter` 用法与两个坑 | `npm run 04emitter` | `on/emit` 正常收发；`error` 事件有监听时进程不崩、无监听时子进程退出码 1（崩溃首行 `node:events:497`）；反复 `on` 不 `off` 触发 `MaxListenersExceededWarning`，改 `once` 后 `listenerCount` 从 15 降到 2 |
+| `04-event-driven.js` | 业务 emit + 观测层 on 解耦 | `npm run 04eventdriven` | 一次业务动作后，日志 / 监控 / 状态三个监听器各自打印，互不知道对方存在 |
+| `05-buffer.js` | Buffer 是什么、三种解读视角、`alloc` vs `from`、字节 vs 字符 | `npm run 05buffer` | `'你好'.length=2` 但字节长度=6（UTF-8 每字 3 字节）；`<Buffer 68 65 6c 6c 6f>` vs `toString('hex')` / `'base64'`；`alloc(5)` 是全 0、`from('hello')` 是原内容 |
+| `05-stream-types.js` | 四种 Stream 的最小实现：Readable / Writable / Duplex / Transform | `npm run 05types` | `readableFlowing` 走 `null → true → false`；`cork()` 攒住 3 条小写入、`uncork()` 合并成一次 `writev`；真实 TCP 两端各自 `readable=true writable=true`；`Transform` 转大写 + `flush()` 补发；`end()` 后再 `write()` 报 `ERR_STREAM_WRITE_AFTER_END` |
+| `05-stream-vs-buffered.js` | 一次性读完 vs 流式：磁盘复制 + HTTP 推送 | `npm run 05vsbuffered` | 磁盘段两种复制各起一个子进程测：`readFile` 同时握着 64MB，`pipe` 只有 128KB（读侧 64KB + 写侧 16KB 缓冲）；网络段 `/all` 首字节约 750ms、`/stream` 只有几毫秒；跑完自动清临时目录 |
+| `05-stream-flow-control.js` | 背压 + `pipe` vs `pipeline` 的错误语义 | `npm run 05flow` | 背压段打印 `write()` 返回 `false` 时的 `writableLength` / `writableNeedDrain` 与 `drain` 恢复，100 条共刹车 16 次；`pipe` 出错时上下游都 `destroyed=false`，`pipeline` 出错时都 `destroyed=true`；末尾 `read → gzip → write` 多级链路 |
 | `05-fs-dir.js` | 目录遍历 + 批量读 .md 文件 | `npm run 05fs` | 扫描 3 个 .md，逐文件打印「字节数 + 首行」，汇总总数/总字节；跑完自动清理临时目录 |
 | `06-child-process.js` | spawn/exec/execFile/fork 对照 | `npm run 06child` | 四个 API 依次输出，fork 走 IPC 双向通信 |
 | `06-worker-thread.js` | 主线程阻塞 vs Worker 不阻塞 | `npm run 06worker` | 方案①心跳卡住，方案②心跳持续跳 |
@@ -63,7 +69,7 @@ Node.js 后端知识体系 —— 模块一「运行环境」配套实验代码�
 - `02-module-realm/01`~`10` 再把“解析时机、同步 vs 异步加载、缓存只执行一次、`exports` 陷阱、解析算法”逐条放大成可对照的输出，被追问 `require` 与 `import` 的区别时可以直接用跑出来的结果回答；
 - 事件循环那几题（`03order` / `03check` / `03starve`）跑出来后，你就不会再记混 nextTick、Promise、timer 的先后；`03phases` 更进一步，直接让你看到“回调究竟在哪个阶段跑”；
 - `05buffer` 的“2 个字符 6 个字节”会直接纠正“字符串长度 = 字节长度”的错觉，这是写分包协议的根；
-- `05copy` / `05backpressure` / `05pipeline` 把“流为什么省内存、背压为什么不会写爆、pipeline 为什么能统一销毁”变得可观测；
+- `05types` 一份文件把四种流摆在一起，`05vsbuffered` 用真实字节数（64MB vs 128KB）和真实首字节时间（750ms vs 4ms）证明「流式为什么省内存、为什么不用等」，`05flow` 把「背压怎么刹车、pipeline 为什么比 pipe 安全」变成可观测的输出；
 - `06child` / `06worker` / `06pool` / `06shutdown` 则是面试和线上排障真正用得上的：子进程怎么选、CPU 密集别堵主线程、每请求 new Worker 为什么不行、上线怎么优雅重启。
 
 ## 运行与预期输出
@@ -75,17 +81,23 @@ Node.js 后端知识体系 —— 模块一「运行环境」配套实验代码�
 | `01-io-cost.js` | `npm run 01` | 每段等待耗时对照表；总墙上时间约 580ms（真实约 2.3 秒，按 1/4 缩放）、CPU 实际占用仅几毫秒，CPU/墙上比值远低于 1% |
 | `02-module-cjs.cjs` | `npm run 02cjs` | 6 行：`[CJS 模块体] 执行完毕，导出 = TAG, count, inc, peek` → `[ESM 模块体] 开始执行` → `[互操作 ESM→CJS] 调 inc() 后 count = 0 但 cjs.peek() = 1` → `[互操作 CJS→ESM] 调 inc() 后 count = 1` |
 | `02-module-esm.mjs` | `npm run 02esm` | 与 `npm run 02cjs` 的输出**逐行相同**，两者退出码均为 0 |
-| `03-eventloop-phases.js` | `npm run 03phases` | 12 行、连跑 5 次稳定。三处关键：① `[check] 顶层 setImmediate` 出现在 `[poll] fs.readFile I/O callback` 之前（第一轮 poll 没有就绪的 I/O，直接进 check）；② poll 回调里注册的 `setImmediate` 紧跟在同轮 poll 之后，而 `setTimeout(fn, 0)` 要等下一轮 timers；③ `[close callbacks] client socket close` 排最后，而 `[对照] 无连接 server 的 close` 却夹在 nextTick 与 Promise 之间 |
+| `03-eventloop-phases.js` | `npm run 03phases` | 13 行，稳定的是前 7 行：同步代码 → nextTick → 对照 close → Promise → timers → 微任务检查点 → check。三处关键：① `[check] 顶层 setImmediate` 出现在 `[poll] fs.readFile I/O callback` 之前（第一轮 poll 没有就绪的 I/O，直接进 check）；② poll 回调里注册的 `setImmediate` 紧跟在同轮 poll 之后，而 `setTimeout(fn, 0)` 要等下一轮 timers；③ `[close callbacks] client socket close` 与 `[poll]` 的相对顺序**不固定**——前者等真实 socket 销毁、后者等文件读完，谁先就绪谁先跑（实测 10 次：9 次 close 在前、1 次 poll 在前），而 `[对照] 无连接 server 的 close` 稳定夹在 nextTick 与 Promise 之间 |
 | `03-eventloop-order.js` | `npm run 03order` | 顺序固定为 `start → end → nextTick → promise → timeout` |
 | `03-microtask-checkpoint.js` | `npm run 03check` | 第一个 timer 内的微任务夹在它与第二个 timer 之间 |
 | `03-nexttick-starve.js` | `npm run 03starve` | 10 次 nextTick 先打印，最后才打印 setTimeout |
 | `03-uv-threadpool.js` | `npm run 03pool` | 10 个 pbkdf2 分三批完成（前 4 约 130ms、中 4 约 240ms、后 2 约 316ms）；`UV_THREADPOOL_SIZE=8` 跑则分两批（前 8 约 141ms、后 2 约 206ms） |
 | `04-async-serial.js` | `npm run 04serial` | 总耗时约 700ms（100+100+500） |
 | `04-async-parallel.js` | `npm run 04parallel` | 总耗时约 500ms（=最慢一个），比串行写法快约 200ms |
-| `05-buffer.js` | `npm run 05buffer` | `'你好'.length=2` 但字节长度=6（UTF-8 每字 3 字节） |
-| `05-stream-copy.js` | `npm run 05copy` | 两种复制都成功，stream 的 RSS 明显更平稳 |
-| `05-backpressure.js` | `npm run 05backpressure` | 打印触发了几次背压、几次 drain |
-| `05-stream-pipeline.js` | `npm run 05pipeline` | pipe 复制成功、RSS 峰值约 60MB；pipeline 出错捕获异常且上游 `destroyed=true`、pipe 出错上游 `destroyed=false`；pipeline+gzip 压缩到约 0.03MB；跑完删除 `os.tmpdir()` 下临时目录 |
+| `04-callback-hell.js` | `npm run 04callback` | `读取成功，内容： Hello from callback demo`；随后 `回调地狱：业务结果被挤到最右列， [ 'p1', 'p2' ]` |
+| `04-promise-chain.js` | `npm run 04promise` | `接住错误： 第 2 步炸了` → `最终结果： [ 'p1', 'p2' ]` → `无论成功失败都执行（释放资源等）` |
+| `04-async-await.js` | `npm run 04await` | 严格按 `0 → 1 → 2 → 3` 打印，第 2 行是 async 之后的同步代码，说明 await 不会阻塞外层 |
+| `04-all-settled.js` | `npm run 04settled` | `allSettled` 打印 `✓ { id: 2, name: 'Alice' }` / `✗ report 2 挂了` / `✓ [ { sku: 'A' } ]`；`all` 打印 `all 快速失败： report 1 挂了` |
+| `04-eventemitter.js` | `npm run 04emitter` | `收到消息： Hello Node` → `捕获到错误，进程不会崩： 出事了` → `无监听器时子进程退出码： 1`、`崩溃首行信息： node:events:497` → `listenerCount： 15` → `用 once 后 listenerCount： 2`，并附带一条 `MaxListenersExceededWarning`（正是本节要演示的坑） |
+| `04-event-driven.js` | `npm run 04eventdriven` | 三行：`[日志] 任务开始 jobId=42`、`[监控] 调用外部服务：callPartnerApi`、`[状态] 完成：result-of-42` |
+| `05-buffer.js` | `npm run 05buffer` | 四段：`buf.length=5` 且 `instanceof Uint8Array` 为 `true`；同一段字节三种视角分别得到 `<Buffer 68 65 6c 6c 6f>` / `68656c6c6f` / `hello` / `aGVsbG8=`；`Buffer.alloc(5)` 输出全 0、`Buffer.from('hello')` 输出原内容；`'你好'` 2 字符 vs 6 字节、`'中文abc'` 5 vs 9，`Buffer.isBuffer('你好')` 为 `false` |
+| `05-stream-types.js` | `npm run 05types` | 四段：① Readable —— `readableFlowing` 依次为 `null` / `true`（注册 data 后）/ `false`（`pause()`），`[end]` 时 `readableEnded=true`、`[close]` 时 `destroyed=true`；② Writable —— 写 2 条后 `writableLength=8`，`cork()` 期间底层调用不增加、`uncork()` 后合并为一次 `writev(3B，3 块合一)`，`end()` 后再 `write()` 报 `ERR_STREAM_WRITE_AFTER_END`；③ Duplex —— 合成 Duplex 的 `allowHalfOpen` 默认 `true`，`net.createServer` 产出的 socket 是 `false`，客户端发 `ping` 收到回声；④ Transform —— 转大写得到 `HELLO WORLD\|收尾`，`objectMode` 下 chunk 是对象 |
+| `05-stream-vs-buffered.js` | `npm run 05vsbuffered` | 磁盘段：`readFile+writeFile` 同时在手 64.0MB / 峰值 RSS 约 121MB，`createReadStream().pipe()` 同时在手 128KB / 峰值 RSS 约 76MB，两个副本字节数一致；网络段（15 块、每块间隔 40ms）：`/all` 首字节约 750ms ≈ 总耗时，`/stream` 首字节约 4ms、总耗时约 705ms；跑完删除 `os.tmpdir()` 下临时目录 |
+| `05-stream-flow-control.js` | `npm run 05flow` | 背压段：第 7 条后 `write()` 返回 `false`（`writableLength=56B ≥ highWaterMark=50B`、`writableNeedDrain=true`），`drain` 后 `writableLength=0B`，100 条共 16 次背压/16 次 drain；对照段：`pipe` 出错后上下游 `destroyed=false`，`pipeline` 出错后上下游 `destroyed=true` 并抛出异常；末尾 `8.00MB → gzip → 8.0KB`；跑完删除临时目录 |
 | `05-fs-dir.js` | `npm run 05fs` | 扫描出 3 个 `.md`，逐文件打印「字节数 + 首行」，末尾汇总「文件总数：3 / 总字节数：167」，跑完自动删临时目录 |
 | `06-child-process.js` | `npm run 06child` | 四个 API 依次输出，fork 走 IPC 双向通信 |
 | `06-worker-thread.js` | `npm run 06worker` | 方案①心跳卡住，方案②心跳持续跳 |
@@ -106,11 +118,11 @@ Node.js 后端知识体系 —— 模块一「运行环境」配套实验代码�
 ## 注意事项
 
 - `06-graceful-shutdown.js` 是常驻服务，需手动 Ctrl+C 退出（其他脚本都会自动结束）。
-- `05-stream-copy.js` 会临时生成一个 200MB 文件，运行结束后自动删除，不会污染仓库。
+- `05-stream-vs-buffered.js` 会临时生成一个 64MB 文件并复制两份，运行结束后自动删除，不会污染仓库；内存对比之所以各起一个子进程，是因为同一进程里前一次实验留下的内存（以及还没回收的 Buffer）会让后一次测不准。
 - `05-fs-dir.js` 在 `os.tmpdir()` 下自建示例目录并写入文件，不依赖仓库内任何文件；传 `keep` 参数可保留临时目录：`node src/05-fs-dir.js keep`。
 - `06-error-fallback.js` 默认不会让进程崩溃；只有显式传 `uncaught` / `unhandled` 时才会由进程级兜底接住并主动退出。
 - `03-uv-threadpool.js` 想看线程池扩容效果，启动前设 `UV_THREADPOOL_SIZE=8` 再跑（运行时改无效）；默认 4 线程。
-- `05-stream-pipeline.js` 在 `os.tmpdir()` 下自建临时目录生成 30MB 源文件，演示完自动删除，不污染仓库。
+- `05-stream-flow-control.js` 会在 `os.tmpdir()` 下自建 8MB 源文件（用于 `pipe` / `pipeline` 的出错对照与 gzip 链路），演示完自动删除；背压那一段不需要任何文件，纯内存演示。
 - `06-worker-pool.js` 会预创建 4 个 Worker 组成线程池；脚本结束前 `terminate` 全部 Worker，进程正常退出。
 - `02-module-realm/08-type-switch/` 是唯一自带 `package.json`（`"type": "module"`）的子目录，入口 `run.cjs` 靠后缀强制按 CommonJS 解析；请按 `npm run mr08` 或 `node src/02-module-realm/08-type-switch/run.cjs` 运行，子目录里另有 README 说明。
 - `02-module-realm/lib/counter.cjs` 在被加载时会打印一行「模块体被执行」，这是 `01-cache.cjs` / `03-*.mjs` 判断模块体执行了几次的依据，看到这行重复出现说明缓存被清过。

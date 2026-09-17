@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "ES2021",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "lib": ["ES2021"],
+        // TypeORM 的 @Entity / @Column 是"老式装饰器"，必须开这两个开关
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "strict": false,
+        "noEmit": true
+    },
+    "include": ["src/**/*.ts"]
+}

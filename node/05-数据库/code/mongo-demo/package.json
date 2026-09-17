@@ -1,0 +1,28 @@
+{
+  "name": "mongo-demo",
+  "version": "1.0.0",
+  "description": "《Node.js 后端知识体系》05-数据库 MongoDB 两篇（入门 / 进阶）的配套示例：官方 mongodb 驱动 + Mongoose，README 里逐条对应正文小节。",
+  "type": "commonjs",
+  "main": "src/lib.js",
+  "scripts": {
+    "connect": "node src/01-connect.js",
+    "crud": "node src/02-crud.js",
+    "objectid": "node src/03-objectid.js",
+    "mconnect": "node src/04-mongoose-connect.js",
+    "model": "node src/05-model.js",
+    "embed": "node src/06-embed-vs-ref.js",
+    "logs": "node src/07-logs.js",
+    "comments": "node src/08-comments.js",
+    "index": "node src/09-index.js",
+    "explain": "node src/10-explain.js",
+    "aggregate": "node src/11-aggregate.js",
+    "tx": "node src/12-transaction.js",
+    "readpref": "node src/13-read-preference.js",
+    "pagination": "node src/14-pagination.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mongodb": "^6.10.0",
+    "mongoose": "^8.9.0"
+  }
+}

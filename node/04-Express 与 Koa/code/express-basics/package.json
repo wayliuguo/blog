@@ -1,0 +1,20 @@
+{
+  "name": "express-basics",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Express 快速入门 —— 用真实 express 写的最小可运行示例集",
+  "scripts": {
+    "http": "node src/00-http-baseline.js",
+    "hello": "node src/01-hello.js",
+    "routing": "node src/02-routing.js",
+    "params": "node src/03-params.js",
+    "middleware": "node src/04-middleware.js",
+    "builtin": "node src/05-builtin.js",
+    "cors": "node src/06-cors.js",
+    "error": "node src/07-error.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}

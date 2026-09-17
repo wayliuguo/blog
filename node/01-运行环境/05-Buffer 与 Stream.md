@@ -6,12 +6,15 @@ Node.js 做服务端，面对的数据很多时候并不是字符串——而是
 
 官方定义里，Buffer 是一个**固定长度的字节序列**：创建时容量就定死了，不能无限往里加东西。现在（Node 4+）的 `Buffer` 已经是 JavaScript `Uint8Array` 的子类，所以它能和整个 TypedArray 体系互操作——`Buffer` 可以直接传给操作 `Uint8Array` 的 API，也能用 `ArrayBuffer` 的视图方法。
 
-```javascript
-const buf = Buffer.from('hello');
+> 本节（及全篇）的代码块均取自配套脚本，采用 CommonJS 写法（`require(...)`），与正文示例里的 `import ... from 'node:...'` 风格不同——`node-basics` 零依赖，直接用 `node` 运行即可。
 
-// Buffer 是 Uint8Array 的子类，能与 TypedArray 体系互操作
-console.log(buf instanceof Uint8Array); // true
-console.log(buf.length);                // 5（5 个字节）
+> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+
+```javascript
+const buf1 = Buffer.from('hello')
+// …
+console.log('  buf1.length =', buf1.length, '（创建时容量就定死，不能往后追加）')
+console.log('  buf1 instanceof Uint8Array =', buf1 instanceof Uint8Array, '（能与 TypedArray 体系互操作）')
 ```
 
 一句话：字符串是"给人读的字符"，Buffer 是"给机器搬的字节"。服务端天生就在和字节打交道，所以 `Buffer` 是绕不开的基础类型。
@@ -28,13 +31,15 @@ console.log(buf.length);                // 5（5 个字节）
 | l | 6c | 108 |
 | o | 6f | 111 |
 
-```javascript
-const buf = Buffer.from('hello');
+> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
 
-console.log(buf);                 // <Buffer 68 65 6c 6c 6f>
-console.log(buf.toString());      // 还原成字符串：hello
-console.log(buf.toString('hex')); // 十六进制视角：68656c6c6f
-console.log(buf.toString('base64')); // Base64 视角：aGVsbG8=
+```javascript
+console.log('\n=== 2) 十六进制与字符串互转 ===')
+console.log('  console.log(buf1)            →', buf1, '（默认打印十六进制：68 65 6c 6c 6f 正好是 ASCII 的 h e l l o）')
+// …
+console.log("  buf1.toString('hex')         →", buf1.toString('hex'))
+console.log("  buf1.toString('utf8')        →", buf1.toString('utf8'))
+console.log("  buf1.toString('base64')      →", buf1.toString('base64'), '（把二进制安全地塞进只认文本的协议）')
 ```
 
 关键点：**字节本身没有编码，编码只是解读视角**。同一段字节，用 `'utf8'` 解读就是字符串，用 `'hex'` 解读就是十六进制串，用 `'base64'` 解读就是 Base64 串。这正是 `Buffer.from(str)` 与 `buf.toString()` 成对出现的原因。
@@ -46,12 +51,12 @@ console.log(buf.toString('base64')); // Base64 视角：aGVsbG8=
 - `Buffer.alloc(n)`：分配 **n 个字节并清零**，拿到的是一段干净的、全 0 的内存，适合作为"待填充的缓冲区"。
 - `Buffer.from(x)`：从**已有的数据**构造——可以是字符串、数组、`ArrayBuffer` 等，不会清零，而是把现有内容编码进去。
 
-```javascript
-const zeroed = Buffer.alloc(5);
-console.log(zeroed); // <Buffer 00 00 00 00 00>（已清零）
+> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
 
-const fromStr = Buffer.from('hello');
-console.log(fromStr); // <Buffer 68 65 6c 6c 6f>（从字符串编码而来）
+```javascript
+const zeroed = Buffer.alloc(5)
+console.log('  Buffer.alloc(5)     →', zeroed, '（已清零，适合当待填充的缓冲区）')
+console.log("  Buffer.from('hello') →", Buffer.from('hello'), '（从已有数据编码而来，不清零）')
 ```
 
 安全提示：不要用 `Buffer(size)` 这种未清零的构造函数（旧写法），它残留的是堆上随机旧数据，可能泄漏敏感信息。需要空白缓冲就用 `Buffer.alloc`。
@@ -60,9 +65,12 @@ console.log(fromStr); // <Buffer 68 65 6c 6c 6f>（从字符串编码而来）
 
 这是 Buffer 与 String 最容易踩、也最该记住的区别：
 
+> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+
 ```javascript
-console.log('你好'.length);            // 2（字符数）
-console.log(Buffer.from('你好').length); // 6（字节数，UTF-8 下每个汉字 3 字节）
+const buf2 = Buffer.from('你好')
+console.log('  "你好".length        =', '你好'.length, '（JS 认为只有 2 个字符）')
+console.log('  Buffer.from("你好").length =', buf2.length, '（UTF-8 下每个汉字 3 字节）')
 ```
 
 `'你好'` 作为字符串只有 2 个字符，但按 UTF-8 编码成字节后占 6 个字节。**字符长度 ≠ 字节长度**。
@@ -77,14 +85,18 @@ console.log(Buffer.from('你好').length); // 6（字节数，UTF-8 下每个汉
 ## Buffer 的五个应用场景
 
 1. **文件读取**：`fs.readFile` 不指定 encoding 时，回调拿到的 `data` 就是 `Buffer`。
+   > 示意片段（无配套脚本）
+
    ```javascript
-   import fs from 'node:fs';
+   const fs = require('node:fs')
 
    fs.readFile('./avatar.png', (err, data) => {
-     console.log(Buffer.isBuffer(data)); // true（未指定编码即返回 Buffer）
-   });
+       console.log(Buffer.isBuffer(data)) // true（未指定编码即返回 Buffer）
+   })
    ```
 2. **TCP Socket 的 `data` 事件**：网络收到的原始字节，回调里的 `chunk` 通常就是 `Buffer`。
+   > 示意片段（无配套脚本）
+
    ```javascript
    socket.on('data', (chunk) => {
      console.log(Buffer.isBuffer(chunk)); // true
@@ -102,9 +114,10 @@ console.log(Buffer.from('你好').length); // 6（字节数，UTF-8 下每个汉
    Buffer（密文）
    ```
 5. **Base64 编解码**：把任意二进制安全地塞进只认文本的协议（如邮件、JSON、Data URL）。
+   > 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+
    ```javascript
-   const buf = Buffer.from('hello');
-   console.log(buf.toString('base64')); // aGVsbG8=
+   console.log("  buf1.toString('base64')      →", buf1.toString('base64'), '（把二进制安全地塞进只认文本的协议）')
    ```
 
 ## Stream 是什么：一块一块地流动
@@ -165,42 +178,97 @@ Readable Stream
 - **Duplex（双向）**：同时可读可写，**典型是 TCP Socket**——既能收也能发。
 - **Transform（双向 + 转换）**：Duplex 的一种，输入经过"转换"再输出，例如 `gzip` 压缩、加解密、数据格式转换。
 
+### Readable：方法、属性与事件
+
+| 你想做的事 | 方法 | 说明 |
+|------------|------|------|
+| 一块块拿数据 | `readable.on('data', chunk => {})` | 注册 `data` 监听就把流切进**流动模式**，数据自动推来 |
+| 主动去拉 | `readable.read(size?)` | **暂停模式**下按需拉；返回 `null` 表示暂时没数据 |
+| 用循环读 | `for await (const chunk of readable)` | 语法最干净，每次迭代自动等上一块消费完（天然配合背压） |
+| 接上目的地 | `readable.pipe(writable)` | 返回**目标流本身**，所以可以直接 `.pipe().pipe()` 串下去 |
+| 暂停 / 恢复 | `pause()` / `resume()` | 对应 `readableFlowing` 由 `true` 变 `false`、再变回 `true` |
+| 按字符读 | `setEncoding('utf8')` | 之后 `data` 给的是字符串，且不会把一个多字节字符从中间切断 |
+| 从现成数据造流 | `Readable.from(iterable)` | 数组、生成器、异步生成器都能变成可读流，造数据源的捷径 |
+| 自己产数据 | `this.push(chunk)` | 写在自定义流的 `read()` 里；`push(null)` 表示数据源结束 |
+| 提前收工 | `readable.destroy(err?)` | 触发 `close`，`destroyed` 变为 `true` |
+
+- 关键属性：`readableFlowing`（`null` 未定 / `true` 流动 / `false` 暂停）、`readableHighWaterMark`（读侧缓冲上限）、`readableLength`（缓冲里还压着多少字节）、`readableEnded`、`destroyed`。
+- 关键事件：`data`、`end`、`readable`、`pause`、`resume`、`error`、`close`。
+
+### Writable：方法、属性与事件
+
+| 你想做的事 | 方法 | 说明 |
+|------------|------|------|
+| 写一块 | `writable.write(chunk)` | 返回值是关键：`true` 可以继续写，`false` 表示内部缓冲已满、**应当暂停上游** |
+| 写完收尾 | `writable.end(chunk?)` | 之后不能再 `write()`，否则报 `ERR_STREAM_WRITE_AFTER_END`（错误走 `error` 事件，不是同步抛出） |
+| 合并小写入 | `cork()` / `uncork()` | 攒着一起交给底层；若该流实现了 `writev`，多次小写会合并成一次系统调用 |
+| 判断是否在刹车 | `writableNeedDrain` | 等价于"上次 `write()` 返回了 `false` 且还没等到 `drain`" |
+| 立刻释放资源 | `writable.destroy(err?)` | 不等缓冲排空，直接销毁 |
+
+- 关键属性：`writableHighWaterMark`（写侧缓冲上限）、`writableLength`（缓冲里积压的字节数）、`writableNeedDrain`、`writableEnded`（`end()` 已调用）、`writableFinished`（数据已全部交付）。
+- 关键事件：`drain`（缓冲排空，可以继续写）、`finish`（全部写完）、`pipe` / `unpipe`（被 `pipe` 接上 / 摘掉）、`error`、`close`。
+
+### Duplex：读侧和写侧各有一套
+
+Duplex 就是 `Readable` 与 `Writable` 的能力叠加，**两边的 API、属性、事件各有一套、互不干扰**：读侧有 `read()` / `push()` / `readableLength` / `readableFlowing` 与 `data` / `end`，写侧有 `write()` / `end()` / `writableLength` / `writableNeedDrain` 与 `drain` / `finish`。
+
+它还有一个自己的选项 `allowHalfOpen`：为 `true` 时读侧收到 EOF **不会**自动关掉写侧（这就是 TCP 半关闭语义）。注意默认值并不统一——`new Duplex()` 默认 `true`，而 `net.createServer` 产出的 socket 默认 `false`。真实世界的 Duplex 就是 `net.Socket`：同一个对象上既能 `on('data')` 收，也能 `write()` 发。
+
+### Transform：在 Duplex 之上加一层转换
+
+除了继承两边的 API，你只需要实现三个钩子：
+
+| 钩子 | 何时被调用 | 要做的事 |
+|------|------------|----------|
+| `transform(chunk, encoding, callback)` | 每收到一块输入 | 用 `this.push(改好的数据)` 送出去，再 `callback()` 说明这块处理完了 |
+| `flush(callback)` | 所有输入都处理完 | 补发收尾数据（可以不实现） |
+| `final(callback)` | 写侧结束 | 释放资源（用得较少） |
+
+- 送数据只能 `this.push()`——`transform` 里的 `this` 就是这个流本身。
+- `objectMode: true` 时 chunk 不再是 `Buffer`，可以是任意 JS 值（`readableObjectMode` / `writableObjectMode` 会同时变成 `true`），适合在流水线上传对象。
+- `PassThrough` 是 Transform 的最简实现：不做任何改动、原样透传，常用来"插一脚"观测数据。
+
+> 摘自 `./code/node-basics/src/05-stream-types.js`（运行：`npm run 05types`）
+
 ```javascript
-// Transform 最常用于"边过边改"：读进来转大写，再写出去
-import { Transform } from 'node:stream';
-import fs from 'node:fs';
-
+const { Readable, Writable, Duplex, Transform, PassThrough } = require('node:stream')
+// …
 const upper = new Transform({
-  transform(chunk, encoding, callback) {
-    this.push(chunk.toString().toUpperCase()); // chunk 是 Buffer
-    callback();
-  },
-});
-
-fs.createReadStream('a.txt').pipe(upper).pipe(fs.createWriteStream('a.upper.txt'));
+    // transform() 每收到一块调一次：用 this.push() 送改好的，再 callback() 说"这块处理完了"
+    transform(chunk, encoding, callback) {
+        this.push(chunk.toString().toUpperCase())
+        callback()
+    },
+    // flush() 在所有输入处理完后调一次，用来补发收尾数据
+    flush(callback) {
+        this.push('|收尾')
+        callback()
+    }
+})
 ```
 
 ## 实战：复制大文件
 
 先给一个"炸内存"版本——把整个文件读进来再写出去：
 
-```javascript
-import fs from 'node:fs/promises';
+> 摘自 `./code/node-basics/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
 
-// 危险：大文件会整体进入内存
-const data = await fs.readFile('./big.mp4');
-await fs.writeFile('./copy.mp4', data);
+```javascript
+const data = await fs.promises.readFile(SRC)
+// …
+await fs.promises.writeFile(OUT_ALL, data)
 ```
 
 再给 Stream 版本，内存占用恒定：
 
+> 摘自 `./code/node-basics/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
+
 ```javascript
-import fs from 'node:fs';
-
-const reader = fs.createReadStream('./big.mp4');
-const writer = fs.createWriteStream('./copy.mp4');
-
-reader.pipe(writer); // 一边读一边写，内存始终是几 KB 到几 MB
+const rs = fs.createReadStream(SRC)
+const ws = fs.createWriteStream(OUT_STREAM)
+const held = peakOf(() => rs.readableLength + ws.writableLength, 1)
+rs.pipe(ws)
+await once(ws, 'finish')
 ```
 
 数据流是这样走的：
@@ -210,6 +278,33 @@ Disk ──▶ Buffer ──▶ Readable Stream ──▶ Writable Stream ──
 ```
 
 `pipe` 把可读端和可写端接起来，数据从磁盘的一块 Buffer 流进可读流，再流进可写流写回磁盘，全程不把整文件搬进内存。
+
+两者到底差多少？用 64MB 文件实测一次（`npm run 05vsbuffered`；两种方式各起一个独立子进程，否则前一次实验残留的内存会让后一次测不准）：
+
+| 复制方式 | 同时握在手里的数据 | 峰值 RSS |
+|----------|--------------------|----------|
+| `readFile` + `writeFile` | **64.0MB**（≈ 整个文件） | 约 121MB |
+| `createReadStream().pipe()` | **128KB**（读侧 64KB + 写侧 16KB 两块缓冲） | 约 76MB |
+
+前者的占用**随文件大小线性增长**，后者的占用**只与两侧的高水位有关**。文件越大差距越悬殊——10GB 的视频走 `readFile`，进程当场就被撑爆。
+
+实测输出（`npm run 05vsbuffered`，两种复制方式各起独立子进程，避免内存互相污染）：
+
+```
+  ── 子进程 readfile（独立进程，内存基数干净）──
+     耗时 104ms
+     同时握在手里的数据：64.0MB —— 整份数据都在 data 变量里，文件多大就占多大
+     峰值 RSS：119.5MB
+
+  ── 子进程 pipe（独立进程，内存基数干净）──
+     耗时 224ms
+     同时握在手里的数据：128KB —— 读侧缓冲（上限 64KB） + 写侧缓冲（上限 16KB）
+     峰值 RSS：73.0MB
+
+  两种方式结果一致：true（67108864 / 67108864 字节）
+  readFile 的占用 ≈ 整个文件大小；pipe 的占用只与两侧的高水位有关
+  所以文件越大差距越悬殊：10GB 视频走 readFile 会直接把进程撑爆
+```
 
 ## 背压：Stream 真正高级的地方
 
@@ -235,6 +330,32 @@ Stream 必须能告诉上游："你慢一点，我处理不过来了。"这就�
 - 返回 `true`：内部缓冲还没到阈值，可以继续写。
 - 返回 `false`：**内部缓冲已达上限，调用方应当暂停读取**，否则内存照样暴涨。
 
+背压发生时，流上有三个数字能让你确认"它真的在刹车"（`npm run 05flow` 实测）：
+
+| 属性 | 含义 | 实测值 |
+|------|------|--------|
+| `writableLength` | 写侧缓冲里积压了多少字节 | 返回 `false` 那一刻是 `56B`，而 `highWaterMark` 只有 `50B` |
+| `writableNeedDrain` | 是否处于"刹车中"（上次返回 `false` 且还没等到 `drain`） | 刹车时为 `true`，`drain` 之后变回 `false` |
+| `readableLength` | 读侧缓冲里还压着多少字节 | 交给 `pipe` 自动协调时，它会在 `write()` 返回 `false` 那一刻 `pause()` 上游，所以这个值始终只有一两块 |
+
+实测输出（`npm run 05flow`，自定义一个消费很慢的 Writable，`highWaterMark` 故意设成 50 字节）：
+
+```
+  向慢速流写入 100 条数据（每条消费 10ms）...
+  第 7 条之后 write() 返回 false：
+    writableLength=56B ≥ highWaterMark=50B，writableNeedDrain=true
+    → 上游应当暂停，否则内存照样被写爆
+  drain 事件（第 1 次）：缓冲已排空 writableLength=0B，writableNeedDrain=false → 恢复写入
+  第 13 条之后 write() 返回 false：
+    writableLength=51B ≥ highWaterMark=50B，writableNeedDrain=true
+    → 上游应当暂停，否则内存照样被写爆
+  drain 事件（第 2 次）：缓冲已排空 writableLength=0B，writableNeedDrain=false → 恢复写入
+
+  全部写完：共触发背压 16 次、drain 16 次
+  每条数据 8~10 字节，50B 的缓冲每轮装得下约 6 条，所以大约每 6 条就刹车一次。
+  write() 的返回值 + drain 事件，就是 Node 给"生产快于消费"准备的刹车。
+```
+
 等可写端消化完、缓冲降下来，它会触发 `'drain'` 事件，此时再恢复写入。闭环如下：
 
 ```
@@ -253,11 +374,25 @@ Producer ── chunk ──▶ [Writable 内部缓冲] ──▶ Consumer
                    Producer.resume() ──▶ 回到开头继续搬
 ```
 
-`createReadStream` 的 `highWaterMark` 参数（默认 64KB）决定了"缓冲到多大算到顶"——也就是背压的触发点。阈值越小，内存越省但搬运次数越多；阈值越大则相反。
+`highWaterMark` 参数决定了"缓冲到多大算到顶"——也就是背压的触发点。两侧的默认值并不相同，这点很容易记错：
+
+| 流 | 默认 `highWaterMark` |
+|----|----------------------|
+| `fs.createReadStream()` | **64KB**（"流每次搬一小块"的印象就来自这里） |
+| `fs.createWriteStream()` | **16KB** |
+| 通用默认值（`new Readable()` / `new Writable()` / `new Duplex()` 等） | **16KB**，可用 `stream.getDefaultHighWaterMark()` 查看 |
+
+阈值越小，内存越省但搬运次数越多（系统调用更多）；阈值越大则相反。
+
+> 摘自 `./code/node-basics/src/05-stream-flow-control.js`（运行：`npm run 05flow`）
 
 ```javascript
-// highWaterMark 决定每次读的块大小，也决定背压触发点
-const reader = fs.createReadStream('./big.iso', { highWaterMark: 64 * 1024 });
+const slow = new Writable({
+    highWaterMark: 50, // 写侧内部缓冲上限 50 字节
+    write(chunk, encoding, callback) {
+        setTimeout(() => callback(), DELAY) // 10ms 后才通知"这条处理完了"
+    }
+})
 ```
 
 手写 `pause/resume` 很容易出错，绝大多数场景直接用 `pipe` 或 `pipeline`——它们内部已经自动协调了背压。
@@ -266,21 +401,42 @@ const reader = fs.createReadStream('./big.iso', { highWaterMark: 64 * 1024 });
 
 `readable.pipe(writable)` 不只是"把 A 的数据丢给 B"：它内部会自动协调读取速度、写入速度、缓存和背压。比起自己写 `on('data', chunk => socket.write(chunk))`，`pipe` 不会让你手滑写出内存泄漏，所以生产代码里通常优先用它。
 
+`pipe()` 还有几个容易忽略的细节：它**返回目标流本身**，所以能一路 `.pipe().pipe()` 串下去；第二个参数 `{ end: false }` 可以让它不自动结束下游（同一个可写流还要接别的来源时用得上）；接上 / 摘掉会触发源流的 `pipe` / `unpipe` 事件，`reader.unpipe(writer)` 能中途拆开；但下游流的 `error` **不会**自动传回上游。
+
 但 `pipe()` 有个短板：**下游出错时，它不会自动销毁上游**。如果中间某个流抛错，上游流可能还挂着，文件描述符、Socket 都没释放，留下一堆悬挂的流。
 
 因此更推荐 `pipeline()`（来自 `node:stream/promises`）。它会在任意一环出错时**统一销毁所有流并抛出错误**，还能顺序串联多个 Transform（比如"读 → 压缩 → 加密 → 写"）。生产代码里它比 `pipe` 更安全：
 
-```javascript
-import fs from 'node:fs';
-import { pipeline } from 'node:stream/promises';
-import { createGzip } from 'node:zlib';
+> 摘自 `./code/node-basics/src/05-stream-flow-control.js`（运行：`npm run 05flow`）
 
-// 任意一环出错都会统一销毁整条链路；还能顺序串多个 Transform
-await pipeline(
-  fs.createReadStream('./input.mp4'),
-  createGzip(),
-  fs.createWriteStream('./output.mp4.gz'),
-);
+```javascript
+const { pipeline } = require('node:stream/promises')
+// …
+const dst = path.join(TMP, 'pipeline.gz')
+await pipeline(fs.createReadStream(SRC), zlib.createGzip(), fs.createWriteStream(dst))
+```
+
+两者出错时的差别可以直接观察（`npm run 05flow` 用同一个"第 2 块故意抛错"的 Transform，分别接在 `pipe` 和 `pipeline` 上跑一遍）：
+
+| | `pipe()` | `pipeline()` |
+|---|----------|--------------|
+| 返回值 | 目标流本身，可继续 `.pipe()` | `node:stream` 版收 `callback`，`node:stream/promises` 版返回 Promise，可直接 `await` |
+| 出错时对其它流 | **不销毁**：实测上下游 `destroyed` 都是 `false`，得自己逐环 `on('error')` 再 `destroy()` | **统一销毁整条链路**：实测上下游 `destroyed` 都是 `true`，并抛出异常 |
+| 多级链路 | 能串，但要一层层接 | 逗号一次列完，层数不限 |
+| 何时算结束 | 靠 `finish` / `end` 事件自己判断 | `await` 结束即可；单独一条流要判断收尾可以用 `stream.finished(stream, cb)` |
+
+实测输出（`npm run 05flow`，同一个"第 2 块故意抛错"的 Transform，分别接在 `pipe` 与 `pipeline` 上）：
+
+```
+  [pipe] 中间 Transform 抛错：
+    捕获到：Transform 第 2 块故意出错
+    上游 rs.destroyed = false，下游 ws.destroyed = false
+    —— 读写流都没被自动销毁，文件描述符还挂着：这就是 pipe 的短板，得自己补 error 处理
+
+  [pipeline] 同样的错误：
+    pipeline 抛出：Transform 第 2 块故意出错
+    上游 rs.destroyed = true，下游 ws.destroyed = true
+    —— 整条链路被统一销毁，不会留下悬挂的流，所以生产代码优先用它
 ```
 
 一句话选型：**简单搬运用 `pipe` 即可；链路更长、需要错误兜底、或要串联多个转换时，用 `pipeline`**。
@@ -291,31 +447,63 @@ await pipeline(
 
 正确做法是把数据源做成 Readable Stream，**边产生边推**：
 
-```javascript
-import fs from 'node:fs';
+> 摘自 `./code/node-basics/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
 
-// 大文件边读边推，客户端立刻开始下载，服务端内存恒定
-app.get('/download/:file', (req, res) => {
-  const stream = fs.createReadStream(`./files/${req.params.file}`);
-  stream.pipe(res); // res 本身就是一个 Writable Stream
-});
+```javascript
+for (let i = 0; i < BLOCKS; i++) {
+    if (!res.write(piece(i))) await once(res, 'drain') // write 返回 false 就等 drain
+    await sleep(GAP)
+}
+res.end()
 ```
 
 把"日志 / 进度 / 大文件 / 监控数据"看成不断产出的 chunk，客户端每收到一段就能立刻消费一段，而不是干等。理解 Stream 与背压，是写出"不卡内存的流式接口"的前提。
+
+`res` 是 `http.ServerResponse`，它本身就是 `Writable`，所以前面那套 API 原样成立：`res.write(chunk)` 同样返回布尔值、同样要靠 `drain` 协调，`stream.pipe(res)` 只是把背压转交给了 `pipe`。手写流式响应时注意别提前设 `Content-Length`，交给 Node 用 `Transfer-Encoding: chunked` 分块传即可。
+
+这件事的收益可以直接量出来（`npm run 05vsbuffered` 第二段：同一份数据、每块间隔 40ms，"拼完再发"与"边产生边发"各请求一次）：
+
+| 接口写法 | 首字节到达 | 全部读完 |
+|----------|------------|----------|
+| 先拼进内存再 `res.end` | **814ms**（几乎等于总耗时） | 816ms |
+| 每产生一块就 `res.write` | **4ms** | 733ms |
+
+实测输出（`npm run 05vsbuffered` 第二段，同一份数据、每块间隔 40ms）：
+
+```
+  [/all] 服务端攒够 1250 字节才发出第一枪
+  [/all] 首字节 814ms，全部读完 816ms
+  [/stream] 首字节 4ms，全部读完 733ms
+
+  同一份数据、同样的产生节奏：
+  /all    要等数据全部产生完（约 600ms）客户端才拿到第一个字节
+  /stream 首字节几乎瞬间到达，客户端能边收边渲染（日志、进度、大文件下载都靠它）
+```
+
+两种写法的总耗时差不多，**差的是首字节**：前者客户端要干等近 0.8 秒才见到第一个字，后者几毫秒就开始收到。日志滚动、进度条、大模型流式回复靠的都是这个差别——把"等待"变成"边出边看"。
 
 ## 落地到 fs：读、写、目录与遍历
 
 Buffer 和 Stream 讲完，把它们落到最常用的 `fs` 模块上。`fs` 提供文件读写、目录操作等能力，常用 API 如下：
 
-```javascript
-import fs from 'node:fs/promises';
+> 摘自 `./code/node-basics/src/05-fs-dir.js`（运行：`npm run 05fs`）
 
-await fs.readFile('./a.txt', 'utf8');        // 读文件（指定编码返回字符串）
-await fs.writeFile('./b.txt', 'hello', 'utf8'); // 写文件（覆盖）
-await fs.mkdir('./logs', { recursive: true });  // 创建多级目录
-const names = await fs.readdir('./logs');        // 列目录
-const stat = await fs.stat('./b.txt');           // 查元信息（大小/时间/类型）
-await fs.rm('./old', { recursive: true });       // 递归删除
+```javascript
+const fs = require('node:fs/promises')
+const path = require('node:path')
+// …
+async function prepareSamples() {
+    await fs.mkdir(SAMPLE_DIR, { recursive: true })
+    for (const f of SAMPLE_FILES) {
+        await fs.writeFile(path.join(SAMPLE_DIR, f.name), f.content, 'utf8')
+    }
+}
+// …
+const entries = await fs.readdir(dir, { withFileTypes: true })
+// …
+const buf = await fs.readFile(full) // 读成 Buffer，便于同时拿到字节数与首行
+// …
+await fs.rm(SAMPLE_DIR, { recursive: true, force: true })
 ```
 
 注意 `fs.stat` 的 `isFile()` / `isDirectory()` 能判断路径类型，配合 `size` 字段可以统计文件体积。
@@ -331,14 +519,18 @@ await fs.rm('./old', { recursive: true });       // 递归删除
 - 回调版在深层嵌套时容易"回调地狱"，新代码基本不写。
 - `fs/promises` 配合 `async/await` 可读性最好，还能用 `try/catch` 统一兜底，是现在的主流选择。
 
-```javascript
-import fs from 'node:fs/promises';
+> 示意片段（无配套脚本）
 
-try {
-  const content = await fs.readFile('./a.txt', 'utf8');
-  await fs.writeFile('./b.txt', content);
-} catch (err) {
-  console.error('文件操作失败:', err.message);
+```javascript
+const fs = require('node:fs/promises')
+
+async function copy(src, dest) {
+    try {
+        const content = await fs.readFile(src, 'utf8')
+        await fs.writeFile(dest, content)
+    } catch (err) {
+        console.error('文件操作失败:', err.message) // try/catch 能一次性兜住所有 await 的失败
+    }
 }
 ```
 
@@ -346,30 +538,38 @@ try {
 
 目录遍历有两种常见写法。一种是递归（自己处理子目录），另一种更推荐——用 `fs.readdir` 加 `withFileTypes`，拿到 `Dirent` 后判断类型，避免反复 `stat`：
 
+> 摘自 `./code/node-basics/src/05-fs-dir.js`（运行：`npm run 05fs`）
+
 ```javascript
-import fs from 'node:fs/promises';
-import path from 'node:path';
+async function scanMarkdown(dir) {
+    const entries = await fs.readdir(dir, { withFileTypes: true })
+    // 只保留普通文件，且后缀为 .md（大小写不敏感）
+    const mdFiles = entries
+        .filter(e => e.isFile() && e.name.toLowerCase().endsWith('.md'))
+        .map(e => e.name)
+        .sort()
 
-// 扫描一个资源目录，统计每个文件的大小与总字节数
-async function scanDir(dir) {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  let total = 0;
+    let totalBytes = 0
+    console.log(`=== 扫描目录：${dir} ===`)
+    console.log(`找到 ${mdFiles.length} 个 .md 文件\n`)
 
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name); // 永远用 path.join 拼路径
-    if (entry.isDirectory()) {
-      total += await scanDir(full);          // 递归进子目录
-    } else if (entry.isFile()) {
-      const stat = await fs.stat(full);
-      total += stat.size;
-      console.log(`${full}  ${stat.size} 字节`);
+    for (const name of mdFiles) {
+        const full = path.join(dir, name)
+        const buf = await fs.readFile(full) // 读成 Buffer，便于同时拿到字节数与首行
+        const firstLine = buf.toString('utf8').split('\n')[0]
+        totalBytes += buf.length
+        console.log(`文件：${name}`)
+        console.log(`  字节数：${buf.length}`)
+        console.log(`  首行：${firstLine}\n`)
     }
-  }
-  return total;
-}
 
-const sum = await scanDir('./public');
-console.log(`资源目录总大小：${sum} 字节`);
+    console.log('--- 汇总 ---')
+    console.log(`文件总数：${mdFiles.length}`)
+    console.log(`总字节数：${totalBytes}`)
+    return { count: mdFiles.length, totalBytes }
+}
+// …
+await scanMarkdown(SAMPLE_DIR)
 ```
 
 这个例子把 `fs.readdir` + `withFileTypes`、`fs.stat`、`path.join` 串了起来，是文件批处理 / 静态资源扫描里的标准套路。
@@ -378,17 +578,19 @@ console.log(`资源目录总大小：${sum} 字节`);
 
 不同操作系统路径分隔符不同（Linux 用 `/`，Windows 用 `\`）。手写 `'/'` 或 `'\\'` 会在跨平台时出问题，所以**永远用 `path` 模块拼路径**。`path` 还提供一串解析工具：
 
-```javascript
-import path from 'node:path';
+> 示意片段（无配套脚本）
 
-path.join('users', 'docs', 'file.txt');  // 跨平台拼接 → users/docs/file.txt
-path.basename('/users/docs/file.txt');   // 'file.txt'（文件名）
-path.dirname('/users/docs/file.txt');    // '/users/docs'（目录）
-path.extname('/users/docs/file.txt');    // '.txt'（扩展名）
-path.sep;                                // 当前系统的分隔符（/ 或 \）
+```javascript
+const path = require('node:path')
+
+path.join('users', 'docs', 'file.txt')  // 跨平台拼接 → users/docs/file.txt
+path.basename('/users/docs/file.txt')   // 'file.txt'（文件名）
+path.dirname('/users/docs/file.txt')    // '/users/docs'（目录）
+path.extname('/users/docs/file.txt')    // '.txt'（扩展名）
+path.sep                                // 当前系统的分隔符（/ 或 \）
 
 // path.parse 拆成结构化字段
-path.parse('/users/docs/file.txt');
+path.parse('/users/docs/file.txt')
 // → { root:'/', dir:'/users/docs', base:'file.txt', ext:'.txt', name:'file' }
 ```
 
@@ -398,6 +600,8 @@ path.parse('/users/docs/file.txt');
 
 - `path.join`：把若干段**按顺序拼接**成一个相对/绝对路径，只做拼接与规范化，不引入"当前工作目录"。
 - `path.resolve`：从右往左拼，**遇到绝对路径就停下来**，并把结果解析成基于"当前工作目录"的绝对路径。相当于对每段依次做 `cd`。
+
+> 示意片段（无配套脚本）
 
 ```javascript
 path.join('a', 'b', 'c');     // 'a/b/c'（相对路径，纯拼接）
@@ -426,19 +630,20 @@ path.resolve('/etc', 'x');    // '/etc/x'（遇到绝对路径 /etc 即停止）
 - **Stream 的本质，以及它与 Buffer 的关系**
   - **一块一块地搬**：`fs.readFile` 读 10GB 视频意味着整个文件进内存、进程直接被撑爆；Stream 一次只搬一小块（通常 64KB），内存占用始终维持在几十 KB 到几 MB
   - **水桶与水管**：`Buffer` 是一块数据（水桶里装的那桶水），`Stream` 是数据的运输方式（水管）；Stream 不断输送一个又一个 Buffer chunk——没有 Buffer 就没东西可运，没有 Stream 就只能整块整块堆在内存里
-- **四种 Stream**
-  1. **`Readable`（只读）**：只生产数据，如 `fs.createReadStream('./a.txt')`、HTTP 请求体
-  2. **`Writable`（只写）**：只消费数据，如 `fs.createWriteStream('./b.txt')`、HTTP 响应
-  3. **`Duplex`（双向）**：同时可读可写，**典型是 TCP Socket**
-  4. **`Transform`（双向 + 转换）**：`Duplex` 的一种，输入经过"转换"再输出，如 `gzip` 压缩、加解密、数据格式转换
+- **四种 Stream，以及它们各自的方法、属性与事件**
+  1. **`Readable`（只读）**：只生产数据，如 `fs.createReadStream('./a.txt')`、HTTP 请求体；三种读法——`on('data')` 进流动模式、`read(size?)` 主动拉（返回 `null` 表示暂时没数据）、`for await...of` 逐块迭代（天然配合背压）；`pipe(dest)` 返回目标流本身所以能链式串，`pause()` / `resume()` 对应 `readableFlowing` 的 `false` / `true`，`setEncoding('utf8')` 后 `data` 给字符串且不会切断多字节字符，自定义数据源在 `read()` 里用 `this.push(chunk)` 产出、`push(null)` 结束；属性看 `readableFlowing` / `readableHighWaterMark` / `readableLength` / `readableEnded` / `destroyed`，事件看 `data` / `end` / `error` / `close`
+  2. **`Writable`（只写）**：只消费数据，如 `fs.createWriteStream('./b.txt')`、HTTP 响应；`write()` 返回 `true` 可继续写、`false` 表示缓冲已满应暂停上游，`end()` 之后再 `write()` 会报 `ERR_STREAM_WRITE_AFTER_END`（走 `error` 事件而非同步抛出），`cork()` / `uncork()` 用来攒小写入、若该流实现了 `writev` 就合并成一次系统调用（`net.Socket`、`fs.WriteStream` 都有）；属性看 `writableHighWaterMark` / `writableLength` / `writableNeedDrain` / `writableEnded` / `writableFinished`，事件看 `drain` / `finish` / `pipe` / `unpipe`
+  3. **`Duplex`（双向）**：同时可读可写，**典型是 TCP Socket**（`net.Socket` 上同一个对象既能 `on('data')` 收也能 `write()` 发），读侧与写侧各有一套 API、属性与事件；`allowHalfOpen` 决定半关闭行为，且默认值不统一——`new Duplex()` 是 `true`（读侧 EOF 不关写侧），`net.createServer` 产出的 socket 是 `false`
+  4. **`Transform`（双向 + 转换）**：`Duplex` 的一种，输入经过"转换"再输出，如 `gzip` 压缩、加解密、数据格式转换；只要实现 `transform(chunk, encoding, callback)`（用 `this.push()` 送出改好的数据、再 `callback()` 说这块处理完了）与可选的 `flush(callback)`（全部输入处理完后补发收尾数据）即可；`objectMode: true` 时 chunk 可以是任意 JS 值，`PassThrough` 是零转换的最简实现
 - **Stream 的工程实践：复制、背压与 `pipe` / `pipeline`**
-  - **复制大文件必须用 Stream**：`fs.readFile` + `fs.writeFile` 会把整个文件读进内存、大文件直接 OOM；`createReadStream` 配 `pipe` 到 `createWriteStream` 后数据沿 `Disk → Buffer → Readable Stream → Writable Stream → Disk` 流动，内存恒定在几 KB 到几 MB
-  - **背压是 Stream 真正高级的地方**：速度不匹配时（磁盘 500MB/s、网络 10MB/s），`writable.write(chunk)` 返回 `true` 表示内部缓冲未到阈值可继续写、返回 `false` 表示**缓冲已达上限、调用方应暂停读取**，否则内存照样涨到 OOM；缓冲降下来后触发 `'drain'` 事件再恢复写入，闭环是 `write() 返回 false → pause → 缓冲下降 → 'drain' → resume`
-  - **`highWaterMark` 决定背压触发点**：`createReadStream` 的 `highWaterMark` 默认 64KB，阈值越小内存越省但搬运次数越多；手写 `pause` / `resume` 容易出错，直接用 `pipe` / `pipeline`，它们内部已自动协调背压
-  - **`pipe` 与 `pipeline` 的取舍**：`pipe` 会自动协调读取速度、写入速度、缓存与背压，但**下游出错时不会自动销毁上游**，可能留下悬挂的流与未释放的文件描述符、Socket；`pipeline`（`node:stream/promises`）在任意一环出错时统一销毁所有流并抛出错误，还能顺序串联多个 Transform（读 → 压缩 → 加密 → 写）——简单搬运用 `pipe`，链路更长、需要错误兜底或串联多个转换时用 `pipeline`
+  - **复制大文件必须用 Stream**：`fs.readFile` + `fs.writeFile` 会把整个文件读进内存、大文件直接 OOM；`createReadStream` 配 `pipe` 到 `createWriteStream` 后数据沿 `Disk → Buffer → Readable Stream → Writable Stream → Disk` 流动，内存恒定在几 KB 到几 MB。64MB 文件实测：一次性读写的占用 ≈ 整个文件（64.0MB、峰值 RSS 约 121MB），`pipe` 只有 128KB（读侧 64KB + 写侧 16KB 两块缓冲、峰值 RSS 约 76MB）——前者随文件大小线性增长，后者只与两侧高水位有关
+  - **背压是 Stream 真正高级的地方**：速度不匹配时（磁盘 500MB/s、网络 10MB/s），`writable.write(chunk)` 返回 `true` 表示内部缓冲未到阈值可继续写、返回 `false` 表示**缓冲已达上限、调用方应暂停读取**，否则内存照样涨到 OOM；缓冲降下来后触发 `'drain'` 事件再恢复写入，闭环是 `write() 返回 false → pause → 缓冲下降 → 'drain' → resume`。刹车过程有三个可观测数字：`writableLength`（返回 `false` 时 56B 而 `highWaterMark` 只有 50B）、`writableNeedDrain`（刹车时 `true`、`drain` 后 `false`）、`readableLength`（被 `pipe` 协调时始终只有一两块）
+  - **`highWaterMark` 决定背压触发点，且两侧默认值不同**：`fs.createReadStream()` 是 **64KB**（"流每次搬一小块"的印象来自这里）、`fs.createWriteStream()` 是 **16KB**，流的通用默认值是 **16KB**（可用 `stream.getDefaultHighWaterMark()` 查看）；阈值越小内存越省但搬运次数越多；手写 `pause` / `resume` 容易出错，直接用 `pipe` / `pipeline`，它们内部已自动协调背压
+  - **`pipe` 与 `pipeline` 的取舍**：`pipe` 会自动协调读取速度、写入速度、缓存与背压，且**返回目标流本身**（所以能一路 `.pipe().pipe()` 串下去）、`{ end: false }` 可让下游不被自动结束、接上/摘掉会触发 `pipe` / `unpipe` 事件；但**下游出错时不会自动销毁上游**，可能留下悬挂的流与未释放的文件描述符、Socket（实测出错后上下游 `destroyed` 都是 `false`）；`pipeline`（`node:stream` 版收回调、`node:stream/promises` 版返回 Promise）在任意一环出错时统一销毁所有流并抛出错误（实测上下游 `destroyed` 都是 `true`），还能顺序串联多个 Transform（读 → 压缩 → 加密 → 写）；单独判断一条流的收尾可以用 `stream.finished(stream, cb)`——简单搬运用 `pipe`，链路更长、需要错误兜底或串联多个转换时用 `pipeline`
 - **流式推送为什么必须用 Stream**
   - **问题**：日志流、进度百分比、大文件传输、实时监控数据这类**持续产生**的数据，用 `readFile` 或先拼成大字符串再一次性返回，会让客户端干等到全部生成完、服务端内存还被撑着
-  - **做法**：把数据源做成 Readable Stream 边产生边推，客户端每收到一段就消费一段；`res` 本身就是 `Writable` Stream，`stream.pipe(res)` 即可
+  - **做法**：把数据源做成 Readable Stream 边产生边推，客户端每收到一段就消费一段；`res` 本身就是 `Writable` Stream，`stream.pipe(res)` 即可，`res.write()` 同样返回布尔值、同样要靠 `drain` 协调，且不要提前设 `Content-Length`（交给 `Transfer-Encoding: chunked` 分块传）
+  - **收益可量化**：同一份数据（每块间隔 40ms）实测，先拼进内存再 `res.end` 的首字节要等 **752ms**（≈ 总耗时），每产生一块就 `res.write` 的首字节只要 **4ms**——总耗时接近，差的就是"什么时候开始收到"，这就是日志滚动、进度条、大模型流式回复的基础
 - **落地 `fs` 与 `path`：读写、目录遍历与拼路径**
   - **`fs` 的三种风格**：老式回调版（深层嵌套易成回调地狱）、`fs/promises`（配 `async/await` 与 `try/catch` 统一兜底，现在的主流）、`*Sync` 同步版——同步版会**阻塞事件循环**直到 I/O 完成，只适合启动初始化、CLI 这类不在请求热路径上的场景
   - **常用 API**：`readFile` / `writeFile` / `mkdir({ recursive: true })` / `readdir`（配 `withFileTypes` 拿 `Dirent` 判断类型，避免反复 `stat`）/ `stat`（`isFile()` / `isDirectory()` 与 `size`）/ `rm({ recursive: true })`
@@ -449,11 +654,13 @@ path.resolve('/etc', 'x');    // '/etc/x'（遇到绝对路径 /etc 即停止）
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |
-| `./code/node-basics/src/05-buffer.js` | 字符长度 ≠ 字节长度：Content-Length 的坑 | Buffer 的创建、十六进制输出、与字符串的字节数差异、Base64 |
-| `./code/node-basics/src/05-stream-copy.js` | 实战：复制大文件 | 用 Stream 复制大文件：内存占用恒定 |
-| `./code/node-basics/src/05-backpressure.js` | 背压：Stream 真正高级的地方 | 背压：下游消费慢时上游自动暂停，`write()` 返回 `false` 与 `drain` |
-| `./code/node-basics/src/05-stream-pipeline.js` | pipe 为什么重要，以及为什么更推荐 pipeline | `pipe` 与 `pipeline` 的差别，以及 `pipeline` 如何统一销毁错误链路 |
+| `./code/node-basics/src/05-buffer.js` | Buffer 到底是什么：固定长度的字节序列 · 十六进制与字符串互转：从 hello 看字节 · Buffer.alloc 与 Buffer.from 的区别 · 字符长度 ≠ 字节长度：Content-Length 的坑 | Buffer 的创建与 `Uint8Array` 子类身份、三种解读视角（十六进制 / utf8 / base64）、`alloc` 清零 vs `from` 编码、字符长度与字节长度之差（`'你好'` 2 vs 6、`'中文abc'` 5 vs 9） |
+| `./code/node-basics/src/05-stream-types.js` | Stream 是什么：一块一块地流动 · Stream 与 Buffer 的关系：水桶与水管 · 四种 Stream：一张表看明白 | 手写四种流的最小实现：`readableFlowing` 从 `null` 到 `true` 再到 `false`、`cork()` / `uncork()` 与 `writev` 合并、真实 TCP 两端的 Duplex、`transform()` / `flush()` / `objectMode`、`end()` 后再 `write()` 的报错码 |
+| `./code/node-basics/src/05-stream-vs-buffered.js` | 实战：复制大文件 · 流式推送为什么必须用 Stream | 磁盘：`readFile` 同时在手 64MB vs `pipe` 只有 128KB（两种方式各起独立子进程，避免内存互相污染）；网络：`/all` 首字节 752ms vs `/stream` 4ms |
+| `./code/node-basics/src/05-stream-flow-control.js` | 背压：Stream 真正高级的地方 · pipe 为什么重要，以及为什么更推荐 pipeline | 背压：`write()` 返回 `false` 时的 `writableLength` / `writableNeedDrain` 与 `drain` 恢复；`pipe` 出错不销毁链路 vs `pipeline` 统一销毁；`read → gzip → write` 多级链路 |
 | `./code/node-basics/src/05-fs-dir.js` | 落地到 fs：读、写、目录与遍历 | `fs` 目录遍历 + `path` 组合路径 |
+
+运行方式（`code/node-basics` 目录下）：`npm run 05types` / `npm run 05vsbuffered` / `npm run 05flow` / `npm run 05buffer` / `npm run 05fs`，脚本各自建临时文件并在结束时清理。
 
 ## 参考
 

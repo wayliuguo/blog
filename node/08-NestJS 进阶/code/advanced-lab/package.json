@@ -1,0 +1,46 @@
+{
+  "name": "advanced-lab",
+  "version": "1.0.0",
+  "description": "NestJS 进阶配套示例 - 装饰器 / 作用域与循环依赖 / 认证令牌与 Cookie / 文件上传 / WebSocket / 定时任务与队列",
+  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "01decorators": "ts-node src/01-decorators.ts",
+    "02scope": "ts-node src/02-scope-and-circular.ts",
+    "03tokens": "ts-node src/03-tokens.ts",
+    "03cookie": "ts-node src/03-cookie.ts",
+    "03wechat": "ts-node src/03-wechat.ts",
+    "04upload": "ts-node src/04-file-upload.ts",
+    "05gateway": "ts-node src/05-websocket-gateway.ts",
+    "06schedule": "ts-node src/06-schedule.ts",
+    "06queue": "ts-node src/06-queue.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/bull": "^11.0.2",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.0.1",
+    "@nestjs/schedule": "^6.0.0",
+    "@nestjs/websockets": "^11.0.1",
+    "axios": "^1.20.0",
+    "bull": "^4.16.4",
+    "cookie": "^1.0.2",
+    "cron": "^4.3.0",
+    "multer": "^1.4.5-lts.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}

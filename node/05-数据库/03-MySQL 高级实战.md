@@ -289,84 +289,125 @@ gh-ost \
 
 ### 连接池参数详解
 
-```typescript
-// Node.js 生产级连接池配置（mysql2）
-const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: 'password',
-    database: 'myapp',
+项目里的 `db.js` 只留必要项（账号密码走 `.env`），`08-pool-stats.js` 则把生产常用参数全列出来，并在建完池后回读一遍「真正生效的值」——它只建池、不发查询，所以本机没装 MySQL 也能跑。
 
-    // 核心参数
+> 摘自 `./code/mysql-demo/src/08-pool-stats.js`（运行：`npm run pool`）
+
+```javascript
+// 敏感信息交给 .env；这里刻意把常用参数都列出来，方便逐项对照
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || '127.0.0.1',
+    // …
     connectionLimit: 10,           // 最大连接数（默认 10）
     queueLimit: 0,                 // 等待队列上限（0 表示不限制）
     waitForConnections: true,      // 无可用连接时是否排队等待
-
-    // 超时配置
-    acquireTimeout: 10000,         // 获取连接的超时时间（ms）
+    // …
     connectTimeout: 10000,         // 连接数据库的超时时间（ms）
-    idleTimeout: 600000,           // 连接空闲多久后释放（ms，默认 10 分钟）
-
-    // 健康检查
+    idleTimeout: 60000,            // 空闲连接多久后被回收（ms，默认 60 秒）
+    // …
     enableKeepAlive: true,         // 开启心跳保活
-    keepAliveInitialDelay: 0,     // 心跳延迟
-
-    // 高级配置
-    charset: 'UTF8MB4_GENERAL_CI', // 字符集（支持 emoji）
+    keepAliveInitialDelay: 0,      // 心跳延迟
+    // …
+    charset: 'utf8mb4',            // 字符集（支持 emoji）
     timezone: '+08:00'             // 时区
 })
 ```
 
+两个最容易记错的点，实测（`npm run pool`）如下：
+
+- **`acquireTimeout` 在 mysql2 里已经失效**：它是老 `mysql` 库的参数，传了会被忽略并打警告；真正控制「获取连接超时」的是 `connectTimeout`（默认 `10000` ms）。
+- **`idleTimeout` 默认是 60 秒**（`60000` ms），不是 10 分钟——空闲连接超过这个时长就会被回收。
+
+另外 `charset` 既可以直接写 `'utf8mb4'`，也可以写 MySQL 的字符集名 `'UTF8MB4_GENERAL_CI'`，两者映射到的 `charsetNumber` 都是同一个（`45`）。
+
+实测输出（`npm run pool`，第 1~2 段）：
+
+```
+Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+=== 1. 实际生效的连接配置 ===
+  host / port / user / database = 127.0.0.1 3306 root mysql_demo
+  charsetNumber = 45 （45 就是 utf8mb4）
+  timezone = +08:00
+  connectTimeout = 10000 ms
+  enableKeepAlive = true ，keepAliveInitialDelay = 0
+
+=== 2. 传了却不生效的选项 ===
+  acquireTimeout 生效值 = undefined （undefined = 被忽略，警告见 stderr）
+  另外几个池级参数：connectionLimit = 10 ，queueLimit = 0 ，waitForConnections = true ，idleTimeout = 60000 ms
+```
+
 ### 连接数估算
 
-```typescript
-// 连接数估算公式
-// 最大连接数 = (CPU 核心数 × 2) + 有效磁盘数
-// 或者按业务估算：QPS × 平均查询时间
+> 摘自 `./code/mysql-demo/src/08-pool-stats.js`（运行：`npm run pool`）
 
-// 生产实践
-// 4 核 8G 服务器：建议 20-50 个连接
-// 8 核 16G 服务器：建议 50-100 个连接
-// 16 核 32G 服务器：建议 100-200 个连接
+```javascript
+console.log('  公式：最大连接数 = (CPU 核心数 × 2) + 有效磁盘数')
+console.log('  或按业务估算：QPS × 平均查询时间')
+// …
+console.log('  4 核 8G    建议 20~50 个连接')
+console.log('  8 核 16G   建议 50~100 个连接')
+console.log('  16 核 32G  建议 100~200 个连接')
+// …
+console.log('  注意：连接过多 → MySQL 上下文切换开销大 → 性能反而下降')
+```
 
-// 注意：连接数不是越多越好
-// 连接过多 → MySQL 上下文切换开销大 → 性能反而下降
+实测输出（`npm run pool`，第 3 段）：
+
+```
+=== 3. 连接数估算 ===
+  公式：最大连接数 = (CPU 核心数 × 2) + 有效磁盘数
+  或按业务估算：QPS × 平均查询时间
+  4 核 8G    建议 20~50 个连接
+  8 核 16G   建议 50~100 个连接
+  16 核 32G  建议 100~200 个连接
+  注意：连接过多 → MySQL 上下文切换开销大 → 性能反而下降
 ```
 
 ### 生产场景：连接池监控
 
-```typescript
-// 监控连接池状态
-class DatabaseMonitor {
-    private pool: mysql.Pool
+mysql2 的 `pool` 上**没有** `totalConnectionCount` 这类便捷属性（取值恒为 `undefined`），真实计数要从底层 `pool.pool` 的三个内部集合上取：
 
-    getPoolStatus() {
-        return {
-            totalConnections: this.pool.totalConnectionCount,      // 总连接数
-            activeConnections: this.pool.activeConnectionCount,    // 活跃连接数
-            idleConnections: this.pool.idleConnectionCount,        // 空闲连接数
-            pendingRequests: this.pool.pendingRequestCount         // 等待队列长度
-        }
-    }
+> 摘自 `./code/mysql-demo/src/08-pool-stats.js`（运行：`npm run pool`）
 
-    // 设置告警阈值
-    checkHealth() {
-        const status = this.getPoolStatus()
-
-        // 告警：活跃连接超过 80%
-        if (status.activeConnections / status.totalConnections > 0.8) {
-            console.error('连接池告警：活跃连接数超过 80%')
-            // 触发扩容或告警通知
-        }
-
-        // 告警：等待队列有积压
-        if (status.pendingRequests > 100) {
-            console.error('连接池告警：等待队列积压')
-            // 可能原因：数据库慢查询导致连接被长时间占用
-        }
+```javascript
+// mysql2 的 pool 上没有 totalConnectionCount 这类便捷属性（取值恒为 undefined），
+// 真实计数在底层 pool 的三个内部集合上
+function getPoolStatus(pool) {
+    const p = pool.pool
+    return {
+        totalConnections: p._allConnections.length,          // 已创建的全部连接
+        freeConnections: p._freeConnections.length,          // 空闲（可复用）的连接
+        activeConnections: p._allConnections.length - p._freeConnections.length, // 活跃连接
+        pendingRequests: p._connectionQueue.length           // 排队等连接的请求数
     }
 }
+// …
+// 阈值告警：活跃连接占比超 80%、等待队列积压超 100，都该先去查慢查询
+function checkHealth(pool) {
+    const status = getPoolStatus(pool)
+    const alerts = []
+    if (status.totalConnections > 0 && status.activeConnections / status.totalConnections > 0.8) {
+        alerts.push('连接池告警：活跃连接数超过 80%')
+    }
+    if (status.pendingRequests > 100) {
+        alerts.push('连接池告警：等待队列积压（大概率是慢查询占着连接不释放）')
+    }
+    return { status, alerts }
+}
 ```
+
+实测输出（`npm run pool`，第 4 段）：
+
+```
+=== 4. 连接池监控 ===
+  当前计数 = {"totalConnections":0,"freeConnections":0,"activeConnections":0,"pendingRequests":0}
+  说明：此刻还没发过查询，池是懒加载的，一条连接都没建
+  pool.totalConnectionCount 这些属性并不存在，监控要从 pool.pool 的
+  _allConnections / _freeConnections / _connectionQueue 上取
+  健康检查告警 = 无
+```
+
+连接数是 0 很正常——池是懒加载的，只有真正发起查询才会建连接。上生产时把 `getPoolStatus()` 定期打进监控，再用 `checkHealth()` 的两条阈值（活跃占比 > 80%、等待队列 > 100）触发告警即可。
 
 ### 生产场景：连接池常见问题排查
 
@@ -493,11 +534,13 @@ mysqlbinlog \
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `05-transaction.js` | 事务的提交与回滚 |
-| `06-oversell.js` | 防超卖：先查后改 vs 条件更新 |
-| `07-lock.js` | 乐观锁与悲观锁 |
+| `./code/mysql-demo/src/08-pool-stats.js` | 连接池参数核对（含被忽略的 `acquireTimeout`）、连接数估算、池内计数与阈值告警；只建池不发查询，本机无需 MySQL 也能运行 |
+| `./code/mysql-demo/src/db.js` | 项目里精简版的连接池封装（账号密码走 `.env`） |
+| `./code/mysql-demo/src/05-transaction.js` | 事务的提交与回滚 |
+| `./code/mysql-demo/src/06-oversell.js` | 防超卖：先查后改 vs 条件更新 |
+| `./code/mysql-demo/src/07-lock.js` | 乐观锁与悲观锁 |
 
-运行方式见 `mysql-demo/README.md`。
+运行方式见 `mysql-demo/README.md`；`08-pool-stats.js` 对应的命令是 `npm run pool`。
 
 ---
 

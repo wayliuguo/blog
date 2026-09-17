@@ -1,0 +1,13 @@
+node_modules/
+
+# 日志目录：由脚本运行时生成，跑完自行清理
+logs/
+*.log
+
+# 环境文件：真实值绝不进仓库，只放行模板
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+!*.env.example

@@ -1,0 +1,1 @@
+这是 koa-static('public') 提供的静态文件。

@@ -82,25 +82,60 @@ Hello Node.js
 JavaScript ── 你需要手动 .toString() 才能得到字符串
 ```
 
-Node.js 网络编程里 `socket.on('data', cb)` 拿到的 `data` 是 **Buffer**，而不是天然的字符串：
+Node.js 网络编程里 `socket.on('data', cb)` 拿到的 `data` 是 **Buffer**，而不是天然的字符串。本篇代码块均摘自配套脚本，脚本用 CommonJS 的 `require(...)` 写法（与正文示例里偶尔出现的 `import` 只是风格差异，能力一致）：
+
+> 摘自 `./code/net-lab/src/01-tcp-server.js`（运行：`npm run 01`，另开终端跑 `npm run 02` 发数据）
 
 ```js
-socket.on('data', (buffer) => {
-  console.log(buffer);                 // <Buffer 48 65 6c 6c 6f ...>
-  console.log(buffer.toString('utf8')); // Hello Node.js
-});
+socket.on('data', chunk => {
+    // chunk 是 Buffer（字节流），可以按不同编码解读
+    console.log('  收到数据(utf8):', chunk.toString('utf8'))
+    console.log('  收到数据(hex) :', chunk.toString('hex'))
+    // 回执：把字节原样确认回去
+    socket.write(`已收到 ${chunk.length} 字节\n`)
+})
+```
+
+同一段字节换个编码解读，结果完全不同——`utf8` 给出 `你好`，`hex` 给出 `e4bda0e5a5bd`（正是那 3 个汉字的 UTF-8 字节，每个汉字 3 字节）。平时 `console.log(buf)` 直接打印出的 `<Buffer 48 65 6c 6c 6f ...>` 就是这个 hex 形式（十六进制、无分隔符）：
+
+实测输出（`npm run 01` + `npm run 02`，服务端日志）：
+
+```
+TCP 服务已启动，监听 4000。另开终端运行 `npm run 02` 连接本服务
+客户端连入: ::ffff:127.0.0.1:60275
+  收到数据(utf8): 你好
+  收到数据(hex) : e4bda0e5a5bd
+  收到数据(utf8): 我是客户端TCP是字节流
+  收到数据(hex) : e68891e698afe5aea2e688b7e7abaf544350e698afe5ad97e88a82e6b581
+socket error: read ECONNRESET
+连接关闭: ::ffff:127.0.0.1:60275
 ```
 
 结论：Buffer 是 Node.js 的 JavaScript 世界与底层二进制字节流之间最重要的桥梁。忘掉它，后面所有粘包、编码问题都会踩坑。
 
 ## 粘包与拆包：TCP 为什么不保证"你发几次、我收几次"？
 
-客户端连续调用两次发送：
+客户端快速连续调用发送：
+
+> 摘自 `./code/net-lab/src/03-sticky-packet.js`（运行：`npm run 03`）
 
 ```js
-socket.write('hello');
-socket.write('world');
+client.write('hello')
+client.write('world')
 ```
+
+实测输出（`npm run 03`，脚本里客户端一次连发 3 条：`hello` / `world` / `node`）：
+
+```
+粘包实验服务已启动(4001)，客户端将快速连发 3 条短消息...
+
+第 1 次 data 事件，本次收到 14 字节：<helloworldnode>
+
+（结果因机器/系统/网络而异，但“TCP 是字节流、没有消息边界”这一原理不变）
+想要稳定收消息，必须像 04 那样用「长度前缀」自己做分包
+```
+
+3 次 `write` 被合并成 1 次 `data` 事件、14 字节（5 + 5 + 4），这就是粘包。
 
 很多人的第一反应是：服务端会收到两次，第一次 `hello`，第二次 `world`。**但 TCP 不保证这一点。**
 
@@ -153,50 +188,77 @@ Socket（套接字）可以简单理解为：**应用程序使用操作系统网
 
 `node:net` 是 Node.js 最底层的网络模块，NestJS/Express/HTTP 最终都建立在它之上。下面给出最小可运行的服务端和客户端。
 
-```js
-import net from 'node:net';
+服务端：
 
-const server = net.createServer((socket) => {
-  console.log('客户端连接');
-
-  socket.on('data', (buffer) => {
-    // 注意：这里的 buffer 是 Buffer，不是字符串
-    console.log('收到数据：', buffer.toString('utf8'));
-    socket.write('Hello Client');
-  });
-
-  socket.on('end', () => {
-    console.log('客户端断开');
-  });
-
-  socket.on('error', (error) => {
-    console.error('连接出错：', error);
-  });
-});
-
-server.listen(3000, () => {
-  console.log('TCP Server running at 3000');
-});
-```
+> 摘自 `./code/net-lab/src/01-tcp-server.js`（运行：`npm run 01`）
 
 ```js
-import net from 'node:net';
+const net = require('node:net')
 
-const client = net.createConnection(
-  { host: '127.0.0.1', port: 3000 },
-  () => {
-    client.write('Hello Server'); // 发送的是字节流
-  },
-);
+const server = net.createServer(socket => {
+    // 每个连接是一个 socket，带远程地址端口
+    console.log(`客户端连入: ${socket.remoteAddress}:${socket.remotePort}`)
 
-client.on('data', (buffer) => {
-  console.log(buffer.toString('utf8'));
-});
+    socket.on('data', chunk => {
+        // chunk 是 Buffer（字节流），可以按不同编码解读
+        console.log('  收到数据(utf8):', chunk.toString('utf8'))
+        console.log('  收到数据(hex) :', chunk.toString('hex'))
+        // 回执：把字节原样确认回去
+        socket.write(`已收到 ${chunk.length} 字节\n`)
+    })
 
-client.on('error', (error) => {
-  console.error('出错：', error);
-});
+    socket.on('end', () => {
+        console.log(`客户端半关闭(停止发送): ${socket.remoteAddress}:${socket.remotePort}`)
+    })
+    socket.on('close', () => {
+        console.log(`连接关闭: ${socket.remoteAddress}:${socket.remotePort}`)
+    })
+    socket.on('error', err => console.log('socket error:', err.message))
+})
+
+server.listen(4000, () => {
+    console.log('TCP 服务已启动，监听 4000。另开终端运行 `npm run 02` 连接本服务')
+})
 ```
+
+客户端：
+
+> 摘自 `./code/net-lab/src/02-tcp-client.js`（运行：`npm run 02`）
+
+```js
+const net = require('node:net')
+
+const socket = net.connect(4000, '127.0.0.1', () => {
+    console.log('已连接到服务端')
+    // 连续 write 三次。对端可能一次 data 收到全部，也可能分多次收到
+    socket.write('你好')
+    socket.write('我是客户端')
+    socket.write('TCP是字节流')
+})
+
+socket.on('data', chunk => {
+    console.log('服务端回执:', chunk.toString('utf8'))
+})
+
+socket.on('end', () => {
+    console.log('服务端关闭了写入端，客户端退出')
+    socket.end()
+    process.exit(0)
+})
+```
+
+实测输出（`npm run 01` + `npm run 02`，客户端日志）：
+
+```
+已连接到服务端
+服务端回执: 已收到 6 字节
+
+服务端回执: 已收到 30 字节
+
+（兜底）2 秒超时，客户端主动退出
+```
+
+客户端连发三条，服务端回了两次「已收到 N 字节」——`你好` 6 字节一次、后两条 30 字节一次。发送次数和接收次数对不上，正是上一节说的粘包。
 
 下面这条关系链是理解整篇的钥匙：
 
@@ -327,8 +389,11 @@ Network I/O      某些其他任务
 
 回到 Stream。假设把一个大文件读出来通过网络发出去：
 
+> 摘自 `./code/net-lab/src/09-backpressure.js`（运行：`npm run 09`）
+
 ```js
-fs.createReadStream('./big-file.zip').pipe(socket);
+// 推荐写法：pipe 内部自动协调背压，无需手动管 write 返回值与 drain
+fs.createReadStream(FILE).pipe(socket)
 ```
 
 如果磁盘读取速度是 `500 MB/s`，而客户端网络只能收 `10 MB/s`，不做任何控制会怎样？
@@ -350,18 +415,28 @@ Disk（生产 500 MB/s）
 
 `Writable` 提供了背压机制来化解：`socket.write(buffer)` 返回一个 **boolean**。
 
+> 摘自 `./code/net-lab/src/09-backpressure.js`（运行：`npm run 09`）
+
 ```js
-const canContinue = socket.write(buffer);
-// canContinue === false 表示内部缓冲已达压力阈值
+// write 返回 boolean：false 表示内部缓冲已到阈值，应当暂停生产、等 drain
+const canContinue = client.write(c)
+if (!canContinue) console.log('  write 返回 false：内部缓冲到阈值，应等 drain')
 ```
 
 返回 `false` 意味着 Writable 内部缓冲已经积压到阈值，**此时不应继续疯写**，而应等待 `'drain'` 事件——它表示缓冲已排空，可以继续写：
 
+> 摘自 `./code/net-lab/src/09-backpressure.js`（运行：`npm run 09`）
+
 ```js
-socket.write(buffer);
-socket.on('drain', () => {
-  // 缓冲排空，可以继续生产
-});
+client.on('drain', () => console.log('drain 事件：缓冲已排空，可继续生产'))
+```
+
+`09-backpressure.js` 把一份 2MB 数据经 TCP 推给客户端、客户端每收到一片就回传一片，跑完两端字节数一致，说明背压之下不丢数据：
+
+实测输出（`npm run 09`）：
+
+```
+客户端共收到 2097152 字节（≈ 文件大小，背压下不丢数据）
 ```
 
 整个模型的闭环是这样的：
@@ -386,17 +461,37 @@ Producer 继续生产 ◀─┘
 
 上面的背压逻辑如果自己写，很容易写错：
 
+> 摘自 `./code/net-lab/src/12-pipe-vs-manual.js`（运行：`npm run 12`）
+
 ```js
-// 反例：丢掉了背压
-readStream.on('data', (chunk) => {
-  socket.write(chunk); // write 返回 false 也不管，照样写
-});
+// 反例：write 返回 false 也不管，照样把下一片写进去
+rs.on('data', chunk => socket.write(chunk))
+rs.on('end', () => socket.end())
 ```
 
 而 `pipe()` 会**内部协调**生产者与消费者的速度：下游（Socket）消费跟不上，就自动暂停上游读取；等 `drain` 后再继续。
 
+> 摘自 `./code/net-lab/src/12-pipe-vs-manual.js`（运行：`npm run 12`）
+
 ```js
-readStream.pipe(socket); // 自带背压协调
+// 推荐写法：pipe 内部自动协调背压，无需手动管 write 返回值与 drain
+rs.pipe(socket)
+```
+
+同一份 4MB 数据、同一个「先停 800ms、之后每片歇 25ms」的慢速客户端，只换这一行写法，服务端发送缓冲的峰值积压差了 20 倍：
+
+实测输出（`npm run 12`）：
+
+```
+同一份 4MB 数据，同一个「先停 800ms、之后每片歇 25ms」的慢速客户端：
+
+  [manual] 客户端收全 4194304 字节，耗时 2764ms
+  [manual] 发送缓冲峰值积压 1280.0KB（socket.writableHighWaterMark = 16KB）
+  [pipe] 客户端收全 4194304 字节，耗时 2765ms
+  [pipe] 发送缓冲峰值积压 64.0KB（socket.writableHighWaterMark = 16KB）
+
+结论：不检查 write 返回值的写法，积压随发送总量一路涨；
+      pipe 只积压当前正在写的那一块，不随发送总量增长。
 ```
 
 更进一步，**生产代码更推荐 `pipeline()`**：它在出错时能统一销毁整条链路（某个环节出错，上下游一起清理），避免资源泄漏。`pipe` 出错时链路不会自动销毁，需要你手动处理。关于 `pipeline` 的用法与边界处理，详见第 06 篇《Buffer 与 Stream》。
@@ -445,6 +540,10 @@ TCP 只给你一条可靠字节流，那"我要 `GET /users`"这层语义该由�
 | `./code/net-lab/src/03-sticky-packet.js` | 复现粘包：两次 `write` 被合并成一次 `data` |
 | `./code/net-lab/src/04-protocol-server.js` | 自定义分包协议服务端：`Length(4B) + Body(NB)` |
 | `./code/net-lab/src/04-protocol-client.js` | 自定义分包协议客户端：按长度边界正确切分消息 |
+| `./code/net-lab/src/09-backpressure.js` | 网络侧背压：`pipe` 托管背压、`write()` 返回值与 `drain` |
+| `./code/net-lab/src/12-pipe-vs-manual.js` | 手写 `on('data') + write` 与 `pipe` 的发送缓冲峰值积压对比 |
+
+运行方式（`code/net-lab` 目录下）：`npm run 01`（服务端，常驻）/ `npm run 02`（客户端，另开终端）/ `npm run 03` / `npm run 04s` + `npm run 04c` / `npm run 09` / `npm run 12`，除 01、04s 外都会自动结束。
 
 ## 参考
 

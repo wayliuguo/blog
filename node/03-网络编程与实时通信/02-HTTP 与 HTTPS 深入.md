@@ -44,30 +44,46 @@ IP      （网络层：寻址与路由）
 
 ## 用 node:http 手写 Server：几行代码之后会撞上哪些工程问题？
 
-Node.js 内置 `node:http` 就能直接起一个 HTTP Server：
+Node.js 内置 `node:http` 就能直接起一个 HTTP Server。本篇代码块均摘自配套脚本，脚本是 CommonJS 的 `require(...)` 写法：
+
+> 摘自 `./code/net-lab/src/05-http-server.js`（运行：`npm run 05`）
 
 ```js
-import http from 'node:http';
+const http = require('node:http')
 
 const server = http.createServer((req, res) => {
-  // req：客户端请求（可读流）
-  // res：服务端响应（可写流）
-  if (req.method === 'GET' && req.url === '/users') {
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-    });
-    res.end(JSON.stringify({ users: [] }));
-    return;
-  }
+    // req.method / req.url 是解析出来的首行信息
+    console.log(`收到请求: ${req.method} ${req.url}`)
 
-  // 其它路径返回 404
-  res.statusCode = 404;
-  res.end('Not Found');
-});
+    if (req.method === 'GET' && req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end('首页')
+        return
+    }
+// …
+    // 其他路径返回 404
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+    res.end('404 Not Found')
+})
 
 server.listen(3000, () => {
-  console.log('server on http://localhost:3000');
-});
+    console.log('最小 HTTP 服务已启动: http://localhost:3000')
+    console.log('测试:')
+    console.log('  curl localhost:3000/')
+    console.log('  curl localhost:3000/api/users')
+    console.log('  curl -XPOST localhost:3000/api/echo -d "hello"')
+    console.log('  curl localhost:3000/unknown')
+})
+```
+
+实测输出（`npm run 05`，服务端日志）：
+
+```
+最小 HTTP 服务已启动: http://localhost:3000
+收到请求: GET /
+收到请求: GET /api/users
+收到请求: POST /api/echo
+收到请求: GET /unknown
 ```
 
 `createServer` 的回调每来一个请求触发一次：`req.method` / `req.url` 用来判断路由，`res.writeHead` 写响应头，`res.end` 写响应体并结束响应。
@@ -107,28 +123,49 @@ Operating System  （内核 / 网卡）
 
 `req` 是**可读流（Readable）**。客户端发来的请求体可能很大、分多次到达，Node 用 `data` 事件逐块推给你：
 
+> 摘自 `./code/net-lab/src/05-http-server.js`（运行：`npm run 05`）
+
 ```js
-const chunks = [];
+        // 请求体是流：用 chunks[] 累积，结束后再 Buffer.concat 起来
+        const chunks = []
+        req.on('data', c => chunks.push(c)) // req 是可读流
+        req.on('end', () => {
+            const body = Buffer.concat(chunks).toString('utf8')
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify({ echo: body, len: body.length }))
+        })
+```
 
-req.on('data', (chunk) => {
-  // chunk 是 Buffer，不是字符串
-  chunks.push(chunk);
-});
+`chunks.push(c)` 里的 `c` 是 Buffer，所以最后要用 `Buffer.concat(chunks).toString('utf8')` 才能拼回字符串。实测一次 `POST /api/echo`：
 
-req.on('end', () => {
-  // 所有分块到齐，再拼成一个完整字节序列
-  const body = Buffer.concat(chunks).toString('utf8');
-  console.log(body);
-});
+实测输出（`npm run 05`，请求 `POST /api/echo -d "hello"`）：
+
+```
+收到请求: POST /api/echo
+body: {"echo":"hello","len":5}
 ```
 
 `res` 是**可写流（Writable）**。你可以分多次写入，最后用 `end()` 收尾：
 
+> 摘自 `./code/net-lab/src/13-http-response.js`（运行：`npm run 13`）
+
 ```js
-res.writeHead(200, { 'Content-Type': 'text/plain' });
-res.write('hello ');
-res.write('world');
-res.end(); // 结束响应
+        // 分多次 write，最后用 end() 收尾；没给 Content-Length，Node 改用 chunked
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.write('hello ')
+        res.write('world')
+        res.end() // 结束响应
+```
+
+多次 `write` 而没给 `Content-Length`，Node 会自动改用分块传输：
+
+实测输出（`npm run 13`，请求 `/chunks` 一路）：
+
+```
+/chunks
+  Content-Length    : null
+  Transfer-Encoding : chunked
+  body              : "hello world"
 ```
 
 把整条数据链路串起来，会看到从网卡到 JavaScript 变量的每一跳：
@@ -153,13 +190,16 @@ JavaScript（你的 data / end 回调拿到 Buffer）
 
 当响应体是一次性算出来的（比如 `JSON.stringify(...)`），服务端可以在 `writeHead` 里带上 `Content-Length`，告诉客户端"我总共发这么多字节，收齐就结束"：
 
+> 摘自 `./code/net-lab/src/13-http-response.js`（运行：`npm run 13`）
+
 ```js
-const data = JSON.stringify({ users: [] });
-res.writeHead(200, {
-  'Content-Type': 'application/json',
-  'Content-Length': Buffer.byteLength(data), // 必须是字节长度
-});
-res.end(data);
+        // 响应体一次性算出来：可以提前给出 Content-Length
+        const data = JSON.stringify({ users: [] })
+        res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Length': Buffer.byteLength(data) // 必须是字节长度
+        })
+        res.end(data)
 ```
 
 但一旦响应是**流式产生**的——比如一边读数据库一边推、一边读大文件一边发——你就无法在开头先算出总长度。两个原因：
@@ -175,6 +215,31 @@ Transfer-Encoding: chunked
 ```
 
 `Transfer-Encoding: chunked` 让响应体被切成若干块，每块自带长度前缀，最后以一个长度为 0 的块表示结束。这样服务端就能做到"边产生、边发送、边结束"，无需预先知道总字节数。流式推送、大文件下载、实时进度，背后都是这套分块传输在支撑。
+
+同一份服务，三条路径各请求一次，两个头此消彼长——有 `Content-Length` 就没有 `Transfer-Encoding`，反之亦然：
+
+实测输出（`npm run 13`）：
+
+```
+/once
+  Content-Length    : 12
+  Transfer-Encoding : null
+  body              : "{\"users\":[]}"
+
+/chunks
+  Content-Length    : null
+  Transfer-Encoding : chunked
+  body              : "hello world"
+
+/stream
+  Content-Length    : null
+  Transfer-Encoding : chunked
+  body              : "第 1 片\n第 2 片\n第 3 片\n"
+
+'你好' 的字符长度 = 2，字节长度 = 6
+```
+
+最后一行正是上面说的坑：`'你好'` 字符长度 2、字节长度 6，所以 `Content-Length` 只能取 `Buffer.byteLength()`。
 
 ## HTTP Keep-Alive 为什么重要：三个超时怎么互相影响？
 
@@ -215,11 +280,24 @@ requestTimeout     整个请求（含处理）的最长允许时间
 
 设置建议（毫秒）：
 
+> 摘自 `./code/net-lab/src/11-keepalive-timeouts.js`（运行：`npm run 11`）
+
 ```js
-const server = http.createServer(app);
-server.keepAliveTimeout = 5000;    // 5s 空闲后关连接
-server.headersTimeout = 60000;     // 必须 > keepAliveTimeout
-server.requestTimeout = 30000;     // 单请求最多 30s
+const server = http.createServer((req, res) => res.end('ok'))
+server.keepAliveTimeout = 5000    // 5s 空闲后关连接
+server.headersTimeout = 60000     // 必须 > keepAliveTimeout
+server.requestTimeout = 30000     // 单请求最多 30s
+```
+
+把这三行配上后启动一次，可以把实测值（含 Node 的默认值）读回来核对：
+
+实测输出（`npm run 11`）：
+
+```
+keepAliveTimeout  = 5000
+headersTimeout    = 60000
+requestTimeout     = 30000
+headersTimeout > keepAliveTimeout ? true
 ```
 
 一句话原则：**反向代理（如 Nginx）的超时 ≥ 服务端超时**，否则代理还以为连接活着、拿去发请求时，服务端已经把它关了。
@@ -264,21 +342,31 @@ HTTP 数据开始加密传输
 
 在 Node 里起一个 HTTPS 服务，只是把 `http` 换成 `https` 并带上证书：
 
+> 摘自 `./code/net-lab/src/10-https-server.js`（运行：`npm run 10`）
+
 ```js
-import https from 'node:https';
-import fs from 'node:fs';
-
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0' // 仅演示：跳过自签证书校验，便于 fetch 连上来
+// …
 const server = https.createServer(
-  {
-    key: fs.readFileSync('./server.key'),  // 私钥
-    cert: fs.readFileSync('./server.cert'), // 证书（含公钥）
-  },
-  (req, res) => {
-    res.end('hello over TLS');
-  },
-);
+    {
+        key: fs.readFileSync('./server.key'),  // 私钥
+        cert: fs.readFileSync('./server.cert') // 证书（含公钥）
+    },
+    (req, res) => {
+        res.end('hello over TLS')
+    }
+)
+```
 
-server.listen(443);
+`server.key` / `server.cert` 由 `openssl` 现场生成（见 `code/net-lab/README.md`），是自签证书，所以脚本里临时关掉了证书校验——生产环境不能这么干：
+
+实测输出（`npm run 10`）：
+
+```
+HTTPS 服务已启动(3443)，内部用 fetch 走一次 TLS 握手验证...
+TLS 握手成功，服务端返回： hello over TLS
+(node:1712) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
 ```
 
 生产环境里，TLS 通常**不在 Node 进程里终止**，而是在网关（Nginx / 负载均衡 / 云服务）上统一卸载：网关做 TLS 终结与证书管理，后端 Node 服务跑在内部明文 HTTP 上。这样证书续期、多实例统一入口都更省心，Node 只管业务。
@@ -424,6 +512,11 @@ TLS 安全能力 （加密与身份认证内建）
 | --- | --- |
 | `./code/net-lab/src/05-http-server.js` | 原生 `node:http`：路由判断、`req` 收集 Body、`res` 流式写入 |
 | `./code/net-lab/src/06-keepalive.js` | Keep-Alive 观测：连接复用与三个超时的实际效果 |
+| `./code/net-lab/src/10-https-server.js` | HTTPS：把 `http` 换成 `https` + `key`/`cert`，走一次真实 TLS 握手 |
+| `./code/net-lab/src/11-keepalive-timeouts.js` | `keepAliveTimeout` / `headersTimeout` / `requestTimeout` 三个超时的取值与相对关系 |
+| `./code/net-lab/src/13-http-response.js` | 三种响应写法：`Content-Length` vs `Transfer-Encoding: chunked` |
+
+运行方式（`code/net-lab` 目录下）：`npm run 05` / `npm run 06` / `npm run 10` / `npm run 11` / `npm run 13`，除 05 需手动 Ctrl+C 外都会自动结束；`10` 依赖同目录的 `server.key` / `server.cert`。
 
 ## 参考
 
