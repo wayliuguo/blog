@@ -1,6 +1,5 @@
 import frontend from './config/frontend'
 import nav from './config/nav'
-import interview from './config/interview'
 import node from './config/node'
 import ai from './config/ai'
 
@@ -21,7 +20,6 @@ module.exports = {
         sidebar: {
             '/frontend/': frontend,
             '/node/': node,
-            '/interview': interview,
             '/ai': ai
         },
         // 添加 outline 配置以显示三级标题
