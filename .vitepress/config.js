@@ -1,7 +1,6 @@
 import frontend from './config/frontend'
 import nav from './config/nav'
 import interview from './config/interview'
-import alg from './config/alg'
 import node from './config/node'
 import ai from './config/ai'
 
@@ -23,7 +22,6 @@ module.exports = {
             '/frontend/': frontend,
             '/node/': node,
             '/interview': interview,
-            '/alg': alg,
             '/ai': ai
         },
         // 添加 outline 配置以显示三级标题

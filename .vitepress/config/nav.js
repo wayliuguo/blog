@@ -18,10 +18,5 @@ export default [
         text: '不止于面试',
         link: '/interview/index',
         activeMatch: '/interview/'
-    },
-    {
-        text: '算法',
-        link: '/alg/array',
-        activeMatch: '/alg/'
     }
 ]
