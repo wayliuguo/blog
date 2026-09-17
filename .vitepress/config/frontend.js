@@ -210,14 +210,10 @@ export default [
                     { text: '设计模式在前端', link: '/frontend/进阶/06-工程实践与架构/01-设计模式在前端' },
                     { text: '组件设计', link: '/frontend/进阶/06-工程实践与架构/02-组件设计' },
                     { text: '模块总结（工程实践与架构）', link: '/frontend/进阶/06-工程实践与架构/总结' },
-                    { text: '模块面试题（工程实践与架构）', link: '/frontend/进阶/06-工程实践与架构/面试题' }
+                    { text: '模块面试题（工程实践与架构）', link: '/frontend/进阶/06-工程实践与架构/面试题' },
+                    { text: '面试方法论', link: '/frontend/进阶/面试方法论' }
                 ]
             }
         ]
-    },
-    {
-        text: '面试方法论',
-        collapsed: true,
-        items: [{ text: '01-面试方法论', link: '/frontend/12-面试方法论/01-面试方法论' }]
     }
 ]
