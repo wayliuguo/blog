@@ -125,6 +125,30 @@ export default [
                     { text: '模块总结（Vue）', link: '/frontend/基础/06-前端框架-Vue/总结' },
                     { text: '模块面试题（Vue）', link: '/frontend/基础/06-前端框架-Vue/面试题' }
                 ]
+            },
+            {
+                text: '小程序',
+                collapsed: false,
+                items: [
+                    {
+                        text: '小程序生命周期与路由',
+                        link: '/frontend/基础/07-小程序/01-小程序生命周期与路由'
+                    },
+                    {
+                        text: '双线程架构与渲染机制',
+                        link: '/frontend/基础/07-小程序/02-双线程架构与渲染机制'
+                    },
+                    {
+                        text: '启动优化与性能优化',
+                        link: '/frontend/基础/07-小程序/03-启动优化与性能优化'
+                    },
+                    {
+                        text: '原生与跨端框架差异',
+                        link: '/frontend/基础/07-小程序/04-原生与跨端框架差异'
+                    },
+                    { text: '模块总结（小程序）', link: '/frontend/基础/07-小程序/总结' },
+                    { text: '模块面试题（小程序）', link: '/frontend/基础/07-小程序/面试题' }
+                ]
             }
         ]
     },
