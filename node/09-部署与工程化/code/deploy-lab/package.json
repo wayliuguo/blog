@@ -1,0 +1,26 @@
+{
+  "name": "deploy-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "09-部署与工程化 配套代码：环境配置 / 日志体系 / PM2 / 数据库迁移",
+  "license": "MIT",
+  "scripts": {
+    "01dotenv": "node src/01-dotenv.js",
+    "01loadenv": "node src/shared/load-env.js",
+    "01validate": "node src/01-validate.js",
+    "01genenvtypes": "node src/01-gen-env-types.js",
+    "01addconfig": "node src/01-add-config.js",
+    "02console": "node src/02-console.js",
+    "02winston": "node src/02-winston.js",
+    "02trace": "node src/02-trace.js",
+    "02rotate": "node src/02-rotate.js",
+    "02pino": "node src/02-pino.js",
+    "07migration": "node src/07-migration.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pino": "^9.5.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}

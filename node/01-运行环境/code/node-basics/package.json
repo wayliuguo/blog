@@ -17,11 +17,17 @@
 
     "04serial": "node src/04-async-serial.js",
     "04parallel": "node src/04-async-parallel.js",
+    "04callback": "node src/04-callback-hell.js",
+    "04promise": "node src/04-promise-chain.js",
+    "04await": "node src/04-async-await.js",
+    "04settled": "node src/04-all-settled.js",
+    "04emitter": "node src/04-eventemitter.js",
+    "04eventdriven": "node src/04-event-driven.js",
 
     "05buffer": "node src/05-buffer.js",
-    "05copy": "node src/05-stream-copy.js",
-    "05backpressure": "node src/05-backpressure.js",
-    "05pipeline": "node src/05-stream-pipeline.js",
+    "05types": "node src/05-stream-types.js",
+    "05vsbuffered": "node src/05-stream-vs-buffered.js",
+    "05flow": "node src/05-stream-flow-control.js",
     "05fs": "node src/05-fs-dir.js",
 
     "06child": "node src/06-child-process.js",

@@ -275,6 +275,8 @@ SELECT * FROM pgstattuple('tool_calls');
 
 ### 建表与索引
 
+> 摘自 `./code/pg-demo/sql/01-pgvector-schema.sql`（运行：`npm run schema`）
+
 ```sql
 -- 开启向量扩展（每个数据库只需一次）
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -298,6 +300,8 @@ CREATE INDEX idx_chunks_hnsw
 ```
 
 ### 相似度查询（TopK 召回）
+
+> 摘自 `./code/pg-demo/sql/02-pgvector-search.sql`（运行：`npm run search`）
 
 ```sql
 -- 把"用户问题"的向量作为查询条件，取最相似的 5 段
@@ -335,44 +339,59 @@ LIMIT 5;
 
 Prisma 官方 schema 对 `VECTOR` 没有原生类型，但可以用 `Unsupported` 或 `String` 旁路，向量检索多用 raw query。
 
-```ts
-// prisma/schema.prisma（要点）
-// datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+> 本节两段代码逐字摘自配套工程 `pg-demo` 的 `prisma/` 目录（见 `./code/pg-demo/README.md`）。它们要连上装了 pgvector 的 PG 才能跑，**本机没有 PostgreSQL 服务，未实跑**。本页其它 `sql` 片段同样出自 `pg-demo/sql/`，都是可直接在 `psql` 里执行的形态。
 
+> 摘自 `./code/pg-demo/prisma/schema.prisma`（需 `npx prisma generate`，DATABASE_URL 指向装了 pgvector 的 PG）
+
+```ts
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+// …
 model DocumentChunk {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   content   String
   // pgvector 暂无官方类型，用 Unsupported 透传
   embedding Unsupported("vector(1536)")?
+
+  @@map("document_chunks")
 }
 ```
 
+（本机无 PostgreSQL 服务，以上脚本未实跑）
+
+> 摘自 `./code/pg-demo/prisma/chunk-vector.ts`（需 `@prisma/client` + 装了 pgvector 的 PG）
+
 ```ts
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+
 // 写入向量：用 Prisma 的 $executeRaw，向量要拼成 '[1,2,...]' 字符串
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 async function saveChunk(content: string, vector: number[]) {
-  await prisma.$executeRaw`
+    await prisma.$executeRaw`
     INSERT INTO "document_chunks" (content, embedding)
     VALUES (${content}, ${'[' + vector.join(',') + ']'}::vector)
-  `;
+  `
 }
 
 // 相似度查询：raw query 取 TopK
 async function search(queryVector: number[], topK = 5) {
-  const vec = '[' + queryVector.join(',') + ']';
-  return prisma.$queryRawUnsafe(
-    `SELECT id, content,
+    const vec = '[' + queryVector.join(',') + ']'
+    return prisma.$queryRawUnsafe(
+        `SELECT id, content,
             1 - (embedding <=> $1::vector) AS similarity
      FROM document_chunks
      ORDER BY embedding <=> $1::vector
      LIMIT $2`,
-    vec, topK,
-  );
+        vec,
+        topK
+    )
 }
 ```
+
+（本机无 PostgreSQL 服务，以上脚本未实跑）
 
 关键点：
 
@@ -445,6 +464,28 @@ async function search(queryVector: number[], topK = 5) {
   - **选 MySQL**：核心业务 / 交易 / 账户（生态成熟、运维简单），团队更熟悉、生态与招聘面更广
   - **选 PostgreSQL**：半结构化 metadata（JSONB + GIN）、复杂分析与窗口函数 / CTE、地理信息（PostGIS）、向量检索（pgvector 原生扩展）
   - **常见组合**：MySQL 管账户与订单 + PostgreSQL 管业务运行数据与文档向量
+
+---
+
+## 配套代码
+
+本篇的示例在仓库 `node/05-数据库/code/pg-demo`（`pg` 驱动 + `dotenv`）。
+
+| 文件 | 说明 | 对应小节 |
+| --- | --- | --- |
+| `./code/pg-demo/sql/01-pgvector-schema.sql` | `CREATE EXTENSION vector`、`document_chunks` 建表、IVFFlat 与 HNSW 索引 | pgvector · 建表与索引 |
+| `./code/pg-demo/sql/02-pgvector-search.sql` | TopK 相似度查询（`<=>` 余弦距离 + `1 - 距离` 当 similarity） | pgvector · 相似度查询（TopK 召回） |
+| `./code/pg-demo/sql/03-distance-ops.sql` | `<->` / `<#>` / `<=>` 三个算子在同一个向量对上的取值 | pgvector · 距离算子与索引类型对照 |
+| `./code/pg-demo/src/01-schema.js` | 执行建表脚本，再回读列类型 / 索引定义 / 向量维度 | pgvector · 建表与索引 |
+| `./code/pg-demo/src/02-insert-vectors.js` | `INSERT ... $3::vector` 写入向量，回读校验（自身余弦距离 = 0） | pgvector · 建表与索引（写入侧） |
+| `./code/pg-demo/src/03-similarity-search.js` | 参数化 `$1::vector` 做 TopK 召回，用 `EXPLAIN` 看是否走向量索引 | pgvector · 相似度查询（TopK 召回） |
+| `./code/pg-demo/src/04-distance-ops.js` | 读 `sql/03-distance-ops.sql` 并解释三个距离值的含义 | pgvector · 距离算子与索引类型对照 |
+| `./code/pg-demo/src/lib.js` | `pg` 连接池、`.sql` 文件执行器、假向量与向量字面量工具 | -- |
+| `./code/pg-demo/prisma/schema.prisma` | Prisma schema：`Unsupported("vector(1536)")?` 透传向量列 | 在 NestJS + Prisma 中集成 PostgreSQL |
+| `./code/pg-demo/prisma/chunk-vector.ts` | Prisma 侧 `$executeRaw` 写向量、`$queryRawUnsafe` 做 TopK 检索 | 在 NestJS + Prisma 中集成 PostgreSQL |
+| `./code/pg-demo/README.md` | 工程说明、环境要求与预期输出 | -- |
+
+运行方式（在 `code/pg-demo` 目录下，先建库、`cp .env.example .env` 再 `npm install`）：`npm run schema` / `insert` / `search` / `distances`；`prisma/` 下两份文件不属于 `npm install` 的依赖范围，需要 `npm i @prisma/client prisma && npx prisma generate`。**本机没有 PostgreSQL 服务，以上均未实跑。**
 
 ---
 

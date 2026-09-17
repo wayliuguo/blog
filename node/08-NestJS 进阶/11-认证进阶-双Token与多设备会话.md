@@ -20,15 +20,20 @@
 
 **为什么这里用 Prisma 举例**：会话表（`AuthSession`）的查询高度依赖精确的字段类型推导 —— 比如 `findUnique({ where: { tokenHash } })`，Prisma 生成的类型能让"字段名写错"在编译期就暴露，示例不容易被误读。
 
-你完全可以用 TypeORM 实现完全相同的逻辑。**表结构、哈希入库、轮换、多设备登出这几件事的思路一模一样**，只是把 API 换成：
+你完全可以用 TypeORM 实现完全相同的逻辑。**表结构、哈希入库、轮换、多设备登出这几件事的思路一模一样**，只是把「按哈希查一条会话」这一步换成 ORM 自己的写法。
 
-```ts
-// Prisma 写法
-const session = await this.prisma.authSession.findUnique({ where: { tokenHash } })
+本篇的配套脚本 `./code/advanced-lab2/src/11-refresh-token.ts` 用一张内存表顶替 Prisma Client（方法名与参数形状完全对齐），所以下面所有代码都能真的跑起来：
 
-// TypeORM 等价写法
-const session = await this.sessionRepo.findOne({ where: { tokenHash } })
+> 摘自 `./code/advanced-lab2/src/11-refresh-token.ts`（运行：`npm run 11refresh`）
+
+```typescript
+// Prisma 写法：按 userId + 哈希 + 未吊销 三个条件取一条会话
+const session = await this.prisma.authSession.findFirst({
+    where: { userId: payload.sub, refreshTokenHash: incomingHash, revoked: false }
+})
 ```
+
+换成 TypeORM 就是 `sessionRepo.findOne({ where: { userId, tokenHash: incomingHash, revoked: false } })`；换成 Redis 就是把哈希当 key 存 `redisService.set('token:refresh:' + hash, payload, ttl)`（本项目 `nestjs-template` 用的正是这一种，见 `./code/nestjs-template/src/modules/auth/auth.service.ts`）。
 
 学习时请关注**设计**（为什么哈希、为什么要轮换、为什么登出后 Access Token 仍短暂有效），而不是 ORM 的语法差异。
 
@@ -47,26 +52,33 @@ const session = await this.sessionRepo.findOne({ where: { tokenHash } })
 
 ## 用 HttpOnly Cookie 保存 Refresh Token
 
-Refresh Token 不该进 `localStorage`（XSS 一打就穿），而应由服务端通过 `Set-Cookie` 写入 HttpOnly Cookie：
+Refresh Token 不该进 `localStorage`（XSS 一打就穿），而应由服务端通过 `Set-Cookie` 写入 HttpOnly Cookie。注意登录接口的返回值里**只有 Access Token**，Refresh Token 只走 Cookie：
+
+> 摘自 `./code/advanced-lab2/src/11-refresh-token.ts`（运行：`npm run 11refresh`）
 
 ```typescript
-@Post('login')
-async login(
-    @Body() dto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-) {
-    const { access_token, refresh_token } = await this.authService.login(dto)
+    @Post('login')
+    async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: ResponseStub) {
+        const { access_token, refresh_token } = await this.authService.login(dto)
 
-    res.cookie('refresh_token', refresh_token, {
-        httpOnly: true,        // JS 读不到，挡掉大多数 XSS 窃取
-        secure: true,           // 仅 HTTPS 传输
-        sameSite: 'strict',     // 跨站请求不自动带，缓解 CSRF
-        path: '/auth/refresh',  // 只在刷新接口携带，缩小暴露面
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
+        res.cookie('refresh_token', refresh_token, {
+            httpOnly: true, // JS 读不到，挡掉大多数 XSS 窃取
+            secure: true, // 仅 HTTPS 传输
+            sameSite: 'strict', // 跨站请求不自动带，缓解 CSRF
+            path: '/auth/refresh', // 只在刷新接口携带，缩小暴露面
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        })
 
-    return { access_token }  // Access Token 走响应体
-}
+        return { access_token } // Access Token 走响应体
+    }
+```
+
+注意 `maxAge` 这里填的是**毫秒**（Express 的约定），Express 内部会转成秒再写进响应头。实测输出里的 `Max-Age=604800` 就是 7 天：
+
+实测输出（`npm run 11refresh`，Token 值已用占位符替代）：
+
+```
+  Set-Cookie = refresh_token=<JWT>; Max-Age=604800; Path=/auth/refresh; HttpOnly; Secure; SameSite=Strict
 ```
 
 | 选项 | 作用 | 边界 |
@@ -82,40 +94,80 @@ async login(
 
 很多人把 Refresh Token 当成"长一点的 JWT"随手存库，这里有个隐蔽的大坑：**bcrypt 只处理输入的前 72 字节**。
 
+> 摘自 `./code/advanced-lab2/src/11-refresh-token.ts`（运行：`npm run 11refresh`）
+
 ```typescript
-// 危险：Refresh Token 往往超过 72 字节，bcrypt.hash 会截断
-// 两个内容不同但前 72 字节相同的 Token，hash 结果可能一致 → 校验误判
-const hashA = await bcrypt.hash(refreshTokenA, 10)
-const ok = await bcrypt.compare(refreshTokenB, hashA) // 可能错误返回 true
+    // 前 72 字节完全相同、尾部不同的两个「Token」
+    const common = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImRldmljZSI6ImExIn0.' + 'x'.repeat(10)
+    const refreshTokenA = common + '-ALICE-signature'
+    const refreshTokenB = common + '-BOB-signature-different'
+
+    const hashA = await bcrypt.hash(refreshTokenA, 10)
+    const ok = await bcrypt.compare(refreshTokenB, hashA)
 ```
+
+这不是理论风险，脚本里当场就能复现：
+
+实测输出（`npm run 11refresh`）：
+
+```
+=== 1) bcrypt 的 72 字节截断：两个不同的 Token 被判成同一个 ===
+  公共前缀长度                      = 79 字节（> 72）
+  refreshTokenA / B 长度            = 95 / 103 字节
+  两个 Token 是同一个吗             = false
+  bcrypt.compare(B, bcrypt.hash(A)) = true   ← 校验被绕过
+  sha256(A) = fdcf3e33cadde8a02d32b1d861c890ecabfae484244245e7b50da4b91e3d25fa
+  sha256(B) = d697d4d1812e42a2e198bda84a34a7dcd025f115055832ecacb4651eb6759c78
+  两个 SHA-256 相等吗               = false
+```
+
+两个内容完全不同的 Token，bcrypt 认为它们是同一个（比对返回 `true`），SHA-256 则给出了两个完全不同的哈希。
 
 而 Refresh Token 并不需要"可还原"（你只需要校验"这次带来的 Token 是不是当初发的那个"），所以**用 SHA-256 做单向哈希入库**就够了：
 
-```typescript
-import { createHash } from 'crypto'
+> 摘自 `./code/advanced-lab2/src/11-refresh-token.ts`（运行：`npm run 11refresh`）
 
+```typescript
+import { createHash, randomBytes } from 'node:crypto'
+
+// …
 // 把 Refresh Token 转成固定长度的哈希再存库
 function hashRefreshToken(token: string): string {
     return createHash('sha256').update(token).digest('hex')
 }
 
-// 签发后只存哈希
-const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' })
-await this.prisma.authSession.create({
-    data: {
-        userId: user.id,
-        refreshTokenHash: hashRefreshToken(refreshToken), // 存哈希，不存明文
-        deviceId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
-})
+// …
+        // 签发后只存哈希。签名带一个随机 jti：否则同一秒内两次登录会签出完全相同的 Token
+        const refreshToken = this.jwtService.sign(
+            { sub: user.id, jti: randomBytes(16).toString('hex') },
+            { expiresIn: '7d' }
+        )
+        await this.prisma.authSession.create({
+            data: {
+                userId: user.id,
+                refreshTokenHash: hashRefreshToken(refreshToken), // 存哈希，不存明文
+                deviceId: dto.deviceId,
+                userAgent: dto.userAgent ?? null,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            }
+        })
 
-// 刷新时：对客户端带来的明文算哈希，再去库里比对
-const incomingHash = hashRefreshToken(incomingRefreshToken)
-const session = await this.prisma.authSession.findFirst({
-    where: { userId, refreshTokenHash: incomingHash, revoked: false },
-})
-if (!session) throw new UnauthorizedException('Refresh Token 无效')
+// …
+        // 刷新时：对客户端带来的明文算哈希，再去库里比对
+        const incomingHash = hashRefreshToken(incomingRefreshToken)
+        const session = await this.prisma.authSession.findFirst({
+            where: { userId: payload.sub, refreshTokenHash: incomingHash, revoked: false }
+        })
+        if (!session) throw new UnauthorizedException('Refresh Token 无效或已被使用')
+```
+
+关于那个随机 `jti`：JWT 的时间戳精度只到**秒**，如果 Refresh Token 的 payload 只有 `{ sub }`，同一秒内同一用户的两台设备会签出**逐字节相同**的 Token，哈希自然也一样——后面"按哈希查一条会话"就会查错行，轮换、单设备登出全部失效。加一个随机 `jti` 才能保证每次签发都唯一。脚本里把这一点也验证了：
+
+实测输出（`npm run 11refresh`）：
+
+```
+  会话数              = 2
+  两台设备哈希不同吗   = true
 ```
 
 > 结论：**Token 明文只在这次响应里给客户端一次，服务端永远只保存它的 SHA-256 哈希**。即使数据库被拖库，攻击者拿到的也只是哈希，无法直接拿去刷新。
@@ -160,71 +212,104 @@ model AuthSession {
 
 "轮换"的意思是：**每次用 Refresh Token 换 Access Token，都签发一个全新的 Refresh Token，并让旧的立刻失效**。这样即便旧 Token 被窃取，窃取者一旦使用就会被发现（因为合法用户已经用掉过它），且旧 Token 已失效。
 
+> 摘自 `./code/advanced-lab2/src/11-refresh-token.ts`（运行：`npm run 11refresh`）
+
 ```typescript
-async refresh(incomingRefreshToken: string) {
-    // 1. 先校验 JWT 签名与过期
-    let payload: any
-    try {
-        payload = await this.jwtService.verifyAsync(incomingRefreshToken)
-    } catch {
-        throw new UnauthorizedException('Refresh Token 已过期')
+    async refresh(incomingRefreshToken: string) {
+        // 1. 先校验 JWT 签名与过期
+        let payload: any
+        try {
+            payload = await this.jwtService.verifyAsync(incomingRefreshToken)
+        } catch {
+            throw new UnauthorizedException('Refresh Token 已过期')
+        }
+
+        // 2. 算哈希，查库比对（确认这是服务端签发且未吊销的那条）
+        const incomingHash = hashRefreshToken(incomingRefreshToken)
+        const session = await this.prisma.authSession.findFirst({
+            where: { userId: payload.sub, refreshTokenHash: incomingHash, revoked: false }
+        })
+        if (!session) throw new UnauthorizedException('Refresh Token 无效或已被使用')
+
+        // 3. 关键：旧 Token 立即失效（置位 revoked），并签发新一对 Token
+        await this.prisma.authSession.update({
+            where: { id: session.id },
+            data: { revoked: true }
+        })
+
+        const newAccessToken = this.jwtService.sign({ sub: payload.sub }, { expiresIn: '15m' })
+        const newRefreshToken = this.jwtService.sign(
+            { sub: payload.sub, jti: randomBytes(16).toString('hex') },
+            { expiresIn: '7d' }
+        )
+
+        // 4. 写入新的会话记录（新哈希、新设备上下文）
+        await this.prisma.authSession.create({
+            data: {
+                userId: payload.sub,
+                refreshTokenHash: hashRefreshToken(newRefreshToken),
+                deviceId: session.deviceId,
+                userAgent: session.userAgent,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            }
+        })
+
+        return { access_token: newAccessToken, refresh_token: newRefreshToken }
     }
-
-    // 2. 算哈希，查库比对（确认这是服务端签发且未吊销的那条）
-    const incomingHash = hashRefreshToken(incomingRefreshToken)
-    const session = await this.prisma.authSession.findFirst({
-        where: { userId: payload.sub, refreshTokenHash: incomingHash, revoked: false },
-    })
-    if (!session) throw new UnauthorizedException('Refresh Token 无效或已被使用')
-
-    // 3. 关键：旧 Token 立即失效（置位 revoked），并签发新一对 Token
-    await this.prisma.authSession.update({
-        where: { id: session.id },
-        data: { revoked: true },
-    })
-
-    const newAccessToken = this.jwtService.sign({ sub: payload.sub }, { expiresIn: '15m' })
-    const newRefreshToken = this.jwtService.sign({ sub: payload.sub }, { expiresIn: '7d' })
-
-    // 4. 写入新的会话记录（新哈希、新设备上下文）
-    await this.prisma.authSession.create({
-        data: {
-            userId: payload.sub,
-            refreshTokenHash: hashRefreshToken(newRefreshToken),
-            deviceId: session.deviceId,
-            userAgent: session.userAgent,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-    })
-
-    return { access_token: newAccessToken, refresh_token: newRefreshToken }
-}
 ```
 
 > 攻击者用偷来的旧 Token 重放时，因为库里那条记录的 `revoked` 已经被合法刷新置为 `true`，哈希比对会失败，直接返回 401——这就是轮换带来的"重放即失效"保护。
 
+实测输出（`npm run 11refresh`）：
+
+```
+=== 4) 轮换：刷新后旧 Refresh Token 立即失效 ===
+  device-A 刷新成功    = true
+  旧会话 revoked       = true
+  新会话沿用 deviceId  = device-A
+  拿旧 Token 再刷一次  = Refresh Token 无效或已被使用
+  device-B 被牵连了吗  = revoked: false
+```
+
+注意最后一行：device-A 的刷新没有波及 device-B，两台设备的会话是彼此独立的行。
+
 ## 登出：单设备与全设备
 
-登出本质就是"把对应的会话记录作废"：
+登出本质就是"把对应的会话记录作废"，两者都是软删除：
+
+> 摘自 `./code/advanced-lab2/src/11-refresh-token.ts`（运行：`npm run 11refresh`）
 
 ```typescript
-// 单设备登出：只吊销当前这条会话
-async logout(currentRefreshToken: string) {
-    const hash = hashRefreshToken(currentRefreshToken)
-    await this.prisma.authSession.updateMany({
-        where: { refreshTokenHash: hash, revoked: false },
-        data: { revoked: true },
-    })
-}
+    // 单设备登出：只吊销当前这条会话
+    async logout(currentRefreshToken: string) {
+        const hash = hashRefreshToken(currentRefreshToken)
+        await this.prisma.authSession.updateMany({
+            where: { refreshTokenHash: hash, revoked: false },
+            data: { revoked: true }
+        })
+    }
 
-// 全设备登出：吊销该用户所有会话
-async logoutAllDevices(userId: number) {
-    await this.prisma.authSession.updateMany({
-        where: { userId, revoked: false },
-        data: { revoked: true },
-    })
-}
+    // 全设备登出：吊销该用户所有会话
+    async logoutAllDevices(userId: number) {
+        await this.prisma.authSession.updateMany({
+            where: { userId, revoked: false },
+            data: { revoked: true }
+        })
+    }
 ```
+
+实测输出（`npm run 11refresh`）：
+
+```
+=== 5) 登出 ===
+  单设备登出后 device-A 活跃会话数 = 0
+  登出后再刷新                    = Refresh Token 无效或已被使用
+  device-B 仍然活跃               = 1
+  全设备登出后活跃会话数          = 0
+  device-B 的旧 Token 还能刷吗    = Refresh Token 无效或已被使用
+```
+
+单设备登出只把 device-A 的行置为 `revoked`，device-B 还能继续刷新；`logoutAllDevices` 之后连 device-B 的旧 Token 也刷不动了。
 
 > 需要注意的权衡：**登出后，手里那张 Access Token 在其短生命周期内（如 15m）仍然可能有效**。这是双 Token 设计的固有取舍——要么每次请求都查库校验 Access Token（失去无状态优势、加重 DB 压力），要么接受这 15 分钟的窗口。生产上通常接受这个窗口，或对高敏接口额外做"用户版本号/黑名单"校验。
 
@@ -271,14 +356,16 @@ async logoutAllDevices(userId: number) {
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/08-NestJS 进阶/code/nestjs-template`。
+本篇的可运行示例在仓库 `node/08-NestJS 进阶/code/advanced-lab2`：用一张内存表顶替 Prisma Client，把双 Token 的登录 / 刷新轮换 / 多设备 / 登出全部真跑一遍。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `auth.service.ts` | 认证服务（对照本篇的 Prisma 写法） |
-| `redis.service.ts` | 用 Redis 承载会话与吊销 |
+| 文件 | 说明 | 对应小节 |
+| --- | --- | --- |
+| `./code/advanced-lab2/src/11-refresh-token.ts` | 内存版 AuthSession：bcrypt 72 字节截断复现、SHA-256 哈希入库、HttpOnly Cookie、多设备、轮换、单/全设备登出 | 全部小节 |
+| `./code/advanced-lab2/README.md` | 脚本清单、运行命令与实测输出 | 全部小节 |
+| `./code/nestjs-template/src/modules/auth/auth.service.ts` | TypeORM + Redis 版的同一套设计（哈希当 key、轮换即删 key） | Refresh Token 必须哈希后入库 · 关于技术栈 |
+| `./code/nestjs-template/src/modules/auth/auth.controller.ts` | 真实项目里 refresh / logout 接口的接线方式 | 用 HttpOnly Cookie 保存 Refresh Token |
 
-运行方式见 `nestjs-template/README.md`。
+运行方式见 `advanced-lab2/README.md` 与 `nestjs-template/README.md`。
 
 ---
 

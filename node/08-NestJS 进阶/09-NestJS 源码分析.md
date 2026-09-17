@@ -25,6 +25,8 @@
 
 **手动实现一个类装饰器**：
 
+> 摘自 `./code/advanced-lab2/src/09-decorator-basics.ts`（运行：`npm run 09decorators`）
+
 ```typescript
 // 类装饰器：接收被装饰的类（构造函数）
 function Controller(prefix: string) {
@@ -44,6 +46,8 @@ class UserController {
 ```
 
 **手动实现一个方法装饰器**：
+
+> 摘自 `./code/advanced-lab2/src/09-decorator-basics.ts`（运行：`npm run 09decorators`）
 
 ```typescript
 // 方法装饰器：target 是类的原型，propertyKey 是方法名，descriptor 是属性描述符
@@ -65,6 +69,8 @@ class UserController {
 
 **手动实现一个参数装饰器**：
 
+> 摘自 `./code/advanced-lab2/src/09-decorator-basics.ts`（运行：`npm run 09decorators`）
+
 ```typescript
 // 参数装饰器：parameterIndex 是参数在函数参数列表中的位置（从 0 开始）
 function Body() {
@@ -79,6 +85,19 @@ class UserController {
 // 输出：@Body() 标记在 create 的第 0 个参数上
 ```
 
+三个装饰器的输出（`npm run 09decorators`，三段示例分别执行）：
+
+```
+=== 1) 类装饰器 ===
+注册控制器: UserController, 前缀: /users
+
+=== 2) 方法装饰器 ===
+注册路由: getUsers → GET /list
+
+=== 3) 参数装饰器 ===
+@Body() 标记在 create 的第 0 个参数上
+```
+
 ### 2. reflect-metadata
 
 装饰器本身只是"运行时执行一个函数"，但如果想把元数据**持久存储**到类上供后续读取，需要 `reflect-metadata` 库。
@@ -91,25 +110,34 @@ npm install reflect-metadata
 
 **引入**（在入口文件顶部）：
 
+> 摘自 `./code/advanced-lab2/src/09-decorator-basics.ts`（运行：`npm run 09decorators`）
+
 ```typescript
 import 'reflect-metadata'  // 必须在所有其他 import 之前
 ```
 
 **核心 API**：
 
+> 摘自 `./code/advanced-lab2/src/09-decorator-basics.ts`（运行：`npm run 09decorators`）
+
 ```typescript
-// 存储元数据：Reflect.defineMetadata(key, value, target)
-// 读取元数据：Reflect.getMetadata(key, target)
-
-import 'reflect-metadata'
-
 const MY_KEY = 'my:key'
 
 // 存储在类上
-Reflect.defineMetadata(MY_KEY, { prefix: '/users' }, UserController)
+Reflect.defineMetadata(MY_KEY, { prefix: '/users' }, DemoController)
 // 读取
-const meta = Reflect.getMetadata(MY_KEY, UserController)
-console.log(meta.prefix)  // /users
+const meta = Reflect.getMetadata(MY_KEY, DemoController)
+console.log(meta.prefix)
+```
+
+按上面这两行存进去的东西，只有通过同一个 `key` 才取得到——它就挂在类对象自己身上，和业务属性互不干扰（`DemoController` 上并没有多出 `prefix` 属性）：
+
+实测输出（`npm run 09decorators`）：
+
+```
+=== 4) reflect-metadata 核心 API ===
+/users
+DemoController 上的普通属性 _prefix = undefined
 ```
 
 **为什么不直接用 `target._prefix = prefix`？**
@@ -138,6 +166,8 @@ TypeScript 编译时如果开启 `emitDecoratorMetadata: true`，会自动为**�
 
 **效果演示**：
 
+> 摘自 `./code/advanced-lab2/src/09-decorator-basics.ts`（运行：`npm run 09decorators`）
+
 ```typescript
 import 'reflect-metadata'
 
@@ -146,16 +176,28 @@ class Logger {
 }
 
 // UserService 的构造函数参数是 [Logger]
-// → TypeScript 自动生成 design:paramtypes 元数据
+// → 因为类上有装饰器，TypeScript 会为它自动生成 design:paramtypes 元数据
+@Injectable()
 class UserService {
     constructor(private logger: Logger) {}
 }
 
 // 读取构造函数的参数类型
 const paramTypes = Reflect.getMetadata('design:paramtypes', UserService)
-console.log(paramTypes)  // [Logger]
-//                       ↑ 这是一个数组，每个元素是参数的类型（构造函数）
+console.log(paramTypes)
 ```
+
+`@Injectable()` 在这里的作用只是"给类贴一个装饰器"（脚本里它就是一个空实现），真正干活的是编译器的 `emitDecoratorMetadata`：
+
+实测输出（`npm run 09decorators`）：
+
+```
+=== 5) design:paramtypes ===
+[ [class Logger] ]
+没有装饰器的类 → undefined
+```
+
+第二行是关键：脚本里还有一个**没加任何装饰器**的 `PlainService`，同样是 `constructor(private logger: Logger)`，`design:paramtypes` 却是 `undefined`。这就是下面那条注意事项的实证。
 
 **这是 NestJS 依赖注入的关键**：DI 容器读取 `design:paramtypes`，知道 `UserService` 需要 `Logger`，就自动创建 `Logger` 实例并注入。
 
@@ -175,7 +217,7 @@ UserController 构造函数: (userService: UserService)
 
 ## 最小实现
 
-完整源码见 `nestjs-mini/index.ts`。这里不再把代码堆成一大段，而是**按"谁使用 → 调用到哪些关键逻辑"的顺序**拆成若干片段，顺着调用链阅读更清晰。
+完整源码见 `nestjs-mini/index.ts`（`node/07-NestJS 入门/code/nestjs-mini/index.ts`，593 行，`npm run start` 可直接跑起来）。这里不再把代码堆成一大段，而是**按"谁使用 → 调用到哪些关键逻辑"的顺序**拆成若干片段，顺着调用链阅读更清晰。
 
 整体调用链如下：
 
@@ -199,6 +241,8 @@ app.listen(3000)
 
 识别一个"标签"有没有、内容是什么，都靠 `reflect-metadata` 在类上存取元数据。先引入依赖，并统一定义 `Key`（相当于元数据的"索引"）。
 
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+
 ```typescript
 import 'reflect-metadata'
 import http from 'http'
@@ -216,7 +260,10 @@ const PARAM_METADATA = 'param:metadata'
 
 后面各环节共用的接口都汇总在这里。
 
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+
 ```typescript
+// 类型定义
 interface ModuleOptions {
     controllers?: any[]
     providers?: any[]
@@ -227,28 +274,18 @@ interface ControllerOptions {
     prefix?: string
 }
 
-// 路由表条目：method + 拼接后的 path + 绑定了实例的处理函数
 interface RouteDef {
     method: string
     path: string
     handlerName: string
 }
 
-// 参数装饰器记录：type 决定从 req 的哪部分取值，key 是参数名
 interface ParamDef {
     type: 'body' | 'param' | 'query'
     key?: string
 }
 
-// 匹配成功后的路由信息（含实例，供请求处理链使用）
-interface MatchedRoute {
-    method: string
-    path: string
-    handler: (...args: any[]) => any
-    handlerName: string
-    controllerClass: any
-    controllerInstance: any
-}
+// …
 
 // 请求处理链组件：实现对应方法（canActivate/transform/intercept）即可被自动调用
 interface PipeTransform {
@@ -259,6 +296,17 @@ interface CanActivate {
 }
 interface NestInterceptor {
     intercept(context: any, next: () => Promise<any>): Promise<any>
+}
+
+// …
+
+interface MatchedRoute {
+    method: string
+    path: string
+    handler: (...args: any[]) => any
+    handlerName: string
+    controllerClass: any
+    controllerInstance: any
 }
 ```
 
@@ -274,6 +322,8 @@ interface NestInterceptor {
 @Get('@path')/@Post()   → createMethodDecorator → 往路由数组 push {method,path,handlerName}
 @Param('id')/@Body()    → createParamDecorator → 按参数位置记录 {type,key}
 ```
+
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 /**
@@ -304,7 +354,7 @@ function Module(options: ModuleOptions) {
  */
 function Controller(options: ControllerOptions | string = {}) {
     // 统一处理两种入参形式
-    const prefix = typeof options === 'string' ? options : (options.prefix || '')
+    const prefix = typeof options === 'string' ? options : options.prefix || ''
     return (target: any) => {
         Reflect.defineMetadata(CONTROLLER_METADATA, { prefix }, target)
     }
@@ -350,7 +400,7 @@ function createMethodDecorator(method: string) {
             routes.push({
                 method,
                 path,
-                handlerName: propertyKey,
+                handlerName: propertyKey
             })
             // 写回元数据
             Reflect.defineMetadata(ROUTE_METADATA, routes, target.constructor)
@@ -398,6 +448,8 @@ const Query = createParamDecorator('query')
 
 装饰器实现好了，现在"使用"它们定义一个最小应用（Service / Controller / Module）。
 
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+
 ```typescript
 // --- 定义服务 ---
 // @Injectable() 标记这个类可以被注入
@@ -407,7 +459,7 @@ class UserService {
     findAll() {
         return [
             { id: 1, name: '张三', email: 'zhangsan@test.com' },
-            { id: 2, name: '李四', email: 'lisi@test.com' },
+            { id: 2, name: '李四', email: 'lisi@test.com' }
         ]
     }
 
@@ -455,7 +507,7 @@ class UserController {
 // NestFactory.create 会读取这里的配置
 @Module({
     controllers: [UserController],
-    providers: [UserService],
+    providers: [UserService]
 })
 class AppModule {}
 ```
@@ -463,6 +515,8 @@ class AppModule {}
 ### Step 5 · DI 容器：注入依赖的关键逻辑
 
 `NestFactory.create` 启动时「使用」容器创建所有实例。容器靠 `design:paramtypes` 知道构造函数要什么类型，然后递归解析、单例缓存。
+
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 // DI（Dependency Injection，依赖注入）的核心问题：
@@ -530,6 +584,8 @@ class Container {
 ### Step 6 · 框架核心 `NestFactory.create`：把前面几步串起来的入口
 
 这里「使用」了 Step 3 的装饰器元数据和 Step 5 的 DI 容器，完成：**模块系统递归收集 → 实例化 Provider/Controller → 扫描路由 → 建 HTTP 服务器**。
+
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 /**
@@ -615,7 +671,7 @@ class NestFactory {
                     handler: controllerInstance[route.handlerName].bind(controllerInstance),
                     handlerName: route.handlerName,
                     controllerClass: ControllerClass,
-                    controllerInstance,
+                    controllerInstance
                 })
             }
         }
@@ -686,6 +742,8 @@ class NestFactory {
             })
         })
 
+        // …（这里就是 Step 7 的 executeRequestChain，完整源码中它就定义在 create() 内部）
+
         return {
             listen(port: number, callback?: () => void) {
                 server.listen(port, callback)
@@ -698,6 +756,8 @@ class NestFactory {
 ### Step 7 · 请求处理链：请求到达时被调用的关键逻辑
 
 路由匹配成功后，服务器就调用这里的处理链：`Guard → 参数解析 → Pipe → Interceptor → Handler`。每个环节都是可选的，靠方法名检测是否存在。（完整源码中该函数定义在 `NestFactory.create` 内部，这里单独列出便于阅读。）
+
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 /**
@@ -778,6 +838,8 @@ async function executeRequestChain(route: MatchedRoute, req: any, res: any) {
 
 最后「使用」`NestFactory.create` 拿到 app 实例并监听端口。
 
+> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+
 ```typescript
 // NestFactory.create(AppModule) 完成所有初始化：
 // 1. 注册 UserService 到 DI 容器
@@ -791,6 +853,17 @@ app.listen(3000, () => {
     console.log('  GET    /users/:id  → 查询单个用户')
     console.log('  POST   /users      → 创建用户（body: {"name":"王五","email":"ww@test.com"}）')
 })
+```
+
+这段 `app.listen(3000, callback)` 里的回调就是路由表建好、HTTP 服务器起来之后拿到控制权的地方，控制台会原样打印出前面扫描到的路由。
+
+实测输出（`npm run start`）：
+
+```
+最小 NestJS 运行在 http://localhost:3000
+  GET    /users      → 查询所有用户
+  GET    /users/:id  → 查询单个用户
+  POST   /users      → 创建用户（body: {"name":"王五","email":"ww@test.com"}）
 ```
 
 ## 函数调用流程
@@ -940,12 +1013,13 @@ NestJS 利用 TypeScript 的 `emitDecoratorMetadata` 和 `reflect-metadata` 库�
 
 本篇的可运行示例在仓库 `node/07-NestJS 入门/code/nestjs-mini`。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `index.ts` | 593 行完整最小实现 |
-| `README.md` | 与真实 NestJS 的能力差异对照 |
+| 文件 | 说明 | 对应小节 |
+| --- | --- | --- |
+| `../07-NestJS 入门/code/nestjs-mini/index.ts` | 593 行完整最小实现：装饰器 → DI 容器 → 路由匹配 → 请求处理链 | 最小实现（Step 1~8）· 函数调用流程 · 核心机制解析 |
+| `./code/advanced-lab2/src/09-decorator-basics.ts` | 前置知识最小示例：四类装饰器 / reflect-metadata / design:paramtypes | 1. TypeScript 装饰器 · 2. reflect-metadata · 3. design:paramtypes（自动类型反射） |
+| `../07-NestJS 入门/code/nestjs-mini/README.md` | 与真实 NestJS 的能力差异对照 | 最小实现 vs NestJS 源码 |
 
-运行方式见 `nestjs-mini/README.md`。
+运行方式见 `nestjs-mini/README.md`；前置知识脚本见 `advanced-lab2/README.md`。
 
 ---
 

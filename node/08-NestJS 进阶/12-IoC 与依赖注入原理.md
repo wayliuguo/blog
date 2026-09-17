@@ -10,6 +10,8 @@
 
 假设没有 IoC，一个真实项目里的对象依赖会长成这样：
 
+> 摘自 `./code/advanced-lab2/src/12-ioc-di.ts`（运行：`npm run 12ioc`）
+
 ```typescript
 // 没有 IoC：你手动 new 出整条依赖网，越写越乱
 const redis = new Redis()
@@ -20,6 +22,16 @@ const authService = new AuthService(userService, emailService, redis)
 const userController = new UserController(userService)
 // 改一个构造参数，上面全要跟着改
 ```
+
+实测输出（`npm run 12ioc`）：
+
+```
+=== 1) 手动 new：整条依赖网自己拼 ===
+为了拿到 userController，一共 new 了 6 个对象
+redis 是同一个实例（全靠人肉传同一个变量）：true
+```
+
+"共享同一个 redis"这种事，全靠记得把同一个变量往下传；漏传一次就会多出一个连接。
 
 问题很明显：依赖之间互相缠绕，谁创建、谁先谁后、怎么共享同一个 `redis` 实例，全要人肉管理。对象一多，这张网就失控了。
 
@@ -36,6 +48,8 @@ const userController = new UserController(userService)
 
 可以这样记：**IoC 是"为什么要交出去"的设计哲学，DI 是"怎么交出去"的具体技术**。NestJS 用 DI 来实现 IoC：你声明依赖，框架在启动时扫描、实例化、注入。
 
+> 摘自 `./code/advanced-lab2/src/12-ioc-di.ts`（运行：`npm run 12ioc`）
+
 ```typescript
 // 有 NestJS：只声明，不创建
 @Controller('users')
@@ -43,6 +57,15 @@ export class UserController {
     // 这行 = "我需要一个 UserService 实例"，由容器注入
     constructor(private readonly userService: UserService) {}
 }
+```
+
+容器把 `UserService` 造好塞进来，`UserController` 里始终没有 `new` 的字样——脚本里直接用容器把注入结果取出来验证：
+
+实测输出（`npm run 12ioc`）：
+
+```
+=== 2) 容器按类型注入：UserController 从没 new 过 UserService ===
+app.get(UserController).userService instanceof UserService = true
 ```
 
 ## NestJS 怎么知道要注入 UserService
@@ -88,14 +111,16 @@ TypeScript 装饰器(@Injectable/@Controller)
 
 当 Token 不是类（比如字符串、`Symbol`）时，使用方要用 `@Inject()` 显式指名：
 
+> 摘自 `./code/advanced-lab2/src/12-ioc-di.ts`（运行：`npm run 12ioc`）
+
 ```typescript
 // 自定义 Token（用 Symbol 或字符串）
 export const CONFIG = Symbol('CONFIG')
 
 @Module({
     providers: [
-        { provide: CONFIG, useValue: { jwtSecret: 'my-secret', expiresIn: '15m' } },
-    ],
+        { provide: CONFIG, useValue: { jwtSecret: 'my-secret', expiresIn: '15m' } }
+    ]
 })
 export class AppModule {}
 
@@ -104,6 +129,17 @@ export class AppModule {}
 export class AuthService {
     constructor(@Inject(CONFIG) private config: { jwtSecret: string }) {}
 }
+```
+
+`useValue` 提供的是一个现成对象，所以"注入进去的"和"容器里那个"必须是同一个引用；`useExisting` 起别名也是同理：
+
+实测输出（`npm run 12ioc`）：
+
+```
+=== 3) 自定义 Token ===
+app.get(CONFIG) = {"jwtSecret":"my-secret","expiresIn":"15m"}
+AuthService 注入到的是同一个对象：true
+useExisting 起的别名与本体同源：true
 ```
 
 > 决策模型：普通类依赖用默认 Token 即可；注入配置/第三方实例/需要条件创建的对象时，用 `useValue`/`useFactory` + `@Inject()` 自定义 Token。
@@ -118,11 +154,28 @@ export class AuthService {
 | Request | `Scope.REQUEST` | 每个请求新建一个实例 | 需要绑定请求上下文（如按租户隔离） |
 | Transient | `Scope.TRANSIENT` | 每次注入都新建实例 | 有状态、不可共享的工具类 |
 
+> 摘自 `./code/advanced-lab2/src/12-ioc-di.ts`（运行：`npm run 12ioc`）
+
 ```typescript
 @Injectable({ scope: Scope.REQUEST })
 export class RequestContext {
     // 每个请求一个独立实例，可安全存当前请求的信息
+    private static counter = 0
+    readonly seq = ++RequestContext.counter
 }
+```
+
+三种作用域的差别可以直接量出来：脚本里让一个控制器同时注入两个使用方（各自依赖同一组三个 Provider），然后连请求两次 `/scope`，把实例编号打出来：
+
+实测输出（`npm run 12ioc`，`{"default":[序号1,序号2],"request":[…],"transient":[…]}`）：
+
+```
+=== 4) 作用域：同一个接口连请求两次，看 seq 变化 ===
+  第一次 /scope -> 200 {"default":[1,1],"request":[1,1],"transient":[1,2]}
+  第二次 /scope -> 200 {"default":[1,1],"request":[2,2],"transient":[3,4]}
+  default  两次都是同一组序号 → DEFAULT 是单例，请求间共享
+  request  每次请求序号都变、但请求内两个使用方拿到同一个 → 每请求一份
+  transient 同一请求内两个使用方的序号就不同 → 每次注入都新建
 ```
 
 > 注意：Request/Transient 作用域会**绕过 Singleton 的复用**，在高频接口上会增加创建开销，且无法被 Singleton 依赖（否则作用域语义冲突）。默认用 Singleton，只有在确实需要"每请求一份状态"时才上 Request。
@@ -161,20 +214,49 @@ main.ts
    → 使用方 Module 要 imports: [XxxModule]
 ```
 
+> 摘自 `./code/advanced-lab2/src/12-ioc-di.ts`（运行：`npm run 12ioc`）
+
 ```typescript
 // 提供方 Module：注册 + 导出
 @Module({
     providers: [XxxService],
-    exports: [XxxService],
+    exports: [XxxService]
 })
 export class XxxModule {}
+
+// …
 
 // 使用方 Module：imports 引入
 @Module({
     imports: [XxxModule],
-    controllers: [YyyController],
+    controllers: [YyyController]
 })
 export class YyyModule {}
+```
+
+三步对齐之后，使用方 Module 里就能直接注入 `XxxService` 了——脚本里跑的正是这个组合：
+
+实测输出（`npm run 12ioc`）：
+
+```
+=== 5) 跨模块注入（IocDemoModule imports XxxModule 并拿到 exports 的 XxxService）===
+app.get(XxxService).tag = xxx-service
+```
+
+而三步里只要漏掉第一步（把 `UserService` 从 `providers` 里删掉），启动时立刻就是这个报错——它把三步法里的问题直接问了一遍：
+
+实测输出（`npm run 12ioc`，脚本里注释掉 `UserService` 这一行 provider 后的启动日志；为便于阅读去掉了终端颜色码）：
+
+```
+[Nest] 10500  - 2026/09/17 15:43:20   ERROR [ExceptionHandler] UnknownDependenciesException [Error]: Nest can't resolve dependencies of the UserController (?). Please make sure that the argument UserService at index [0] is available in the IocDemoModule module.
+
+Potential solutions:
+- Is IocDemoModule a valid NestJS module?
+- If UserService is a provider, is it part of the current IocDemoModule?
+- If UserService is exported from a separate @Module, is that module imported within IocDemoModule?
+  @Module({
+    imports: [ /* the Module containing UserService */ ]
+  })
 ```
 
 > 口诀：**要被用，先注册；要跨模块，先导出；要用别人，先导入**。三步走完还报错，再检查 `emitDecoratorMetadata` 是否开启、构造参数类型是否可解析（比如用了接口而非具体类却没给 Token）。
@@ -213,12 +295,13 @@ export class YyyModule {}
 
 本篇的可运行示例在仓库 `node/07-NestJS 入门/code/nestjs-mini`。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `index.ts` | Container 的 collectProviders / resolve 实现 |
-| `app.module.ts` | 真实项目里的模块图 |
+| 文件 | 说明 | 对应小节 |
+| --- | --- | --- |
+| `./code/advanced-lab2/src/12-ioc-di.ts` | 手动 new 的代价、容器按类型注入、自定义 Token（`useValue`/`useFactory`/`useExisting`）、三种作用域对照、跨模块注入、真实报错复现 | 从"为什么不需要 new"说起 · IoC 与 DI 的区别 · NestJS 怎么知道要注入 UserService · Provider Token 与四种声明方式 · Provider 作用域（Scope） · DI 报错排查三步法 |
+| `../07-NestJS 入门/code/nestjs-mini/index.ts` | 手写 `Container`：读 `design:paramtypes` 递归注入 + 单例缓存 | NestJS 启动流程（文字图） |
+| `./code/nestjs-template/src/app.module.ts` | 真实项目里的模块图：`ConfigModule` + `TypeOrmModule.forRootAsync` + 全局 Provider | NestJS 启动流程（文字图） |
 
-运行方式见 `nestjs-mini/README.md`。
+运行方式见 `advanced-lab2/README.md`。
 
 ---
 

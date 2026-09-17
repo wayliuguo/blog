@@ -1,0 +1,18 @@
+{
+  "name": "koa-basics",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Koa 快速入门 —— 用真实 koa 写的最小可运行示例集",
+  "scripts": {
+    "hello": "node src/01-hello.js",
+    "async": "node src/02-async.js",
+    "onion": "node src/03-onion.js",
+    "stack": "node src/04-stack.js"
+  },
+  "dependencies": {
+    "@koa/router": "^15.7.0",
+    "koa": "^3.2.1",
+    "koa-body": "^8.0.1",
+    "koa-static": "^5.0.0"
+  }
+}

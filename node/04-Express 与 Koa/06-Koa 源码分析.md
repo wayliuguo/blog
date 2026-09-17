@@ -8,205 +8,245 @@
 
 ## 最小实现
 
+> 摘自 `./code/koa-mini/index.js`（运行：`npm start`）
+
 ```javascript
+/**
+ * 最小 Koa 实现
+ *
+ * 核心机制：
+ * 1. compose() 将中间件数组组合成嵌套的 Promise 链
+ * 2. dispatch(i) 递归调用，每次传入 dispatch(i+1) 作为 next
+ * 3. await next() 等待后续中间件完成，形成洋葱模型
+ * 4. ctx.body 赋值后由 respond() 自动决定 Content-Type 和序列化
+ */
+
 const http = require('http')
 
-// ===== 最小 Koa 实现 =====
-
 function createKoa() {
-  const middlewares = []  // 中间件数组
+    const middlewares = []
 
-  const app = {}
+    const app = {}
 
-  // --- 注册中间件 ---
-  app.use = (fn) => {
-    middlewares.push(fn)
-    return app  // 支持链式调用
-  }
+    // --- 注册中间件 ---
+    app.use = fn => {
+        middlewares.push(fn)
+        return app
+    }
 
-  // --- 洋葱模型核心：compose ---
-  // 将中间件数组组合成一个嵌套的 Promise 链
-  function compose(middlewareList) {
-    return function (ctx) {
-      let index = -1
+    // --- compose：洋葱模型核心 ---
+    function compose(middlewareList) {
+        return function (ctx) {
+            let index = -1
 
-      function dispatch(i) {
-        // 防止同一个中间件中多次调用 next()
-        if (i <= index) {
-          return Promise.reject(new Error('next() 被多次调用'))
+            function dispatch(i) {
+                if (i <= index) {
+                    return Promise.reject(new Error('next() 被多次调用'))
+                }
+                index = i
+
+                const fn = middlewareList[i]
+                if (!fn) {
+                    return Promise.resolve()
+                }
+
+                try {
+                    return Promise.resolve(fn(ctx, () => dispatch(i + 1)))
+                } catch (err) {
+                    return Promise.reject(err)
+                }
+            }
+
+            return dispatch(0)
         }
-        index = i
+    }
 
-        const fn = middlewareList[i]
-        if (!fn) {
-          return Promise.resolve()  // 所有中间件执行完毕
+    // --- 创建 Context ---
+    function createContext(req, res) {
+        const ctx = {}
+        ctx.req = req
+        ctx.res = res
+        ctx.method = req.method
+        ctx.url = req.url
+        ctx.path = req.url.split('?')[0]
+        ctx.query = parseQuery(req.url)
+        ctx.headers = req.headers
+        ctx.status = 200
+        ctx.body = undefined
+
+        ctx.set = (key, value) => {
+            res.setHeader(key, value)
         }
 
-        try {
-          // 关键：将 dispatch(i + 1) 作为 next 传入中间件
-          // 返回 Promise，确保洋葱模型的异步执行顺序
-          return Promise.resolve(fn(ctx, () => dispatch(i + 1)))
-        } catch (err) {
-          return Promise.reject(err)
+        Object.defineProperty(ctx, 'body', {
+            get() {
+                return ctx._body
+            },
+            set(val) {
+                ctx._body = val
+                ctx._respond = true
+            }
+        })
+
+        ctx.params = {}
+        return ctx
+    }
+
+    function parseQuery(url) {
+        const idx = url.indexOf('?')
+        if (idx === -1) return {}
+        const query = {}
+        url.slice(idx + 1)
+            .split('&')
+            .forEach(pair => {
+                const [key, value] = pair.split('=').map(decodeURIComponent)
+                query[key] = value
+            })
+        return query
+    }
+
+    // --- 发送响应 ---
+    function respond(ctx) {
+        const { res, body, status } = ctx
+        if (res.headersSent) return
+
+        res.statusCode = status
+
+        if (body === null || body === undefined) {
+            res.statusCode = 204
+            res.end()
+            return
         }
-      }
 
-      // 从第一个中间件开始执行
-      return dispatch(0)
-    }
-  }
+        if (typeof body === 'string') {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8')
+            res.end(body)
+            return
+        }
 
-  // --- 创建 Context 对象 ---
-  function createContext(req, res) {
-    const ctx = {}
+        if (Buffer.isBuffer(body)) {
+            res.end(body)
+            return
+        }
 
-    // 原始 Node.js 对象
-    ctx.req = req
-    ctx.res = res
-
-    // ---- 请求相关 ----
-    ctx.method = req.method
-    ctx.url = req.url
-    ctx.path = req.url.split('?')[0]
-    ctx.query = parseQuery(req.url)
-    ctx.headers = req.headers
-
-    // 封装 request.body（需要 koa-body 中间件支持）
-    ctx.request = {
-      get body() { return ctx._body },
-      set body(val) { ctx._body = val },
-      get headers() { return req.headers },
-      get method() { return req.method },
-      get url() { return req.url }
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(body))
     }
 
-    // ---- 响应相关 ----
-    ctx.status = 200
-    ctx.body = undefined
+    // --- 处理请求 ---
+    app.handle = (req, res) => {
+        const ctx = createContext(req, res)
+        const fn = compose(middlewares)
 
-    ctx.set = (key, value) => {
-      res.setHeader(key, value)
+        fn(ctx)
+            .then(() => {
+                respond(ctx)
+            })
+            .catch(err => {
+                console.error(err)
+                res.statusCode = 500
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ message: 'Internal Server Error' }))
+            })
     }
 
-    // 代理：设置 ctx.body 自动处理响应
-    Object.defineProperty(ctx, 'body', {
-      get() { return ctx._body },
-      set(val) {
-        ctx._body = val
-        ctx._respond = true  // 标记需要发送响应
-      }
-    })
-
-    ctx.params = {}
-
-    return ctx
-  }
-
-  // --- 解析查询参数 ---
-  function parseQuery(url) {
-    const idx = url.indexOf('?')
-    if (idx === -1) return {}
-    const query = {}
-    url.slice(idx + 1).split('&').forEach(pair => {
-      const [key, value] = pair.split('=').map(decodeURIComponent)
-      query[key] = value
-    })
-    return query
-  }
-
-  // --- 发送响应 ---
-  function respond(ctx) {
-    const { res, body, status } = ctx
-
-    if (res.headersSent) return  // 已发送过响应
-
-    res.statusCode = status
-
-    // 根据 body 类型自动选择响应方式
-    if (body === null || body === undefined) {
-      res.statusCode = 204
-      res.end()
-      return
+    // --- 启动 ---
+    app.listen = (port, cb) => {
+        const server = http.createServer((req, res) => {
+            app.handle(req, res)
+        })
+        return server.listen(port, cb)
     }
 
-    if (typeof body === 'string') {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8')
-      res.end(body)
-      return
-    }
-
-    if (Buffer.isBuffer(body)) {
-      res.end(body)
-      return
-    }
-
-    // 对象 → JSON
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify(body))
-  }
-
-  // --- 处理 HTTP 请求 ---
-  app.handle = (req, res) => {
-    const ctx = createContext(req, res)
-    const fn = compose(middlewares)
-
-    fn(ctx).then(() => {
-      // 中间件链执行完毕，发送响应
-      respond(ctx)
-    }).catch((err) => {
-      // 未捕获的错误 → 500
-      console.error(err)
-      res.statusCode = 500
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ message: 'Internal Server Error' }))
-    })
-  }
-
-  // --- 启动服务 ---
-  app.listen = (port, cb) => {
-    const server = http.createServer((req, res) => {
-      app.handle(req, res)
-    })
-    return server.listen(port, cb)
-  }
-
-  return app
+    return app
 }
 
 // ===== 使用示例 =====
-
 const app = createKoa()
 
-// 中间件 1：日志（演示洋葱模型）
 app.use(async (ctx, next) => {
-  console.log(`--> ${ctx.method} ${ctx.url}`)
-  await next()
-  console.log(`<-- ${ctx.status} ${ctx.url}`)
+    console.log(`--> ${ctx.method} ${ctx.url}`)
+    await next()
+    console.log(`<-- ${ctx.status} ${ctx.url}`)
 })
 
-// 中间件 2：响应耗时
 app.use(async (ctx, next) => {
-  const start = Date.now()
-  await next()
-  ctx.set('X-Response-Time', `${Date.now() - start}ms`)
+    const start = Date.now()
+    await next()
+    ctx.set('X-Response-Time', `${Date.now() - start}ms`)
 })
 
-// 中间件 3：路由模拟
-app.use(async (ctx) => {
-  if (ctx.url === '/users') {
-    ctx.body = [{ id: 1, name: '张三' }, { id: 2, name: '李四' }]
-  } else if (ctx.url === '/health') {
-    ctx.body = { status: 'ok' }
-  } else {
-    ctx.status = 404
-    ctx.body = { message: 'Not Found' }
-  }
+app.use(async ctx => {
+    if (ctx.url === '/users') {
+        ctx.body = [
+            { id: 1, name: '张三' },
+            { id: 2, name: '李四' }
+        ]
+    } else if (ctx.url === '/health') {
+        ctx.body = { status: 'ok' }
+    } else {
+        ctx.status = 404
+        ctx.body = { message: 'Not Found' }
+    }
 })
 
 app.listen(3000, () => {
-  console.log('最小 Koa 运行在 http://localhost:3000')
+    console.log('最小 Koa 运行在 http://localhost:3000')
 })
 ```
+
+实测输出（`npm start` 起服务，另开一个终端用 `curl -i` 依次打三个接口）。先看服务端日志：
+
+```
+最小 Koa 运行在 http://localhost:3000
+--> GET /users
+<-- 200 /users
+--> GET /health
+<-- 200 /health
+--> GET /unknown
+<-- 404 /unknown
+```
+
+再看 `curl -i` 拿到的完整响应：
+
+```
+$ curl -i http://localhost:3000/users
+HTTP/1.1 200 OK
+X-Response-Time: 0ms
+Content-Type: application/json
+Date: Thu, 17 Sep 2026 05:47:23 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Content-Length: 51
+
+[{"id":1,"name":"张三"},{"id":2,"name":"李四"}]
+
+$ curl -i http://localhost:3000/health
+HTTP/1.1 200 OK
+X-Response-Time: 0ms
+Content-Type: application/json
+Date: Thu, 17 Sep 2026 05:47:23 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Content-Length: 15
+
+{"status":"ok"}
+
+$ curl -i http://localhost:3000/unknown
+HTTP/1.1 404 Not Found
+X-Response-Time: 0ms
+Content-Type: application/json
+Date: Thu, 17 Sep 2026 05:47:23 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Content-Length: 23
+
+{"message":"Not Found"}
+```
+
+服务端日志里 `--> GET /users` 与 `<-- 200 /users` 这一对就是洋葱模型最直接的证据：第一个中间件在 `await next()` 之前打 `-->`、之后打 `<--`，两条都落进日志说明"回程"真的执行了。
+
+`X-Response-Time: 0ms` 这个响应头是第二个中间件在 `await next()` 之后用 `ctx.set()` 加上的——它同样在回程里跑。三个请求的状态码分别是 200 / 200 / 404：`/users` 命中列表分支，`/health` 命中健康检查分支，`/unknown` 两个分支都不中，于是 `ctx.status = 404` 配 `ctx.body = { message: 'Not Found' }`，由 `respond()` 统一发出去。
 
 ## 函数调用流程
 
@@ -319,7 +359,7 @@ dispatch(0)  ← 启动递归
 7.                                     C 执行完毕，返回
 8.                                  B 继续执行 next() 后面的代码
 9.                   A 继续执行 next() 后面的代码
-10. 所有中间件执行完毕，send(ctx)
+10. 所有中间件执行完毕，respond(ctx)
 ```
 
 ## 最小实现 vs Koa 源码
@@ -356,13 +396,14 @@ dispatch(0)  ← 启动递归
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/koa-mini`。
+本篇的代码块逐字摘自仓库 `node/04-Express 与 Koa/code/koa-mini/index.js`（全文 183 行，零第三方依赖，纯 `node:http` 实现）。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `index.js` | 180 行还原 Koa 洋葱模型（compose / dispatch / ctx） |
+| 文件 | 对应小节 | 演示什么 |
+| --- | --- | --- |
+| `./code/koa-mini/index.js` | 最小实现 · 函数调用流程 · 核心机制解析 · compose 执行流程详解 | 183 行还原 Koa 核心：`compose` 把中间件数组变成嵌套 Promise 链、`dispatch(i)` 递归并把 `dispatch(i+1)` 当作 `next`、`index` 防重入、`ctx.body` 的 setter 标记 `_respond`、`respond` 按 body 类型自动出响应 |
 
-运行方式见 `koa-mini/README.md`。
+运行方式见 `koa-mini/README.md`（`npm start` 起服务，默认监听 3000）；
+建议先读 `compose` 与 `dispatch`，再读 `createContext` 与 `respond`。
 
 ---
 

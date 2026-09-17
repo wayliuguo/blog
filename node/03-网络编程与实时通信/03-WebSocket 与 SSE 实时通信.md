@@ -71,18 +71,29 @@ WebSocket（应用层协议）
 
 TCP 是**传输层**协议，WebSocket 是**应用层**协议，经典关系是 `WebSocket → TCP → IP`。如果你绕过 WebSocket，直接用 `net.createServer()` 基于 TCP 写一套通信：
 
+> 摘自 `./code/net-lab/src/01-tcp-server.js`（运行：`npm run 01`）
+
 ```js
-// 直接用 TCP：消息格式、心跳、断线处理全要自己设计
-const net = require('node:net');
-net.createServer((socket) => {
-  socket.on('data', (buf) => {
-    // 字节流怎么切分成"消息"？粘包怎么办？
-    // 怎么区分文本/二进制？心跳帧怎么定义？
-  });
-});
+const net = require('node:net')
+
+const server = net.createServer(socket => {
+    // 每个连接是一个 socket，带远程地址端口
+    console.log(`客户端连入: ${socket.remoteAddress}:${socket.remotePort}`)
+
+    socket.on('data', chunk => {
+        // chunk 是 Buffer（字节流），可以按不同编码解读
+        console.log('  收到数据(utf8):', chunk.toString('utf8'))
+        console.log('  收到数据(hex) :', chunk.toString('hex'))
+        // 回执：把字节原样确认回去
+        socket.write(`已收到 ${chunk.length} 字节\n`)
+    })
+// …
+server.listen(4000, () => {
+    console.log('TCP 服务已启动，监听 4000。另开终端运行 `npm run 02` 连接本服务')
+})
 ```
 
-你就要自己定义消息格式、分包、心跳、断线重连等一整套规则。而 WebSocket 已经把这些定好了：
+这段裸 TCP 只做到"把字节收进来"：字节流怎么切成一条条"消息"（粘包怎么办）、这段数据是文本还是二进制、心跳帧长什么样，全都没有约定。你就要自己定义消息格式、分包、心跳、断线重连等一整套规则。而 WebSocket 已经把这些定好了：
 
 ```
 Handshake   握手（HTTP Upgrade）
@@ -166,34 +177,56 @@ retry: 重连间隔(ms)  —— 建议浏览器多久重连一次
 
 因为 `res` 本身就是可写流（呼应第 02 篇）——你只需要把一段段事件 `write` 进这条流，浏览器侧的 `EventSource` 就会逐条触发 `onmessage`。
 
+> 摘自 `./code/net-lab/src/07-sse.js`（运行：`npm run 07`）
+
 ```js
-// sse-server.js：极简 SSE 服务端
-const http = require('node:http');
+const http = require('node:http')
 
 const server = http.createServer((req, res) => {
-  if (req.url !== '/stream') {
-    res.writeHead(404);
-    res.end();
-    return;
-  }
-  // 1) 声明 SSE 长连接
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-  });
-  // 2) 持续推送（res 是可写流，write 即推送）
-  let n = 0;
-  const timer = setInterval(() => {
-    n++;
-    res.write(`id: ${n}\ndata: 消息 #${n} 时间=${new Date().toLocaleTimeString()}\n\n`);
-  }, 1000);
-  // 3) 客户端断开时清理，避免内存泄漏
-  req.on('close', () => clearInterval(timer));
-});
-
-server.listen(3001, () => console.log('SSE on http://localhost:3001/stream'));
+    if (req.url === '/stream') {
+        // SSE 的三个固定响应头
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive'
+        })
+        let n = 0
+        const timer = setInterval(() => {
+            n += 1
+            const payload = JSON.stringify({ time: new Date().toISOString(), seq: n })
+            // SSE 格式：每条消息以 `data: ...\n\n` 结尾
+            res.write(`data: ${payload}\n\n`)
+            if (n >= 6) {
+                clearInterval(timer)
+                res.end() // 推完 6 条后关闭流
+            }
+        }, 500)
+        // 客户端断开时清理定时器，避免内存泄漏
+        req.on('close', () => clearInterval(timer))
+        return
+    }
+    res.writeHead(200)
+    res.end('SSE demo, 访问 /stream')
+})
 ```
+
+`07-sse.js` 自己既是服务端、又用 `fetch` 当客户端读流，单文件就能跑出「服务端每 500ms 推一条」的完整效果：
+
+实测输出（`npm run 07`）：
+
+```
+SSE 服务已启动(3001)，启动内部客户端用 fetch 读取流...
+
+收到 SSE: {"time":"2026-09-17T04:58:56.648Z","seq":1}
+收到 SSE: {"time":"2026-09-17T04:58:57.162Z","seq":2}
+收到 SSE: {"time":"2026-09-17T04:58:57.675Z","seq":3}
+收到 SSE: {"time":"2026-09-17T04:58:58.187Z","seq":4}
+收到 SSE: {"time":"2026-09-17T04:58:58.701Z","seq":5}
+收到 SSE: {"time":"2026-09-17T04:58:59.202Z","seq":6}
+流结束
+```
+
+六条消息的时间戳正好间隔约 500ms，`data:` 后面就是服务端 `JSON.stringify` 出来的那串负载。
 
 ## 为什么流式输出场景适合 SSE？
 
@@ -299,8 +332,11 @@ Node.js 是一个基于 Chrome V8 的运行时
 
 | 文件 | 演示什么 |
 | --- | --- |
+| `./code/net-lab/src/01-tcp-server.js` | 对照项：裸 TCP 只给字节流，消息边界/心跳都要自己定 |
 | `./code/net-lab/src/07-sse.js` | SSE：`text/event-stream` + 持续 `write` + 客户端自动重连 |
 | `./code/net-lab/src/08-websocket.js` | WebSocket：HTTP Upgrade → 101 之后的双向收发与心跳 |
+
+运行方式（`code/net-lab` 目录下）：`npm run 01`（服务端，常驻）/ `npm run 07` / `npm run 08`；`08` 依赖 `ws`，先 `npm install`。
 
 ## 参考
 

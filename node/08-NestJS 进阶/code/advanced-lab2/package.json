@@ -1,0 +1,49 @@
+{
+  "name": "advanced-lab2",
+  "version": "1.0.0",
+  "description": "NestJS 进阶配套示例（07~12 篇）- 微服务传输 / 平台切换 / 源码分析 / 项目模板 / 双 Token 会话 / IoC 原理",
+  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "07transports": "ts-node src/07-transports.ts",
+    "08fastify": "ts-node src/08-fastify-platform.ts",
+    "08bench": "ts-node src/08-benchmark.ts",
+    "09decorators": "ts-node src/09-decorator-basics.ts",
+    "10entity": "ts-node src/10-refresh-token.entity.ts",
+    "10infra": "ts-node src/10-common-infra.ts",
+    "11refresh": "ts-node src/11-refresh-token.ts",
+    "12ioc": "ts-node src/12-ioc-di.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.0.1",
+    "@fastify/helmet": "^13.0.1",
+    "@fastify/multipart": "^9.0.3",
+    "@fastify/static": "^10.1.2",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/microservices": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-fastify": "^11.0.1",
+    "@nestjs/swagger": "^11.0.3",
+    "bcryptjs": "^3.0.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "cookie": "^2.0.1",
+    "cookie-parser": "^1.4.7",
+    "fastify": "^5.11.3",
+    "jsonwebtoken": "^9.0.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.10.0",
+    "autocannon": "^8.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}

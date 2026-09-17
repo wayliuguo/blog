@@ -26,15 +26,19 @@
 
 所以如果先学 NestJS，你学到的是一堆语法：
 
-```ts
-@Controller('user')
-export class UserController {
-  constructor(private readonly userService: UserService) {}
+> 摘自 `./code/nestjs-basics/src/users/users.controller.ts`（运行：`npm start`）
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(id)
-  }
+```ts
+@Controller('users')  // 路由前缀：所有路由都以 /users 开头
+// …
+export class UsersController {
+    constructor(private readonly usersService: UsersService) {}
+// …
+    @Get(':id')  // GET /users/1
+    findOne(@Param('id', ParseIdPipe) id: number): User {
+        return this.usersService.findOne(String(id))
+    }
+// …
 }
 ```
 
@@ -145,10 +149,14 @@ NestJS 非常大，全学完没有必要。按目标划分：
 
 装饰器只做一件事：**往类或方法上贴标签**。真正干活的是运行时读取标签的框架代码。
 
+> 摘自 `./code/nestjs-basics/src/users/admin.controller.ts`（运行：`npm start`）
+
 ```ts
-@Roles('admin')            // 只是贴了个标签
+@Roles('admin')  // 到这里为止只是贴了个标签，什么都不发生
 @Get('users')
-findAll() {}
+findAll(): User[] {
+    return this.usersService.findAll()
+}
 ```
 
 `@Roles('admin')` 本身不会拦截任何请求。需要一个 Guard 通过 `Reflector` 把它读出来，才会生效。理解这一点，"为什么我加了 `@Roles` 却不生效"就不再是玄学。
@@ -184,14 +192,15 @@ findAll() {}
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/07-NestJS 入门/code/nestjs-mini`。
+本篇的可运行示例在仓库 `node/07-NestJS 入门/code/` 下，两个项目分工不同：`nestjs-mini` 是手写的框架内核（讲机制），`nestjs-basics` 是真实 `@nestjs/*` 写出来的应用（讲写法）。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `nestjs-mini` | 600 行还原 NestJS 五大机制，用来理解"框架做了什么" |
-| `nestjs-template` | 真实项目模板，用来对照"生产里长什么样" |
+| 文件 | 对应小节 | 演示什么 |
+| --- | --- | --- |
+| `./code/nestjs-mini/index.ts` | NestJS 到底封装了哪几层 · 学习边界：什么必须掌握，什么点到为止 · 建议的学习节奏 | 约 600 行还原 NestJS 五大机制（装饰器 / DI 容器 / 请求处理链 / 路由匹配 / 模块系统），用来看懂"框架到底做了什么" |
+| `./code/nestjs-basics/src/users/users.controller.ts` | 为什么 NestJS 排在模块五 | 真实 NestJS 的控制器长什么样：路由前缀 + 构造函数声明依赖，不用自己 `new` |
+| `./code/nestjs-basics/src/users/admin.controller.ts` | 三个常见误区（误区二：觉得装饰器是"魔法"） | `@Roles('admin')` 只是贴标签，没有 Guard 去读它就不会生效 |
 
-完整目录与运行方式见 `nestjs-mini/README.md`。
+完整目录与运行方式见 `nestjs-mini/README.md`、`nestjs-basics/README.md`。
 
 ---
 

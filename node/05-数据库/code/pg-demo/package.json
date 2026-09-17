@@ -1,0 +1,17 @@
+{
+  "name": "pg-demo",
+  "version": "1.0.0",
+  "description": "《Node.js 后端知识体系》05-数据库「PostgreSQL 与 pgvector」的配套示例：用 pg 驱动跑通 pgvector 的建表 / 写入 / 相似度检索，另附 Prisma 集成片段。",
+  "type": "commonjs",
+  "main": "src/lib.js",
+  "scripts": {
+    "schema": "node src/01-schema.js",
+    "insert": "node src/02-insert-vectors.js",
+    "search": "node src/03-similarity-search.js",
+    "distances": "node src/04-distance-ops.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.0"
+  }
+}

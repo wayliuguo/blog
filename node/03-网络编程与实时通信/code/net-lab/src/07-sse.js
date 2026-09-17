@@ -22,6 +22,8 @@ const server = http.createServer((req, res) => {
                 res.end() // 推完 6 条后关闭流
             }
         }, 500)
+        // 客户端断开时清理定时器，避免内存泄漏
+        req.on('close', () => clearInterval(timer))
         return
     }
     res.writeHead(200)

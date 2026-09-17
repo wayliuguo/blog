@@ -1,0 +1,20 @@
+// 用 Prisma 管理这份 PG 库时的 schema：向量列走 Unsupported 透传，检索走 raw query。
+// 需要：npm i @prisma/client prisma && npx prisma generate，以及装了 pgvector 的 PG（DATABASE_URL 指向它）
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model DocumentChunk {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content   String
+  // pgvector 暂无官方类型，用 Unsupported 透传
+  embedding Unsupported("vector(1536)")?
+
+  @@map("document_chunks")
+}
