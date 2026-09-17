@@ -177,11 +177,74 @@ HTML 用**标签**描述"这里是什么内容"。
 </html>
 ```
 
-## 9. `<!DOCTYPE html>` 到底做了什么
+## 9. 常用的 meta 标签
+
+`meta` 是文档的"元信息"，不显示但影响编码、SEO、移动适配。除了 `charset` / `viewport` / `description`，常用的还有：
+
+| meta | 作用 |
+| ---- | ---- |
+| `<meta name="keywords" content="HTML,前端">` | 关键词（早期 SEO 用，现已基本失效） |
+| `<meta name="author" content="作者">` | 作者信息 |
+| `<meta name="robots" content="noindex">` | 告诉爬虫是否收录/跟链（`noindex`/`nofollow`） |
+| `<meta http-equiv="refresh" content="0;url=...">` | 页面重定向/定时刷新 |
+| `<meta http-equiv="X-UA-Compatible" content="IE=edge">` | 兼容旧 IE 的渲染模式（legacy 项目） |
+
+viewport 字段逐个说清楚：
+
+| 字段 | 含义 |
+| ---- | ---- |
+| `width=device-width` | 布局视口宽度 = 设备宽度 |
+| `height` | 视口高度（极少用） |
+| `initial-scale` | 初始缩放比例 |
+| `maximum-scale` / `minimum-scale` | 最大 / 最小缩放 |
+| `user-scalable` | 是否允许用户缩放（禁用违反可访问性，见模块面试题） |
+
+## 10. 脚本与资源加载：`src`/`href` 与 `defer`/`async`
+
+**`src` 与 `href` 的区别**：`href` 是"引用"，在当前文档和目标资源之间**建立联系**（`<a>`、`<link>`），不替换内容、可并行下载不阻塞；`src` 是"加载并嵌入"（`<script>`、`<img>`、`<iframe>`），需要下载后执行 / 渲染，浏览器解析到同步 `script` 时会**暂停解析**直到下载并执行完——这也是 JS 放底部 / 用 `defer` 的原因。
+
+**`defer` 与 `async` 的区别**：两者都不阻塞 HTML 解析（下载与解析并行），区别在执行时机：
+
+```html
+<script defer src="a.js"></script>   <!-- 下载并行，HTML 解析完才执行，且按文档顺序 -->
+<script async src="b.js"></script>   <!-- 下载并行，下载完立刻执行，不保序 -->
+```
+
+- `defer`：HTML 解析完成后、`DOMContentLoaded` 触发前，按文档顺序执行——适合依赖 DOM 的业务脚本。
+- `async`：下载完立刻执行（可能在解析中途）——适合独立无依赖的统计脚本。
+- `type="module"`：自带 defer 语义 + 严格模式 + 模块作用域，Vite 产物入口默认用它。
+
+> 预加载指令 `dns-prefetch` / `preconnect` / `preload` / `prefetch` 的选型，详见 `04-网络与浏览器` 模块。
+
+## 11. HTML5 新增了什么
+
+- **语义化标签**：`header`/`nav`/`main`/`article`/`section`/`aside`/`footer`（见第 3 节）。
+- **媒体标签**：`<video>`、`<audio>` 原生播放音视频，配 `controls`/`autoplay`/`muted` 等属性。
+- **表单增强**：新类型（`email`/`url`/`number`/`search`/`range`/`color`/`date`/`time`…）、新属性（`placeholder`/`autofocus`/`required`/`pattern`…）、原生约束校验——细节见 `02-表单与标签`。
+- **进度条与度量器**：`<progress>`（任务进度，不确定值不加 `value`）与 `<meter>`（度量，如磁盘用量）。
+- **Web 存储**：`localStorage`（持久）与 `sessionStorage`（会话级）——详见 `04-网络与浏览器`。
+- **DOM 查询**：`document.querySelector()` / `querySelectorAll()`——详见 `03-JavaScript 核心`。
+- **拖放**：`draggable` + `dragstart`/`dragover`/`drop` 事件实现拖拽。
+- **画布**：`<canvas>` 提供 2D/3D 绘图 API。
+
+## 12. iframe 的优缺点
+
+`<iframe>` 在页面内嵌另一个文档（内联框架）。
+
+**优点**：
+- 加载慢的内容（如广告）可独立加载、并行下载脚本；
+- 可做跨子域通信与第三方内容嵌入（地图、支付表单）。
+
+**缺点**：
+- 会**阻塞主页面的 `load` 事件**（要等 iframe 加载完）；
+- 部分搜索引擎不索引 iframe 内容；
+- 多个 iframe 产生多个独立文档，维护与调试成本高；安全上要防点击劫持（`X-Frame-Options`/`frame-ancestors`）。
+
+## 13. `<!DOCTYPE html>` 到底做了什么
 
 不带它，浏览器可能进**怪异模式（Quirks Mode）**——按旧 IE 的怪癖规则渲染，你写的 CSS 会听话很怪。声明它 = 让浏览器开**标准模式**。一句话：**DOCTYPE 是告诉浏览器"按谁的规则渲染"的开关**。回到本页顶部删掉它再看下布局差别，是最直观的验证。
 
-## 10. HTML 如何变成一棵"结构树"
+## 14. HTML 如何变成一棵"结构树"
 
 浏览器拿到 HTML 后，会把它解析成一棵**DOM 树**——每个标签变成树上的一个节点，父子嵌套变成树的父子关系：
 
@@ -195,7 +258,7 @@ HTML 用**标签**描述"这里是什么内容"。
 
 任何前端框架、JS 操作（`document.querySelector`）、爬虫解析，本质都是在这棵树上找节点和挂事件。**你现在就能验证**：DevTools → Elements 面板显示的就是这棵树的实时样子，右键可增删改节点。详见浏览器渲染章节，但以上直觉已足以理解语义化为什么重要。
 
-## 11. 为什么语义化能提升 SEO 与无障碍
+## 15. 为什么语义化能提升 SEO 与无障碍
 
 - **对爬虫（SEO）**：它不"看"网页，只"读"结构树。`<nav>/<article>/<main>` 和 `h1` 层级能让它瞬间分清正文与导航，正确索引内容。
 - 对读屏器（无障碍）：你闭眼，靠听读屏器浏览。语义化让它能"跳过导航直接读正文"、"把图读成 alt 文字"。`div` 堆出的页面只会被读成一串无意义容器。
@@ -244,6 +307,21 @@ HTML 用**标签**描述"这里是什么内容"。
     - 标题层级
     - `description` 摘要
     - `alt` 与语义标签
+  - 常用 meta 标签
+    - `keywords` / `author` / `robots` / `http-equiv=refresh`
+    - viewport 字段：`width` / `initial-scale` / `maximum-scale` / `minimum-scale` / `user-scalable`
+  - 脚本与资源加载
+    - `src`（加载并嵌入，同步阻塞） vs `href`（引用关联，并行不阻塞）
+    - `defer`（解析完按序执行） / `async`（下载完即执行不保序） / `type="module"`
+  - HTML5 新特性
+    - 媒体标签 `video` / `audio`
+    - 表单增强（新类型 / 新属性 / 原生校验）
+    - `progress` / `meter` 进度度量
+    - `localStorage` / `sessionStorage`（详见网络模块）
+    - `querySelector` / 拖放 / `canvas`
+  - iframe
+    - 优点：独立加载慢内容、跨子域嵌入
+    - 缺点：阻塞 `load`、SEO 不友好、防点击劫持
   - DOCTYPE 与渲染模式
     - 标准模式 vs 怪异模式（Quirks Mode）
   - DOM 结构树
