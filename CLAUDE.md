@@ -32,7 +32,6 @@
 
 ```
 ├── ai/                    # AI 相关文章
-├── alg/                   # 算法文章
 ├── article/               # 通用技术文章
 ├── code/                  # 独立示例项目（browser、node、rollup 等）
 ├── engineer/              # 工程化实践
