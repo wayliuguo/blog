@@ -26,21 +26,16 @@
 
 ### 单测说明
 
-主博客未配置测试套件。`code/` 目录下的示例项目可能各自有独立的测试脚本。
+主博客未配置测试套件。各模块 `code/` 目录下的配套项目可能各自有独立的测试脚本。
 
 ## 项目结构
 
 ```
 ├── ai/                    # AI 相关文章
-├── article/               # 通用技术文章
-├── code/                  # 独立示例项目（browser、node、rollup 等）
-├── engineer/              # 工程化实践
-├── interview/             # 面试题内容
+├── frontend/              # 前端知识体系（基础 + 进阶 + 面试方法论）
 ├── node/                  # Node.js 文章
-├── react/                 # React 文章与教程
-├── vue/                   # Vue 文章
+├── docs/                  # 设计文档与规范
 ├── assets/                # 图片与静态资源
-├── public/                # 公共静态文件
 ├── .vitepress/            # VitePress 配置
 │   ├── config.js          # 主配置，负责引入各分类侧边栏配置
 │   ├── config/            # 各分类侧边栏定义
@@ -53,7 +48,7 @@
 
 各分类目录中的 Markdown 文件对应侧边栏链接。侧边栏配置拆分在 `.vitepress/config/` 中，导航配置定义在 `.vitepress/config/nav.js`。
 
-`code/` 目录中的项目为独立示例工程，不参与博客主站构建，但可能会被文章引用。
+各模块的配套代码位于 `node/<模块>/code/<项目名>/` 与 `frontend/<模块>/code/<项目名>/`，不参与博客主站构建，但会被文章引用。
 
 ## 代码规范
 
