@@ -511,6 +511,18 @@ function useState(initialValue) {
 
 `useEffect` 的原理也在这条链表上：React 把 `deps` 存在 hook 节点里，每次渲染时**浅比较旧的 deps 与新的 deps**，若不同才执行副作用，并在 Commit 阶段触发回调。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/进阶/04-前端框架原理/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `mini-runtime.html` | 手写极简 React 渲染器：虚拟 DOM（createElement 描述界面）+ 声明式更新（重新 render），不引入 React |
+| `hooks-demo.html` | hooks 原理：用普通数组复刻 useState / useEffect，展示按固定顺序调用、状态存进数组的核心语义 |
+| `vdom-diff.html` | 虚拟 DOM diff：两棵轻量 VNode 树做最小比较，输出 patch（补丁）列表，缩小真实 DOM 操作范围 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5182/`。
+
 ## 总结
 
 - React 高级与原理

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>前端安全：XSS 注入与转义对比 + CSRF 原理示意</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 640px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+                white-space: pre-wrap;
+            }
+            button {
+                cursor: pointer;
+                padding: 6px 14px;
+                margin: 4px 6px 4px 0;
+            }
+            input {
+                padding: 6px 10px;
+                width: 62%;
+                box-sizing: border-box;
+            }
+            .danger {
+                color: #b91c1c;
+            }
+            .ok {
+                color: #15803d;
+            }
+            .warn {
+                background: #fffbeb;
+                color: #92400e;
+                padding: 8px 12px;
+                border-radius: 6px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>前端安全：XSS 注入与转义对比 + CSRF 原理示意</h1>
+        <p class="warn">
+            ⚠ 仅用于理解防御原理：在本地演示环境中输入恶意内容会真实触发脚本（弹窗），请勿在真实网站上尝试。
+        </p>
+
+        <h2>1. XSS 注入演示</h2>
+        <p>
+            在输入框中粘贴一段 HTML/脚本（默认示例为
+            <code>&lt;img src=x onerror="alert('XSS')"&gt;</code>），对比三种渲染方式：
+        </p>
+        <div>
+            <input id="input" value="&lt;img src=x onerror=alert('XSS')&gt;" />
+            <button id="btn-inner">innerHTML 渲染（危险）</button>
+            <button id="btn-text">textContent 渲染（安全）</button>
+            <button id="btn-escape">escapeHtml 转义后渲染（安全）</button>
+        </div>
+
+        <div id="box-inner">
+            <pre>（点击 innerHTML 按钮后在此展示渲染结果）</pre>
+        </div>
+        <div id="box-text">
+            <pre>（点击 textContent 按钮后在此展示渲染结果）</pre>
+        </div>
+        <div id="box-escape">
+            <pre>（点击 escapeHtml 按钮后在此展示转义结果）</pre>
+        </div>
+        <p class="danger" id="tip"></p>
+
+        <h2>2. escapeHtml 转义函数实现</h2>
+        <p>输出编码是防 XSS 的核心：把 &lt; &gt; &amp; 等特殊字符替换为 HTML 实体，让输入永远成不了标签。</p>
+        <pre id="fn"></pre>
+
+        <h2>3. CSRF 攻击原理与防护（静态示意，不发请求）</h2>
+        <pre>
+攻击原理：用户已登录网站 A（浏览器带着 A 的 Cookie），攻击者在网站 B 放置表单或图片，诱导用户浏览器向 A 发送写操作请求——该请求会"自动"携带 A 的 Cookie，服务端误以为是用户本人操作。
+
+防护手段：
+1. 同源校验：校验 Origin / Referer 请求头，拒绝跨站来源的写操作；
+2. CSRF Token：服务端签发随机 token 随页面下发，写操作必须携带，攻击者无法预知；
+3. SameSite Cookie：给 Cookie 设置 SameSite=Lax 或 Strict，跨站请求不再自动携带。</pre
+        >
+
+        <script>
+            // 统一出口：把文本追加到指定容器（始终用 textContent 写入，避免二次注入）
+            function out(id, text, cls) {
+                var box = document.querySelector(id)
+                var p = document.createElement('pre')
+                p.textContent = text
+                if (cls) p.className = cls
+                box.appendChild(p)
+            }
+
+            // 转义函数：把 HTML 特殊字符替换为实体，即"输出编码"防 XSS 的核心
+            function escapeHtml(str) {
+                var map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }
+                return str.replace(/[&<>"']/g, function (ch) {
+                    return map[ch]
+                })
+            }
+
+            // 2) 在页面上展示转义函数源码（用 textContent 写入，便于阅读）
+            document.querySelector('#fn').textContent = escapeHtml.toString()
+
+            // ① 危险：innerHTML 直接把不可信输入当作 HTML 解析执行 —— 典型 DOM 型 XSS 注入点
+            document.querySelector('#btn-inner').addEventListener('click', function () {
+                var box = document.querySelector('#box-inner')
+                var tip = document.querySelector('#tip')
+                box.innerHTML = ''
+                tip.textContent = ''
+                var value = document.querySelector('#input').value
+                try {
+                    box.innerHTML = value
+                    out(
+                        '#box-inner',
+                        'innerHTML 把输入当作 HTML 解析执行：若输入含 <img onerror>，元素加载失败即触发脚本（上方弹窗就是证据）。',
+                        'danger'
+                    )
+                    tip.textContent =
+                        '风险提示：对不可信输入使用 innerHTML / outerHTML / insertAdjacentHTML / document.write 都会造成 XSS。'
+                } catch (e) {
+                    out('#box-inner', '解析异常：' + e.message, 'danger')
+                }
+            })
+
+            // ② 安全：textContent 只当纯文本显示，标签不解析、不执行
+            document.querySelector('#btn-text').addEventListener('click', function () {
+                var box = document.querySelector('#box-text')
+                var tip = document.querySelector('#tip')
+                box.innerHTML = ''
+                tip.textContent = ''
+                var value = document.querySelector('#input').value
+                out('#box-text', 'textContent 渲染结果（输入作为纯文本原样显示，不会执行）：')
+                var p = document.createElement('pre')
+                p.textContent = value
+                box.appendChild(p)
+                out('#box-text', '结论：输入永远是文本，无法构造 DOM 节点 → 安全。', 'ok')
+            })
+
+            // ③ 安全：先转义再渲染，转义后的实体被浏览器显示为字面文本，脚本同样不会执行
+            document.querySelector('#btn-escape').addEventListener('click', function () {
+                var box = document.querySelector('#box-escape')
+                var tip = document.querySelector('#tip')
+                box.innerHTML = ''
+                tip.textContent = ''
+                var value = document.querySelector('#input').value
+                out('#box-escape', 'escapeHtml 转义后的字符串（可见 &lt; &gt; 等实体）：')
+                var p = document.createElement('pre')
+                p.textContent = escapeHtml(value)
+                box.appendChild(p)
+                out(
+                    '#box-escape',
+                    '若把转义结果用 innerHTML 插入，浏览器会把 &lt;img&gt; 显示为字面文本，脚本不会执行 → 安全。',
+                    'ok'
+                )
+            })
+        </script>
+    </body>
+</html>

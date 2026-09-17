@@ -494,6 +494,16 @@ const alertFn = () => {
 
 > 注意：**ref 变化不会触发 rerender**，所以需要结合 state 一起使用——用 `useState` 保存驱动 UI 的值，用 `useRef` 保存给异步闭包读取的最新值。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/05-前端框架-React/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `hooks-demo.html` | 用普通数组实现极简 useState / useEffect，演示 hooks 每次渲染按固定顺序调用的原理 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
+
 ## 总结
 
 - React Hooks

@@ -467,6 +467,17 @@ export function createStore<S, A>(
 - 依赖没有类型时优先 `npm i -D @types/xxx`，没有类型包的再写 `.d.ts`。
 - 用 `unknown` 而不是 `any` 表达「暂不确定」，再用守卫逐步收窄。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/进阶/01-TypeScript/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `utility-practice.html` | 手写实现内置工具类型 Partial / Exclude（映射类型与条件分发），用 JS 对象模拟值层面的变化 |
+| `check.ts` | 类型编译校验入口：汇总结构类型、联合/交叉、泛型、infer、工具类型等示例，用 `npx tsc --noEmit` 验证类型错误 |
+
+启动方式：HTML demo 在 `code` 目录执行 `node server.js`（即 `npm start`）打开 `http://localhost:5178/`；`check.ts` 用 `npx tsc --noEmit check.ts` 检查类型。
+
 ## 总结
 
 - TypeScript 工程实践

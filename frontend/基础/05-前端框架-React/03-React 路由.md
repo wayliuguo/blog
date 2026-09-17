@@ -517,6 +517,16 @@ function App() {
 
 这样一来，单页应用中"URL → 页面 → 布局 → 权限"的整条链路就打通了，后续新增页面只需"加页面 + 加路由 + 挂布局"三步。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/05-前端框架-React/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `vdom-diff.html` | 路由切换为何不是整页重建（轻量虚拟 DOM diff） |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
+
 ## 总结
 
 - React 路由
