@@ -214,5 +214,10 @@ export default [
                 ]
             }
         ]
+    },
+    {
+        text: '面试方法论',
+        collapsed: true,
+        items: [{ text: '01-面试方法论', link: '/frontend/12-面试方法论/01-面试方法论' }]
     }
 ]
