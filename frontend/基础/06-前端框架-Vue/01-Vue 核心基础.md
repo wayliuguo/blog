@@ -55,6 +55,26 @@ createApp({
 }).mount('#app')
 ```
 
+### data 为什么必须是函数
+
+组件是可复用的，同一个组件会被创建出多个实例。如果 `data` 直接写成一个**对象**，所有实例会共享**同一个引用**——改一个实例的数据，其他实例跟着变：
+
+```js
+// 错误：所有实例共享同一份 data
+export default {
+  data: { count: 0 } // 实例 A 改 count，实例 B 的 count 也变
+}
+
+// 正确：每次创建实例都调用函数，返回独立的新对象
+export default {
+  data() {
+    return { count: 0 } // 每个实例各有一份
+  }
+}
+```
+
+规则一句话：**组件里的 `data` 必须是函数，根组件（`createApp({...})`）的 data 可以是对象**——因为应用只有一个根实例，不存在共享问题。Vue 在初始化组件时若检测到 `data` 是对象会直接告警（选项式 API）。
+
 ## 模板语法
 
 Vue 使用基于 HTML 的模板语法，可以在模板中绑定数据、指令。模板最终会被编译成虚拟 DOM，再渲染成真实 DOM。
@@ -453,6 +473,7 @@ const formatPrice = (val) => '¥ ' + Number(val).toFixed(2)
   - 创建应用（createApp）
     - `createApp` + `mount`
     - 最小 Vue 应用
+    - `data` 必须是函数（组件复用需独立实例，根组件可对象）
   - 模板语法
     - 插值（`{{ }}`、单表达式、`v-html` 防 XSS）
     - 指令（`v-bind`、`v-on`、`v-if`、`v-for`、`v-model` 等）
