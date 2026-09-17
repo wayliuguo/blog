@@ -1,7 +1,5 @@
 # Redis 进阶
 
-> 承上：[Redis 缓存实战](./04-Redis%20缓存实战) —— 先掌握缓存用法，再学哨兵/Cluster 高可用与高级数据类型
-> 启下：[学习地图与边界：NestJS 该学到什么程度](../07-NestJS%20入门/00-NestJS%20学习地图与边界) —— 对照模块体系画出 NestJS 在 Express 之上的四层封装，并说清哪些能力必须掌握、哪些点到为止
 
 ---
 
@@ -240,20 +238,20 @@ INFO replication
 ## 小结
 
 - **高可用与水平扩展（主从 / 哨兵 / Cluster）**
-  1. **主从复制的五步流程**：从节点发 `SYNC` → 主节点 `BGSAVE` 出 RDB → 传 RDB → 从节点加载 → 之后持续同步写命令；作用是读写分离、数据备份与高可用基础
-  2. **哨兵模式与故障转移**：`sentinel monitor mymaster host port 2` 里的 2 是判定主观下线所需票数；流程是主观下线 → 多哨兵协商确认客观下线 → 选新主 → 重指向 → 通知客户端
-  3. **Cluster 与哈希槽**：数据被分到 16384 个哈希槽，用 `CRC16(key) % 16384` 定位节点；相比哨兵多了自动分片与水平扩展，节点间靠 Gossip 协议通信
+  1. 主从复制五步：从节点发 `SYNC` → 主节点 `BGSAVE` 出 RDB → 传 RDB → 从节点加载 → 之后持续同步写命令；作用读写分离、数据备份与高可用基础
+  2. 哨兵与故障转移：`sentinel monitor mymaster host port 2` 的 2 是判定主观下线所需票数；流程主观下线 → 多哨兵协商确认客观下线 → 选新主 → 重指向 → 通知客户端
+  3. Cluster 与哈希槽：数据分到 16384 个哈希槽、`CRC16(key) % 16384` 定位节点；比哨兵多了自动分片与水平扩展，节点间靠 Gossip 协议通信
 - **高级数据类型**
-  1. **Bitmap 做日活统计**：`SETBIT user:日期 用户ID 1` 记录访问，`BITCOUNT` 统计当天访问人数，内存占用极小
-  2. **HyperLogLog 做 UV**：`PFADD` / `PFCOUNT` 统计独立用户数，固定只占 12KB，误差约 0.81%
-  3. **GEO 做地理位置**：`GEOADD` 存坐标、`GEODIST` 算两点距离、`GEORADIUS` 查半径内目标，底层复用 ZSet
-  4. **Stream 做消息队列**：Redis 5.0+ 提供，支持持久化、消费组与 ACK；`XADD` 生产、`XREADGROUP` 消费、`XGROUP CREATE` 建消费组
+  1. Bitmap 做日活：`SETBIT user:日期 用户ID 1` 记录访问、`BITCOUNT` 统计当天人数，内存占用极小
+  2. HyperLogLog 做 UV：`PFADD` / `PFCOUNT` 统计独立用户数，固定只占 12KB、误差约 0.81%
+  3. GEO 做地理位置：`GEOADD` 存坐标、`GEODIST` 算两点距离、`GEORADIUS` 查半径内目标，底层复用 ZSet
+  4. Stream 做消息队列：Redis 5.0+ 提供，支持持久化、消费组与 ACK；`XADD` 生产、`XREADGROUP` 消费、`XGROUP CREATE` 建消费组
 - **安全与性能调优**
-  - **安全配置**：`requirepass` 设强密码、`bind` 只留内网地址、用 `rename-command` 禁用 FLUSHALL / FLUSHDB / CONFIG、改掉默认 6379 端口
-  - **慢查询日志**：`slowlog-log-slower-than 10000` 记录超过 10ms 的命令，`SLOWLOG GET` 查看
-  - **多线程 IO**：Redis 6.0 的 `io-threads` 只把网络 IO 多线程化，命令执行仍然是单线程
+  - 安全配置：`requirepass` 设强密码、`bind` 只留内网地址、用 `rename-command` 禁用 FLUSHALL / FLUSHDB / CONFIG、改掉默认 6379 端口
+  - 慢查询日志：`slowlog-log-slower-than 10000` 记录超 10ms 命令，`SLOWLOG GET` 查看
+  - 多线程 IO：Redis 6.0 的 `io-threads` 只把网络 IO 多线程化，命令执行仍是单线程
 - **关键监控指标**
-  - **四组 `INFO`**：`INFO clients` 看连接数、`INFO stats` 算命中率、`INFO commandstats` 看单命令耗时、`INFO replication` 的 `master_last_io_seconds_ago` 看复制延迟
+  - 四组 `INFO`：`INFO clients` 看连接数、`INFO stats` 算命中率、`INFO commandstats` 看单命令耗时、`INFO replication` 的 `master_last_io_seconds_ago` 看复制延迟
 
 ---
 

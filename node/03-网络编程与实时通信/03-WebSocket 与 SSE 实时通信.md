@@ -299,34 +299,26 @@ Node.js 是一个基于 Chrome V8 的运行时
 
 ## 小结
 
-- **实时双向通信与 WebSocket 的定位**
-  - **HTTP 一问一答的局限**：普通 HTTP 是"客户端发请求、服务端返回响应、一次交互结束"；而聊天室、在线游戏、股票行情、实时通知、多人协作、实时日志需要服务端在任意时刻主动推数据，所以需要一条 `Client ⇄ Server` 的常开长连接——WebSocket 就是为这类实时双向通信设计的应用层协议
-  - **不替代 TCP，而是把协议标准化**：分层是 `WebSocket → TCP → IP`；若绕过它用 `net.createServer()` 直接基于 TCP，就要自己定义消息格式、分包、心跳、断线重连；而 WebSocket 已把 `Handshake`（握手）、`Frame`（帧，数据切分单位）、`Message`（由若干帧拼成）、`Ping` / `Pong`（心跳探测与响应）、`Close`（关闭帧）、`Text` / `Binary`（文本与二进制消息）全部定好
-- **建立连接：先复用一次 HTTP 完成协议升级**
-  - **常见误解**："WebSocket 一上来就建了一条专用 TCP 连接"——实际上它先走一次普通 HTTP 请求做 **HTTP Upgrade**，并没有凭空发明连接
-  - **握手报文**：客户端带 `Upgrade: websocket` + `Connection: Upgrade` + `Sec-WebSocket-Key` + `Sec-WebSocket-Version: 13`；服务端同意就回 `101 Switching Protocols` + `Upgrade` + `Connection` + `Sec-WebSocket-Accept`，此后 WebSocket 协议接管**同一条** TCP 连接并保持长连接
-  - **`Sec-WebSocket-Accept` 不是加密**：它把客户端发来的 `Sec-WebSocket-Key` 拼上固定字符串、做一次 SHA-1 + Base64 后回传，用来**向客户端证明"对方确实懂 WebSocket 握手"**，防止缓存代理或意外服务器把升级请求误判成普通 HTTP 而返回脏数据
+- **WebSocket：实时双向通信的应用层协议**
+  - 定位：HTTP 一问一答不匹配"服务端随时主动推"，WebSocket 为这类双向实时场景而生
+  - 不替代 TCP：分层 `WebSocket → TCP → IP`；裸 TCP 要自己定消息格式/分包/心跳，WebSocket 已标准化 Handshake/Frame/Message/Ping-Pong/Close/Text-Binary
+- **建立连接：先 HTTP 升级，不新建连接**
+  - 客户端带 `Upgrade: websocket` + `Sec-WebSocket-Key`，服务端回 `101 Switching Protocols` 后接管同一条 TCP 连接
+  - `Sec-WebSocket-Accept` 不是加密：把 `Key` 拼固定串做 SHA-1+Base64 回传，仅用于证明对方真懂握手、防代理误判
 - **长连接的心跳与生产必备件**
-  - **为什么需要心跳**：客户端断网、手机切换网络、进程被杀、NAT 映射超时失效、设备突然关机时，服务端**往往不能立刻知道连接已失效**——TCP 连接对象还在却再也收不到任何数据，这种"假死"状态会悄悄吃光内存和文件描述符
-  - **`Ping` / `Pong` 机制**：定期探测，连续多次没有 `Pong` 就判定连接失效、释放 Socket
-  - **能上生产的清单**：心跳（定期 `Ping` / `Pong` 剔除假死连接）、断线感知、客户端自动重连、空闲连接与读写超时主动关闭、连接健康度维护、关键消息确认、以及扩容分布
-  - **多实例下的连接分布**：单机改多实例后连接会散落在不同进程里，"全房间广播"时需要共享订阅关系（如 Redis 发布订阅、消息总线）或集中式连接管理，否则广播根本发不到另一个实例的连接——这也是成熟项目直接选用带房间 / 集群能力的库、而不是从 `net` 起步自己造协议的原因
-- **SSE 的本质与两条工程要点**
-  - **单向推送**：SSE（Server-Sent Events）用一条普通的 HTTP 长连接让服务端持续向客户端推送事件，方向固定为 `Client ← Server`
-  - **报文格式**：纯文本、按行组织、空行分隔事件；每行是 `字段: 值`，常见字段为 `event:`（事件名，可选，客户端可针对性监听）、`data:`（负载内容，真正的消息体）、`id:`（事件编号，用于断线续传）、`retry:`（建议浏览器的重连间隔，单位 ms）
-  - **断线续传**：浏览器原生 `EventSource` 在建连失败或连接断开时会**自动重连**，并在重连请求里带上 `Last-Event-ID` 头，服务端据此从断点之后继续推，避免重复推送
-  - **Node 侧实现三步**：①把响应 `Content-Type` 设为 `text/event-stream` ②关掉默认缓冲（`Cache-Control: no-cache`、`Connection: keep-alive`）③往 `res` 这条可写流持续 `write` 事件文本（`res` 本身就是可写流）；同时必须监听 `req.on('close')` 清掉定时器，否则内存泄漏
-- **流式输出场景为什么适合 SSE**
-  - **对照**：一次要准备 20 秒的请求，等全算完再一次性返回会让用户对着空白页干等、以为卡死；改成"边产生边推"后服务端每准备好一小段就推一段、客户端立刻显示
-  - **典型场景**：日志回放、批量任务进度、大文件生成、实时监控数据——共同点是"数据一段一段来，且不需要客户端高频回传"；例如逐字揭示一段说明文字时，客户端会看到 `Node` → `Node.js` → `Node.js 是` → …… 逐步累积
-  - **为什么选 SSE**：需求本质是"服务端单向、低频交互、高频推送"，而 SSE 是最轻的解——无需握手升级、浏览器原生支持、断线自动重连、与现有 HTTP 网关无缝兼容；WebSocket 的双向能力在这里是用不上的重量
+  - 为什么心跳：客户端断网/进程被杀/NAT 超时后服务端不能立刻感知，连接"假死"会吃光内存与 fd；`Ping/Pong` 多次无响应即判失效释放
+  - 生产必备：心跳、断线感知、客户端重连、超时关闭、健康度维护、消息确认、扩容分布
+  - 多实例：连接散落不同进程，全房间广播需 Redis 发布订阅/消息总线或集中式连接管理——成熟项目直接用带集群能力的库
+- **SSE：单向推送**
+  - 方向固定 `Client ← Server`，用普通 HTTP 长连接；报文纯文本、空行分隔事件，`event`/`data`/`id`/`retry` 四个字段
+  - 断线续传：浏览器 `EventSource` 自动重连并带 `Last-Event-ID`，服务端从断点续推
+  - Node 侧三步：`Content-Type: text/event-stream` → 关默认缓冲（`Cache-Control: no-cache`、`Connection: keep-alive`）→ 往 `res` 流持续 `write`，并监听 `req.on('close')` 清定时器
+- **流式输出场景适合 SSE**
+  - 对照：20 秒任务若等算完再返回，用户干等像卡死；边产生边推则立即显示
+  - 典型：日志回放、任务进度、大文件生成、实时监控——共同点是数据分段来且不需客户端高频回传
 - **SSE 与 WebSocket 的选型准则**
-  - **通信方向与数据形态**：SSE 单向（`Server → Client`）、仅文本（二进制需自行编码）；WebSocket 双向全双工（`Client ⇄ Server`）、原生支持 Text / Binary
-  - **协议形态与工程复杂度**：SSE 是普通 HTTP 长连接，走标准 HTTP、网关易配；WebSocket 握手后升级为独立协议，需配 `Upgrade` 头、跨域与鉴权稍复杂
-  - **自动重连**：SSE 由浏览器内置（`EventSource`）；WebSocket 需自己实现
-  - **场景适配**：服务端持续推送、实时通知 / 站内信、股票行情推送两者都适合（SSE 对"持续推送"非常适合）；双向实时通信、聊天、多人实时协作 / 双人实时游戏则是 WebSocket 非常适合、SSE 不适合
-  - **两条判断准则**：业务本质是 `Server → Client` 持续推送（通知、行情、日志、进度）→ SSE 往往已经足够；业务需要 `Client ⇄ Server` 高频双向通信（聊天、协作、游戏）→ 更适合 WebSocket
-  - **一句话**：如果只是服务端广播，没必要上双向电台——SSE 是单向广播里最轻、最稳、最好运维的选择
+  - SSE 单向、仅文本、普通 HTTP、浏览器内置重连、网关易配；WebSocket 双向全双工、原生 Text/Binary、需配 `Upgrade`、重连自实现
+  - 判断：业务本质是 `Server → Client` 持续推送（通知/行情/日志/进度）→ SSE 足够；需 `Client ⇄ Server` 高频双向（聊天/协作/游戏）→ WebSocket
 
 ## 配套代码
 

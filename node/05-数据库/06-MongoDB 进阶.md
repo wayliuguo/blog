@@ -1,7 +1,5 @@
 # MongoDB 进阶
 
-> 承上：[MongoDB 入门](./05-MongoDB%20入门) —— 先会基础 CRUD 与 Mongoose，再学聚合管道与索引优化
-> 启下：[PostgreSQL 与 pgvector](./07-PostgreSQL%20与%20pgvector) —— 在 PostgreSQL 中用 JSONB + GIN 存半结构化业务元数据，并用 pgvector 跑通一次向量相似度检索的 TopK 召回
 
 ---
 
@@ -390,27 +388,27 @@ const pendingPlan = await orders.find({ status: 'pending' }).explain('executionS
 ## 小结
 
 - **索引与查询优化**
-  - **创建索引**：`createIndex({ name: 1 })` 单字段、`{ age: 1, name: 1 }` 复合、`{ unique: true }` 唯一索引，`1` 升序 `-1` 降序
-  - **explain 关键指标**：`totalDocsExamined` 是扫描文档数、`nReturned` 是返回文档数、`executionTimeMillis` 是执行时间；`IXSCAN` 走了索引、`COLLSCAN` 是全集合扫描（需要优化）
-  - **慢查询日志**：`db.setProfilingLevel(1, { slowms: 100 })` 记录超过 100ms 的查询，再查 `system.profile`
+  - 创建索引：`createIndex({ name: 1 })` 单字段、`{ age: 1, name: 1 }` 复合、`{ unique: true }` 唯一索引，`1` 升序 `-1` 降序
+  - explain 关键指标：`totalDocsExamined` 扫描文档数、`nReturned` 返回文档数、`executionTimeMillis` 执行时间；`IXSCAN` 走索引、`COLLSCAN` 全集合扫描
+  - 慢查询日志：`db.setProfilingLevel(1, { slowms: 100 })` 记录超 100ms 查询，再查 `system.profile`
 - **聚合管道**
-  - **常用阶段**：`$match`（过滤）→ `$group`（`$sum: '$amount'` / `$sum: 1` 分组聚合）→ `$sort` → `$project`（选择字段、`_id: 0` 排除）→ `$limit`
-  - **关联与展开**：`$lookup` 相当于 LEFT JOIN、`$unwind` 展开数组，统计按月分组用 `_id: { $month: '$createdAt' }`
+  - 常用阶段：`$match` 过滤 → `$group`（`$sum` 分组聚合）→ `$sort` → `$project`（选字段、`_id: 0` 排除）→ `$limit`
+  - 关联与展开：`$lookup` 相当于 LEFT JOIN、`$unwind` 展开数组；按月分组用 `_id: { $month: '$createdAt' }`
 - **事务与原子性**
-  - **多文档事务**：`startSession()` 加 `startTransaction()`，出错 `abortTransaction()`，`finally` 里 `endSession()`；MongoDB 4.0+ 支持，但性能低于 MySQL 事务，只在必要时使用
+  - 多文档事务：`startSession()` + `startTransaction()`，出错 `abortTransaction()`，`finally` 里 `endSession()`；MongoDB 4.0+ 支持但性能低于 MySQL 事务，只在必要时使用
 - **副本集与高可用**
-  - **三种角色**：Primary 唯一可写、Secondary 异步复制 `opLog` 且可读、Arbiter 只参与选举不存储数据
-  - **选举与大多数原则**：主节点心跳超时（默认 10 秒）触发选举，需超过半数节点同意，因此节点数建议取奇数（3、5、7）
-  - **读写分离配置**：连接串带 `replicaSet` 与 `readPreference`，`secondaryPreferred` 优先读从、`primaryPreferred` 优先读主、`secondaryOnly` 只读从；一致性要求高读主、容忍轻微延迟读从、分析报表读从；故障转移一般 10-30 秒完成
+  - 三种角色：Primary 唯一可写、Secondary 异步复制 `opLog` 且可读、Arbiter 只参与选举不存储数据
+  - 选举与大多数原则：主节点心跳超时（默认 10 秒）触发选举，需超半数节点同意，节点数取奇数（3、5、7）
+  - 读写分离：连接串带 `replicaSet` 与 `readPreference`；`secondaryPreferred` 优先读从、`primaryPreferred` 优先读主；一致性要求高读主、容忍延迟读从、报表读从；故障转移 10-30 秒完成
 - **分片集群与水平扩展**
-  - **什么时候才分片**：数据超单机内存（300GB 以上）、写入超 1 万 QPS、垂直扩展到头，三者满足其一才考虑
-  - **分片键常见坑**：时间戳分片造成写入热点（新写入全落最新分片），自增 ID 哈希分片让范围查询跨全部分片；`user_id` 哈希或"区域 + 时间"更稳
-  - **跨分片分页**：各分片返回 N 条再客户端聚合排序取前 N 条，分片越多越慢；优化靠查询条件带上分片键只查单个分片、游标分页（`_id: { $gt: lastId }`）、统计结果缓存到 Redis
+  - 何时分片：数据超单机内存（300GB+）、写入超 1 万 QPS、垂直扩展到头，满足其一才考虑
+  - 分片键坑点：时间戳分片造成写入热点，自增 ID 哈希分片让范围查询跨全部分片；`user_id` 哈希或"区域 + 时间"更稳
+  - 跨分片分页：各分片返回 N 条再客户端聚合排序，分片越多越慢；优化靠带分片键只查单分片、游标分页（`_id: { $gt: lastId }`）、统计结果缓存 Redis
 - **索引失效与覆盖索引**
-  - **最左前缀**：索引 `{ user_id: 1, created_at: -1 }` 下，`find({ user_id: 123 })` 与 `find({ user_id: 123, created_at: { $gt: ... } })` 能用，`find({ created_at: { $gt: ... } })` 用不到
-  - **失效场景**：正则包含匹配 `/张三/` 不走索引（`/^张/` 前缀匹配可以）、对索引列用函数不走索引；改写成 `$gte` / `$lt` 范围条件才走索引
-  - **覆盖索引**：查询只要索引里的字段（如 `count({ user_id: 123 })`）无需回表，`explain()` 里只有 `IXSCAN`、没有 `FETCH` 即命中
-  - **该不该优化看这里**：`totalDocsExamined >> nReturned` 就说明扫描远多于返回，需要优化
+  - 最左前缀：索引 `{ user_id: 1, created_at: -1 }` 下，`find({ user_id: 123 })` 与带 `created_at` 范围能用，只查 `created_at` 用不到
+  - 失效场景：正则包含匹配 `/张三/` 不走索引（`/^张/` 前缀可以）、对索引列用函数不走索引；改 `$gte` / `$lt` 范围条件才走索引
+  - 覆盖索引：查询只用索引里的字段（如 `count({ user_id: 123 })`）无需回表，`explain()` 只有 `IXSCAN`、无 `FETCH` 即命中
+  - 优化判据：`totalDocsExamined >> nReturned` 说明扫描远多于返回，需要优化
 
 ---
 

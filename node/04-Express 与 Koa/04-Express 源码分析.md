@@ -1,8 +1,6 @@
 # Express 源码分析
 
 > Express 的核心只有三件事：**路由注册**、**中间件链**、**响应封装**。下面用不到 100 行代码实现它的最小版本。
-> 承上：[Express 项目模板](./03-Express%20项目模板) —— 先搭过真实 Express 项目，再读源码理解其底层运转原理
-> 启下：[Koa 项目模板](./05-Koa%20项目模板) —— 照模板搭出含洋葱模型中间件（日志、耗时、错误处理）的 Koa 项目骨架
 
 ---
 
@@ -343,21 +341,18 @@ executeMiddlewareChain(req, res, middlewares, callback)
 ## 小结
 
 - **Express 的核心抽象**
-  - **只有三件事**：路由注册、中间件链、响应封装；不到 100 行就能写出能跑的最小版本
-  - **两个核心数据结构**：`middlewares = [{ path, handler }]` 由 `app.use` 填充，`routes = [{ method, path, handler }]` 由 `app.get` 等方法填充
-- **注册 API 的重载设计**
-  - **`app.use` 的可选路径**：靠 `handler === undefined` 区分 `app.use(fn)` 与 `app.use(path, fn)`，前者补上 `path = '/'`
-- **路由匹配与参数提取**
-  - **动态路由转正则**：`/users/:id` 把 `:id` 替换成 `([^/]+)` 拼成 `^/users/([^/]+)$`，`url.match(regex)` 后按顺序把捕获组写回 `req.params`
-- **中间件链的执行模型（线性递归）**
-  - **递归推进**：`executeMiddlewareChain` 内维护 `let index = 0`，每次 `next()` 取走 `middlewareList[index++]`；走到末尾就执行回调（路由匹配阶段）
-  - **前缀匹配**：`mw.path !== '/' && !req.url.startsWith(mw.path)` 时直接 `next()` 跳过，这是最小实现里唯一的路径判断
-  - **`next` 的双重语义**：`next` 既是"推进下一个中间件"，也是"错误传递通道"——`next(err)` 有值时跳过剩余中间件直接调 `errorHandler`，没注册处理器就回落 500
-- **响应对象的封装**
-  - **`enhanceRes` 给原生 `res` 挂三个方法**：`status(code)`（设状态码并 `return res` 支持链式）、`json(data)`（设 JSON 头 + `end`）、`send(body)`（对象走 json，其余走 text/html）
+  - 只有三件事：路由注册、中间件链、响应封装；不到 100 行即可写出能跑的最小版本
+  - 两个核心数据结构：`middlewares = [{ path, handler }]`（app.use 填充）与 `routes = [{ method, path, handler }]`（app.get 等填充）
+- **注册 API 的重载设计**：`app.use` 靠 `handler === undefined` 区分 `use(fn)` 与 `use(path, fn)`，前者补 `path = '/'`
+- **路由匹配与参数提取**：`/users/:id` 把 `:id` 替换成 `([^/]+)` 拼成 `^/users/([^/]+)$`，`url.match` 后捕获组写回 `req.params`
+- **中间件链（线性递归）**
+  - `executeMiddlewareChain` 维护 `index`，每次 `next()` 取走 `middlewareList[index++]`，走到末尾执行回调（路由匹配）
+  - 前缀匹配：`mw.path !== '/'` 且 `url` 不以它开头时直接 `next()` 跳过
+  - `next` 双重语义：既是推进下一个中间件，也是错误通道——`next(err)` 有值时跳过剩余中间件直奔 `errorHandler`，未注册则回落 500
+- **响应封装（`enhanceRes`）**：给原生 `res` 挂 `status(code)`（链式）、`json(data)`（设 JSON 头+end）、`send(body)`（对象走 json、其余走 text/html）
 - **能力边界：最小实现 vs 真实源码**
-  - **同步 `try/catch` 的边界**：普通中间件与路由 handler 都包在 `try/catch` 内并 `next(err)`，所以只能接住**同步**抛出的异常
-  - **真实源码的差距**：有 `Router` 类（子路由、路由级中间件、参数解码）、Layer 缓存与路由压缩（trie / radix tree），不是每次请求线性遍历；"100 行跑通"不等于"100 行能上生产"
+  - 同步 `try/catch` 只能接住同步抛出的异常
+  - 真实源码有 `Router` 类、Layer 缓存与路由压缩（trie/radix tree），非每次线性遍历；"100 行跑通"≠"100 行能上生产"
 
 ---
 

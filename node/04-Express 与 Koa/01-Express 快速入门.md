@@ -1,8 +1,6 @@
 # Express 快速入门
 
 > Express 是 Node.js 最流行的 Web 框架，也是 NestJS 的底层依赖。
-> 承上：[WebSocket 与 SSE 实时通信](../03-网络编程与实时通信/03-WebSocket%20与%20SSE%20实时通信) —— 先理解服务端如何承接 HTTP 请求与实时通信，再学框架如何把原生 `http` 写法标准化
-> 启下：[Koa 快速入门](./02-Koa%20快速入门) —— 用 Koa 写出带洋葱模型中间件的服务，并说清 `await next()` 与 Express 线性中间件的执行顺序差异
 
 ---
 
@@ -351,22 +349,20 @@ Error: 故意炸一个
 ## 小结
 
 - **Express 的定位与心智模型**
-  - **不提供 `node:http` 之外的新能力**：只把路由分发、请求体读取、响应封装收敛成约定，手写 `if (req.url === ...)` 变成 `app.get('/user', handler)`
-  - **Hello World 的五个动作**：`require('express')` → `express()` 建应用 → `app.get('/')` 注册路由 → `res.send()` 输出 → `app.listen(3000)`，5 行起服务
+  - 不提供 `node:http` 之外的新能力：把路由分发、请求体读取、响应封装收敛成约定（`if (req.url)` → `app.get(path, handler)`）
+  - Hello World 五步：`require('express')` → `express()` → `app.get('/')` → `res.send()` → `app.listen(3000)`
 - **路由匹配规则**
-  - **两个维度**：`app.get/post/put/delete(path, handler)` 按 HTTP 方法与路径分发，`:id` 是路径里的占位符
-  - **`app.use` 与 `app.get` 的匹配差异**：`use` 匹配所有方法且路径是前缀匹配（`/user` 命中 `/user/123`），`get` 只匹配 GET 且路径精确匹配
+  - `app.get/post/put/delete(path, handler)` 按方法与路径分发，`:id` 是路径占位符
+  - `use` 与 `get` 的差异：`use` 匹配所有方法且前缀匹配（`/user` 命中 `/user/123`），`get` 只匹配 GET 且精确匹配
 - **请求数据的三个来源**
-  1. **`req.params`**：路径占位符的值，恒为字符串——`/users/123` 命中 `/users/:id` 后 `req.params.id === '123'`，当数字用必须先 `Number()` 转换
-  2. **`req.query`**：查询串自动解析，`?page=1` 进 `req.query.page`
-  3. **`req.body`**：必须挂了 `express.json()` / `urlencoded()` 才存在，`multipart/form-data` 要另上 multer
-- **中间件的执行模型**
-  - **签名与推进**：`app.use(fn)` 注册的中间件每个请求都会执行，签名 `(req, res, next)`，只有调用 `next()` 才推进到下一环，否则请求挂起
-  - **错误处理中间件必须 4 参数**：靠 `fn.length === 4` 识别，链上任意位置 `next(err)` 会跳过后面全部普通中间件，直奔错误处理器
-- **中间件生态**
-  - **内置**：`express.json()` 解析 JSON 请求体、`urlencoded({ extended: true })` 解析 URL 编码请求体、`static('public')` 提供静态文件服务
-  - **第三方**：`cors()` 等跨域、鉴权、限流都要第三方包
-- **框架选型（Express 与 NestJS）**：Express 无架构约束、TS 可选、无依赖注入，适合小型项目与学习；NestJS 强制 MVC / TypeScript / DI / `@Module`，适合中大型长期项目
+  1. `req.params`：路径占位符的值，恒为字符串，当数字用必须先 `Number()`
+  2. `req.query`：查询串自动解析（`?page=1` 进 `req.query.page`）
+  3. `req.body`：挂了 `express.json()`/`urlencoded()` 才存在，`multipart/form-data` 要另上 multer
+- **中间件执行模型**
+  - 签名 `(req, res, next)`，调 `next()` 才推进，否则请求挂起；每个请求都会经过
+  - 错误处理中间件靠 4 参数（`fn.length === 4`）识别，`next(err)` 跳过后续普通中间件直奔错误处理器
+- **中间件生态**：内置 `express.json()`/`urlencoded()`/`static('public')`；跨域、鉴权、限流等靠第三方包（如 `cors()`）
+- **框架选型（Express vs NestJS）**：Express 无架构约束、TS 可选、无 DI，适合小型/学习；NestJS 强制 MVC/TS/DI/`@Module`，适合中大型长期项目
 
 ---
 

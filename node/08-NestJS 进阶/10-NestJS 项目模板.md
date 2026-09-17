@@ -1,8 +1,6 @@
 # NestJS 项目模板
 
 > 一个接近真实生产的 NestJS 项目配置，基于 NestJS CLI 生成，但整理了清晰的目录结构和最佳实践。参考 show-track-server 真实项目整理。
-> 承上：[登录注册实战](./03-登录注册实战) —— 模板里的认证模块就是这一篇的落地结构，先看实战再看模板怎么收口成工程化项目
-> 启下：[认证进阶：双 Token 与多设备会话](./11-认证进阶-双Token与多设备会话) —— 实现 Refresh Token 哈希入库 + 轮换 + AuthSession 多设备会话表，做到单设备/全设备登出
 
 ---
 
@@ -1143,24 +1141,14 @@ npm run start:prod
 
 ## 小结
 
-- **目录结构：src 的五大块与模块内部**
-  - **src 五大块划分**：`common` 公共基础设施、`config` 配置、`constants` 常量、`modules` 按业务分模块、`shared` 共享第三方服务
-  - **模块内部自成一体**：每个业务模块自带 `dto`/`entities`/`guards`/`services`/`strategies` 加 controller、module、service 三件套
-- **配置管理**
-  - **配置集中在 `config/`**：`index.ts` 读 `.env` 并给每项默认值，`database.config.ts` 由它派生出 `TypeOrmModuleOptions`，`synchronize` 与 `logging` 只在该 `development` 时打开
-  - **`.env` 示例的结构**：`PORT`（默认 3000）与 `NODE_ENV`（默认 development）之外，按数据库、Redis、JWT 三组给出变量，如 `DB_HOST`、`REDIS_PORT`（默认 6379）、`JWT_SECRET`、`JWT_EXPIRES`（默认 2h）
-- **根模块与入口的装配**
-  - **全局装配写在根模块**：`APP_FILTER`/`APP_INTERCEPTOR` 用 Provider 方式注册，这样才能注入依赖；`main.ts` 里再挂 `ValidationPipe`（`whitelist`/`transform`/`forbidNonWhitelisted`）、`enableCors()`、`setGlobalPrefix('api')` 与 Swagger
-  - **`package.json` 示例的结构**：`scripts` 含 `start:dev` / `build` / `test` 与三条 TypeORM 迁移命令，依赖分 `dependencies` 与 `devDependencies` 两组
-- **数据层与业务模块示例**
-  - **实体与模块示例的结构**：实体演示主键、唯一列、`select: false` 隐藏密码和 `ManyToOne` 级联删除，业务模块演示 dto / module / controller / service 的组合
-- **公共基础设施**
-  - **统一响应与统一异常**：`ResponseModel` + `TransformInterceptor` 包装返回值，`@Catch()` 过滤器兜住所有异常、记日志并把堆栈只留在 `development`
-  - **`@Global()` 的 RedisModule**：用 `useFactory` 加自定义 Token `'REDIS_CLIENT'` 提供客户端（含重试策略与错误监听），`exports` 后全局可用
-  - **健康检查查两头**：`/health` 里分别跑 `dataSource.query('SELECT 1')` 与 `redis.ping()`，任一失败就把状态改成 degraded
-- **上手与最佳实践**
-  - **使用方式六步**：用 Nest CLI 建项目 → 装依赖 → `cp .env.example .env` → 确认 MySQL 与 Redis 已启动 → `start:dev` 开发 → `build` + `start:prod` 上线
-  - **最佳实践七条**：按功能划分模块、共享模块下沉、基础设施进 common、全局校验、统一响应、统一异常、依赖注入
+- **目录结构**：src 五大块 `common`/`config`/`constants`/`modules`/`shared`；业务模块自带 `dto`/`entities`/`guards`/`services`/`strategies` + 三件套
+- **配置管理**：`config/` 集中读 `.env` 给默认值，`database.config.ts` 派生 `TypeOrmModuleOptions`（`synchronize`/`logging` 仅 development 开）；`.env` 按 DB/Redis/JWT 三组给变量（`JWT_EXPIRES` 默认 2h）
+- **根模块与入口**：`APP_FILTER`/`APP_INTERCEPTOR` 以 Provider 注册（可注入依赖），`main.ts` 挂 `ValidationPipe`(`whitelist`/`transform`/`forbidNonWhitelisted`)+`enableCors`+`setGlobalPrefix('api')`+Swagger
+- **数据层与公共设施**
+  - 实体演示主键/唯一列/`select:false` 隐藏密码/`ManyToOne` 级联删除；业务模块组合 dto/module/controller/service
+  - 统一响应 `ResponseModel`+`TransformInterceptor`、统一异常 `@Catch()` 过滤器（堆栈仅 development）；`@Global()` `RedisModule` 用 `useFactory`+Token `'REDIS_CLIENT'` 全局可用
+  - 健康检查查两头：`dataSource.query('SELECT 1')` 与 `redis.ping()`，任一失败置 degraded
+- **上手与最佳实践**：CLI 建项目 → 装依赖 → `cp .env.example .env` → 起 MySQL/Redis → `start:dev`/`build`+`start:prod`；按功能划模块、共享下沉、基础设施进 common、全局校验/响应/异常、依赖注入
 
 ---
 

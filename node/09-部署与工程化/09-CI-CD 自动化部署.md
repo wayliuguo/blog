@@ -2,8 +2,6 @@
 
 > 从"SSH 登录部署"到"推送即上线"：自动化的渐进式演进
 > 实战参考：nest-template 的 GitHub Actions 工作流
-> 承上：[生产部署实战](./08-生产部署实战) —— 自动化只是把「手动部署」变成推送即上线，不读它不懂要自动化哪几步
-> 启下：[脚手架开发入门](../10-脚手架开发/01-脚手架开发入门) —— 用 `inquirer` + `fs-extra` 做一个交互式 CLI，按用户选择复制模板目录并把 `{{变量}}` 替换为真实项目名
 
 ---
 
@@ -220,34 +218,25 @@ curl https://api.example.com/api/health
 
 ## 小结
 
-- **手动部署的问题与 CI/CD 的核心区别**
-  - **四个问题**：易漏步骤、构建消耗服务器资源、无法快速回滚、多人发版不可控
-  - **核心区别**：**构建从服务器挪到云端 CI**，服务器只做一件事——拉新镜像、重启容器
-  - **对应关系**：触发方式从 SSH 敲命令变成 `git tag v1.0.0` 推送；构建位置从服务器本地变成 GitHub Actions 云端；镜像从本地构建变成从仓库拉取；回滚从 `git checkout` 重新构建变成切回旧 tag 镜像（秒级）
-- **workflow 的三个概念（`.github/workflows/*.yml`）**
-  1. **触发条件（`on`）**：什么时候跑——`push`、`tag`、手动
-  2. **任务（`jobs`）**：一个流水线的步骤集合，可并行
-  3. **步骤（`steps`）**：具体动作——`checkout`、`build`、`deploy`
-- **为什么推荐双流水线**
-  - **build 负责构建推送，deploy 等 build 成功后再 SSH 部署**
-  - 构建失败就不会触发部署；deploy 还能在多台服务器上复用
-- **流水线一：构建镜像并推送（build-stable.yml）**
-  - `on: push: tags: ['v*']` 触发，`docker/login-action@v3` 登录 Docker Hub 后由 `docker/build-push-action@v5` 构建并 `push: true`
-  - 同时打两个 tag：`stable` 表示"最新稳定版"，`v1.0.0`（`github.ref_name`）表示"此版本"；**回滚时直接拉旧 tag 的镜像**
-- **流水线二：SSH 部署（deploy.yml）**
-  - `on: workflow_run` 监听 `Build Stable Image` 工作流的 `completed`，且 `if: conclusion == 'success'` 才执行，连接由 `appleboy/ssh-action@v1` 完成
-  - 服务器上只跑 `docker compose -f docker-compose.prod.yml --env-file .env --env-file .env.production pull` + `up -d`
-  - **`pull`（从仓库拉取）替代 `--build`（服务器本地构建）**，这就是"构建挪到云端"的关键，服务器压力大幅下降
-- **Secrets：密钥不进代码**
-  - 在仓库 **Settings → Secrets and variables → Actions** 配置 `DOCKER_USERNAME` / `DOCKER_PASSWORD`、`DOCKER_IMAGE`、`SERVER_HOST` / `SERVER_USER`、`SERVER_SSH_KEY`
-  - 建议为 CI/CD 单独生成密钥对（`ssh-keygen -t ed25519 -C "github-actions-deploy"` + `ssh-copy-id`），不要用日常账号
+- **手动部署的问题与核心区别**
+  - 四个问题：易漏步骤、构建吃服务器资源、无法快速回滚、多人发版不可控
+  - 核心区别：构建从服务器挪到云端 CI，服务器只拉新镜像、重启容器
+  - 对应关系：触发从 SSH 敲命令变 `git tag`；镜像从本地构建变仓库拉取；回滚从重新构建变切旧 tag（秒级）
+- **workflow 三概念（`.github/workflows/*.yml`）**
+  1. 触发（`on`）：`push` / `tag` / 手动
+  2. 任务（`jobs`）：步骤集合，可并行
+  3. 步骤（`steps`）：`checkout` / `build` / `deploy`
+- **双流水线**：build 负责构建推送，deploy 等 build 成功后再 SSH 部署——构建失败不触发部署，deploy 可在多机复用
+  - 流水线一（build-stable.yml）：`on: push: tags: ['v*']`，`docker/login-action` 登录后 `build-push-action` `push: true`，同时打 `stable` 与 `v1.0.0` 两 tag，回滚拉旧 tag
+  - 流水线二（deploy.yml）：`on: workflow_run` 监听构建 `completed` 且 `if: success`，`appleboy/ssh-action` 连接，服务器只跑 `pull` + `up -d`；`pull` 替代 `--build`，服务器压力大降
+- **Secrets**：在仓库 Settings 配 `DOCKER_USERNAME/PASSWORD`、`DOCKER_IMAGE`、`SERVER_HOST/USER`、`SERVER_SSH_KEY`；建议为 CI/CD 单独生成密钥对（ed25519 + `ssh-copy-id`），不用日常账号
 - **迁移进流水线**
-  - **安全迁移**（新增表 / 字段 / 索引）在 deploy 中自动执行，且用隔离容器：`docker compose -f docker-compose.prod.yml run --rm --entrypoint "" my-app node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/data-source.js`
-  - **破坏性迁移**（删除 / 重命名）不可逆，自动化执行没有"看一眼"的机会，必须人工确认后手动执行——安全的变更全自动，危险的变更留人工
+  - 安全迁移（新增表/字段/索引）在 deploy 用隔离容器自动执行：`docker compose -f docker-compose.prod.yml run --rm --entrypoint "" my-app node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/data-source.js`
+  - 破坏性迁移（删除/重命名）不可逆，自动化没“看一眼”机会，必须人工确认后手动执行
 - **触发、回滚与验证**
-  - **发版 / 删 tag**：`git tag v1.0.0 && git push origin master && git push origin v1.0.0`；`git tag -d v1.0.0 && git push origin --delete v1.0.0`
-  - **回滚 = 用旧 tag 再部署一次**：CI 重新构建旧代码镜像并部署，秒级完成
-  - **验证**：GitHub Actions 页面看运行日志；服务器上 `docker ps | grep my-app`、`docker logs -f my-app-server`、`curl https://api.example.com/api/health`
+  - 发版：`git tag v1.0.0 && git push origin master && git push origin v1.0.0`；删 tag：`git tag -d` + `git push --delete`
+  - 回滚 = 用旧 tag 再部署一次：CI 重建旧代码镜像并部署，秒级
+  - 验证：GitHub Actions 看日志；服务器 `docker ps | grep my-app`、`docker logs -f my-app-server`、`curl https://api.example.com/api/health`
 
 ---
 

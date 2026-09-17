@@ -1,8 +1,6 @@
 # Koa 源码分析
 
 > Koa 的核心比 Express 更精简，只有两个关键机制：**洋葱模型中间件链** 和 **Context 封装**。
-> 承上：[Koa 项目模板](./05-Koa%20项目模板) —— 先搭过真实 Koa 项目，再读源码理解洋葱模型与 Context 的底层实现
-> 启下：[MySQL 基础](../05-数据库/01-MySQL%20基础) —— 用 SQL 建表、做增删改查与 INNER/LEFT JOIN，并说清主键与外键的作用
 
 ---
 
@@ -376,21 +374,17 @@ dispatch(0)  ← 启动递归
 ## 小结
 
 - **Koa 的核心抽象**
-  - **只有两件事**：洋葱模型中间件链（`compose`）与 Context 封装（`createContext`），比 Express 更精简
-  - **`app.use` 支持链式调用**：`middlewares.push(fn)` 之后 `return app`，所以能连续 `app.use(...).use(...)`
-- **洋葱模型的实现：compose 与 dispatch**
-  - **`compose` 的结构与递归终点**：返回 `function (ctx)`，内部 `let index = -1` 后从 `dispatch(0)` 启动；`const fn = middlewareList[i]; if (!fn) return Promise.resolve()` 是递归的自然终点
-  - **`dispatch` 把下一个自己当作 `next`**：`Promise.resolve(fn(ctx, () => dispatch(i + 1)))`——`await next()` 之所以能等到下游完成，全靠这一句把 `dispatch(i+1)` 包成 Promise 返回
-  - **`index` 用于防重入**：每次 `dispatch(i)` 先判 `if (i <= index)` 就 `reject(new Error('next() 被多次调用'))`，再 `index = i`；同一中间件里写两个 `await next()` 会直接报错而不是把下游重跑一遍
-  - **`await next()` 决定回程顺序**：`await` 等到的是下游整条链的 Promise resolve，所以 A、B 的"返回段"只能在内层 C 结束之后才开始执行
-- **Context 封装（`createContext`）**
-  - 挂上 method / url / path（`?` 之前）/ query / headers / status / body 与 `ctx.set()`；`ctx.body` 的 setter 在赋值时标记 `_respond`
-- **响应的自动生成（`respond`）**
-  - **按类型分支**：string → `text/html; charset=utf-8`；对象 → `application/json` + `JSON.stringify`；Buffer → 原样 `end`；`null` / `undefined` → 状态码改成 **204** 且不发 body
-- **错误的传播与兜底**
-  - **统一靠 Promise `catch`**：`fn(ctx).then(respond).catch(...)`，任意中间件 reject 都落到同一个 catch 里返回 500
-- **能力边界：最小实现 vs Koa 源码**
-  - 真源码用 `koa-compose` 包、ctx 的 request / response 双层属性委托、`ctx.onerror` 与 `app.on('error')` 事件、支持 stream 作为 `ctx.body` 与文件上传，路由则交给 `@koa/router`
+  - 只有两件事：洋葱模型中间件链（`compose`）与 Context 封装（`createContext`），比 Express 更精简
+  - `app.use` 链式：`middlewares.push(fn)` 后 `return app`，可连续 `app.use(...).use(...)`
+- **洋葱模型：compose 与 dispatch**
+  - `compose` 返回 `function(ctx)`，从 `dispatch(0)` 启动；`middlewareList[i]` 为空时 `Promise.resolve()` 是递归终点
+  - `dispatch` 把下个自己当 `next`：`Promise.resolve(fn(ctx, () => dispatch(i+1)))`——`await next()` 能等下游完成全靠这句
+  - `index` 防重入：同一中间件写两个 `await next()` 会因 `i <= index` 直接 reject，而非重跑下游
+  - `await next()` 决定回程：A、B 的返回段只能在内层 C 结束后才开始
+- **Context 封装（`createContext`）**：挂 method/url/path(`?`前)/query/headers/status/body 与 `ctx.set()`；`ctx.body` setter 赋值时标记 `_respond`
+- **响应自动生成（`respond`）**：string→text/html；对象→application/json+JSON.stringify；Buffer→原样 end；null/undefined→状态码改 **204** 且不发 body
+- **错误传播**：统一靠 `fn(ctx).then(respond).catch(...)`，任意中间件 reject 都落同一 catch 返回 500
+- **能力边界 vs Koa 源码**：真源码用 `koa-compose`、ctx 双层属性委托、`ctx.onerror` 与 `app.on('error')`、支持 stream 作 `ctx.body` 与文件上传，路由交 `@koa/router`
 
 ---
 

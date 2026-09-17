@@ -467,42 +467,34 @@ TLS 安全能力 （加密与身份认证内建）
 ## 小结
 
 - **HTTP 是 TCP 之上的应用层协议**
-  - **它约定了什么**：`Method` / `URL` / `Header` / `Body` / `Status Code`；报文中头部与体靠一个**空行**分界，体的结束靠 `Content-Length` 或 `Transfer-Encoding: chunked`——这就是 HTTP 在 TCP 字节流之上约定的边界规则
-  - **抽象层级**：`NestJS`（装饰器 / 依赖注入 / 模块化）→ `Express` / `Fastify`（路由 / 中间件 / 生命周期）→ `node:http`（解析 HTTP 报文）→ `TCP`（可靠字节流）→ `Socket`（OS 提供的连接抽象）→ 操作系统；能直接用 `@Body()`，是因为框架已按 HTTP 规则把字节流解析好了
-  - **手写 `node:http` 会撞上的工程问题**：路由怎么管理（一个 `if` 不够用，需要路由表）、`/users?id=1` 的查询参数要自己拆、POST 的 JSON / 表单要自己读流再 parse、回调里抛错会崩进程需要统一兜底、登录态与鉴权要横切在路由之前、路由 / 中间件 / 控制器要分层——Express / Fastify 就是来收这些的
+  - 约定 `Method`/`URL`/`Header`/`Body`/`Status Code`，头与体靠空行分界，体的结束靠 `Content-Length` 或 `Transfer-Encoding: chunked`
+  - 抽象层级：`node:http` → Express/Fastify → NestJS，框架已按 HTTP 规则把字节流解析好（所以能直接拿到 `@Body()`）
+  - 手写 `node:http` 会撞上的问题：路由分发、查询参数解析、Body 读取、统一兜底、横切鉴权、分层组织——Express/Fastify 就是来收这些的
 - **`req` 与 `res` 本质上也是流**
-  - **`req` 是可读流（Readable）**：请求体可能很大、分多次到达，Node 用 `data` 事件逐块推给你（`chunk` 是 `Buffer`），`end` 到齐后用 `chunks[] + Buffer.concat` 拼成完整字节序列再 `.toString('utf8')`
-  - **`res` 是可写流（Writable）**：可以分多次 `write()`，最后用 `end()` 收尾
-  - **从网卡到变量的每一跳**：Network（网卡收到比特流）→ TCP（按序号重组为可靠字节流）→ HTTP（按 Method / Header / Body 规则切分报文）→ Stream（以 chunk 为单位流式产出）→ Buffer Chunk → JavaScript（`data` / `end` 回调拿到 Buffer）
-  - **这个设计的收益**：大文件下载可以直接 `readableStream.pipe(res)`，让磁盘上的字节"边读边发"流向客户端，不必先全部读进内存
-- **流式响应与 `Content-Length` 的取舍**
-  - **一次性算出的响应体**：可以在 `writeHead` 里带上 `Content-Length`，但必须用 `Buffer.byteLength(data)`——取的是**字节长度**
-  - **流式响应算不出总长度**：一是总长度要等所有数据产生完才知道，而流式响应的意义恰恰是不等完就先发；二是 `Content-Length` 取字节长度而非字符长度——`'你好'` 的 `length` 是 2，`Buffer.from('你好').length` 是 6（UTF-8 下每个汉字 3 字节），错算会直接让客户端截断或报错
-  - **改用分块传输编码**：`Transfer-Encoding: chunked` 让响应体被切成若干块、每块自带长度前缀，最后以一个长度为 0 的块表示结束，从而"边产生、边发送、边结束"；流式推送、大文件下载、实时进度背后都是它
-- **Keep-Alive 与三个超时的关系**
-  - **Keep-Alive 的价值**：多个 HTTP 请求复用同一条 TCP 连接，省掉每个请求都要"建立 TCP → 发请求 → 收响应 → 关闭 TCP"的握手与挥手成本，空闲一段时间后才超时关闭
-  - **三个超时的分工**：`keepAliveTimeout` 管 keep-alive 连接空闲多久后被服务端主动关闭（设太短，长尾请求容易被提前掐断）；`headersTimeout` 管从连接建立到收齐请求头的时限（主要防慢速攻击）；`requestTimeout` 管单个请求从开始到结束的总时限（超时通常返回 `408` 或直接断连）
-  - **硬约束**：`headersTimeout` 必须**大于** `keepAliveTimeout`，否则服务器按 `keepAliveTimeout` 关闭连接时"已关闭"状态还没和请求头超时逻辑对齐，连接上后续进来的请求被直接丢弃，客户端表现为 `ECONNRESET` / `socket hang up`；一组参考值是 `keepAliveTimeout = 5000`、`headersTimeout = 60000`、`requestTimeout = 30000`
-  - **一句话原则**：反向代理（如 Nginx）的超时 ≥ 服务端超时，否则代理还以为连接活着、拿去发请求时服务端已经把它关了
+  - `req` 是 Readable（请求体分多次到达，`chunk` 是 Buffer，靠 `data`+`end`+`Buffer.concat` 拼回字符串）
+  - `res` 是 Writable（可多次 `write`，最后 `end` 收尾）
+  - 收益：大文件下载可直接 `readableStream.pipe(res)`，边读边发，不必先读进内存
+- **流式响应的边界：Content-Length 与 chunked**
+  - 一次性算出的响应体可在 `writeHead` 带 `Content-Length`，但必须用 `Buffer.byteLength()`（字节长度，非字符长度——`'你好'` 字符长 2、字节长 6）
+  - 流式响应算不出总长度，改用 `Transfer-Encoding: chunked` 分块传输，实现"边产生边发送边结束"
+- **Keep-Alive 与三个超时**
+  - 价值：多个 HTTP 请求复用同一条 TCP 连接，省掉每次的握手/挥手成本
+  - 分工：`keepAliveTimeout` 管空闲多久关连接；`headersTimeout` 管收齐请求头时限；`requestTimeout` 管单请求总时限
+  - 硬约束：`headersTimeout` 必须 > `keepAliveTimeout`，否则空闲连接被关时后续请求被丢，客户端见 `ECONNRESET`/`socket hang up`
 - **HTTPS 与 TLS 解决的问题**
-  - **HTTPS 不是新协议**：而是 **HTTP over TLS**——在 HTTP 与 TCP 之间多垫一层 TLS，负责握手 + 加密 + 完整性校验
-  - **TLS 解决的三个问题**
-    1. **加密**：通信内容只有通信双方能读；没有它，运营商 / 中间人可窃听明文、密码泄露
-    2. **身份认证**：证书证明"你真的是 example.com"；没有它，中间人可伪造服务器、钓鱼劫持
-    3. **数据完整性**：防篡改；没有它，响应可能被注入广告或恶意脚本
-  - **TLS 握手**：协商加密套件与交换随机数 → 验证服务器证书 → 密钥协商（双方算出同一把会话密钥）→ 建立加密连接 → HTTP 数据开始加密传输；Node 里起 HTTPS 服务只是把 `http` 换成 `https` 并带上 `key`（私钥）与 `cert`（含公钥的证书）
-  - **生产做法**：TLS 通常**不在 Node 进程里终止**，而是在网关（Nginx / 负载均衡 / 云服务）上统一卸载——网关管 TLS 终结与证书续期，后端 Node 服务跑在内部明文 HTTP 上
+  - TLS 解决三件事：加密（防中间人窃听明文）、身份认证（证书防伪造钓鱼）、数据完整性（防响应被篡改注入）
+  - HTTPS 不是新协议，而是 HTTP over TLS（握手+加密+完整性校验）；生产里 TLS 通常在网关卸载，Node 跑内部明文 HTTP
 - **HTTP 版本演进：队头阻塞与多路复用**
-  - **HTTP/1.1 的应用层队头阻塞**：同一条连接上的请求 / 响应是**串行**的，前一个响应没回来后一个请求只能排队；浏览器只能靠开多条 TCP 连接（通常 6 条左右）绕过，又额外增加 TCP 握手与 TLS 握手成本
-  - **HTTP/2 的核心是多路复用**：在**单条 TCP 连接**上同时跑多个 Stream，不同请求被拆成 **Frame（帧）** 交错发送、互不排队；另外还有二进制分帧（头部与数据分离、解析更高效）与 Header 压缩 HPACK（压缩重复出现的请求头如 Cookie）
-  - **HTTP/3 换掉 TCP**：传输层从 TCP 换成基于 UDP 的 **QUIC**，在 UDP 之上重新实现可靠传输、多路复用、拥塞控制、TLS 安全能力与更高效的连接建立（`HTTP/3 → QUIC → UDP → IP`）；原因是 HTTP/2 的多个 Stream 仍共享同一条 TCP，一旦底层丢包，后续已到达的数据也要等缺失段重传补齐——即 **TCP 层队头阻塞**；QUIC 让各 Stream 更独立、某个丢包只影响它自己，业务代码层面通常无感
+  - HTTP/1.1：同一条连接上请求/响应串行（应用层队头阻塞），靠开多条 TCP 连接绕过
+  - HTTP/2：单条 TCP 连接上多 Stream 交错（多路复用），加二进制分帧与 HPACK 头压缩；但仍共享一条 TCP，丢包会触发 TCP 层队头阻塞
+  - HTTP/3：传输层换成基于 UDP 的 QUIC，各 Stream 更独立，丢包只影响自身
 - **报错码与排障方向**
-  - **`ECONNRESET`**：对端突然重置连接（服务端先关了 keep-alive 连接而客户端还在用，或读写时对方已断开）→ 核对 `keepAliveTimeout` / `headersTimeout` 是否小于代理超时，确认不是中途崩进程
-  - **`socket hang up`**：客户端视角的连接被对方提前关闭（上游 / 服务端意外断开）→ 看上游是否崩、是否超时主动断连
-  - **`ECONNREFUSED`**：目标地址 / 端口无进程监听（服务没起、地址端口写错、容器没拉起）→ 确认进程在跑、`listen` 端口正确、网络可达
-  - **`431 Request Header Fields Too Large`**：请求头过大（典型是 Cookie / 鉴权头累积过多）→ 精简请求头，必要时调大服务端 `maxHeaderSize`
-  - **`502` 与 `504` 的分界**：`502 Bad Gateway` 通常是网关**根本没连上上游**（上游挂了、端口没监听、防火墙拦截）；`504 Gateway Timeout` 通常是网关**连上了但上游迟迟不回**（处理慢、`requestTimeout` 过小、慢查询或下游阻塞）
-  - **方法论**：遇到网络类报错，先定位"断在哪一跳"，再去看对应的超时与配置
+  - `ECONNRESET`：对端突然重置（keep-alive 连接被服务端先关，或读写时对方已断）
+  - `socket hang up`：客户端视角连接被对方提前关闭
+  - `ECONNREFUSED`：目标地址/端口无进程监听
+  - `431`：请求头过大（Cookie/鉴权头累积）
+  - `502` vs `504`：前者网关根本没连上上游，后者连上了但上游迟迟不回（慢查询/下游阻塞）
+  - 方法论：遇网络报错先定位"断在哪一跳"，再看对应超时与配置
 
 ---
 

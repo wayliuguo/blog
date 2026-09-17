@@ -1,8 +1,6 @@
 # Express 项目模板
 
 > 一个接近真实生产的 Express 项目配置，集成数据库、缓存、认证、日志、校验等通用中间件。
-> 承上：[Express 快速入门](./01-Express%20快速入门) —— 先懂 Express 的路由、中间件与响应封装，才能看懂项目模板的分层结构
-> 启下：[Express 源码分析](./04-Express%20源码分析) —— 不依赖 Express 源码，用不到 100 行代码手写一个支持路由注册与中间件链的 `createApp`
 
 ---
 
@@ -538,22 +536,20 @@ npm run dev
 ## 小结
 
 - **工程骨架与依赖栈**
-  - **分层目录结构**：`src/` 下 config / controllers / entities / middleware / routes / services / utils 七个目录加 `app.js`，单文件服务长成工程骨架
-  - **package.json 的脚本与依赖栈**：`"dev": "node --watch src/app.js"` 实现免 nodemon 热重启；依赖覆盖 express / cors / dotenv / typeorm / mysql2 / ioredis / jsonwebtoken / bcrypt / joi / winston
-- **配置管理**
-  - **单一出口**：`src/config/index.js` 先 `dotenv.config()` 再聚合 port / database / redis / jwt 三块，业务代码一律不直接读 `process.env`
-- **应用的装配与启动顺序**
-  - **中间件装配顺序**：`cors()` → 请求日志 → `express.json()` / `urlencoded()` → 业务路由 → 健康检查 → 404 兜底 → `errorHandler`（必须最后注册）
-  - **bootstrap 启动顺序**：先 `AppDataSource.initialize()` 连库、再 `redisClient.ping()` 验缓存、最后 `app.listen()`；任一步失败就 `logger.error` + `process.exit(1)`
-  - **健康检查与两处兜底**：`GET /health` 用 `SELECT 1` 与 `redisClient.ping()` 双探，任一失败返回 503 + `degraded`；404 用普通中间件，500 交给 4 参数错误处理器
-- **数据层：TypeORM 的 DataSource 与 EntitySchema**
-  - 用 `EntitySchema` 声明 User（email 唯一）与 Product（price decimal(10,2)）两张表；`synchronize` 只在开发环境开，生产走迁移
-- **routes / controllers / services 的三层职责**
-  - **职责划分**：routes 声明路径与中间件顺序，controller 取请求调 service 再 `res.json`、出错 `next(err)`，service 只管业务规则且完全不碰 `req` / `res`
-  - **业务错误的统一约定**：service 抛错时打 `err.statusCode` 与 `err.isOperational = true`（409 邮箱已注册、401 密码错误、404 用户不存在），错误处理器据此决定状态码与能否透传文案
-- **中间件与工具模块**
-  - **四个中间件**：auth 解析 `Bearer` token 写入 `req.user`、validate 用 Joi 校验后 `req.body = value`、errorHandler 区分可预期与未知错误、logger 用 `res.on('finish')` 记耗时
-  - **三个工具模块**：utils 下是 Winston 日志、ioredis 客户端、Joi schemas
+  - 分层目录：`src/` 下 config/controllers/entities/middleware/routes/services/utils 七目录 + `app.js`
+  - 依赖栈：express/cors/dotenv/typeorm/mysql2/ioredis/jsonwebtoken/bcrypt/joi/winston；`"dev": "node --watch"` 免 nodemon 热重启
+- **配置管理**：`config/index.js` 先 `dotenv.config()` 再聚合 port/database/redis/jwt，业务代码一律不直接读 `process.env`
+- **应用装配与启动**
+  - 中间件顺序：`cors()` → 请求日志 → `express.json()`/`urlencoded()` → 路由 → 健康检查 → 404 兜底 → `errorHandler`（必须最后）
+  - 启动：先连库 `AppDataSource.initialize()`、再 `redisClient.ping()`、最后 `app.listen()`；任一步失败 `process.exit(1)`
+  - 健康检查 `GET /health` 用 `SELECT 1` + `redisClient.ping()` 双探，失败返回 503
+- **数据层**：TypeORM 用 `EntitySchema` 声明 User（email 唯一）/Product（price decimal(10,2)）；`synchronize` 仅开发开，生产走迁移
+- **三层职责（routes/controllers/services）**
+  - 划分：routes 声明路径与中间件顺序；controller 取请求调 service 再 `res.json`、出错 `next(err)`；service 只管业务规则、不碰 `req`/`res`
+  - 错误约定：service 抛 `err.statusCode` + `isOperational`（409/401/404），错误处理器据此决定状态码与文案透传
+- **中间件与工具**
+  - 四个中间件：auth 解析 `Bearer` 写 `req.user`、validate 用 Joi 校验后 `req.body = value`、errorHandler 区分可预期/未知、logger 用 `res.on('finish')` 记耗时
+  - 三个工具：Winston 日志、ioredis 客户端、Joi schemas
 
 ---
 
