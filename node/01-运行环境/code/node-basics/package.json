@@ -9,8 +9,8 @@
     "02cjs": "node src/02-module-cjs.cjs",
     "02esm": "node src/02-module-esm.mjs",
 
-    "03phases": "node src/03-eventloop-phases.js",
     "03order": "node src/03-eventloop-order.js",
+    "03phases": "node src/03-eventloop-phases.js",
     "03check": "node src/03-microtask-checkpoint.js",
     "03starve": "node src/03-nexttick-starve.js",
     "03pool": "node src/03-uv-threadpool.js",

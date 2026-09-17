@@ -1,7 +1,5 @@
 # MongoDB 入门
 
-> 承上：[Node.js 操作 MySQL](./04-Node.js%20操作%20MySQL) —— 先掌握关系型数据库的 Node 访问模式，再学文档型数据库的异同
-> 启下：[MongoDB 进阶](./06-MongoDB%20进阶) —— 用聚合管道做分组统计与 `$lookup` 关联，并给频繁查询字段建出命中 IXSCAN 的索引
 
 ---
 
@@ -380,27 +378,27 @@ await Post.updateOne(
 ## 小结
 
 - **文档型数据库的概念映射**
-  - **概念对应**：数据库 / 集合 / 文档 / 字段，对应 MySQL 的库 / 表 / 行 / 列，主键是自动生成的 `_id`
-  - **BSON 与嵌套结构**：文档以 BSON（Binary JSON）存储，字段值可以是数组与嵌套对象，建模时无需预先定义 Schema
+  - 概念对应：数据库 / 集合 / 文档 / 字段，对应 MySQL 的库 / 表 / 行 / 列，主键是自动生成的 `_id`
+  - BSON 与嵌套结构：文档以 BSON（Binary JSON）存储，字段值可以是数组与嵌套对象，建模无需预先定义 Schema
 - **基本 CRUD 语法**
-  1. **查询**：`find({ age: { $gt: 18 } })`、正则 `/张/`、`$in: [18, 20]`
-  2. **插入**：`insertOne` / `insertMany`
-  3. **更新**：`updateOne({ name: '张三' }, { $set: { age: 26 } })`、`updateMany`
-  4. **删除**：`deleteOne` / `deleteMany`
+  1. 查询：`find({ age: { $gt: 18 } })`、正则 `/张/`、`$in: [18, 20]`
+  2. 插入：`insertOne` / `insertMany`
+  3. 更新：`updateOne({ name: '张三' }, { $set: { age: 26 } })`、`updateMany`
+  4. 删除：`deleteOne` / `deleteMany`
 - **Mongoose 的 ODM 定位**
-  - **用法**：先定义 Schema（`required` / `default` / `unique` 等约束）再 `mongoose.model()` 生成 Model，之后走 `create` / `find` / `findById` / `updateOne` / `deleteOne`，与 TypeORM 类似但没有迁移概念
+  - 用法：先定义 Schema（`required` / `default` / `unique` 等约束）再 `mongoose.model()` 生成 Model，之后走 `create` / `find` / `findById` / `updateOne` / `deleteOne`；与 TypeORM 类似但没有迁移概念
 - **文档关系建模（嵌入 vs 引用）**
-  - **嵌入**：一次查询就拿到全部数据，但有冗余、且受单文档 16MB 限制；适合数据总是一起查、不单独变化、量小的场景
-  - **引用**：省空间、一致性由引用保证，查询时要用 `populate()` 补齐；适合独立变化、量大、需要单独查询的场景
+  - 嵌入：一次查询拿全数据，但有冗余、受单文档 16MB 限制；适合数据总是一起查、不单独变化、量小的场景
+  - 引用：省空间、一致性由引用保证，查询用 `populate()` 补齐；适合独立变化、量大、需单独查询的场景
 - **MySQL 与 MongoDB 选型**
-  - **选 MySQL**：用户、订单、财务等结构化数据（要强 ACID 与事务支持），以及复杂报表、多表关联查询
-  - **选 MongoDB**：日志、评论、配置等结构灵活的数据，无 Schema 限制、写性能高，快速迭代时数据结构变化无需迁移
+  - 选 MySQL：用户、订单、财务等结构化数据（要强 ACID 与事务），以及复杂报表、多表关联查询
+  - 选 MongoDB：日志、评论、配置等结构灵活的数据，无 Schema 限制、写性能高，快速迭代时数据结构变化无需迁移
 - **生产场景：日志系统**
-  - **TTL 索引自动过期**：在时间字段上设 `expireAfterSeconds: 86400 * 30`，后台每 60 秒扫描一次自动删除过期文档
-  - **日志按日期分集合**：如 `logs_20240101`，历史数据整体 `drop()` 比 DELETE 快得多，也不产生碎片
+  - TTL 索引自动过期：在时间字段上设 `expireAfterSeconds: 86400 * 30`，后台每 60 秒扫描一次删除过期文档
+  - 日志按日期分集合：如 `logs_20240101`，历史数据整体 `drop()` 比 DELETE 快、不产生碎片
 - **生产场景：评论/回复系统**
-  - **嵌套文档 + `$push`**：回复嵌在评论内，用 `$push` 追加，用 `comments.$.replies` 定位更新
-  - **适用判断**：每条评论小于 1KB、一篇文档内评论通常不超过 100 条才适合嵌入
+  - 嵌套文档 + `$push`：回复嵌在评论内，用 `$push` 追加、`comments.$.replies` 定位更新
+  - 适用判断：每条评论小于 1KB、一篇文档内评论通常不超过 100 条才适合嵌入
 
 ---
 

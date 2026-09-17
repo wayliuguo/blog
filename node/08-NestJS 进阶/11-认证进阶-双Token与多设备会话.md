@@ -1,8 +1,6 @@
 # 认证进阶：双 Token 与多设备会话
 
 > 登录注册实战里我们做到了"能登录"，但生产环境还要回答三个更难的问题：Refresh Token 泄露了怎么办？同一用户用手机和电脑同时登录怎么互不踢下线？用户点"退出登录"到底删了什么？这一篇把这些问题一次性讲透。
-> 承上：[登录注册实战](./03-登录注册实战) —— 这一篇是单 Token 登录的升级，先会签发基础 JWT 才接得上双 Token 与多设备会话
-> 启下：[IoC 与依赖注入原理](./12-IoC%20与依赖注入原理) —— 向别人讲清 `@Injectable` 与 `emitDecoratorMetadata` 如何配合让容器"看得见"并注入依赖，并排查 `Nest can't resolve dependencies` 报错
 
 ---
 
@@ -325,32 +323,16 @@ model AuthSession {
 
 ## 小结
 
-- **双 Token 的分工**
-  - **单 Token 的死穴**：有效期长则泄露危害大、短则体验差，且客户端存不住、服务端管不了（无法主动吊销）
-  - **职责拆分**：Access Token 短（如 15m）、放前端内存或 `Authorization` 头，只管访问业务接口；Refresh Token 长（如 7d）、放 HttpOnly Cookie，只管换发新的 Access Token
-  - **决策模型**：Refresh Token 必须有"服务端能主动作废"的能力，否则就退化成无法吊销的长效 JWT
-- **HttpOnly Cookie 的四个选项与边界**
-  1. **`httpOnly`**：JS 无法读取，降低 XSS 窃取 Token 明文的风险，但**不解决 XSS 本身**
-  2. **`secure`**：仅 HTTPS 下发与传输，防明文抓包
-  3. **`sameSite`**：跨站不自动携带，缓解 CSRF；需要跨站携带时权衡用 `lax`
-  4. **`path`**：限定携带路径（如 `/auth/refresh`），缩小 Token 暴露面
-- **Refresh Token 的存储：SHA-256 而非 bcrypt**
-  - **必须哈希入库**：用 `createHash('sha256').update(token).digest('hex')` 单向哈希存库，明文只在响应里给客户端一次，拖库也拿不到可用 Token
-  - **别用 bcrypt 存长 Token**：bcrypt 只处理输入的前 72 字节，超长 Token 会被截断，导致不同 Token 哈希相同、校验误判
-- **AuthSession 表：支持多设备会话**
-  - **User 1:N AuthSession**：每个设备一条记录，新设备登录不会顶掉旧设备
-  - **关键字段**：`userId`、`refreshTokenHash`（校验刷新请求）、`deviceId`（区分设备）、`userAgent`（展示活跃设备）、`expiresAt`（服务端侧过期闸门）、`revoked`（软删除标记）
-- **轮换与登出**
-  - **轮换做到"重放即失效"**：每次刷新先把旧记录 `revoked = true`，再签新的一对 `15m`/`7d` Token 并写入新会话，偷来的旧 Token 一用就 401
-  - **登出就是会话作废**：单设备按 `refreshTokenHash` 更新，全设备按 `userId` 批量置 `revoked`，都是软删除
-  - **登出后 Access Token 的 15m 窗口**：要么每次请求都查库校验（失去无状态优势），要么接受这个窗口，高敏接口可再加版本号/黑名单校验
+- **双 Token 分工**：单 Token 长则泄露危害大、短则体验差且无法主动吊销；Access 短(15m)放内存/`Authorization` 头管接口，Refresh 长(7d)放 HttpOnly Cookie 只管换发；Refresh 必须可服务端作废否则退化成长效 JWT
+- **HttpOnly Cookie 四选项**：`httpOnly` 降 XSS 窃取(不解决 XSS)、`secure` 仅 HTTPS、`sameSite` 缓解 CSRF(跨站权衡 `lax`)、`path` 缩暴露面
+- **Refresh 存储用 SHA-256 而非 bcrypt**：单向哈希入库、明文只给一次、拖库也拿不到可用 Token；bcrypt 只处理前 72 字节会截断长 Token 致哈希误判
+- **AuthSession 表支持多设备**：User 1:N，每设备一条记录互不顶号；字段 `userId`/`refreshTokenHash`/`deviceId`/`userAgent`/`expiresAt`/`revoked`(软删)
+- **轮换与登出**：刷新先 `revoked=true` 旧记录再签新对（偷来的旧 Token 一用即 401）；登出按 `refreshTokenHash`(单设备)或 `userId`(全设备)批量软删；Access 的 15m 窗口要么查库失无状态、要么接受高敏加黑名单
 - **常见坑**
-  1. **`verifyAsync` 忘记 `await`**：异常被吞，错误变成 500 而非 401
-  2. **Cookie 跨域带不上**：后端 `sameSite` 放宽到 `lax`/`none` + `secure`，前端 `fetch` 带 `credentials: 'include'`
-  3. **过期时间校验缺失**：刷新时同时判断 `expiresAt > now()` 与 `revoked`
-  4. **Refresh Token 明文入库**：拖库即失陷，永远只存 SHA-256 哈希
-  5. **轮换后旧 Token 还能用**：每次刷新先把旧记录 `revoked = true`
-- **Prisma 与 TypeORM 同层**：只是图类型推导完整才用 Prisma，哈希入库、轮换、多设备登出的设计思路完全一致，`findUnique({ where: { tokenHash } })` 对应 `sessionRepo.findOne({ where: { tokenHash } })`
+  - `verifyAsync` 记得 `await`：否则异常被吞变 500 而非 401
+  - 跨域 Cookie 带不上：后端 `sameSite=lax/none`+`secure`、前端 `fetch` 带 `credentials:'include'`
+  - 刷新缺过期校验：同时判断 `expiresAt>now()` 与 `revoked`
+- **ORM 同层**：Prisma 仅图类型推导，`findUnique({ where: { tokenHash } })` 对应 `sessionRepo.findOne({ where: { tokenHash } })`，设计思路一致
 
 ---
 

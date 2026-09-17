@@ -1,8 +1,6 @@
 # Koa 项目模板
 
 > 一个接近真实生产的 Koa 项目配置，集成数据库、缓存、认证、日志、校验等通用中间件。Koa 的洋葱模型让跨切面逻辑（日志、事务、耗时统计）更优雅。
-> 承上：[Koa 快速入门](./02-Koa%20快速入门) —— 先懂 Koa 的基础 API 与洋葱模型，才能看懂项目模板的中间件编排
-> 启下：[Koa 源码分析](./06-Koa%20源码分析) —— 手写一个 `compose` 函数实现 Koa 洋葱模型，并说清 `dispatch(i)` 的递归调用过程
 
 ---
 
@@ -554,22 +552,18 @@ npm run dev
 
 ## 小结
 
-- **工程骨架与依赖栈（相对 Express 模板的差异）**
-  - **目录结构**：分层同名同构，只多一个 `middleware/responseTime.js`，因为洋葱模型让"耗时统计"能顺手写成独立中间件
-  - **package.json 的依赖替换**：koa / @koa/router / koa-body / @koa/cors 替掉 express / cors，其余依赖栈（typeorm + mysql2 + ioredis + jsonwebtoken + bcrypt + joi + winston）与 Express 模板完全一致
-- **路由挂载与统一前缀**
-  - **`@koa/router` 的前缀挂载**：`new Router({ prefix: '/api' })` 统一前缀，子路由用 `api.use(userRoutes.routes())` 挂上，最后 `app.use(api.routes())` + `app.use(api.allowedMethods())`
-- **入口的洋葱堆叠顺序**
-  - `cors()` → `errorHandler` → `responseTime` → `logger` → `koaBody()` → 路由 → 健康检查；越先注册越靠外层，所以错误处理能包住整条链
-- **洋葱模型的两个典型用法**
-  - **`logger` 与 `responseTime`**：进入时记 `start`，`await next()` 之后才算差值、写响应头，这正是线性模型做不到的"响应的上半场"
-- **错误处理的统一约定**
-  1. **`errorHandler` 靠 `try`/`catch` 包链**：最外层中间件 `try { await next() } catch (err)`，按 `err.statusCode || err.status || 500` 写 `ctx.status`，最后 `ctx.app.emit('error', err, ctx)` 交给应用级日志
-  2. **业务错误约定与 Express 模板保持一致**：服务层依旧抛 `statusCode` + `isOperational`，所以同一套错误判据能同时用在两套模板上
-  3. **控制器不用逐个 `try`/`catch`**：Koa 控制器直接 `await userService.xxx()`，异常顺着 `await next()` 的 Promise rejection 回到最外层统一处理，这是两端模板写法差异的根因
-  4. **404 与真错误必须分开**：没有路由命中时什么都没抛，`catch` 不会触发；自定义 404 要靠路由之后的兜底判断，或用 `allowedMethods()` 统一处理未匹配的方法与路径
-- **中间件间的数据传递**
-  - **`ctx.state`**：auth 中间件把解码结果写到 `ctx.state.user`，控制器读 `ctx.state.user.userId`；等价于 Express 挂在 `req.user` 上
+- **工程骨架与依赖栈（相对 Express 模板）**
+  - 目录同名同构，仅多 `middleware/responseTime.js`（洋葱模型让耗时统计顺手成独立中间件）
+  - 依赖替换：koa/@koa/router/koa-body/@koa/cors 替掉 express/cors，其余 typeorm+mysql2+ioredis+jsonwebtoken+bcrypt+joi+winston 完全一致
+- **路由挂载**：`@koa/router` 用 `new Router({ prefix: '/api' })` 统一前缀，`api.use(routes())` → `app.use(api.routes())` + `app.use(api.allowedMethods())`
+- **洋葱堆叠顺序**：`cors()` → `errorHandler` → `responseTime` → `logger` → `koaBody()` → 路由 → 健康检查；越先注册越靠外层，错误处理包住整条链
+- **洋葱模型的两个典型用法**：`logger` 与 `responseTime` 进入时记 `start`、`await next()` 后才算差值写响应头，这是线性模型做不到的"响应上半场"
+- **错误处理约定**
+  - `errorHandler` 靠最外层 `try { await next() } catch` 包链，按 `err.statusCode || err.status || 500` 写 `ctx.status`，再 `ctx.app.emit('error', err, ctx)`
+  - 业务错误与 Express 模板一致：服务层仍抛 `statusCode` + `isOperational`
+  - 控制器不用逐个 try/catch：异常顺 `await next()` 的 rejection 回到最外层统一处理
+  - 404 与真错误分开：未命中路由什么都不抛，catch 不触发，需路由后兜底或用 `allowedMethods()`
+- **中间件间数据传递**：auth 把解码结果写 `ctx.state.user`，控制器读 `ctx.state.user.userId`，等价于 Express 的 `req.user`
 
 ---
 

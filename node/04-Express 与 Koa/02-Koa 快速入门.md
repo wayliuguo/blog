@@ -1,8 +1,6 @@
 # Koa 快速入门
 
 > Koa 由 Express 原班人马打造，更轻量、更现代。
-> 承上：[Express 快速入门](./01-Express%20快速入门) —— 先掌握 Express 的路由与中间件，才能对比理解 Koa 的洋葱模型差异
-> 启下：[Express 项目模板](./03-Express%20项目模板) —— 照模板搭出一个含路由、控制器、服务分层与 JWT 鉴权的 Express 项目骨架
 
 ---
 
@@ -189,16 +187,16 @@ koa-basics · 04-stack 运行在 http://localhost:3000
 ## 小结
 
 - **Koa 的定位与最小写法**
-  - **极简内核**：Express 原班人马打造的继任者，只给 `ctx` 封装，路由、模板引擎、静态文件、body 解析全部外置
-  - **Hello World 的写法**：`app.use(async ctx => { ctx.body = 'Hello World' })`，不写 `res.end`，给 `ctx.body` 赋值即完成响应
-  - **原生 `async/await`**：中间件都是 async 函数，`const data = await database.query(...)` 后直接 `ctx.body = data`，无需回调
-- **中间件的执行模型（洋葱模型）**
-  - **顺序**：进入按注册顺序、返回按逆序，两个中间件夹一个处理函数时输出「1 进入 → 2 进入 → 处理请求 → 2 返回 → 1 返回」
-  - **成立前提是 `await`**：`await next()` 等待的是下游整条链 resolve；写成 `next()` 而不 await，返回段提前执行，洋葱立刻被拉平成线性模型
-  - **价值**：请求处理前后都能介入，天然适合请求耗时统计、事务管理、统一响应包装这类跨切面逻辑
+  - 极简内核：Express 原班人马打造的继任者，只给 `ctx` 封装，路由/模板/静态/body 解析全外置
+  - Hello World：`app.use(async ctx => { ctx.body = 'Hello World' })`，给 `ctx.body` 赋值即完成响应，不写 `res.end`
+  - 原生 `async/await`：中间件都是 async 函数，`await` 到数组直接赋 `ctx.body`，自动序列化成 JSON
+- **洋葱模型**
+  - 顺序：进入按注册顺序、返回按逆序（「1 进入 → 2 进入 → 处理 → 2 返回 → 1 返回」）
+  - 成立前提：`await next()` 等待下游整条链 resolve；写成 `next()` 不 await 则洋葱被拉平成线性
+  - 价值：请求前后都能介入，天然适合耗时统计、事务管理、统一响应包装
 - **Express 与 Koa 的对比**
-  - **七项差异**：中间件模型（线性 / 洋葱）、异步支持（回调 / async）、体积、路由、body 解析、静态文件、社区生态
-  - **需要额外安装的中间件**：`@koa/router` 管路由、`koa-body` 管请求体、`koa-static` 管静态文件，用 `app.use(router.routes())` 挂载
+  - 七项差异：中间件模型（线性/洋葱）、异步（回调/async）、体积、路由、body 解析、静态文件、社区生态
+  - 需额外安装：`@koa/router`（路由）、`koa-body`（body）、`koa-static`（静态），用 `app.use(router.routes())` 挂载
 
 ---
 

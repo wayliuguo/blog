@@ -1,8 +1,6 @@
 # IoC 与依赖注入原理
 
 > 你在 Controller 里写 `private readonly userService: UserService`，从不 `new`，它却能直接用。这一篇把"框架在背后到底做了什么"讲清楚——理解了它，NestJS 的 Module、Provider、`@Injectable()` 就不再是黑盒。
-> 承上：[自定义装饰器](./01-自定义装饰器) —— 原理篇要从装饰器"写标签"说起，先看过如何用装饰器才懂 `design:paramtypes` 从哪来
-> 启下：[环境管理与配置](../09-部署与工程化/01-环境管理与配置) —— 用 `registerAs` + `ConfigType` 把配置拆成强类型命名空间，让 `configService.get('app.port')` 返回 `number` 而非 `string`
 
 ---
 
@@ -263,31 +261,21 @@ Potential solutions:
 
 ## 小结
 
-- **从手动 new 到 IoC**
-  - **没有 IoC 的代价**：手动 new 出整条依赖网，改一个构造参数上层全要跟着改，越写越乱
-  - **IoC 与 DI 是两个层面**：IoC 是"为什么把控制权交给容器"的思想，DI 是"怎么交出去"的具体实现方式
-- **容器怎么"看得见"依赖**
-  - **注入链路的完整路径**：装饰器在编译期 emit `design:paramtypes` → `reflect-metadata` 挂到类上 → 启动扫描 → 容器解析并实例化 → 注入使用方
-  - **`@Injectable()` 与 `emitDecoratorMetadata` 缺一不可**：前者让零件进"可注入"名单，后者让容器看得见零件类型，否则运行时报 `Nest can't resolve dependencies`
-- **Provider Token 与四种声明方式**
-  1. **`useClass`**：`{ provide: UserService, useClass: UserService }`，最常用，Token 即类
-  2. **`useValue`**：`{ provide: 'CONFIG', useValue: { secret: 'x' } }`，注入常量或配置对象
-  3. **`useFactory`**：`{ provide: Repo, useFactory: () => new Repo(...) }`，需要运行时逻辑、异步或依赖其他 Provider
-  4. **`useExisting`**：`{ provide: 'Alias', useExisting: RealService }`，给同一个实例起别名
-  - **非类 Token 必须 `@Inject` 指名**：Token 是字符串或 `Symbol` 时，使用方要写 `@Inject(CONFIG)` 才能对上，否则容器无从匹配
-- **Provider 作用域（Scope）**
-  1. **`Scope.DEFAULT`（Singleton）**：整个应用一个实例、所有请求共享，绝大多数无状态服务用它
-  2. **`Scope.REQUEST`**：每个请求新建一个实例，适合绑定请求上下文（如按租户隔离）
-  3. **`Scope.TRANSIENT`**：每次注入都新建实例，适合有状态、不可共享的工具类
-  - **代价**：Request/Transient 绕过 Singleton 的复用，高频接口上增加创建开销，且无法被 Singleton 依赖（作用域语义冲突）
-- **启动流程与循环依赖**
-  - **`NestFactory.create` 的顺序**：扫描 Module 树（imports/providers/controllers）→ 收集元数据 → 建依赖关系图 → 建 IoC 容器 → 按依赖顺序实例化 → 注入 Controller 与其他 Provider → 绑路由与 Guard/Pipe → 启动 HTTP Server
-  - **循环依赖会让启动直接失败**：依赖图里出现环，容器无法确定先实例化谁，要用 `forwardRef()` 打破
-- **DI 报错排查三步法**（口诀：要被用先注册、要跨模块先导出、要用别人先导入）
-  1. **该 Provider 是否在 `providers` 里注册**：没注册就补上
-  2. **它来自别的 Module 吗、是否通过 `exports` 导出**：提供方 Module 要写 `exports: [XxxService]`
-  3. **使用方 Module 是否 `imports` 了提供方 Module**：没导入就补上
-  - 三步走完还报错，再检查 `emitDecoratorMetadata` 是否开启、构造参数类型是否可解析（比如用了接口而非具体类却没给 Token）
+- **IoC 与 DI 的两层**：手动 new 整条依赖网，改动牵一发动全身；IoC 是"为何交控制权给容器"的思想，DI 是"怎么交出去"的实现
+- **容器看得见依赖的前提**：装饰器 emit `design:paramtypes` → `reflect-metadata` 挂类 → 启动扫描 → 容器解析注入；`@Injectable()` 与 `emitDecoratorMetadata` 缺一不可，否则 `Nest can't resolve dependencies`
+- **Provider 四种声明**
+  1. **`useClass`**：Token 即类，最常用
+  2. **`useValue`**：注入常量/配置对象
+  3. **`useFactory`**：需运行时逻辑/异步/依赖其他 Provider
+  4. **`useExisting`**：给同一实例起别名
+  - 非类 Token(字符串/`Symbol`)须 `@Inject` 指名才能对上
+- **作用域 Scope**
+  1. **`DEFAULT`(Singleton)**：全应用一实例，无状态服务默认
+  2. **`REQUEST`**：每请求新建，绑请求上下文(如租户隔离)
+  3. **`TRANSIENT`**：每次注入新建，有状态不可共享工具类
+  - 代价：绕过复用增创建开销，且不可被 Singleton 依赖
+- **启动流程与循环依赖**：`NestFactory.create` 扫 Module 树→建依赖图→建容器→按序实例化注入→绑路由/Guard/Pipe→起 HTTP Server；依赖图成环启动直接失败，用 `forwardRef()` 打破
+- **DI 报错三步法**：①该 Provider 是否注册 ②跨模块是否 `exports` 导出 ③使用方是否 `imports`；仍报错查 `emitDecoratorMetadata` 与构造参数类型是否可解析(接口没给 Token)
 
 ---
 

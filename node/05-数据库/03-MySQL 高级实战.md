@@ -1,8 +1,6 @@
 # MySQL 高级实战
 
 > 本章定位为 MySQL 高级实战内容，从前面的 MySQL 进阶延伸到生产环境中的 MySQL 高可用、分布式、运维和深层次调优。
-> 承上：[MySQL 进阶](./02-MySQL%20进阶) —— 先理解索引与事务原理，才能落到主从复制、分库分表等生产实战
-> 启下：[Node.js 操作 MySQL](./04-Node.js%20操作%20MySQL) —— 用 mysql2 连接池配合参数化查询读写 MySQL，并用 TypeORM 的 Repository 完成一次关联查询
 
 ---
 
@@ -505,26 +503,26 @@ mysqlbinlog \
 ## 小结
 
 - **主从复制与读写分离**
-  1. **复制四步流程**：主库写 Binlog → dump 线程推给从库 → 从库 I/O 线程写 Relay Log → SQL 线程重放，以此实现读写分离
-  2. **Binlog 三种格式**：`STATEMENT` 日志量小但遇非确定性函数（`UUID()`、`NOW()`）会主从不一致；`ROW` 最精确、日志量大；`MIXED` 自动切换；生产推荐 `ROW`
-  3. **主从延迟排查**：看 `Seconds_Behind_Master` 与 `Slave_IO_Running` / `Slave_SQL_Running`；靠拆大事务（每次删 1000 行）、并行复制（`slave_parallel_workers = 4`）、关键业务强制读主来解决
+  1. 复制四步流程：主库写 Binlog → dump 线程推给从库 → 从库 I/O 线程写 Relay Log → SQL 线程重放，实现读写分离
+  2. Binlog 三种格式：`STATEMENT` 日志量小但遇非确定性函数（`UUID()`、`NOW()`）会主从不一致；`ROW` 最精确但日志量大；`MIXED` 自动切换；生产推荐 `ROW`
+  3. 主从延迟排查：看 `Seconds_Behind_Master` 与 `Slave_IO_Running` / `Slave_SQL_Running`，靠拆大事务（每次删 1000 行）、并行复制（`slave_parallel_workers = 4`）、关键业务强制读主解决
 - **分库分表**
-  - **垂直拆分与水平拆分**：垂直按业务分库（用户库 / 订单库 / 商品库）；水平按分片键取模拆表，如 `user_id % 4` → `users_0` ~ `users_3`
-  - **分片键选型**：按时间分片会造成写入热点（90% 写入集中在当月）；`user_id` / `order_id` 哈希取模更均匀，地理位置按区域范围分片
-  - **SQL 限制与绕开手段**：跨分片 JOIN、跨分片事务（XA / Seata 性能差）、无分片键的查询都不可用；用广播表、ER 分片（父子表同分片键）、用 ES 维护的索引表绕开
-  - **全局唯一 ID 四方案**：雪花算法（高性能、趋势递增，依赖时钟）、Redis INCR（简单可靠，依赖 Redis）、数据库号段（`UPDATE id_generator SET max_id += 1000`，要维护号段表）、UUID（本地生成，但无序且长、伤索引）
+  - 垂直 / 水平拆分：垂直按业务分库（用户 / 订单 / 商品库）；水平按分片键取模拆表，如 `user_id % 4` → `users_0` ~ `users_3`
+  - 分片键选型：按时间分片会造成写入热点（90% 写入集中当月）；`user_id` / `order_id` 哈希取模更均匀，地理位置按区域范围分片
+  - SQL 限制与绕开：跨分片 JOIN、跨分片事务（XA / Seata 性能差）、无分片键查询都不可用；用广播表、ER 分片（父子表同分片键）、ES 维护的索引表绕开
+  - 全局唯一 ID 四方案：雪花算法（高性能、趋势递增，依赖时钟）、Redis INCR（简单可靠，依赖 Redis）、数据库号段（`UPDATE id_generator SET max_id += 1000`，需维护号段表）、UUID（本地生成但无序且长、伤索引）
 - **表结构变更与迁移**
-  - **Online DDL**：加索引、加列、删列、改默认值可 `ALGORITHM=INPLACE, LOCK=NONE`，不阻塞读写；改列类型与主键修改要锁表、不允许并发 DML
-  - **大表用 gh-ost**：建影子表 `_orders_gho` → 同步 binlog 变更 → 分批复制原表数据 → 毫秒级原子改名切换，千万级大表首选
-  - **零停机迁移五步**：搭主从复制 → `pt-table-checksum` 数据校验 → 灰度切读（10% → 50% → 100%）→ 切写（整个窗口控制在 1-5 分钟）→ 保留旧库 3-7 天观察回滚
+  - Online DDL：加索引 / 加列 / 删列 / 改默认值可 `ALGORITHM=INPLACE, LOCK=NONE` 不阻塞读写；改列类型与主键修改要锁表、不允许并发 DML
+  - 大表用 gh-ost：建影子表 `_orders_gho` → 同步 binlog 变更 → 分批复制原表数据 → 毫秒级原子改名切换，千万级大表首选
+  - 零停机迁移五步：搭主从复制 → `pt-table-checksum` 数据校验 → 灰度切读（10% → 50% → 100%）→ 切写（窗口 1-5 分钟）→ 保留旧库 3-7 天观察回滚
 - **连接池调优与故障排查**
-  - **核心参数**：`connectionLimit: 10`（默认 10）、`queueLimit: 0`（不限制等待队列）、`waitForConnections: true`、`acquireTimeout` / `connectTimeout: 10000`、`idleTimeout: 600000`（默认 10 分钟）、`enableKeepAlive: true`
-  - **连接数估算**：`(CPU 核心数 × 2) + 有效磁盘数`，或按 QPS × 平均查询时间估；4 核 8G 建议 20-50，8 核 16G 建议 50-100；连接过多会因上下文切换开销反而变慢
-  - **三类故障排查**：溢出（`ER_CON_COUNT_ERROR` / `Cannot get connection from pool`）查慢查询与连接泄漏；泄漏（连接数只涨不落）改用 `connection.execute` 并在 `finally` 里 release；超时（`connect ETIMEDOUT`）源于 MySQL `wait_timeout` 默认 8 小时，开 `enableKeepAlive` 并让 `idleTimeout` 小于它
+  - 核心参数：`connectionLimit: 10`、`queueLimit: 0`、`waitForConnections: true`、`connectTimeout: 10000`、`idleTimeout`（默认 10 分钟）、`enableKeepAlive: true`
+  - 连接数估算：`(CPU 核心数 × 2) + 有效磁盘数`，或按 QPS × 平均查询时间；4 核 8G 建议 20-50、8 核 16G 建议 50-100；连接过多因上下文切换反而变慢
+  - 三类故障：溢出（`ER_CON_COUNT_ERROR`）查慢查询与连接泄漏；泄漏（连接数只涨不落）改用 `connection.execute` 并 `finally` 里 release；超时（`connect ETIMEDOUT`）源于 `wait_timeout` 默认 8 小时，开 `enableKeepAlive` 并让 `idleTimeout` 小于它
 - **备份与恢复**
-  - **三种方案**：mysqldump 逻辑备份、恢复慢（适合 < 50GB 小库与迁移）；XtraBackup 物理备份、1TB 约 30 分钟（大库生产环境）；Binlog 增量备份，用于时间点恢复（PITR）
-  - **策略与检查清单**：周日全量 + 每日增量 + Binlog 保留 7 天以上；备份必须异地、每周至少一次恢复测试、每季度一次限时 4 小时的完整恢复演练，备份失败 5 分钟内告警
-  - **PITR 三步**：`xtrabackup --prepare` / `--copy-back` 恢复全备 → `mysqlbinlog` 用 `--stop-datetime` 回放到误操作前一刻 → 校验关键表行数与业务数据
+  - 三种方案：mysqldump 逻辑备份（恢复慢，适合 < 50GB）、XtraBackup 物理备份（1TB 约 30 分钟）、Binlog 增量备份（用于时间点恢复 PITR）
+  - 策略与检查清单：周日全量 + 每日增量 + Binlog 保留 7 天以上；异地备份、每周恢复测试、每季度限时 4 小时完整演练、备份失败 5 分钟内告警
+  - PITR 三步：`xtrabackup --prepare` / `--copy-back` 恢复全备 → `mysqlbinlog` 用 `--stop-datetime` 回放至误操作前一刻 → 校验关键表行数与业务数据
 
 ---
 

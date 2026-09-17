@@ -1,7 +1,5 @@
 # PostgreSQL 与 pgvector
 
-> 承上：[MySQL 进阶](./02-MySQL%20进阶) —— 先掌握索引与查询优化，才能对比理解 PG 的 GIN/部分索引与 EXPLAIN ANALYZE 差异
-> 启下：[Redis 基础与数据类型](../06-Redis/01-Redis%20基础与数据类型)
 
 会用 MySQL，甚至能熟练写 ORM，不等于"会数据库"。除了事务与查询，现代后端还要存结构化 + 半结构化混合数据、做向量检索、支撑内容推荐与相似度搜索。
 
@@ -421,49 +419,42 @@ async function search(queryVector: number[], topK = 5) {
 ## 小结
 
 - **PG 与 MySQL 的定位差异**
-  - **设计取向**：MySQL 简单、快、稳，是 Web 业务与交易的首选；PG 标准、严谨、可扩展，能力面更宽，适合分析、地理、JSON 文档、向量等混合负载
-  - **心智模型**：MySQL 管"钱和订单"，PostgreSQL 管"半结构化数据与向量"——不是替代关系，而是该同时掌握的两套武器
+  - 设计取向：MySQL 简单、快、稳，是 Web 业务与交易首选；PG 标准、严谨、可扩展，能力面更宽，适合分析、地理、JSON 文档、向量等混合负载
+  - 心智模型：MySQL 管"钱和订单"、PostgreSQL 管"半结构化数据与向量"，不是替代关系而是该同时掌握的两套武器
+  - 选型：核心业务 / 交易 / 账户选 MySQL（生态成熟、运维简单）；半结构化 metadata、复杂分析 / 窗口函数、地理（PostGIS）、向量（pgvector）选 PostgreSQL；常见组合是 MySQL 管账户订单 + PG 管运行数据与文档向量
 - **强数据类型**
-  - **`UUID`**：分布式环境生成主键，避免自增 ID 被遍历，用 `DEFAULT gen_random_uuid()`
-  - **`TEXT[]` 数组**：一个字段存多个值、省掉关联表，用 `'io' = ANY(tags)` 做包含判断
-  - **`ENUM`**：`CREATE TYPE task_status AS ENUM (...)` 限定取值集合，比 `VARCHAR` 更省空间也更安全
-  - **`JSONB`**：承载任意结构化的半结构化字段
+  - `UUID`：分布式环境生成主键、避免自增 ID 被遍历，用 `DEFAULT gen_random_uuid()`
+  - `TEXT[]` 数组：一个字段存多值、省掉关联表，用 `'io' = ANY(tags)` 做包含判断
+  - `ENUM`：`CREATE TYPE task_status AS ENUM (...)` 限定取值集合，比 `VARCHAR` 省空间更安全
+  - `JSONB`：承载任意结构化半结构化字段
 - **JSONB 与 GIN 索引**
-  - **JSON 与 JSONB 的差别**：JSON 文本原样存、每次解析慢、不能高效索引；JSONB 解析后二进制存、直接取字段快、可建 GIN 索引
-  - **取值与过滤**：`->` 返回 jsonb、`->>` 返回文本；`payload @> '{"tool": "sql_query"}'` 是包含判断并走 GIN，也可只对某个键建索引 `USING GIN ((payload -> 'tool'))`
-  - **决策模型**：字段结构稳定、要联表用普通列；结构随业务演进、经常整体读写、需要灵活查询用 JSONB + GIN
+  - JSON vs JSONB：JSON 文本原样存、每次解析慢、不能高效索引；JSONB 解析后二进制存、直接取字段快、可建 GIN 索引
+  - 取值与过滤：`->` 返回 jsonb、`->>` 返回文本；`payload @> '{"tool": "sql_query"}'` 走 GIN 包含判断，也可只对某键建 `USING GIN ((payload -> 'tool'))`
+  - 决策模型：结构稳定、要联表用普通列；结构随业务演进、常整体读写、需灵活查询用 JSONB + GIN
 - **窗口函数、CTE 与 UPSERT**
-  - **窗口函数**：`ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC)` 取组内最新一条，`RANK() OVER (...)` 算组内排名——行还在，只是多了一列
-  - **CTE（`WITH`）**：`WITH ranked AS (...)` 把子查询命名，多步逻辑可读，比嵌套子查询清晰
-  - **UPSERT**：`ON CONFLICT (run_id) DO UPDATE SET status = EXCLUDED.status` 一条语句完成幂等写入
+  - 窗口函数：`ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC)` 取组内最新一条，`RANK() OVER (...)` 算组内排名（行还在，只多一列）
+  - CTE（`WITH`）：`WITH ranked AS (...)` 把子查询命名，多步逻辑比嵌套子查询清晰
+  - UPSERT：`ON CONFLICT (run_id) DO UPDATE SET status = EXCLUDED.status` 一条语句完成幂等写入
 - **更丰富的索引类型**
-  - **B-Tree**：等值、范围、排序（默认），如 `WHERE user_id = ?`、`ORDER BY created_at`
-  - **GIN**：多值 / JSONB / 数组包含，如 `payload @> '{"tool":"x"}'`、数组 tags
-  - **GiST**：几何、范围重叠、全文检索
-  - **部分索引**：只对一部分行建索引，如 `WHERE status = 'running'`，体积小、写入快
-  - **表达式索引**：对函数结果建索引，如 `ON users (lower(email))` 做大小写无关查询
-- **EXPLAIN ANALYZE 怎么读**
-  - **会真执行语句**：给出真实耗时，信息比 MySQL 的 `EXPLAIN` 更全
-  - **`Seq Scan` / `Index Scan`**：大表出现 `Seq Scan` 通常是没走索引
-  - **`rows` vs `actual rows`**：估算行数与实际行数偏差大，说明统计信息过期、需要 `ANALYZE`
-  - **`Planning Time` / `Execution Time`**：规划 / 执行耗时，是优化目标，单位毫秒
+  - B-Tree：等值、范围、排序（默认），如 `WHERE user_id = ?`、`ORDER BY created_at`
+  - GIN：多值 / JSONB / 数组包含，如 `payload @> '{"tool":"x"}'`、数组 tags
+  - GiST：几何、范围重叠、全文检索
+  - 部分索引：只对一部分行建索引（如 `WHERE status = 'running'`），体积小、写入快
+  - 表达式索引：对函数结果建索引，如 `ON users (lower(email))` 做大小写无关查询
+- **EXPLAIN ANALYZE 怎么读**：会真执行语句并给真实耗时，信息比 MySQL 的 `EXPLAIN` 更全；`Seq Scan` 大表出现通常没走索引；`rows` 与 `actual rows` 偏差大说明统计信息过期需 `ANALYZE`；`Planning Time` / `Execution Time`（毫秒）是优化目标
 - **MVCC 与 VACUUM 的差异**
-  - **旧版本存放**：MySQL 放在 undo log（独立段），由后台 purge 线程自动清理；PG 就存在数据表本身（行里有 `xmin` / `xmax` 版本号）
-  - **回收方式**：PG 的 UPDATE 是"标记旧行失效 + 插入新行"，死元组（dead tuple）必须靠 `VACUUM`（或 autovacuum）回收，否则表持续膨胀、越查越慢
-  - **长事务影响**：MySQL 里阻塞 purge；PG 里阻塞 `VACUUM`，导致死元组堆积
+  - 旧版本存放：MySQL 在 undo log（独立段）由 purge 线程清理；PG 在数据表本身（行有 `xmin` / `xmax` 版本号）
+  - 回收方式：PG 的 UPDATE 是"标记旧行失效 + 插入新行"，死元组靠 `VACUUM`（或 autovacuum）回收，否则表持续膨胀、越查越慢
+  - 长事务影响：MySQL 阻塞 purge；PG 阻塞 `VACUUM`，死元组堆积
 - **pgvector 向量相似度检索**
-  - **完整流程**：原始文档 → 切块 Chunk（一般 200~1000 字一段）→ Embedding 转成定长向量（如 1536 维）→ 存进 `VECTOR(1536)` 列 → 查询同样向量化 → 用余弦距离 `<=>` 取 TopK
-  - **建表与索引**：`CREATE EXTENSION IF NOT EXISTS vector;`；IVFFlat 适合百万级以内（`WITH (lists = 100)`，需先设候选列表数），HNSW 在 PG 0.5+ 召回更准、构建更快，新项目直接用
-  - **距离算子对照**：`<->` 欧氏距离配 `vector_l2_ops`、`<#>` 内积配 `vector_ip_ops`、`<=>` 余弦距离配 `vector_cosine_ops`
-  - **何时才上专用库**：数据到千万级、QPS 很高、需要独立扩缩容时，再考虑 Milvus / Qdrant
+  - 完整流程：原始文档 → 切块（200~1000 字一段）→ Embedding 转定长向量（如 1536 维）→ 存 `VECTOR(1536)` 列 → 查询向量化 → 余弦距离 `<=>` 取 TopK
+  - 建表与索引：`CREATE EXTENSION IF NOT EXISTS vector;`；IVFFlat 适合百万级以内（`WITH (lists = 100)`），HNSW 在 PG 0.5+ 召回更准、构建更快（新项目直接用）
+  - 距离算子：`<->` 欧氏配 `vector_l2_ops`、`<#>` 内积配 `vector_ip_ops`、`<=>` 余弦配 `vector_cosine_ops`
+  - 何时上专用库：数据到千万级、QPS 很高、需独立扩缩容时再考虑 Milvus / Qdrant
 - **NestJS + Prisma 集成 PG**
-  - **类型旁路**：Prisma 没有 `VECTOR` 原生类型，用 `Unsupported("vector(1536)")?` 透传
-  - **写入与查询走 raw query**：`$executeRaw` 写向量（向量要拼成 `'[1,2,...]'` 字符串），`$queryRawUnsafe` 做 TopK 相似度查询——ORM 方法表达不了 `<=>`
-  - **建表与索引**：`DATABASE_URL` 用 `postgresql://` 协议；migration 里先 `CREATE EXTENSION vector;`，HNSW 索引手写 `CREATE INDEX`，Prisma 不支持声明式定义
-- **PostgreSQL vs MySQL 选型决策**
-  - **选 MySQL**：核心业务 / 交易 / 账户（生态成熟、运维简单），团队更熟悉、生态与招聘面更广
-  - **选 PostgreSQL**：半结构化 metadata（JSONB + GIN）、复杂分析与窗口函数 / CTE、地理信息（PostGIS）、向量检索（pgvector 原生扩展）
-  - **常见组合**：MySQL 管账户与订单 + PostgreSQL 管业务运行数据与文档向量
+  - 类型旁路：Prisma 无 `VECTOR` 原生类型，用 `Unsupported("vector(1536)")?` 透传
+  - 读写走 raw query：`$executeRaw` 写向量（拼成 `'[1,2,...]'` 字符串）、`$queryRawUnsafe` 做 TopK——ORM 方法表达不了 `<=>`
+  - 建表与索引：`DATABASE_URL` 用 `postgresql://`；migration 先 `CREATE EXTENSION vector;`，HNSW 索引手写 `CREATE INDEX`（Prisma 不支持声明式定义）
 
 ---
 

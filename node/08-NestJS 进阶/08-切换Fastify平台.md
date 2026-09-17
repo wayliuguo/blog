@@ -1,8 +1,6 @@
 # 切换 Fastify 平台
 
 > NestJS 默认使用 Express 作为底层 HTTP 平台，也支持切换到 Fastify 获得更好的性能。
-> 承上：[快速上手](../07-NestJS%20入门/01-快速上手) —— 切换平台改的就是 `main.ts` 里的 `NestFactory.create`，先会初始化项目才知道改哪
-> 启下：[NestJS 源码分析](./09-NestJS%20源码分析) —— 顺着最小实现讲清装饰器如何写元数据、DI 容器如何读 `design:paramtypes` 递归注入、请求如何走完处理链
 
 ---
 
@@ -211,14 +209,12 @@ const result = await autocannon({
 
 ## 小结
 
-- **换 Fastify 的收益**
-  - **性能约 2~3 倍**：压测约 40000 req/s 对比 Express 的 15000 req/s
-  - **快在哪**：内置 JSON Schema 序列化替代 `JSON.stringify`
-- **切换要改的三处**
-  1. **入口**：装 `@nestjs/platform-fastify` 后换成 `NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())`
-  2. **静态资源写法不同**：Express 是 `useStaticAssets(path, { prefix })`，Fastify 是 `useStaticAssets({ root, prefix })`；视图引擎也从 `setViewEngine('hbs')` 换成 `setViewEngine({ engine, templates })`
-  3. **文件上传要额外注册解析器**：Fastify 下需要 `app.register(contentParser)`（来自 `fastify-multer`）才能接收 multipart 请求
-- **Express 中间件不能直接搬**：Fastify 不兼容 Express 的 `req`/`res`，`cookie-parser`/`helmet` 要换成 `@fastify/cookie`、`@fastify/helmet`，用 `app.register()` 注册
+- **收益**：性能约 2~3 倍（压测 ~40000 vs Express 15000 req/s），快在 JSON Schema 序列化替代 `JSON.stringify`
+- **切换三处改动**
+  1. **入口**：装 `@nestjs/platform-fastify` 后换 `NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())`
+  2. **静态/视图**：`useStaticAssets({ root, prefix })`、`setViewEngine({ engine, templates })`（写法与 Express 不同）
+  3. **文件上传**：需 `app.register(contentParser)`（来自 `fastify-multer`）才能收 multipart 请求
+- **中间件不兼容**：Fastify 不兼容 Express 的 `req`/`res`，`cookie-parser`/`helmet` 换 `@fastify/cookie`/`@fastify/helmet`，用 `app.register()` 注册
 
 ---
 

@@ -1,8 +1,6 @@
 # IOC 与依赖注入
 
 > 依赖注入（DI）是 NestJS 最核心的特性之一，理解它就能理解 NestJS 的设计思想。
-> 承上：[快速上手](./01-快速上手) —— 先跑起一个项目，否则无法直观感受"为什么不用 new"
-> 启下：[模块与提供器](./03-模块与提供器) —— 用 `@Module` 的 imports/exports 把多个业务模块拆开，并让一个模块的服务被另一个模块复用
 
 ---
 
@@ -219,22 +217,16 @@ export class AppController {
 
 ## 小结
 
-- **为什么需要 DI**
-  - **手动 `new` 的三个代价**：与实现紧耦合、没法替换 Mock 做单测、改构造方式要改所有调用点
-  - **DI 的做法**：构造函数里声明 `private readonly userService: UserService`，实例由容器创建并注入
+- **为什么需要 DI**：手动 `new` 紧耦合、难替换 Mock 做单测、改构造方式要改所有调用点；DI 改为在构造函数声明 `private readonly userService: UserService`，实例由容器创建并注入
 - **两个装饰器与一行声明**
-  - **`@Injectable()` 真正的作用**：把类登记进 DI 容器的"可被注入"名单，没有它容器根本不认识这个类
-  - **构造函数注入一行三用**：`private readonly userService: UserService` 同时声明了字段、类型和依赖
-  - **按 Token 注入**：非类依赖（如配置对象）用 `@Inject('CONFIG')` 取值
-- **DI 容器怎么装配依赖**
-  1. **发现**：扫描 `@Injectable` 标记的类
-  2. **分析**：读取构造函数的参数类型
-  3. **递归**：先把依赖的实例创建出来
-  4. **注入并返回**：塞进构造函数，交回创建好的实例
+  - `@Injectable()` 的作用：把类登记进 DI 容器的"可注入"名单，没有它容器不认识这个类
+  - 构造函数注入一行三用：`private readonly userService: UserService` 同时声明字段、类型和依赖
+  - 按 Token 注入：非类依赖（如配置对象）用 `@Inject('CONFIG')` 取值
+- **DI 容器装配依赖**：发现（`@Injectable` 标记）→ 分析（读构造函数参数类型）→ 递归（先创建依赖实例）→ 注入并返回（塞进构造函数）
 - **三种自定义 Provider**
-  1. **useClass**：`{ provide: UserService, useClass: UserService }`，Token 就是类本身，最常用的一种
-  2. **useValue**：`{ provide: 'CONFIG', useValue: { port: 3000 } }` 注入常量或配置对象，取值要配 `@Inject('CONFIG')`
-  3. **useFactory**：`{ provide: 'DB_CONNECTION', useFactory: cfg => ..., inject: [ConfigService] }`，用于需要运行时逻辑或异步的实例
+  1. `useClass`：`{ provide: UserService, useClass: UserService }`，Token 即类，最常用
+  2. `useValue`：`{ provide: 'CONFIG', useValue: { port: 3000 } }` 注入常量或配置对象，取值配 `@Inject('CONFIG')`
+  3. `useFactory`：`{ provide: 'DB_CONNECTION', useFactory: cfg => ..., inject: [ConfigService] }` 用于运行时逻辑或异步实例
 
 ---
 

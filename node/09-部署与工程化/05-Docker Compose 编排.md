@@ -2,8 +2,6 @@
 
 > 从"一个容器"到"一组服务"：编排的渐进式演进
 > 实战参考：show-track-server 的 `docker-compose.infra.prod.yml` 与 `docker-compose.prod.yml`
-> 承上：[Docker 容器化](./04-Docker%20容器化) —— Compose 是「多容器怎么编排」，先会造单容器镜像再看多容器编排
-> 启下：[Nginx 反向代理与网关](./06-Nginx%20反向代理与网关) —— 配出反向代理 server，正确传 `X-Forwarded-For` 拿真实客户端 IP，并用 `proxy_read_timeout` + `Upgrade` 头支持 WebSocket 长连接
 
 ---
 
@@ -224,32 +222,30 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 ## 小结
 
-- **Compose 要解决的痛点**
-  - `docker run` 一个个起容器要敲几十个参数：**参数记不住、网络手动 `--link`、重启要重新组织命令、无法版本化**
-  - Compose 用一份 YAML 声明"这一组服务长什么样"，`docker compose up -d` 一条命令全部拉起
+- **Compose 解决的痛点**：`docker run` 一个个起容器要敲几十参数（参数记不住、网络手动 `--link`、重启重组织命令、无法版本化）；Compose 一份 YAML 声明整组服务，`docker compose up -d` 一条命令拉起
 - **一个文件声明全栈**
-  - app + mysql + redis 写进同一份 YAML，用 `up -d` / `ps` / `logs -f` / `down` 管理整套服务
-  - **服务名互访**：Compose 自动创建网络并做 DNS 解析，容器间直接用服务名（`mysql` / `redis`）当主机名——这是与 `docker run` 的本质区别
-- **数据怎么不丢**
-  - **命名卷持久化**：`volumes: mysql_data:/var/lib/mysql`，容器删了数据还在
-  - **Redis 持久化**：`--appendonly yes --appendfsync everysec` 每秒刷盘，崩溃最多丢 1 秒数据
-  - **日志命名卷**：`show-track-logs:/app/logs/` 让日志跨容器生命周期持久化
+  - app + mysql + redis 写进同一 YAML，用 `up -d` / `ps` / `logs -f` / `down` 管理整套服务
+  - 服务名互访：Compose 自动建网并 DNS 解析，容器间直接用服务名（`mysql` / `redis`）当主机名——与 `docker run` 本质区别
+- **数据持久化**
+  - 命名卷：`volumes: mysql_data:/var/lib/mysql`，容器删了数据还在
+  - Redis 持久化：`--appendonly yes --appendfsync everysec` 每秒刷盘，崩溃最多丢 1 秒
+  - 日志命名卷：`show-track-logs:/app/logs/` 让日志跨容器生命周期持久化
 - **生产堆栈分离**
-  - `docker-compose.infra.prod.yml` 管 MySQL + Redis（**一次性启动，之后不管**）；`docker-compose.prod.yml` 管 migration + 应用（日常部署更新）
-  - **为什么要拆**：数据库几年不动、应用天天更新，生命周期不同；拆开后数据库可自建 Docker、可上云 RDS、可混合，切换只改 env 不动编排文件
-  - **基础设施细节**：`restart: always` 让数据库挂掉自动拉起；`./__data/redis/` 挂到宿主机，容器重建不丢；数据库上云时直接注释掉 mysql 服务
-- **迁移 Job：把启动顺序变成硬依赖**
-  - **`depends_on: condition: service_completed_successfully`**：应用等迁移 Job **成功完成**才启动，比默认"只等容器启动"严格得多
-  - **同镜像不同入口**：迁移与业务共用同一镜像，只靠 `entrypoint` 覆盖区分；`restart: 'no'` 让一次性任务失败就失败，不留死循环重试
+  - `docker-compose.infra.prod.yml` 管 MySQL + Redis（一次性启动之后不管）；`docker-compose.prod.yml` 管 migration + 应用（日常部署）
+  - 为什么拆：数据库几年不动、应用天天更新、生命周期不同；拆开可自建 Docker / 上云 RDS / 混合，切换只改 env 不动编排
+  - 基础设施细节：`restart: always` 让库挂掉自动拉起；`./__data/redis/` 挂宿主机；上云时注释掉 mysql 服务
+- **迁移 Job**：把启动顺序变硬依赖
+  - `depends_on: condition: service_completed_successfully`：应用等迁移 Job 成功完成才启动，比默认“只等容器启动”严格
+  - 同镜像不同入口：迁移与业务共用镜像，只靠 `entrypoint` 覆盖区分；`restart: 'no'` 让一次性任务失败就失败，不留死循环重试
 - **入口收敛与跨宿主机访问**
-  - **`ports: '127.0.0.1:${APP_PORT}:${APP_PORT}'`**：只绑宿主机回环地址、不暴露公网，对外只开 Nginx 一个口
-  - **`env_file: .env.production`**：环境变量从文件注入，密钥不进镜像、不进代码
-  - **显式命名网络**：`networks: name: show_track_net` 让多个 compose 文件共享同一网络
-  - **跨宿主机访问**：`extra_hosts` 配 `host.docker.internal:host-gateway`，`DB_HOST` 填 `host.docker.internal`（自建库）或云 RDS 地址
+  - `ports: '127.0.0.1:${APP_PORT}:${APP_PORT}'`：只绑回环、不暴露公网，对外只开 Nginx 一个口
+  - `env_file: .env.production`：环境变量从文件注入，密钥不进镜像不进代码
+  - 显式命名网络：`networks: name: show_track_net` 让多个 compose 文件共享同一网络
+  - 跨宿主机访问：`extra_hosts` 配 `host.docker.internal:host-gateway`，`DB_HOST` 填 `host.docker.internal`（自建库）或云 RDS 地址
 - **三种部署场景**
-  1. **全部 Docker（自建 MySQL + Redis）**：先 `infra.prod.yml` 启动基础设施，再 `prod.yml` 部署应用
-  2. **混合（MySQL 上云 + Redis 本地）**：infra 文件注释掉 mysql，`.env` 里 `DB_HOST` 填云地址
-  3. **全部云服务**：跳过 infra 文件，`.env` 里全填云地址，只用 `prod.yml`
+  1. 全部 Docker（自建 MySQL + Redis）：先 `infra.prod.yml` 起基础设施，再 `prod.yml` 部署应用
+  2. 混合（MySQL 上云 + Redis 本地）：infra 注释掉 mysql，`.env` 里 `DB_HOST` 填云地址
+  3. 全部云服务：跳过 infra 文件，`.env` 全填云地址，只用 `prod.yml`
 
 ---
 
