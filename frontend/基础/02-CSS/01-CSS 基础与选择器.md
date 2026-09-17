@@ -299,6 +299,21 @@ h2 ~ p {
 }
 ```
 
+### width: 100% 与 width: auto 的区别
+
+两者都会"铺满"，但机制不同：
+
+- **`width: 100%`**：子元素 content 宽度**等于父元素 content 宽度**。父级加 `padding`/`border` 后，子元素会**溢出**（100% 不含自己的 padding/border，也不含父级的 padding/border）。
+- **`width: auto`**（默认）：子元素的 **border + padding + content 之和**填满父元素 content，即"自动收缩以正好填满"，加 `padding`/`border` 后**不溢出**。
+
+```css
+.father { width: 500px; padding: 20px; }   /* content = 460px */
+.son-a  { width: 100%; padding: 20px; }    /* content=460px，总宽 500px，溢出父 content */
+.son-b  { width: auto; padding: 20px; }    /* 总宽自动 = 460px，不溢出 */
+```
+
+> 一句话：块级元素**默认 `auto` 会自适应不溢出**；手写 `100%` 反而容易因 padding 造成溢出，配合 `border-box` 才安全。
+
 ## margin 塌陷与合并
 
 margin 会产生两个让初学者困惑的"坑"。
