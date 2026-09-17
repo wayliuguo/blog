@@ -452,6 +452,17 @@ BFC（Block Formatting Context）是页面上的**一块独立渲染区域**，�
 
 > 现代布局已优先用 Flex/Grid，但 BFC 的概念依然是理解布局机制、排查怪异问题的底层能力。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/02-CSS/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `specificity.html` | 同一元素被标签/类/ID 选择器同时命中，演示优先级权重（ID > 类 > 标签，权重相同后写胜出） |
+| `box-sizing.html` | 同一 `width` 下 `content-box` 与 `border-box` 的可见总宽差异，演示 `border-box` 不会被 padding/border 撑爆布局 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5175/`。
+
 ## 总结
 
 - CSS 基础与选择器

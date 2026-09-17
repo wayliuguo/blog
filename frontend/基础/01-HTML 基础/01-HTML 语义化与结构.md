@@ -200,6 +200,17 @@ HTML 用**标签**描述"这里是什么内容"。
 - **对爬虫（SEO）**：它不"看"网页，只"读"结构树。`<nav>/<article>/<main>` 和 `h1` 层级能让它瞬间分清正文与导航，正确索引内容。
 - 对读屏器（无障碍）：你闭眼，靠听读屏器浏览。语义化让它能"跳过导航直接读正文"、"把图读成 alt 文字"。`div` 堆出的页面只会被读成一串无意义容器。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/01-HTML 基础/code/site/semantic-blog/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `semantic-blog/index.html` | 用 `header/nav/main/article/figure/time/address` 等语义化标签搭出博客页，并演示 `<picture>` 按屏宽切换头图 |
+| `banner-wide.svg` | `<picture>` 大屏（≥720px）使用的头图资源，配合语义化页面做响应式图片 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/`。
+
 ## 总结
 
 - HTML 语义化与结构

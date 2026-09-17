@@ -415,6 +415,16 @@ const increase = useBearStore((s) => s.increase)
 - 喜欢 Vue 式的响应式体验：选 MobX。
 - 无论是哪种，都要牢记 **不可变数据** 与 **单一数据源（Single Source of Truth）** 的原则，才能写出可维护的状态管理代码。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/05-前端框架-React/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `hooks-demo.html` | 状态按调用顺序存取 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
+
 ## 总结
 
 - React 状态管理

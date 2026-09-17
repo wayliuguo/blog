@@ -381,6 +381,16 @@ HTTPS 采用**混合加密**（Hybrid）——取两者之长：
 <link rel="preconnect" href="https://cdn.example.com" />
 ```
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/04-网络与浏览器/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `fetch-status.html` | 通过真实 Fetch 请求回显 HTTP 状态码，并用 Promise 状态机（pending→resolved/rejected）演示请求的异步时序 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5177/`。
+
 ## 总结
 
 - HTTP 与 HTTPS

@@ -285,6 +285,16 @@ export default () => <Card>内容</Card>;
 
 **务实建议**：不必把它当作"非此即彼"的单选题。很多团队是**混合使用**——主体用 CSS Module 或 Tailwind，对确实需要语义化、可复用的复杂业务组件，再用 BEM 命名来承载。判断标准永远是：改一处样式时，我能不能清楚它会影响哪些地方；换一个人接手时，能不能凭类名猜出结构。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/02-CSS/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `bem-card.html` | 用 `block__element--modifier` 命名实现一个卡片组件，改一处状态不影响全局 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5175/`。
+
 ## 总结
 
 - BEM 与 CSS 规范

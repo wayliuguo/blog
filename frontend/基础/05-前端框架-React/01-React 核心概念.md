@@ -403,6 +403,16 @@ npx create-react-app react-ts-demo --template typescript
 npm create vite@latest react-demo-vite --template react-ts
 ```
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/05-前端框架-React/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `mini-runtime.html` | 手写极简渲染器 createElement + render + onUpdate，演示虚拟 DOM 与声明式更新 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
+
 ## 总结
 
 - React 核心概念

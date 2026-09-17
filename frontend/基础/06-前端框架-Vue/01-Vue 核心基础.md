@@ -434,6 +434,16 @@ const formatPrice = (val) => '¥ ' + Number(val).toFixed(2)
 - `@` 是 `v-on` 的简写。
 - `v-model` 是表单双向绑定的专用指令，无简写形式。
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/06-前端框架-Vue/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `compiler-demo.html` | 用字符串模板模拟 Vue 模板编译：解析 `{}` 插值片段、生成渲染函数并渲染数据 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5181/`。
+
 ## 总结
 
 - Vue 核心基础

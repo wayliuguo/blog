@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>css-styles：三种样式方案对比</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                line-height: 1.6;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .box {
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            .box h2 {
+                margin: 0 0 0.5rem;
+                font-size: 1.1rem;
+            }
+            button {
+                margin-right: 0.5rem;
+                padding: 0.3rem 0.7rem;
+            }
+            code {
+                background: #f1f5f9;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            /* ---- 方案二：className + 样式表（选择器全局可见，靠类名切换） ---- */
+            .themed {
+                border-radius: 8px;
+                padding: 1rem;
+                transition: background 0.2s;
+            }
+            .theme-light {
+                background: #f8fafc;
+                color: #0f172a;
+                border: 1px solid #cbd5e1;
+            }
+            .theme-dark {
+                background: #1e293b;
+                color: #f8fafc;
+                border: 1px solid #334155;
+            }
+            /* ---- 方案三：CSS 变量 + 命名前缀，模拟 CSS Module 的隔离思路 ----
+               所有变量都带 cmod- 前缀并只在 .cmod-box 内生效，换一组变量即可换肤，
+               前缀命名让样式不污染全局命名空间（对应 CSS Module 编译出的 hash 类名）。 */
+            .cmod-box {
+                --cmod-bg: #eff6ff;
+                --cmod-border: #2563eb;
+                --cmod-text: #1e3a8a;
+                background: var(--cmod-bg);
+                border: 1px solid var(--cmod-border);
+                color: var(--cmod-text);
+                border-radius: 8px;
+                padding: 1rem;
+            }
+            .cmod-box--alt {
+                --cmod-bg: #fef2f2;
+                --cmod-border: #dc2626;
+                --cmod-text: #7f1d1d;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>css-styles：三种样式方案对比</h1>
+        <p>三个卡片分别演示 React 中三种写样式的方式，都<strong>不依赖任何库</strong>，浏览器直接打开即可交互：</p>
+        <ul>
+            <li><strong>内联 style</strong>：把驼峰对象直接赋给元素，适合动态、一次性的样式。</li>
+            <li><strong>className + 样式表</strong>：样式写在样式表里，用类名切换，可复用、可换肤。</li>
+            <li>
+                <strong>CSS 变量 + 命名前缀</strong>：变量限定在带前缀的类内，换变量即换肤，模拟 CSS Module 的隔离思路。
+            </li>
+        </ul>
+
+        <!-- 方案一：内联 style（驼峰对象） -->
+        <div class="box">
+            <h2>方案一：内联 style（驼峰对象）</h2>
+            <div id="inlineBox" style="padding: 1rem; border-radius: 8px">计数：<b id="inlineCount">0</b></div>
+            <p style="margin-top: 0.8rem">
+                <button id="inlineBtn">+ 加一（同时改背景色）</button>
+            </p>
+            <p>
+                样式来自 JS 里的驼峰对象：<code>{ backgroundColor, border, borderRadius }</code>，等价于 React 的 style
+                属性。
+            </p>
+        </div>
+
+        <!-- 方案二：className + 样式表 -->
+        <div class="box">
+            <h2>方案二：className + 样式表</h2>
+            <div id="themedBox" class="themed theme-light">当前主题：<b id="themeName">浅色</b></div>
+            <p style="margin-top: 0.8rem">
+                <button id="themeBtn">切换深浅主题</button>
+            </p>
+            <p>样式写在 <code>&lt;style&gt;</code> 里，只切换 <code>className</code>（对应 React 里动态拼接类名）。</p>
+        </div>
+
+        <!-- 方案三：CSS 变量 + 命名前缀（模拟 CSS Module 隔离） -->
+        <div class="box">
+            <h2>方案三：CSS 变量 + 命名前缀（模拟 CSS Module）</h2>
+            <div id="cmodBox" class="cmod-box">我是 cmod-box：颜色来自 <code>var(--cmod-*)</code> 变量</div>
+            <p style="margin-top: 0.8rem">
+                <button id="cmodBtn">切换变量组（换肤）</button>
+            </p>
+            <p>
+                变量全部带 <code>cmod-</code> 前缀并只在 <code>.cmod-box</code> 内生效，换一组变量即换肤——
+                前缀命名避免污染全局，对应 CSS Module 编译出 hash 类名的隔离思路。
+            </p>
+        </div>
+
+        <script>
+            /* ---------- 方案一：内联 style，用驼峰对象 + Object.assign 应用到真实 DOM ---------- */
+            var inlineCount = 0
+            var inlineBox = document.getElementById('inlineBox')
+
+            function applyInlineStyle(extra) {
+                // 驼峰属性名（backgroundColor / borderRadius），与 React 的 style={{...}} 写法一致
+                Object.assign(inlineBox.style, {
+                    backgroundColor: extra.bg,
+                    border: '1px solid #2563eb',
+                    color: '#1e3a8a',
+                    padding: '1rem',
+                    borderRadius: '8px'
+                })
+            }
+            applyInlineStyle({ bg: '#eff6ff' })
+
+            document.getElementById('inlineBtn').addEventListener('click', function () {
+                inlineCount += 1
+                document.getElementById('inlineCount').textContent = String(inlineCount)
+                // 每次点击换一个背景色（动态样式正是内联 style 的强项）
+                applyInlineStyle({ bg: inlineCount % 2 === 0 ? '#eff6ff' : '#fefce8' })
+            })
+
+            /* ---------- 方案二：className + 样式表，切换类名换肤 ---------- */
+            var themedBox = document.getElementById('themedBox')
+            var isDark = false
+            document.getElementById('themeBtn').addEventListener('click', function () {
+                isDark = !isDark
+                themedBox.classList.toggle('theme-dark', isDark)
+                themedBox.classList.toggle('theme-light', !isDark)
+                document.getElementById('themeName').textContent = isDark ? '深色' : '浅色'
+            })
+
+            /* ---------- 方案三：CSS 变量，切换变量组换肤 ---------- */
+            var cmodBox = document.getElementById('cmodBox')
+            var isAlt = false
+            document.getElementById('cmodBtn').addEventListener('click', function () {
+                isAlt = !isAlt
+                // 只换类名，颜色全部由类内重新声明的 --cmod-* 变量决定
+                cmodBox.classList.toggle('cmod-box--alt', isAlt)
+            })
+        </script>
+    </body>
+</html>

@@ -231,6 +231,16 @@ branches:
       required_reviews: true             # 必须有 reviewer
 ```
 
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/进阶/03-交付与质量/code/site/`。
+
+| 文件 | 演示什么 |
+| --- | --- |
+| `pipeline-demo.html` | 最小流水线：build → test → deploy 按门禁依次执行，任一步失败即终止，含灰度放量与一键回滚 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5183/`。
+
 ## 总结
 
 - CI/CD 自动化流水线
