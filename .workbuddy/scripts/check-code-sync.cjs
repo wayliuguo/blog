@@ -11,19 +11,34 @@
 //   3. 被标注的脚本必须出现在该篇 `## 配套代码` 表里（否则读者从表里找不到它）。
 //
 // 用法：
-//   node .workbuddy/scripts/check-code-sync.cjs                 # 全量
-//   node .workbuddy/scripts/check-code-sync.cjs --module 01-运行环境
-//   node .workbuddy/scripts/check-code-sync.cjs --strict        # 示意片段也算问题
+//   node .workbuddy/scripts/check-code-sync.cjs                    # 全部板块
+//   node .workbuddy/scripts/check-code-sync.cjs --board frontend    # 只查前端板块
+//   node .workbuddy/scripts/check-code-sync.cjs --module 运行环境    # 限定模块（相对板块根）
+//   node .workbuddy/scripts/check-code-sync.cjs --strict            # 示意片段也算问题
 const fs = require('fs')
 const path = require('path')
+const boards = require('./boards.cjs')
 
-const ROOT = path.resolve(__dirname, '../..')
-const NODE_DIR = path.join(ROOT, 'node')
+const ROOT = boards.ROOT
 const ARGS = process.argv.slice(2)
 const MODULE_FILTER = ARGS.includes('--module') ? ARGS[ARGS.indexOf('--module') + 1] : null
 const STRICT = ARGS.includes('--strict')
 
-const LANG_OK = new Set(['javascript', 'js', 'typescript', 'ts'])
+// 参与「出处标注 + 逐字溯源」检查的语言。前端板块的主力语言是 css / html / jsx / vue，
+// 只盯 js/ts 会让绝大多数代码块处于无人看管的状态。
+const LANG_OK = new Set([
+    'javascript',
+    'js',
+    'typescript',
+    'ts',
+    'css',
+    'scss',
+    'html',
+    'jsx',
+    'tsx',
+    'vue',
+    'json'
+])
 const ELLIPSIS = /^\s*\/\/\s*(…|\.\.\.)/
 
 // 去掉注释与所有空白，只留代码骨架
@@ -223,24 +238,30 @@ function checkDoc(docPath, text) {
     }
 }
 
-// 遍历
-;(function walk(d) {
-    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
-        const p = path.join(d, e.name)
-        if (e.isDirectory()) {
-            if (e.name === 'code' || e.name === 'node_modules') continue
-            walk(p)
-        } else if (e.name.endsWith('.md')) {
-            // 总结.md / 面试题.md 是元页面（汇总页），不参与代码对齐检查
-            if (e.name === '总结.md' || e.name === '面试题.md') continue
-            const relDir = path.relative(NODE_DIR, path.dirname(p)).replace(/\\/g, '/')
-            if (MODULE_FILTER && !relDir.startsWith(MODULE_FILTER)) continue
-            checkDoc(p, fs.readFileSync(p, 'utf8'))
+// 遍历各板块
+const pickedBoards = boards.select(boards.sidebarBoards())
+for (const board of pickedBoards) {
+    const boardDir = path.join(ROOT, board)
+    ;(function walk(d) {
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+            const p = path.join(d, e.name)
+            if (e.isDirectory()) {
+                if (e.name === 'code' || e.name === 'node_modules') continue
+                walk(p)
+            } else if (e.name.endsWith('.md')) {
+                // 总结.md / 面试题.md 是元页面（汇总页），不参与代码对齐检查
+                if (e.name === '总结.md' || e.name === '面试题.md') continue
+                const relDir = path.relative(boardDir, path.dirname(p)).replace(/\\/g, '/')
+                if (MODULE_FILTER && relDir !== MODULE_FILTER && !relDir.startsWith(MODULE_FILTER + '/'))
+                    continue
+                checkDoc(p, fs.readFileSync(p, 'utf8'))
+            }
         }
-    }
-})(NODE_DIR)
+    })(boardDir)
+}
 
 console.log('='.repeat(78))
+console.log(`板块：${pickedBoards.join(' / ')}`)
 console.log(`扫描文档 ${stats.docs} 篇 · JS 代码块 ${stats.blocks} 个`)
 console.log(
     `  已对齐 ${stats.aligned} · 示意片段 ${stats.sketch} · 缺标注 ${stats.noAnno} · 对不上 ${stats.mismatch} · 表里没有 ${stats.table}`
