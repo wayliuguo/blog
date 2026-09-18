@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <title>head 同步脚本（阻塞解析，白屏约 2s）</title>
+        <script>
+            window.__LOAD_NAME = 'sync'
+        </script>
+        <script src="slow.js?delay=2000"></script>
+    </head>
+    <body>
+        <p style="font-family: system-ui, sans-serif; padding: 1rem; background: #fef3c7; border-radius: 8px">
+            这段内容在 <code>head</code> 同步脚本之后。<strong>脚本下载 + 执行完之前，浏览器不会渲染我</strong
+            >——刷新看看白屏持续约 2 秒。
+        </p>
+        <script>
+            // 本行内联脚本排在本页可见内容之后：它执行的时间 ≈ 内容可被解析/渲染的时间
+            window.parent.postMessage({ kind: 'load-report', name: 'sync', contentAt: performance.now() }, '*')
+        </script>
+    </body>
+</html>

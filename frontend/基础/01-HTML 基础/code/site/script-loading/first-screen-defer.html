@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <title>defer 脚本（立即渲染）</title>
+        <script>
+            window.__LOAD_NAME = 'defer'
+        </script>
+        <script defer src="slow.js?delay=2000"></script>
+    </head>
+    <body>
+        <p style="font-family: system-ui, sans-serif; padding: 1rem; background: #dcfce7; border-radius: 8px">
+            脚本加了 <code>defer</code>，不阻塞解析，<strong>我立刻就能渲染</strong>，脚本下载完再执行。
+        </p>
+        <script>
+            // 本行内联脚本排在本页可见内容之后：它执行的时间 ≈ 内容可被解析/渲染的时间
+            window.parent.postMessage({ kind: 'load-report', name: 'defer', contentAt: performance.now() }, '*')
+        </script>
+    </body>
+</html>
