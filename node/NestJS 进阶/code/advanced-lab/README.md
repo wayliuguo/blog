@@ -32,15 +32,15 @@ npm run typecheck      # tsc --noEmit
 
 | 文件 | 对应正文 | 演示什么 |
 | --- | --- | --- |
-| `src/01-decorators.ts` | [01-自定义装饰器](../../01-自定义装饰器.md) | `createParamDecorator` / `SetMetadata` / `RolesGuard` / `applyDecorators` / `ExecutionContext`，请求四个控制器看 200 与 403 |
-| `src/02-scope-and-circular.ts` | [02-作用域与循环依赖](../../02-作用域与循环依赖.md) | DEFAULT / REQUEST / TRANSIENT 的实例编号对照、`@Inject(REQUEST)`、`forwardRef` 破环、作用域传染 |
-| `src/03-tokens.ts` | [03-登录注册实战](../../03-登录注册实战.md) | 同一 payload 签出 2h / 7d 两份 Token，`verify` 通过，过期后抛 `UnauthorizedException` |
-| `src/03-cookie.ts` | [03-登录注册实战](../../03-登录注册实战.md) | 把 Refresh Token 写进 HttpOnly Cookie，看各选项的实际效果 |
-| `src/03-wechat.ts` | [03-登录注册实战](../../03-登录注册实战.md) | 本地 stub 顶替微信服务器，跑通「code 换 openid → 查找或创建用户 → 签 JWT」 |
-| `src/04-file-upload.ts` | [04-文件上传实战](../../04-文件上传实战.md) | `FileInterceptor` + `diskStorage` + `limits` + `fileFilter`、`FilesInterceptor`、`FileValidationPipe`、静态资源 |
-| `src/05-websocket-gateway.ts` | [05-WebSocket 实时通信](../../05-WebSocket%20实时通信.md) | Gateway 命名空间、房间广播、连接时校验 token、`handleDisconnect` |
-| `src/06-schedule.ts` | [06-定时任务与队列](../../06-定时任务与队列.md) | `@Cron` / `@Interval` / `@Timeout`、`SchedulerRegistry` 动态增删任务 |
-| `src/06-queue.ts` | [06-定时任务与队列](../../06-定时任务与队列.md) | Bull 的生产者 / 消费者、重试与延迟任务（需 Redis） |
+| `src/01-decorators.ts` | [自定义装饰器](../../自定义装饰器.md) | `createParamDecorator` / `SetMetadata` / `RolesGuard` / `applyDecorators` / `ExecutionContext`，请求四个控制器看 200 与 403 |
+| `src/02-scope-and-circular.ts` | [作用域与循环依赖](../../作用域与循环依赖.md) | DEFAULT / REQUEST / TRANSIENT 的实例编号对照、`@Inject(REQUEST)`、`forwardRef` 破环、作用域传染 |
+| `src/03-tokens.ts` | [登录注册实战](../../登录注册实战.md) | 同一 payload 签出 2h / 7d 两份 Token，`verify` 通过，过期后抛 `UnauthorizedException` |
+| `src/03-cookie.ts` | [登录注册实战](../../登录注册实战.md) | 把 Refresh Token 写进 HttpOnly Cookie，看各选项的实际效果 |
+| `src/03-wechat.ts` | [登录注册实战](../../登录注册实战.md) | 本地 stub 顶替微信服务器，跑通「code 换 openid → 查找或创建用户 → 签 JWT」 |
+| `src/04-file-upload.ts` | [文件上传实战](../../文件上传实战.md) | `FileInterceptor` + `diskStorage` + `limits` + `fileFilter`、`FilesInterceptor`、`FileValidationPipe`、静态资源 |
+| `src/05-websocket-gateway.ts` | [WebSocket 实时通信](../../WebSocket%20实时通信.md) | Gateway 命名空间、房间广播、连接时校验 token、`handleDisconnect` |
+| `src/06-schedule.ts` | [定时任务与队列](../../定时任务与队列.md) | `@Cron` / `@Interval` / `@Timeout`、`SchedulerRegistry` 动态增删任务 |
+| `src/06-queue.ts` | [定时任务与队列](../../定时任务与队列.md) | Bull 的生产者 / 消费者、重试与延迟任务（需 Redis） |
 
 ## 约定
 

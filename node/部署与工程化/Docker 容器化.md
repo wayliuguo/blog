@@ -155,7 +155,7 @@ WORKDIR /app
 |------|--------|
 | 固定版本号 `node:20.16.0-alpine` | 可复现构建：今天构建和半年后构建结果一致 |
 | `--mount=type=cache` | 依赖缓存挂载，构建缓存不落入镜像层却能被复用 |
-| `ARG TZ` + 时区设置 | 日志时间戳、定时任务时区正确（见 [日志体系](./02-日志体系)） |
+| `ARG TZ` + 时区设置 | 日志时间戳、定时任务时区正确（见 [日志体系](./日志体系)） |
 
 ### 4.3 阶段 2/3：build 与 prod-deps——依赖缓存与最小依赖
 
@@ -264,8 +264,8 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 
 | 下一篇 | 关联点 |
 |--------|--------|
-| [Docker Compose 编排](./05-Docker%20Compose%20编排) | Dockerfile 是"单容器怎么造"，Compose 是"多容器怎么编排" |
-| [生产部署实战](./08-生产部署实战) | 完整部署链路：构建 → 迁移 → 启动 → 健康检查 |
+| [Docker Compose 编排](./Docker%20Compose%20编排) | Dockerfile 是"单容器怎么造"，Compose 是"多容器怎么编排" |
+| [生产部署实战](./生产部署实战) | 完整部署链路：构建 → 迁移 → 启动 → 健康检查 |
 
 ## 小结
 
@@ -303,5 +303,5 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[PM2 进程管理](./03-PM2%20进程管理)
-- 下一篇：[Docker Compose 编排](./05-Docker%20Compose%20编排)
+- 上一篇：[PM2 进程管理](./PM2%20进程管理)
+- 下一篇：[Docker Compose 编排](./Docker%20Compose%20编排)

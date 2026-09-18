@@ -6,7 +6,7 @@
 
 | 项目 | 对应文档 | 说明 |
 | --- | --- | --- |
-| koa-template | [Koa 项目模板](../../05-Koa%20%E9%A1%B9%E7%9B%AE%E6%A8%A1%E6%9D%BF.md) | 与文档中的模板结构对应 |
+| koa-template | [Koa 项目模板](../../Koa%20%E9%A1%B9%E7%9B%AE%E6%A8%A1%E6%9D%BF.md) | 与文档中的模板结构对应 |
 
 ## 技术栈
 
@@ -134,7 +134,7 @@ koa-template/
 
 ## 阅读建议
 
-1. 先读博客 [Koa 项目模板](../../05-Koa%20%E9%A1%B9%E7%9B%AE%E6%A8%A1%E6%9D%BF.md) 了解整体设计。
+1. 先读博客 [Koa 项目模板](../../Koa%20%E9%A1%B9%E7%9B%AE%E6%A8%A1%E6%9D%BF.md) 了解整体设计。
 2. 按 `app.js`（入口与中间件顺序）→ `routes/users.js`（路由与中间件挂载）→ `middleware/*`（认证 / 校验 / 错误处理）→ `services/userService.js`（业务与数据访问）的顺序阅读。
 3. 重点理解 Koa 中间件「洋葱模型」在 `app.js` 中的实际堆叠顺序：cors → errorHandler → responseTime → logger → koaBody → 路由。
 

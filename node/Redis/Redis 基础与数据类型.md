@@ -173,5 +173,5 @@ ZRANGEBYSCORE leaderboard 100 200 # 按分数范围获取
 
 - 本模块总结：[总结](../数据库/总结.md)
 - 本模块面试题：[面试题](../数据库/面试题.md)
-- 上一篇：[PostgreSQL 与 pgvector](../数据库/07-PostgreSQL%20与%20pgvector)
-- 下一篇：[Redis 持久化与淘汰策略](./02-Redis%20持久化与淘汰策略)
+- 上一篇：[PostgreSQL 与 pgvector](../数据库/PostgreSQL%20与%20pgvector)
+- 下一篇：[Redis 持久化与淘汰策略](./Redis%20持久化与淘汰策略)

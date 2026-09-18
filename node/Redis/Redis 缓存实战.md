@@ -382,5 +382,5 @@ async function slidingWindow(key, limit, total) {
 
 - 本模块总结：[总结](../数据库/总结.md)
 - 本模块面试题：[面试题](../数据库/面试题.md)
-- 上一篇：[Node.js 操作 Redis](./03-Node.js%20操作%20Redis)
-- 下一篇：[Redis 进阶](./05-Redis%20进阶)
+- 上一篇：[Node.js 操作 Redis](./Node.js%20操作%20Redis)
+- 下一篇：[Redis 进阶](./Redis%20进阶)

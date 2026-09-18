@@ -7,7 +7,7 @@
 
 ## 为什么最后一步是自动化
 
-[生产部署实战](./08-生产部署实战) 里，每次发版都要：
+[生产部署实战](./生产部署实战) 里，每次发版都要：
 
 ```bash
 git pull && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
@@ -175,7 +175,7 @@ docker compose -f docker-compose.prod.yml run --rm --entrypoint "" my-app \
   node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/data-source.js
 ```
 
-> 为什么破坏性迁移不自动跑？`DROP`/重命名不可逆，自动化执行没有"看一眼"的机会。安全的变更全自动，危险的变更留人工。机制详见 [数据库迁移与发布](./07-数据库迁移与发布)。
+> 为什么破坏性迁移不自动跑？`DROP`/重命名不可逆，自动化执行没有"看一眼"的机会。安全的变更全自动，危险的变更留人工。机制详见 [数据库迁移与发布](./数据库迁移与发布)。
 
 ### 4.3 触发与回滚
 
@@ -244,5 +244,5 @@ curl https://api.example.com/api/health
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[生产部署实战](./08-生产部署实战)
-- 下一篇：[脚手架开发入门](../脚手架开发/01-脚手架开发入门)
+- 上一篇：[生产部署实战](./生产部署实战)
+- 下一篇：[脚手架开发入门](../脚手架开发/脚手架开发入门)

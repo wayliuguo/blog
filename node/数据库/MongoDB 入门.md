@@ -426,5 +426,5 @@ await Post.updateOne(
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[Node.js 操作 MySQL](./04-Node.js%20操作%20MySQL)
-- 下一篇：[MongoDB 进阶](./06-MongoDB%20进阶)
+- 上一篇：[Node.js 操作 MySQL](./Node.js%20操作%20MySQL)
+- 下一篇：[MongoDB 进阶](./MongoDB%20进阶)
