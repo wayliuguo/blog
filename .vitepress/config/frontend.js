@@ -15,6 +15,7 @@ export default [
                         text: '表单与标签',
                         link: '/frontend/基础/HTML%20基础/表单与标签'
                     },
+                    { text: '无障碍与可访问性', link: '/frontend/基础/HTML%20基础/无障碍与可访问性' },
                     { text: '模块总结（HTML 基础）', link: '/frontend/基础/HTML%20基础/总结' },
                     { text: '模块面试题（HTML 基础）', link: '/frontend/基础/HTML%20基础/面试题' }
                 ]
@@ -34,6 +35,7 @@ export default [
                         text: 'BEM 与 CSS 规范',
                         link: '/frontend/基础/CSS/BEM%20与%20CSS%20规范'
                     },
+                    { text: '现代 CSS', link: '/frontend/基础/CSS/现代%20CSS' },
                     { text: '综合实战', link: '/frontend/基础/CSS/综合实战' },
                     { text: '模块总结（CSS）', link: '/frontend/基础/CSS/总结' },
                     { text: '模块面试题（CSS）', link: '/frontend/基础/CSS/面试题' }
@@ -57,6 +59,7 @@ export default [
                         text: '内存管理与垃圾回收',
                         link: '/frontend/基础/JavaScript%20核心/内存管理与垃圾回收'
                     },
+                    { text: 'DOM 与浏览器 API', link: '/frontend/基础/JavaScript%20核心/DOM%20与浏览器%20API' },
                     {
                         text: '手写实现与源码',
                         link: '/frontend/基础/JavaScript%20核心/手写实现与源码'
@@ -130,6 +133,10 @@ export default [
                 text: '小程序',
                 collapsed: false,
                 items: [
+                    {
+                        text: 'WXML、WXSS 与基础语法',
+                        link: '/frontend/基础/小程序/WXML、WXSS%20与基础语法'
+                    },
                     {
                         text: '小程序生命周期与路由',
                         link: '/frontend/基础/小程序/小程序生命周期与路由'

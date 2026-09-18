@@ -1,24 +1,22 @@
 /**
  * 校验文档链接是否指向真实存在的页面：
- *   1. node/ 下正文里的相对/绝对链接
+ *   1. 各板块（ai / frontend / node / docs…）正文里的相对链接
  *   2. .vitepress/config/*.js 里的侧边栏与顶部导航链接
  *   3. 站点落地页（index.md）frontmatter 与正文里的链接
- * 用法：node check-links.cjs
+ *
+ * 用法：
+ *   node .workbuddy/scripts/check-links.cjs                  # 全部板块
+ *   node .workbuddy/scripts/check-links.cjs --board frontend  # 只查前端板块
+ *
+ * 注意：链接目标里出现裸空格（如 `](../JavaScript 核心/a.md)`）会被 markdown-it 判为
+ * 非法目标、渲染成纯文本，VitePress 又不会报死链——属于静默失效，这里单独拦。
  */
 const fs = require('fs')
 const path = require('path')
+const boards = require('./boards.cjs')
 
-const ROOT = process.cwd()
-const DOC_ROOT = path.join(ROOT, 'node')
-
-function walk(dir, acc = []) {
-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-        const p = path.join(dir, e.name)
-        if (e.isDirectory()) walk(p, acc)
-        else if (e.name.endsWith('.md')) acc.push(p)
-    }
-    return acc
-}
+const ROOT = boards.ROOT
+const LINK_RE = /\]\(([^)\n]+)\)/g
 
 function exists(target) {
     // 目录链接必须落在 index.md 上，否则 VitePress 会判死链
@@ -40,26 +38,50 @@ function decode(raw) {
 
 const problems = []
 
-// 1. node/ 下正文链接
-let bodyCount = 0
-for (const file of walk(DOC_ROOT)) {
-    const text = fs.readFileSync(file, 'utf8')
-    const re = /\]\(([^)\s]+)\)/g
+/** 扫一段正文里的 markdown 链接 */
+function scanBody(text, file, counter) {
+    const body = boards.stripFences(text)
     let m
-    while ((m = re.exec(text))) {
-        const raw = m[1]
+    LINK_RE.lastIndex = 0
+    while ((m = LINK_RE.exec(body))) {
+        const raw = m[1].trim()
         if (/^(https?:|mailto:|#)/.test(raw)) continue
+        counter.n++
+        if (/\s/.test(raw)) {
+            problems.push({
+                file,
+                link: raw,
+                kind: '裸空格',
+                resolved: '（目标含空格，渲染成纯文本，链接失效）'
+            })
+            continue
+        }
         const target = raw.split('#')[0]
         if (!target) continue
-        bodyCount++
         const decoded = decode(target)
         const abs = target.startsWith('/')
             ? path.join(ROOT, decoded.replace(/^\//, ''))
             : path.resolve(path.dirname(file), decoded)
         if (!exists(abs)) {
-            problems.push({ file: path.relative(ROOT, file), link: raw, resolved: path.relative(ROOT, abs) })
+            problems.push({
+                file: path.relative(ROOT, file),
+                link: raw,
+                kind: '死链',
+                resolved: path.relative(ROOT, abs)
+            })
         }
     }
+}
+
+// 1. 各板块正文链接
+const picked = boards.select(boards.contentBoards())
+let bodyCount = 0
+for (const board of picked) {
+    const files = boards.walkMd(path.join(ROOT, board))
+    const counter = { n: 0 }
+    for (const file of files) scanBody(fs.readFileSync(file, 'utf8'), file, counter)
+    bodyCount += counter.n
+    console.log(`[${board}] 文档 ${files.length} 篇 · 链接 ${counter.n} 条`)
 }
 
 // 2. .vitepress/config/*.js 里的侧边栏与顶部导航链接
@@ -82,6 +104,7 @@ for (const name of fs
             problems.push({
                 file: path.relative(ROOT, file),
                 link,
+                kind: '死链',
                 resolved: decoded
             })
         }
@@ -104,29 +127,22 @@ for (const name of ['index.md']) {
             landingCount++
             const decoded = decode(link.replace(/^\//, ''))
             if (!exists(path.join(ROOT, decoded))) {
-                problems.push({ file: name + ' (frontmatter)', link, resolved: decoded })
+                problems.push({ file: name + ' (frontmatter)', link, kind: '死链', resolved: decoded })
             }
         }
     }
-    const re = /\]\(([^)\s]+)\)/g
-    let m
-    while ((m = re.exec(text))) {
-        const raw = m[1]
-        if (/^(https?:|mailto:|#)/.test(raw)) continue
-        landingCount++
-        const decoded = decode(raw.split('#')[0])
-        const abs = raw.startsWith('/') ? path.join(ROOT, decoded.replace(/^\//, '')) : path.resolve(ROOT, decoded)
-        if (!exists(abs)) {
-            problems.push({ file: name, link: raw, resolved: path.relative(ROOT, abs) })
-        }
-    }
+    const counter = { n: 0 }
+    scanBody(text, file, counter)
+    landingCount += counter.n
 }
 
+console.log('='.repeat(70))
 console.log('正文相对链接：' + bodyCount + ' 条')
 console.log('导航/侧边栏链接：' + configCount + ' 条')
 console.log('落地页链接：' + landingCount + ' 条')
 console.log('问题：' + problems.length + ' 处')
 for (const p of problems) {
-    console.log('  [' + p.file + '] ' + p.link + '  ->  ' + p.resolved)
+    console.log(`  [${p.kind}] [${p.file}] ${p.link}  ->  ${p.resolved}`)
 }
 if (!problems.length) console.log('全部通过')
+process.exit(problems.length ? 1 : 0)
