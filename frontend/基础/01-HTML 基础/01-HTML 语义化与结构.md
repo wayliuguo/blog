@@ -269,11 +269,47 @@ viewport 字段逐个说清楚：
 
 | 文件 | 演示什么 | 对应小节 |
 | --- | --- | --- |
-| `script-loading/order.html` | `defer` 按文档顺序、`async` 按下载完成顺序乱序 | 第 10 节 |
-| `script-loading/blocking.html` | 同步脚本阻塞解析（内容约 2s 后才可见）vs `defer`/`async` 不阻塞 | 第 10 节 |
-| `script-loading/first-screen.html` | 同步脚本放 head 的白屏 vs `defer`/`async` 提前首屏渲染 | 第 10 节 |
+| `script-loading/script-loading.html` | 同一页面用默认 / `defer` / `async` 三种方式加载同一份 `log.js`，日志面板按时间戳展示真实执行顺序 | 第 10 节 |
 
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/`。
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/` 进入示例目录，点「脚本加载三种方式」。
+
+### 代码解析
+
+验证页在 `<head>` 里依次声明三个脚本，对应三种加载方式：
+
+> 摘自 `./code/site/script-loading/script-loading.html`
+
+```html
+<script src="log.js?name=sync"></script>                  <!-- 默认：同步加载，阻塞解析 -->
+<script defer src="log.js?name=defer"></script>           <!-- defer：解析完按序执行 -->
+<script async src="log.js?name=async&delay=800"></script> <!-- async：下载完立即执行 -->
+```
+
+- **默认（同步）**：`log.js` 下载完成后立刻执行，解析器被阻塞，因此它第一个出现在日志里。
+- **defer**：下载与解析并行，整个文档解析完成后、`DOMContentLoaded` 触发之前，按文档顺序执行。
+- **async**：下载完立即执行、不保序。本例给它加 `?delay=800` 模拟慢下载，因此最后才执行，甚至晚于 `DOMContentLoaded`。
+
+三处都引用同一份 `log.js`，脚本通过 `?name=` 参数区分自己被哪种方式加载，再调用 `window.__log` 记录执行时刻（用 IIFE 包裹，避免同页加载三次时顶层 `const` 重复声明报错）：
+
+> 摘自 `./code/site/script-loading/log.js`
+
+```js
+;(() => {
+    const NAMES = { sync: '默认（同步）', defer: 'defer', async: 'async' }
+    const qs = new URLSearchParams(document.currentScript.src.split('?')[1])
+    window.__log(NAMES[qs.get('name')] + ' 执行')
+})()
+```
+
+`window.__log`（`script-loading.html` 内联定义）把每条日志连同 `performance.now()` 时间戳存进数组，再按时间戳排序后渲染进 `ol#log`——同步脚本执行时 `body` 还没解析，所以统一走数组缓冲、面板出现后整表重建，保证日志顺序就是真实执行顺序。刷新页面，日志面板实测输出（时间戳单位 ms）：
+
+```
+21.8ms  默认（同步） 执行
+26.8ms  defer 执行
+27.5ms  DOMContentLoaded 触发
+834.1ms  async 执行
+834.4ms  load 触发
+```
 
 ## 总结
 
