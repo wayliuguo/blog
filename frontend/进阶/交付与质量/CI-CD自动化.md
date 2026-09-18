@@ -88,7 +88,7 @@ jobs:
     needs: quality
     runs-on: ubuntu-latest
     outputs:
-      version: $&#123;&#123; steps.version.outputs.version &#125;&#125;
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -116,10 +116,10 @@ jobs:
           path: dist
       - run: ./scripts/deploy.sh
         env:
-          CDN_KEY: $&#123;&#123; secrets.CDN_KEY &#125;&#125;
+          CDN_KEY: ${{ secrets.CDN_KEY }}
 ```
 
-> 说明：YAML 中出现的 `$&#123;&#123; &#125;&#125;` 是 GitHub Actions 的表达式语法，**与 Vue 模板插值同形**。在 VitePress（Vue SSR）构建中这类 `*&#123;&#123;*&#125;&#125;` 会被当成 Vue 插值报错，因此本文档统一使用 HTML 实体转义表示，你在真实 .yml 中应写回 `$&#123;&#123; &#125;&#125;`。
+> 说明：YAML 里出现的 <code v-pre>${{ }}</code> 是 GitHub Actions 的表达式语法，**与 Vue 模板插值同形**。围栏代码块会被 VitePress 自动加上 `v-pre`，所以上面照原样写不会出问题；但在**行内代码或普通段落**里直接写双花括号会被 Vue 当成插值解析，构建期报 `Error parsing JavaScript expression`，那里要改用 `<code v-pre>` 包裹（详见 `文档组织规范.md` 第 3 节）。
 
 ## 三、流水线设计：lint → test → build → deploy
 
@@ -249,17 +249,7 @@ branches:
       required_reviews: true             # 必须有 reviewer
 ```
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/进阶/交付与质量/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `pipeline-demo.html` | 最小流水线：build → test → deploy 按门禁依次执行，任一步失败即终止，含灰度放量与一键回滚 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5183/`。
-
-## 总结
+## 小结
 
 - CI/CD 自动化流水线
   - CI/CD 概念与流程
@@ -280,3 +270,20 @@ branches:
     - 凭据管理（secrets / 最小权限 `permissions`）
     - 安全审计清单（OIDC / fork 保护）
     - 生产部署审批与分支保护
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/进阶/交付与质量/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/pipeline-demo.html` | 最小流水线：build → test → deploy 按门禁依次执行，任一步失败即终止，含灰度放量与一键回滚 | 三、流水线设计：lint → test → build → deploy |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5183/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[调试技巧](./调试技巧.md)
+- 下一篇：[质量体系与测试](./质量体系与测试.md)

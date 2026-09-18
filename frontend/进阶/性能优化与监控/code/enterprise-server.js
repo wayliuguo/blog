@@ -13,16 +13,17 @@
  *
  * 启动：npm run enterprise （或 node enterprise-server.js）
  * 访问：
- *   http://localhost:5183/agent.html   前端埋点模拟页（点击产生上报）
- *   http://localhost:5183/monitor.html 聚合报表/告警页
+ *   http://localhost:5188/agent.html   前端埋点模拟页（点击产生上报）
+ *   http://localhost:5188/monitor.html 聚合报表/告警页
  *
  * 依赖：零外部依赖，仅用 node 内置 http / fs / path。
+ * 端口被占用会自动 +1 重试（最多 20 个），实际端口以启动日志为准
  */
 const http = require('http')
 const fs = require('fs')
 const path = require('path')
 
-const PORT = 5183
+const PORT = 5188
 const ROOT = path.join(__dirname, 'site')
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' }
 
@@ -165,32 +166,46 @@ function safePath(url) {
     return file.startsWith(ROOT) ? file : null
 }
 
-http.createServer((req, res) => {
-    const url = req.url.split('?')[0]
+// 端口被占用时自动 +1 重试（最多 20 个），实际端口以启动日志为准
+function listen(port, tries = 0) {
+    const server = http.createServer((req, res) => {
+        const url = req.url.split('?')[0]
 
-    // 上报接口
-    if (url === '/api/collect' && req.method === 'POST') {
-        let chunks = []
-        req.on('data', c => chunks.push(c))
-        req.on('end', () => {
-            handleCollect(Buffer.concat(chunks))
+        // 上报接口
+        if (url === '/api/collect' && req.method === 'POST') {
+            let chunks = []
+            req.on('data', c => chunks.push(c))
+            req.on('end', () => {
+                handleCollect(Buffer.concat(chunks))
+                res.writeHead(200, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ ok: true }))
+            })
+            return
+        }
+
+        // 报表接口
+        if (url === '/api/report') {
             res.writeHead(200, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ ok: true }))
-        })
-        return
-    }
+            res.end(JSON.stringify(makeReport()))
+            return
+        }
 
-    // 报表接口
-    if (url === '/api/report') {
-        res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify(makeReport()))
-        return
-    }
-
-    // 静态资源
-    const file = safePath(req.url)
-    if (!file) return res.writeHead(403).end('Forbidden')
-    if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) return res.writeHead(404).end('Not Found')
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'text/plain' })
-    res.end(fs.readFileSync(file))
-}).listen(PORT, () => console.log(`09-企业级监控 demo -> http://localhost:${PORT}/agent.html`))
+        // 静态资源
+        const file = safePath(req.url)
+        if (!file) return res.writeHead(403).end('Forbidden')
+        if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) return res.writeHead(404).end('Not Found')
+        res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'text/plain' })
+        res.end(fs.readFileSync(file))
+    })
+    server.removeAllListeners('error')
+    server.on('error', (err) => {
+        if (err.code !== 'EADDRINUSE' || tries >= 20) throw err
+        console.log(`  端口 ${port} 被占用，自动改用 ${port + 1}`)
+        listen(port + 1, tries + 1)
+    })
+    server.listen(port, () => {
+        if (port !== PORT) console.log(`  文档里的默认端口是 ${PORT}，现在实际跑在 ${port}，请以这里的为准`)
+        console.log(`09-企业级监控 demo -> http://localhost:${port}/agent.html`)
+    })
+}
+listen(PORT)
