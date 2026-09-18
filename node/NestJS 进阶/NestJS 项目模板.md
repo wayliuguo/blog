@@ -61,6 +61,8 @@ my-nest-app/
 
 ## package.json
 
+> 示意片段（无配套脚本）
+
 ```json
 {
   "name": "my-nest-app",
@@ -1183,7 +1185,7 @@ npm run start:prod
 
 ## 参考
 
-- 本模块总结：[总结](../NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
+- 本模块总结：[总结](../NestJS%20入门/总结.md)
+- 本模块面试题：[面试题](../NestJS%20入门/面试题.md)
 - 上一篇：[NestJS 源码分析](./NestJS%20源码分析)
 - 下一篇：[认证进阶：双 Token 与多设备会话](./认证进阶-双Token与多设备会话)

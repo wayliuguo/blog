@@ -40,6 +40,8 @@ my-koa-app/
 
 ## package.json
 
+> 示意片段（无配套脚本）
+
 ```json
 {
   "name": "my-koa-app",
