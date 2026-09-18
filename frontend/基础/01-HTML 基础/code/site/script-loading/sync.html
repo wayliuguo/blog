@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>脚本加载：默认（同步）</title>
+        <script>
+            // 页面打点：对比脚本执行与 DOMContentLoaded / load 的先后
+            document.addEventListener('DOMContentLoaded', () =>
+                console.log(`[DOMContentLoaded] @ ${performance.now().toFixed(1)}ms`)
+            )
+            window.addEventListener('load', () => console.log(`[load] @ ${performance.now().toFixed(1)}ms`))
+        </script>
+        <!-- 默认（同步）：解析器被阻塞，等脚本下载（delay=2000）并执行完才继续 -->
+        <script src="log.js?name=sync&delay=2000"></script>
+    </head>
+    <body>
+        <h1>默认（同步）加载</h1>
+        <p>同步脚本下载 2 秒期间解析被阻塞——本段内容要等脚本执行完才会渲染（刷新可见约 2 秒白屏）。</p>
+        <p><small>执行日志见浏览器控制台（F12）。</small></p>
+    </body>
+</html>
