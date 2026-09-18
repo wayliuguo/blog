@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>脚本加载：defer</title>
+        <script>
+            // 页面打点：对比脚本执行与 DOMContentLoaded / load 的先后
+            document.addEventListener('DOMContentLoaded', () =>
+                console.log(`[DOMContentLoaded] @ ${performance.now().toFixed(1)}ms`)
+            )
+            window.addEventListener('load', () => console.log(`[load] @ ${performance.now().toFixed(1)}ms`))
+        </script>
+        <!-- defer：下载不阻塞解析，等文档解析完成、DOMContentLoaded 之前按文档顺序执行 -->
+        <script defer src="log.js?name=defer&delay=2000"></script>
+    </head>
+    <body>
+        <h1><code>defer</code> 加载</h1>
+        <p>脚本下载 2 秒期间解析不被阻塞——本段内容立即渲染，无白屏。</p>
+        <p><small>执行日志见浏览器控制台（F12）。</small></p>
+    </body>
+</html>

@@ -269,47 +269,59 @@ viewport 字段逐个说清楚：
 
 | 文件 | 演示什么 | 对应小节 |
 | --- | --- | --- |
-| `script-loading/script-loading.html` | 同一页面用默认 / `defer` / `async` 三种方式加载同一份 `log.js`，日志面板按时间戳展示真实执行顺序 | 第 10 节 |
+| `script-loading/sync.html` | 默认（同步）：脚本阻塞解析，页面内容约 2s 后才渲染（白屏） | 第 10 节 |
+| `script-loading/defer.html` | `defer`：下载不阻塞渲染，解析完成后、`DOMContentLoaded` 前执行 | 第 10 节 |
+| `script-loading/async.html` | `async`：不阻塞渲染、不推迟 `DOMContentLoaded`，下载完立即执行 | 第 10 节 |
 
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/` 进入示例目录，点「脚本加载三种方式」。
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/` 进入示例目录，依次打开三个验证页，在浏览器控制台（F12）观察日志。
 
 ### 代码解析
 
-验证页在 `<head>` 里依次声明三个脚本，对应三种加载方式：
+三个页面是只含一段静态内容的极简页面，差异只在 `<head>` 里加载 `log.js` 的标签属性：
 
-> 摘自 `./code/site/script-loading/script-loading.html`
+> 摘自 `./code/site/script-loading/sync.html` / `defer.html` / `async.html`
 
 ```html
-<script src="log.js?name=sync"></script>                  <!-- 默认：同步加载，阻塞解析 -->
-<script defer src="log.js?name=defer"></script>           <!-- defer：解析完按序执行 -->
-<script async src="log.js?name=async&delay=800"></script> <!-- async：下载完立即执行 -->
+<script src="log.js?name=sync&delay=2000"></script>       <!-- sync.html：默认（同步） -->
+<script defer src="log.js?name=defer&delay=2000"></script> <!-- defer.html -->
+<script async src="log.js?name=async&delay=2000"></script> <!-- async.html -->
 ```
 
-- **默认（同步）**：`log.js` 下载完成后立刻执行，解析器被阻塞，因此它第一个出现在日志里。
-- **defer**：下载与解析并行，整个文档解析完成后、`DOMContentLoaded` 触发之前，按文档顺序执行。
-- **async**：下载完立即执行、不保序。本例给它加 `?delay=800` 模拟慢下载，因此最后才执行，甚至晚于 `DOMContentLoaded`。
+`?delay=2000` 让 `log.js` 慢下载 2 秒（由 `server.js` 支持），把三种方式的执行时机差异放大到肉眼可见：
 
-三处都引用同一份 `log.js`，脚本通过 `?name=` 参数区分自己被哪种方式加载，再调用 `window.__log` 记录执行时刻（用 IIFE 包裹，避免同页加载三次时顶层 `const` 重复声明报错）：
+- **默认（同步）**：解析器被阻塞，脚本下载 2 秒期间页面不渲染——刷新 `sync.html` 会白屏约 2 秒。
+- **defer**：下载期间解析与渲染照常进行，页面立即出现；脚本在解析完成后、`DOMContentLoaded` 之前执行，因此 `DOMContentLoaded` 被推迟到脚本执行之后（也约 2 秒）。
+- **async**：下载期间渲染照常，且 `DOMContentLoaded` 不被推迟（几十毫秒即触发）；脚本下载完立即执行，因此出现在 `DOMContentLoaded` 之后。
+
+`log.js` 执行时向控制台打点，页面内联脚本在 `DOMContentLoaded` / `load` 时各打一点，三个时间点对比即可判断脚本执行顺序：
 
 > 摘自 `./code/site/script-loading/log.js`
 
 ```js
 ;(() => {
     const NAMES = { sync: '默认（同步）', defer: 'defer', async: 'async' }
-    const qs = new URLSearchParams(document.currentScript.src.split('?')[1])
-    window.__log(NAMES[qs.get('name')] + ' 执行')
+    const name = new URLSearchParams(document.currentScript.src.split('?')[1]).get('name')
+    console.log(`[${NAMES[name]}] 脚本执行 @ ${performance.now().toFixed(1)}ms`)
 })()
 ```
 
-`window.__log`（`script-loading.html` 内联定义）把每条日志连同 `performance.now()` 时间戳存进数组，再按时间戳排序后渲染进 `ol#log`——同步脚本执行时 `body` 还没解析，所以统一走数组缓冲、面板出现后整表重建，保证日志顺序就是真实执行顺序。刷新页面，日志面板实测输出（时间戳单位 ms）：
+三个页面刷新后的控制台实测输出（时间戳单位 ms）：
 
 ```
-21.8ms  默认（同步） 执行
-26.8ms  defer 执行
-27.5ms  DOMContentLoaded 触发
-834.1ms  async 执行
-834.4ms  load 触发
+sync.html：   [默认（同步）] 脚本执行 @ 2034.1ms   ← 脚本最先执行，且阻塞到 2s 后才渲染
+             [DOMContentLoaded] @ 2035.2ms
+             [load] @ 2036.5ms
+
+defer.html：  [defer] 脚本执行 @ 2031.1ms         ← DCL 被推迟到脚本之后（约 2s）
+             [DOMContentLoaded] @ 2031.5ms
+             [load] @ 2031.9ms
+
+async.html：  [DOMContentLoaded] @ 23.1ms         ← DCL 不受影响，脚本反而在它之后
+             [async] 脚本执行 @ 2038.5ms
+             [load] @ 2039.4ms
 ```
+
+对比要点：`defer` 页的 `DOMContentLoaded` 与脚本几乎同时（约 2 秒，DCL 等脚本下载）；`async` 页的 `DOMContentLoaded` 只有 20 多毫秒（不等脚本），脚本 2 秒后才执行——这就是「`defer` 推迟 `DOMContentLoaded`、`async` 不推迟」的直接证据。
 
 ## 总结
 
