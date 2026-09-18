@@ -19,7 +19,7 @@ npm run serve      # 预览构建产物
 node 模块下的配套代码位于 `node/<模块>/code/<项目名>/`，用法见各项目内 README：
 
 ```bash
-cd node/01-运行环境/code/node-basics
+cd node/运行环境/code/node-basics
 npm install
 npm run <对应篇号脚本>     # 每个脚本对应一篇正文，篇号见文件名前缀
 ```
