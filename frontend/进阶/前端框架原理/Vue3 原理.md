@@ -1135,19 +1135,7 @@ instance.update = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.
 - `provide` / `inject`（基于原型链）。
 - 编译模块独立项目（模板 → AST → render），可作为最终进阶。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/进阶/前端框架原理/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `compiler-demo.html` | 模板编译：把模板字符串解析成插值占位结构，再包装成渲染函数，渲染函数接收数据返回 HTML |
-| `mini-reactive.html` | 响应式原理：Proxy 拦截 get/set，读取时 track 收集依赖、修改时 trigger 触发更新，数据驱动视图的最小内核 |
-| `vdom-vue-diff.html` | 虚拟 DOM diff：轻量 VNode 树 diff 生成 patch，按补丁只更新真正变化的地方 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5182/`。
-
-## 总结
+## 小结
 
 - Vue3 原理
   - 整体架构
@@ -1179,3 +1167,22 @@ instance.update = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.
   - mini-vue 手写思路
     - 自底向上：响应式 → 运行时 → 接入响应式
     - 渲染 effect + scheduler 异步更新
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/进阶/前端框架原理/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/compiler-demo.html` | 模板编译：把模板字符串解析成插值占位结构，再包装成渲染函数，渲染函数接收数据返回 HTML | 二、编译原理 |
+| `./code/site/mini-reactive.html` | 响应式原理：Proxy 拦截 get/set，读取时 track 收集依赖、修改时 trigger 触发更新，数据驱动视图的最小内核 | 三、响应式系统 |
+| `./code/site/vdom-vue-diff.html` | 虚拟 DOM diff：轻量 VNode 树 diff 生成 patch，按补丁只更新真正变化的地方 | 四、运行时原理 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5182/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[React 高级与原理](./React%20高级与原理.md)
+- 下一篇：[性能指标与评估](../性能优化与监控/性能指标与评估.md)

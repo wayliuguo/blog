@@ -1488,19 +1488,7 @@ type R = ReturnType<Fn> // string
 
 其它常用内置类型还有 `Exclude<T, U>`、`Extract<T, U>`、`NonNullable<T>`、`Parameters<T>`、`InstanceType<T>` 等，它们共同构成了 TypeScript 高效的类型运算基础设施。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/进阶/TypeScript/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `structural.html` | 结构类型（鸭子类型）：对象只要"形状"满足接口即可，多出的字段不影响兼容，运行时仍是普通 JS 对象 |
-| `union-intersection.html` | 联合类型 `\|` 多选一与交叉类型 `&` 合并成员的差别，用 JS 对象模拟两类"类型结果" |
-| `generic-infer.html` | 泛型容器保持"存入类型 = 取出类型"，以及 `infer` 从函数签名提取返回类型（内置 ReturnType 的原理） |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5178/`。
-
-## 总结
+## 小结
 
 - TypeScript 类型系统
   - 安装与配置
@@ -1558,3 +1546,22 @@ type R = ReturnType<Fn> // string
     - 映射类型与索引访问 / `keyof`
     - 条件类型与 `infer`
     - 内置工具类型
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/进阶/TypeScript/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/structural.html` | 结构类型（鸭子类型）：对象只要"形状"满足接口即可，多出的字段不影响兼容，运行时仍是普通 JS 对象 | 接口 interface |
+| `./code/site/union-intersection.html` | 联合类型 `\ | 高级类型 |
+| `./code/site/generic-infer.html` | 泛型容器保持"存入类型 = 取出类型"，以及 `infer` 从函数签名提取返回类型（内置 ReturnType 的原理） | 泛型 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5186/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[原生与跨端框架差异](../../基础/小程序/原生与跨端框架差异.md)
+- 下一篇：[TypeScript 工程实践](./TypeScript%20工程实践.md)
