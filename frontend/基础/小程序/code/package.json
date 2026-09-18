@@ -1,0 +1,10 @@
+{
+  "name": "chapter-miniprogram",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小程序语法：把 WXML / WXSS 的规则跑成可读产物的迷你编译器",
+  "scripts": {
+    "render": "node render.js",
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>fetch：状态码、超时、取消、竞态</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p,
+            li {
+                font-size: 0.9rem;
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>fetch：状态码、超时、取消、竞态</h1>
+        <p>
+            本页所有请求都打到配套的本地接口，所以看到的是<strong>真实网络行为</strong>，不是模拟。先启动服务：在 <code>code</code> 目录执行
+            <code>npm start</code>，再打开 <code>http://localhost:5176/dom-fetch.html</code>（直接双击本文件也会自动指向本地接口）。
+        </p>
+
+        <h2>① 基本用法与响应状态</h2>
+        <p><code>fetch()</code> 返回的 Promise 只代表"拿到响应"，<code>res.ok</code> / <code>res.status</code> 才代表业务成败。</p>
+
+        <h2>② 4xx / 5xx 不会 reject</h2>
+        <p>这是最常踩的坑：服务端返回 500，<code>await fetch()</code> 依然正常返回，只有 <code>res.ok</code> 是 <code>false</code>。</p>
+
+        <h2>③ 超时</h2>
+        <p><code>AbortSignal.timeout(ms)</code> 是最省事的超时写法，超时抛出的错误类型是 <code>TimeoutError</code>。</p>
+
+        <h2>④ 主动取消</h2>
+        <p><code>AbortController.abort()</code> 是真的掐断请求（抛出 <code>AbortError</code>），而不是"忽略结果"——后者只是不再处理返回值，网络与带宽照旧消耗。</p>
+
+        <h2>⑤ 竞态</h2>
+        <p>搜索建议是经典场景：先输入 <code>a</code>、再输入 <code>ab</code>，如果 <code>a</code> 的响应更慢，它会把 <code>ab</code> 的结果覆盖掉。两种守卫都写在本页代码里，探针会给出"最终显示的是哪个关键字"。</p>
+
+        <h2>⑥ 与 XMLHttpRequest 对照</h2>
+        <p>XHR 只有回调式 API、要自己包一层 Promise；fetch 原生返回 Promise、语义更干净，但少了上传进度与同步请求这些能力。</p>
+
+        <h2>实测结果</h2>
+        <pre id="probe">…（请求中）</pre>
+
+        <script src="dom-fetch.js"></script>
+    </body>
+</html>

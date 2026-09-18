@@ -321,17 +321,7 @@ export default () => <Card>内容</Card>;
 
 **务实建议**：不必把它当作"非此即彼"的单选题。很多团队是**混合使用**——主体用 CSS Module 或 Tailwind，对确实需要语义化、可复用的复杂业务组件，再用 BEM 命名来承载。判断标准永远是：改一处样式时，我能不能清楚它会影响哪些地方；换一个人接手时，能不能凭类名猜出结构。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/CSS/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `bem-card.html` | 用 `block__element--modifier` 命名实现一个卡片组件，改一处状态不影响全局 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5175/`。
-
-## 总结
+## 小结
 
 - BEM 与 CSS 规范
   - 命名规范价值
@@ -360,3 +350,20 @@ export default () => <Card>内容</Card>;
     - 可维护性 / 可调试性 / 性能取舍
     - 主题与设计系统（CSS 变量 / CSS-in-JS）
     - 常见组合与混合使用
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/CSS/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/bem-card.html` | 用 `block__element--modifier` 命名实现一个卡片组件，改一处状态不影响全局 | 三、在代码中应用 BEM |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5175/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[动画与变换](./动画与变换.md)
+- 下一篇：[现代 CSS](./现代%20CSS.md)

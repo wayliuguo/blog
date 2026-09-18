@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DOM 事件：委托、解绑与自定义事件</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p,
+            li,
+            label {
+                font-size: 0.9rem;
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+            button {
+                font: inherit;
+                font-size: 0.85rem;
+                padding: 4px 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 6px;
+                background: #fff;
+                cursor: pointer;
+            }
+            .card {
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 10px 12px;
+                margin-top: 6px;
+                background: #fafafa;
+            }
+            .chip {
+                display: inline-block;
+                background: #dbeafe;
+                border-radius: 999px;
+                padding: 2px 10px;
+                font-size: 0.8rem;
+                margin-left: 6px;
+            }
+            ul {
+                padding-left: 1.2rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>DOM 事件：委托、解绑与自定义事件</h1>
+        <p>
+            页面里所有交互都在加载时用 <code>dispatchEvent</code> 程序化触发了一遍，所以页尾探针里的输出是<strong>真实的事件对象内容</strong>——这也是自动化测试触发交互的标准手段。
+        </p>
+
+        <h2>① target 与 currentTarget</h2>
+        <div class="card" id="evt-card">
+            我挂着 click 监听器，里面还有一个 <span class="chip">.chip</span>
+        </div>
+
+        <h2>② 事件委托</h2>
+        <p>监听器只挂在 <code>ul</code> 上，三个已有项与一个插入 DOM 后才出现的项都走同一个回调。</p>
+        <ul id="delegated">
+            <li data-id="a">列表项 a</li>
+            <li data-id="b">列表项 b</li>
+            <li data-id="c">列表项 c</li>
+        </ul>
+
+        <h2>③ 解绑的三个手段</h2>
+        <p>
+            <code>{ once: true }</code> 让回调只执行一次；<code>AbortController.signal</code> 可以在组件卸载时一次性解绑挂在它名下的所有监听器，不必逐个记住函数引用。
+        </p>
+        <button id="once-btn">once 按钮</button>
+        <button id="signal-btn">signal 按钮</button>
+
+        <h2>④ 自定义事件：不依赖框架的组件通信</h2>
+        <p>
+            子元素派发 <code>CustomEvent</code>、祖先监听，<code>detail</code> 携带数据、<code>bubbles: true</code> 让它能冒泡上去——Web Components 与原生组件的通信就建立在这套机制上。
+        </p>
+        <div id="toolbar" class="card">
+            我是祖先 #toolbar
+            <button id="add-btn">加入购物车</button>
+        </div>
+
+        <h2>⑤ 程序化触发事件</h2>
+        <p>
+            <code>el.click()</code> 与 <code>el.dispatchEvent(new KeyboardEvent(...))</code> 可以造出任意交互；差别是后者能带 <code>key</code>、
+            <code>metaKey</code>、<code>clientX</code> 这些真实属性。
+        </p>
+        <div class="card">
+            <label>搜索框：<input id="search-input" /></label>
+        </div>
+
+        <h2>实测结果</h2>
+        <pre id="probe">…</pre>
+
+        <script src="dom-events.js"></script>
+    </body>
+</html>

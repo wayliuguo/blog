@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>现代 CSS · @layer 层叠层</title>
+        <link rel="stylesheet" href="modern-css-layer.css" />
+        <style>
+            /* 页面外框样式，与演示结论无关 */
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p {
+                font-size: 0.9rem;
+                color: #4b5563;
+                margin: 0.4rem 0;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>@layer：用「层」替代选择器优先级战争</h1>
+        <p>
+            下面几组元素都套了 <code>.box</code>，唯一变量是把规则放进了哪个层。页面尾部的探针会把浏览器真正生效的计算值打出来——这就是结论的佐证。
+        </p>
+
+        <h2>① 层序决定胜负，源码位置不算数</h2>
+        <p>
+            层序声明为 <code>@layer reset, components, utilities;</code>，而 <code>utilities</code> 的规则写在源码最前面。三条规则同一选择器，
+            <code>utilities</code> 最后声明，所以它赢。
+        </p>
+        <div id="layer-order"><div class="box">我的文字颜色由 utilities 层决定</div></div>
+
+        <h2>② 层比特异性更靠前</h2>
+        <p>
+            红色边框那条在 components 层里、选择器是 <code>#layer-vs-spec .plain</code>（一个 ID + 一个类）；绿色边框那条没进任何层、选择器只有一个
+            <code>.plain</code>。层先于特异性比较，所以<strong>低特异性的未分层规则赢</strong>。
+        </p>
+        <div id="layer-vs-spec"><div class="box plain">我的边框颜色由层外那条低特异性规则决定</div></div>
+
+        <h2>③ !important 把层序反转</h2>
+        <p>
+            <code>reset</code>（最早声明的层）里的 <code>!important</code> 最强，未分层的 <code>!important</code> 反而最弱——正好与普通声明相反。
+        </p>
+        <div id="layer-important"><div class="box">我的文字颜色由最早层 reset 决定</div></div>
+
+        <h2>④ 同一层内仍是源码顺序</h2>
+        <p>两条规则同在 components 层，后写的青色赢过先写的紫色。</p>
+        <div id="layer-inside"><div class="box">我的文字颜色由层内后写的规则决定</div></div>
+
+        <h2>浏览器实测</h2>
+        <pre id="probe">…</pre>
+
+        <script>
+            const cs = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop]
+            const lines = [
+                '① #layer-order    color        = ' + cs('#layer-order .box', 'color'),
+                '② #layer-vs-spec   border-color = ' + cs('#layer-vs-spec .box', 'borderTopColor'),
+                '③ #layer-important color       = ' + cs('#layer-important .box', 'color'),
+                '④ #layer-inside    color       = ' + cs('#layer-inside .box', 'color')
+            ]
+            document.getElementById('probe').textContent = lines.join('\n')
+        </script>
+    </body>
+</html>

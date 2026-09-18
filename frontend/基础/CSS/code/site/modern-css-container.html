@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>现代 CSS · 容器查询</title>
+        <link rel="stylesheet" href="modern-css-container.css" />
+        <style>
+            /* 页面外框样式，与演示结论无关 */
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 860px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p {
+                font-size: 0.9rem;
+                color: #4b5563;
+                margin: 0.4rem 0;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>@container：让组件按「自己被放多宽」变形</h1>
+        <p>下面是<strong>同一个组件</strong>（<code>.card</code>）被塞进两个宽度不同的容器。页面视口全程没变——这正是媒体查询做不到的地方。</p>
+
+        <h2>① 280px 的容器：卡片竖排</h2>
+        <div class="panel panel--narrow" id="panel-narrow">
+            <div class="card" id="card-narrow">
+                <div class="card__avatar"></div>
+                <div>
+                    <div><strong>窄容器里的卡片</strong></div>
+                    <div style="font-size: 0.85rem; color: #6b7280">容器宽度 &lt; 360px，走默认竖排</div>
+                </div>
+                <div class="mq-probe" id="mq-narrow">媒体查询说：</div>
+            </div>
+        </div>
+
+        <h2>② 520px 的容器：卡片横排</h2>
+        <div class="panel panel--wide" id="panel-wide">
+            <div class="card" id="card-wide">
+                <div class="card__avatar"></div>
+                <div>
+                    <div><strong>宽容器里的卡片</strong></div>
+                    <div style="font-size: 0.85rem; color: #6b7280">容器宽度 ≥ 360px，换成 flex 横排</div>
+                </div>
+                <div class="mq-probe" id="mq-wide">媒体查询说：</div>
+            </div>
+        </div>
+
+        <h2>③ 拖动右下角，实时改容器宽度</h2>
+        <p>同一个组件在不同宽度下自动切换形态，不需要为「在侧栏里 / 在主区里」写两套类名。</p>
+        <div class="panel panel--resizable" id="panel-resizable">
+            <div class="card" id="card-resizable">
+                <div class="card__avatar"></div>
+                <div>拖我所在容器的右下角 → 我在竖排 / 横排之间切换</div>
+            </div>
+        </div>
+
+        <h2>浏览器实测</h2>
+        <pre id="probe">…</pre>
+
+        <script>
+            const cs = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop]
+            const widthOf = sel => Math.round(document.querySelector(sel).getBoundingClientRect().width)
+            const mqOf = sel => getComputedStyle(document.querySelector(sel)).getPropertyValue('--mq').trim() || '(空)'
+            const lines = []
+
+            const report = (label, panelSel, cardSel, mqSel) => {
+                lines.push(label + '容器宽度 = ' + widthOf(panelSel) + 'px  |  .card display = ' + cs(cardSel, 'display'))
+                lines.push('    └─ @media 给出的 --mq = ' + mqOf(mqSel) + '（同一视口下两个容器完全一样）')
+            }
+
+            report('① 窄容器 280px ', '#panel-narrow', '#card-narrow', '#mq-narrow')
+            report('② 宽容器 520px ', '#panel-wide', '#card-wide', '#mq-wide')
+            lines.push('③ 可拖容器：容器宽度 = ' + widthOf('#panel-resizable') + 'px  |  .card display = ' + cs('#card-resizable', 'display'))
+            lines.push('视口宽度 = ' + window.innerWidth + 'px（两个容器始终处在同一个视口里）')
+
+            document.getElementById('probe').textContent = lines.join('\n')
+        </script>
+    </body>
+</html>

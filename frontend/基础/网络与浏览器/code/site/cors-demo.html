@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>同源策略与 CORS：浏览器到底拦了什么</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+                color: #222;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p,
+            li {
+                font-size: 0.9rem;
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+            .warn {
+                color: #b45309;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>同源策略与 CORS：浏览器到底拦了什么</h1>
+        <p>
+            本页由 <code>http://localhost:5177</code> 提供，页面里所有请求都打到
+            <code>http://localhost:5178</code>——<strong>端口不同就是不同源</strong>，所以每一条结果都是浏览器真的按同源策略判定过的。
+        </p>
+        <p class="warn">
+            请务必通过 <code>http://localhost:5177/cors-demo.html</code> 打开；用 <code>file://</code> 直接打开时页面的 Origin 是
+            <code>null</code>，同源判定与 CORS 行为都不一样，看到的结果没有参考价值。
+        </p>
+
+        <h2>怎么跑</h2>
+        <p>在 <code>code</code> 目录下开两个终端（或两个后台进程）：</p>
+        <pre>
+npm start      # 静态站点 -> http://localhost:5177/   （提供本页）
+npm run api    # 另一个源 -> http://localhost:5178/   （提供 /api/data 与 /__log）</pre
+        >
+        <p>
+            端口被占用时两个服务都会自动 +1（实际端口以启动日志为准）。本页加载时会自动探测 api-server 的实际端口，
+            也可以用 <code>?api=端口</code> 手动指定。
+        </p>
+
+        <h2>实测结果</h2>
+        <p>
+            页面加载后自动依次跑完 8 组对照，结果写在下方的探针里。服务端一共收到几次请求、几次预检也会一并列出——被 CORS
+            拦下的那几次，服务端其实都正常收到并返回了，被拦的只是"把响应交给 JS"这一步。
+        </p>
+        <pre id="probe">…（请求中，请确认 5178 已启动）</pre>
+
+        <script src="cors-demo.js"></script>
+    </body>
+</html>

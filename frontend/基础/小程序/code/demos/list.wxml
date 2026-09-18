@@ -1,0 +1,12 @@
+<view class="card">
+    <view class="title">{{ title }}</view>
+
+    <view class="item" wx:for="{{ items }}" wx:key="id">
+        <text class="idx">{{ index + 1 }}</text>
+        <text class="name">{{ item.name }}</text>
+        <text class="price">¥{{ (item.price / 100).toFixed(2) }}</text>
+    </view>
+
+    <view class="empty" wx:if="{{ items.length === 0 }}">还没有商品</view>
+    <view class="count" wx:else>共 {{ items.length }} 件</view>
+</view>

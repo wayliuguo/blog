@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>现代 CSS · 现代选择器与函数</title>
+        <link rel="stylesheet" href="modern-css-selectors.css" />
+        <style>
+            /* 页面外框样式，与演示结论无关 */
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p,
+            li {
+                font-size: 0.9rem;
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>现代选择器与函数</h1>
+
+        <h2>① :is() 带权、:where() 清零</h2>
+        <p class="probe-a">A：:is(#ghost-a, .probe-a) 与 .probe-a 竞争</p>
+        <p class="probe-b">B：:where(#ghost-b, .probe-b) 与 .probe-b 竞争</p>
+        <p>
+            两条规则的写法只差 <code>:is</code> / <code>:where</code>：<code>:is()</code> 会把括号里 <code>#ghost-a</code> 的 ID 权重带进来（<code
+                >1,0,0</code
+            >），所以压过 <code>.probe-a</code>；<code>:where()</code> 权重恒为 <code>0,0,0</code>，于是 <code>.probe-b</code> 反超。
+        </p>
+
+        <h2>② clamp()：一个值兼顾三档</h2>
+        <p class="fluid-clamped">我在 clamp(1rem, 1rem + 2vw, 1.75rem) 里——本视口触到上限</p>
+        <p class="fluid-free">我在 clamp(1rem, 0.5rem + 1vw, 3rem) 里——本视口落在中间档</p>
+
+        <h2>③ aspect-ratio：给宽锁比例</h2>
+        <div class="thumb"></div>
+        <p>只写了 <code>width: 160px</code> 和 <code>aspect-ratio: 16 / 9</code>，高度由浏览器算出来。</p>
+
+        <h2>④ :has()：按后代状态给容器上样式</h2>
+        <form id="demo-form">
+            <div class="field">
+                <input id="name-input" required placeholder="必填：空着时整个 .field 变红（:has + :invalid）" />
+            </div>
+            <div class="field">
+                <input id="other-input" placeholder="填上内容后整个 .field 变蓝（:has + :not(:placeholder-shown)）" />
+            </div>
+        </form>
+
+        <h2>⑤ prefers-reduced-motion：动效降级</h2>
+        <p><span class="pulse">我在动</span> —— 若系统开启「减少动态效果」，这里会变成静止。</p>
+
+        <h2>浏览器实测</h2>
+        <pre id="probe">…</pre>
+
+        <script>
+            const cs = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop]
+            const lines = []
+
+            lines.push('① A 段 color = ' + cs('.probe-a', 'color') + '（:is 带权 → 红）')
+            lines.push('① B 段 color = ' + cs('.probe-b', 'color') + '（:where 清零 → 绿）')
+            lines.push('② 触到上限的 font-size = ' + cs('.fluid-clamped', 'fontSize'))
+            lines.push('② 落在中间档的 font-size = ' + cs('.fluid-free', 'fontSize'))
+            lines.push('   视口宽度 = ' + window.innerWidth + 'px，根字号 = ' + cs('html', 'fontSize'))
+            lines.push(
+                '③ .thumb 实测 ' +
+                    Math.round(document.querySelector('.thumb').getBoundingClientRect().width) +
+                    ' × ' +
+                    Math.round(document.querySelector('.thumb').getBoundingClientRect().height) +
+                    'px（16 / 9 = ' +
+                    (16 / 9).toFixed(3) +
+                    '）'
+            )
+
+            const fields = document.querySelectorAll('#demo-form .field')
+            const borderOf = i => getComputedStyle(fields[i]).borderTopColor
+            lines.push('④ 第 1 行（必填）空着   border-color = ' + borderOf(0) + '（:has(input:required:invalid) 命中）')
+            lines.push('④ 第 2 行（非必填）空着 border-color = ' + borderOf(1) + '（默认灰）')
+            fields[0].querySelector('input').value = 'well'
+            fields[1].querySelector('input').value = 'hello'
+            lines.push('④ 两行都填上内容后 border-color = ' + borderOf(0) + ' / ' + borderOf(1) + '（:has(input:not(:placeholder-shown)) 命中）')
+
+            lines.push(
+                '⑤ prefers-reduced-motion: reduce = ' +
+                    matchMedia('(prefers-reduced-motion: reduce)').matches +
+                    ' → .pulse animation-name = ' +
+                    cs('.pulse', 'animationName')
+            )
+
+            document.getElementById('probe').textContent = lines.join('\n')
+        </script>
+    </body>
+</html>

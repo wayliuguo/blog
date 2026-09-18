@@ -328,17 +328,7 @@ const store = useReducer<MyReducer, MyState>(reducer, initState) // reducer 泛�
 - 事件对象、ref、DOM 元素的类型要在泛型中明确传入标签元素类型，以获得更精准的类型提示。
 - Props 的定义使用 `type` 或 `interface` 均可，选择一种保持一致即可。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `react-types.ts` | 函数组件 props 类型（interface + FC）、hooks 泛型（useState/useRef）、事件对象类型与泛型组件 |
-
-启动方式：HTML demo 在 `code` 目录执行 `node server.js`（即 `npm start`）打开 `http://localhost:5180/`；`react-types.ts` 用 `npx tsc --noEmit react-types.ts` 检查类型。
-
-## 总结
+## 小结
 
 - React 使用 TypeScript
   - 组件声明的整体认识
@@ -370,3 +360,20 @@ const store = useReducer<MyReducer, MyState>(reducer, initState) // reducer 泛�
   - TSX 注意事项
     - 泛型与 JSX 解析歧义、`function` 声明优先
     - 泛型传入标签元素类型
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/react-types.ts` | 函数组件 props 类型（interface + FC）、hooks 泛型（useState/useRef）、事件对象类型与泛型组件 | 函数组件的类型定义 · hooks 的泛型 · 事件与 ref 的类型 |
+
+启动方式：HTML demo 在 `code` 目录执行 `node server.js`（即 `npm start`）打开 `http://localhost:5180/`；`react-types.ts` 用 `npx tsc --noEmit react-types.ts` 检查类型。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[React 状态管理](./React%20状态管理.md)
+- 下一篇：[React 使用 CSS](./React%20使用%20CSS.md)

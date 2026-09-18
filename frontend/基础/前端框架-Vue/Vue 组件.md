@@ -618,17 +618,7 @@ const AsyncComp = defineAsyncComponent({
 
 > 应用场景：图表库、富文本编辑器、超大表单页等不常访问的重组件，适合做成异步组件。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-Vue/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `mini-reactive.html` | 手写 Proxy + track/trigger 响应式，演示组件 `ref/reactive` 数据一变、视图自动更新的底层原理 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5181/`。
-
-## 总结
+## 小结
 
 - Vue 组件
   - 组件注册
@@ -660,3 +650,20 @@ const AsyncComp = defineAsyncComponent({
     - `defineAsyncComponent`
     - 路由级懒加载
     - loading / error 配置
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/前端框架-Vue/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/mini-reactive.html` | 手写 Proxy + track/trigger 响应式，演示组件 `ref/reactive` 数据一变、视图自动更新的底层原理 | 选项式 vs 组合式 API |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5181/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[Vue 核心基础](./Vue%20核心基础.md)
+- 下一篇：[Vue 路由与状态](./Vue%20路由与状态.md)

@@ -471,17 +471,167 @@ ws.onclose = () => console.log("closed");
 
 工程要点：断线自动重连（`close` 后按退避策略重连）、心跳保活（定时发 ping 防代理掐断空闲连接）、`wss://` 加密传输、`Origin` 白名单校验。
 
-## 配套代码
+## 十、同源策略与 CORS
 
-本篇的可运行示例在仓库 `frontend/基础/网络与浏览器/code/site/`。
+前面九节讲的是协议本身。这一节讲的是**浏览器额外加的一道门**：同源策略（Same-Origin Policy）决定了一个页面的脚本能读哪些响应、能操作哪个 iframe 的 DOM，而 CORS（Cross-Origin Resource Sharing）是这道门上唯一的官方"放行条"。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `fetch-status.html` | 通过真实 Fetch 请求回显 HTTP 状态码，并用 Promise 状态机（pending→resolved/rejected）演示请求的异步时序 |
+### 1. 同源：三要素
 
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5177/`。
+**源（Origin）= 协议 + 域名 + 端口**，三者完全一致才同源。假设页面来自 `http://localhost:5177/page.html`：
 
-## 总结
+| 目标地址 | 同源？ | 原因 |
+| --- | --- | --- |
+| `http://localhost:5177/other.html` | ✅ | 三要素全同 |
+| `https://localhost:5177/` | ❌ | 协议不同（`http` → `https`） |
+| `http://api.localhost:5177/` | ❌ | 域名不同 |
+| `http://localhost:5178/` | ❌ | **端口不同**（本篇的 demo 就靠这一条造出跨源） |
+| `http://127.0.0.1:5177/` | ❌ | 域名不同（`localhost` 与 `127.0.0.1` 是两个 host） |
+
+同源策略管的是**"读"**，不是**"发"**：
+
+- 跨源的 `<script>` / `<img>` / `<link>` 标签**可以加载并执行/展示**——这正是 XSS 与 CSRF 能成立的前提。
+- 跨源的 `fetch` / `XHR` **请求会正常发出去**，服务端也会正常处理；被拦的只是"把响应交给 JS 读取"这一步（本篇 demo 用服务端计数证明了这点）。
+- 同源策略还保护 DOM 与存储：跨源 iframe 的 DOM 读不到、`localStorage` 按源隔离、Cookie 另有自己的域规则。
+
+### 2. 两种跨源请求：简单请求与预检
+
+浏览器把跨源请求分成两类，走完全不同的流程：
+
+| | 简单请求 | 非简单请求 |
+| --- | --- | --- |
+| 方法 | 仅 `GET` / `HEAD` / `POST` | 其它方法（`PUT` / `DELETE` / `PATCH`…） |
+| 请求头 | 仅 CORS 安全列表（`Accept` / `Accept-Language` / `Content-Language` / `Range` 等），`Content-Type` 的值只能是 `application/x-www-form-urlencoded`、`multipart/form-data`、`text/plain` | 带任何自定义头，或 `Content-Type` 用其它值 |
+| 流程 | 直接发真实请求，浏览器检查响应里的 `Access-Control-Allow-Origin` 决定 JS 能否读 | **先自动发一个 `OPTIONS` 预检**，通过后才发真实请求 |
+| 页面代码感知 | 只看到一次请求 | 只写了一次 `fetch`，实际产生两次请求 |
+
+最容易踩的一条：**`Content-Type: application/json` 不在安全值列表里**，所以"用 JSON 提交一个 POST"几乎必然触发预检。这不是 bug，而是规范故意留的"先问一句"。
+
+### 3. 服务端要回的响应头
+
+| 响应头 | 作用 | 出现时机 |
+| --- | --- | --- |
+| `Access-Control-Allow-Origin` | 允许哪个源读取响应：`*` 或一个具体源 | 每次跨源响应 |
+| `Access-Control-Allow-Methods` | 预检时告知允许的方法 | 仅预检 |
+| `Access-Control-Allow-Headers` | 预检时告知允许的请求头 | 仅预检 |
+| `Access-Control-Allow-Credentials` | 是否允许带凭据（Cookie / 客户端证书） | 需要凭据时 |
+| `Access-Control-Max-Age` | 预检结果缓存多久（少一次往返） | 仅预检 |
+| `Access-Control-Expose-Headers` | 额外放行哪些响应头给 JS 读 | 需要读自定义响应头时 |
+
+两条硬规则：**`Allow-Credentials: true` 与 `Allow-Origin: *` 不能同时出现**（回显具体源才行）；**自定义响应头默认对 JS 不可见**，必须在 `Expose-Headers` 里列出来。
+
+### 4. 实测：八组对照
+
+demo 由两个源组成：页面在 `5177`，接口在 `5178`。服务端按查询参数决定回哪些 CORS 头：
+
+> 摘自 `./code/api-server.js`（运行：`npm run api`）
+
+```js
+function corsHeaders(mode, req, expose) {
+    const origin = req.headers.origin || ''
+    const h = {}
+    if (mode === 'star') h['Access-Control-Allow-Origin'] = '*'
+    if (mode === 'reflect' || mode === 'credentials' || mode === 'full') {
+        h['Access-Control-Allow-Origin'] = origin
+        h['Vary'] = 'Origin'
+    }
+    // * 与 Allow-Credentials 互斥：带上凭据时只能回显具体 Origin
+    if (mode === 'credentials' || mode === 'full') h['Access-Control-Allow-Credentials'] = 'true'
+    // 自定义响应头默认对 JS 不可见，必须用 Expose-Headers 放行
+    if (expose) h['Access-Control-Expose-Headers'] = 'X-Api-Server'
+    return h
+}
+```
+
+预检请求也被服务端记了数——它是浏览器自动发的，页面里看不到：
+
+> 摘自 `./code/api-server.js`（运行：`npm run api`）
+
+```js
+    // 预检：浏览器在"非简单请求"之前**自动**发出的 OPTIONS，页面里的 fetch 只发了一次
+    if (req.method === 'OPTIONS') {
+        stats.preflight++
+        stats.lastPreflight = {
+            method: req.headers['access-control-request-method'] || '',
+            headers: req.headers['access-control-request-headers'] || ''
+        }
+        if (mode === 'full') {
+            headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            headers['Access-Control-Allow-Headers'] = 'content-type, x-demo-token'
+            headers['Access-Control-Max-Age'] = '600'
+        }
+        res.writeHead(204, headers)
+        return res.end()
+    }
+```
+
+页面侧只写了一次 `fetch`，把"成功"和"被拦"都收敛成一行输出：
+
+> 摘自 `./code/site/cors-demo.js`（运行：`npm start` + `npm run api`）
+
+```js
+/** 把「成功」与「被浏览器拦下」都写成一行输出：被拦时 fetch 只给一个 TypeError */
+async function attempt(label, run) {
+    try {
+        log(label + ' -> 通过：' + (await run()))
+    } catch (e) {
+        log(label + ' -> 被拦下：抛 ' + e.name + ' / ' + e.message)
+    }
+}
+```
+
+通过 `http://localhost:5177/cors-demo.html` 打开（**不能用 `file://`**，那样页面 Origin 是 `null`，结论会变）：
+
+> 实测（CDP 在真实时间下等 4 秒后读页面探针；服务端 `5177` + `5178` 同时运行）
+
+```
+① 同源请求（5177 -> 5177） -> 通过：status = 200，res.ok = true
+② 跨源 + Access-Control-Allow-Origin: * -> 通过：status = 200，服务端看到的 origin = http://localhost:5177，自定义响应头 X-Api-Server = null
+③ ②之上再加 Access-Control-Expose-Headers -> 通过：X-Api-Server = "api-server@5178"
+④ 跨源 + 服务端不返回任何 Access-Control-* 头 -> 被拦下：抛 TypeError / Failed to fetch
+⑤ credentials: include + Access-Control-Allow-Origin: * -> 被拦下：抛 TypeError / Failed to fetch
+⑥ credentials: include + 回显 Origin + Allow-Credentials -> 通过：status = 200，服务端看到的 origin = http://localhost:5177
+⑦ POST + application/json，但预检里没有 Allow-Headers -> 被拦下：抛 TypeError / Failed to fetch
+⑧ 同上，预检补齐 Allow-Methods / Allow-Headers -> 通过：status = 200，服务端收到的 content-type = application/json
+
+服务端统计：一共收到 6 个 /api 请求，其中预检（OPTIONS）2 次
+最后一次预检的内容：Access-Control-Request-Method = POST，Access-Control-Request-Headers = content-type
+被 CORS 拦下的那几次，服务端其实都正常收到并返回了——拦的是"把响应交给 JS"这一步
+```
+
+逐条读：
+
+- **①** 同源请求根本不走 CORS 判定，永远通过——这也是"把接口收敛到同一个源"最省事的原因。
+- **②** `*` 足以让请求通过（能读 `status`），但自定义响应头 `X-Api-Server` 读出来是 `null`。
+- **③** 加上 `Expose-Headers` 后同一个头就能读到了。差异只在这一个响应头。
+- **④** 服务端一个 `Access-Control-*` 都不返回 → 浏览器拦下，`fetch` 抛 `TypeError`。
+- **⑤** `credentials: 'include'` 配上通配的 `*` → 一样被拦：带凭据时必须回显具体源。
+- **⑥** 回显 Origin + `Allow-Credentials: true` → 通过。
+- **⑦⑧** 同一个 `POST`，只是预检里少了 `Allow-Headers` 就失败；补齐后成功。
+- 最后三行是最值得记住的：**页面只写了 6 次 `fetch`，服务端却收到 6 个真实请求 + 2 次预检**；而且**被拦下的 3 次请求服务端全都正常收到并返回了**——CORS 拦的不是"发请求"，是"读响应"。
+
+### 5. 跨源失败时为什么查不到原因
+
+被 CORS 拦下时，JS 侧拿到的只有 `TypeError: Failed to fetch`——**没有状态码、没有响应头、也没有失败原因**。这是浏览器故意的：如果给出细节，就等于让脚本能探测别的源。所以定位跨源问题必须靠两个地方：
+
+- **Network 面板**：请求是红色的（(blocked: cors) 之类），但 `/api/data` 的响应体其实是服务端真返回的内容——因为请求确实到了服务端。
+- **Console**：浏览器会在这里给出具体原因，例如"缺少 `Access-Control-Allow-Origin`"、"credentials mode 为 include 时 `Allow-Origin` 不能用通配符"。
+
+推论有两条：**排查时不要以为"请求没发出去"**；反过来，**CORS 不能当鉴权**——它只在浏览器里生效，绕过浏览器（curl / 服务端转发）就完全没有约束，服务端该做的鉴权一个都不能省。
+
+还有一个常见误解：`fetch(url, { mode: 'no-cors' })` 不是"绕过 CORS"，它只是允许发出一个**不透明响应**（`type: 'opaque'`，`status` 恒为 0、内容读不到）——适合给 CDN 预热、上报这类不关心结果的请求。
+
+### 6. 工程实践
+
+- **首选不跨源**：接口与页面收敛到同一个域（网关 / BFF 统一前缀），开发期用 dev server 代理（Vite 的 `server.proxy`、webpack 的 `devServer.proxy`）把 `/api` 转出去。跨域问题在架构上消灭掉，比在响应头上调参可靠得多。
+- **必须跨源时**：
+  - 不涉及凭据 → `Allow-Origin: *` 最省事，但**不能再加 `Allow-Credentials`**。
+  - 涉及 Cookie / 双向 TLS → 白名单校验 `Origin` 后**回显具体源** + `Allow-Credentials: true`，前端同时要写 `credentials: 'include'`。
+  - 自定义响应头要在 `Expose-Headers` 里列出，否则前端读不到（实测 ②→③ 的区别）。
+  - 减少预检：能落在简单请求里就落（方法、`Content-Type`、请求头三项都受约束）；否则给 `Max-Age` 把预检结果缓存起来——但改了允许的方法或头之后，要确认客户端没在用旧缓存。
+- **别配成"回显任意 Origin + `Allow-Credentials: true`"**：那等于让任何站点都能带着用户 Cookie 读你的接口，同源策略被彻底关掉。这是配置层面的常见事故，与[「前端安全」](./前端安全.md)里的 CSRF 直接相关。
+- 顺带区分一个容易混的概念：**"跨源"与"跨站"不是一回事**。Cookie 的 `SameSite` 判的是**站点**（协议 + 可注册域，不看端口），所以 `5177` → `5178` 这种"跨源但同站"的请求，`SameSite` 限制并不生效；真正决定它能不能被读的是 CORS。
+
+## 小结
 
 - HTTP 与 HTTPS
   - HTTP 基础
@@ -518,3 +668,32 @@ ws.onclose = () => console.log("closed");
     - 全双工、复用 HTTP 握手、无同源限制
     - 短轮询 / 长轮询 / SSE / WebSocket 对比
     - 重连、心跳、`wss://` 与 Origin 校验
+  - 同源策略与 CORS
+    - 同源 = 协议 + 域名 + 端口三者全同；`localhost` 与 `127.0.0.1` 也不同源
+    - 拦的是"读响应"不是"发请求"——被拦下的请求服务端照样收到并返回
+    - 简单请求 vs 预检：非简单请求先自动发 `OPTIONS`；`application/json` 不在安全值列表里，所以它必然触发预检
+    - 六个响应头：`Allow-Origin` / `Allow-Methods` / `Allow-Headers` / `Allow-Credentials` / `Max-Age` / `Expose-Headers`
+    - `Allow-Credentials: true` 与 `Allow-Origin: *` 互斥；自定义响应头默认读不到，要 `Expose-Headers` 放行
+    - 失败时 JS 只有 `TypeError: Failed to fetch`，定位靠 Network 面板与 Console；CORS 不能当鉴权
+    - 工程首选"不跨源"（同域 + dev server 代理）
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/网络与浏览器/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/fetch-status.html` | 通过真实 Fetch 请求回显 HTTP 状态码，并用 Promise 状态机（pending→resolved/rejected）演示请求的异步时序 | 三、状态码分类与常见状态码 |
+| `./code/api-server.js` | CORS 实验用的"另一个源"（5178）：按查询参数返回不同的 `Access-Control-*` 头，并记录收到的预检请求 | 十、同源策略与 CORS |
+| `./code/site/cors-demo.js` | 从 5177 打向 5178，依次跑 8 组对照：同源基线、`*`、`Expose-Headers`、不返回 CORS 头、`credentials` 与 `*` 互斥、预检缺 `Allow-Headers`、预检补齐（页面 `cors-demo.html`） | 十、同源策略与 CORS |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5177/`。`cors-demo.html` 需要**同时**启动第二个源：另开一个终端执行 `npm run api`（即 `node api-server.js`），它监听 `5178`。注意必须通过 `http://localhost:5177/cors-demo.html` 打开，用 `file://` 直接打开时页面 Origin 是 `null`，同源判定与 CORS 行为都会变。
+
+两个服务的端口被占用时都会**自动 +1 重试**（实际端口以启动日志为准）：`api-server` 漂移后，`cors-demo` 页面加载时会自动探测到它的实际端口（也可以用 `?api=端口` 手动指定）。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[手写实现与源码](../JavaScript%20核心/手写实现与源码.md)
+- 下一篇：[浏览器渲染原理](./浏览器渲染原理.md)

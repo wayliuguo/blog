@@ -1,0 +1,74 @@
+/* ==========================================================================
+   演示：自定义属性（CSS 变量）与设计令牌
+   ========================================================================== */
+
+/* ① 设计令牌集中在 :root 声明一次 */
+:root {
+    --brand: #2563eb;
+    --space: 12px;
+    --radius: 8px;
+}
+
+/* ② 换主题 = 重新赋值，而不是重写每一条用到它的规则 */
+[data-theme='dark'] {
+    --brand: #60a5fa;
+    --space: 20px;
+}
+
+/* ③ 注册过的自定义属性有类型，可以规定"不继承" */
+@property --no-inherit {
+    syntax: '<length>';
+    initial-value: 0px;
+    inherits: false;
+}
+:root {
+    --no-inherit: 40px;
+}
+
+/* 用令牌拼出来的组件：颜色与间距都不写死 */
+.token-box {
+    background: var(--brand);
+    color: #fff;
+    padding: var(--space);
+    border-radius: var(--radius);
+    font-weight: 600;
+    margin-top: 0.4rem;
+}
+
+/* ④ 局部作用域：在子树里重新定义同名令牌，只影响这棵子树 */
+.scope {
+    --brand: #dc2626;
+    outline: 2px dashed #9ca3af;
+    padding: 0.6rem;
+    margin-top: 0.4rem;
+}
+
+/* ⑤ 令牌不存在时用兜底值，避免整条声明失效 */
+.fallback {
+    background: var(--not-defined-anywhere, #f59e0b);
+    padding: var(--space);
+    border-radius: var(--radius);
+    font-weight: 600;
+    color: #111827;
+    margin-top: 0.4rem;
+}
+
+/* ⑥ 颜色也能当算式：由主色派生浅色 / 半透明色，不用再手抄第二、第三个十六进制 */
+.mix-light {
+    background: color-mix(in oklab, var(--brand) 80%, #ffffff);
+}
+.mix-translucent {
+    background: color-mix(in srgb, var(--brand) 25%, transparent);
+}
+.oklch-tone {
+    background: oklch(0.72 0.15 250);
+}
+
+.swatch {
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    color: #fff;
+    font-weight: 600;
+    margin-top: 0.4rem;
+}
+
