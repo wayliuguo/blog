@@ -265,12 +265,13 @@ viewport 字段逐个说清楚：
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `frontend/基础/01-HTML 基础/code/site/semantic-blog/`。
+本篇的可运行示例在仓库 `frontend/基础/01-HTML 基础/code/site/script-loading/`（对应正文第 10 节「脚本与资源加载」）。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `semantic-blog/index.html` | 用 `header/nav/main/article/figure/time/address` 等语义化标签搭出博客页，并演示 `<picture>` 按屏宽切换头图 |
-| `banner-wide.svg` | `<picture>` 大屏（≥720px）使用的头图资源，配合语义化页面做响应式图片 |
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `script-loading/order.html` | `defer` 按文档顺序、`async` 按下载完成顺序乱序 | 第 10 节 |
+| `script-loading/blocking.html` | 同步脚本阻塞解析（内容约 2s 后才可见）vs `defer`/`async` 不阻塞 | 第 10 节 |
+| `script-loading/first-screen.html` | 同步脚本放 head 的白屏 vs `defer`/`async` 提前首屏渲染 | 第 10 节 |
 
 启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/`。
 
