@@ -82,7 +82,7 @@ location /ws/ {
 }
 ```
 
-> 对应 [WebSocket 实时通信](../08-NestJS%20进阶/05-WebSocket%20实时通信)：没有这段配置，前端 WebSocket 会握手失败。
+> 对应 [WebSocket 实时通信](../NestJS%20进阶/05-WebSocket%20实时通信)：没有这段配置，前端 WebSocket 会握手失败。
 
 ### 3.2 动静分离 + Gzip（静态资源）
 

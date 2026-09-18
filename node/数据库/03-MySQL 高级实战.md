@@ -528,7 +528,7 @@ mysqlbinlog \
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/05-数据库/code/mysql-demo`。
+本篇的可运行示例在仓库 `node/数据库/code/mysql-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |

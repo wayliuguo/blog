@@ -569,7 +569,7 @@ npm run dev
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/04-Express 与 Koa/code/koa-template`。
+本篇的可运行示例在仓库 `node/Express 与 Koa/code/koa-template`。
 
 | 文件 | 对应小节 |
 | --- | --- |

@@ -322,16 +322,16 @@ express-basics · 07-error 运行在 http://localhost:3000
 
 ```
 Error: 故意炸一个
-    at E:\working\blog\node\04-Express 与 Koa\code\express-basics\src\07-error.js:16:10
-    at Layer.handleRequest (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\lib\layer.js:152:17)
-    at next (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\lib\route.js:157:13)
-    at Route.dispatch (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\lib\route.js:117:3)
-    at handle (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\index.js:435:11)
-    at Layer.handleRequest (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\lib\layer.js:152:17)
-    at E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\index.js:295:15
-    at processParams (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\index.js:582:12)
-    at next (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\index.js:291:5)
-    at Function.handle (E:\working\blog\node\04-Express 与 Koa\code\express-basics\node_modules\router\index.js:186:3)
+    at E:\working\blog\node\Express 与 Koa\code\express-basics\src\07-error.js:16:10
+    at Layer.handleRequest (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\lib\layer.js:152:17)
+    at next (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\lib\route.js:117:3)
+    at handle (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\lib\layer.js:152:17)
+    at E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\index.js:295:15
+    at processParams (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\index.js:582:12)
+    at next (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\index.js:291:5)
+    at Function.handle (E:\working\blog\node\Express 与 Koa\code\express-basics\node_modules\router\index.js:186:3)
 ```
 
 响应体里只有 `message`、没有 `error` 字段：本机没设 `NODE_ENV=development`，三元的另一支是 `undefined`，而 `JSON.stringify` 会把值为 `undefined` 的键直接丢掉——这正好是"开发环境才回显错误详情"的开关。
@@ -368,7 +368,7 @@ Error: 故意炸一个
 
 ## 配套代码
 
-本篇每个代码块都逐字摘自仓库 `node/04-Express 与 Koa/code/express-basics`（真实 `express`，不是重实现），每个脚本跑完会自己打请求并打印真实结果。可落地的工程骨架在 `code/express-template`。
+本篇每个代码块都逐字摘自仓库 `node/Express 与 Koa/code/express-basics`（真实 `express`，不是重实现），每个脚本跑完会自己打请求并打印真实结果。可落地的工程骨架在 `code/express-template`。
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |
@@ -392,5 +392,5 @@ Error: 故意炸一个
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[WebSocket 与 SSE 实时通信](../03-网络编程与实时通信/03-WebSocket%20与%20SSE%20实时通信)
+- 上一篇：[WebSocket 与 SSE 实时通信](../网络编程与实时通信/03-WebSocket%20与%20SSE%20实时通信)
 - 下一篇：[Koa 快速入门](./02-Koa%20快速入门)

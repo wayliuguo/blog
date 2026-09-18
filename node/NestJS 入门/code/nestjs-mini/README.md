@@ -6,9 +6,9 @@
 
 | 项目 | 对应文档 | 说明 |
 | --- | --- | --- |
-| nestjs-mini | [NestJS 源码分析](../../../08-NestJS%20%E8%BF%9B%E9%98%B6/09-NestJS%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) | 配合源码逐行理解装饰器 / DI / 处理链 |
+| nestjs-mini | [NestJS 源码分析](../../../NestJS%20%E8%BF%9B%E9%98%B6/09-NestJS%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) | 配合源码逐行理解装饰器 / DI / 处理链 |
 
-延伸阅读：[IoC 与依赖注入原理](../../../08-NestJS%20%E8%BF%9B%E9%98%B6/12-IoC%20%E4%B8%8E%E4%BE%9D%E8%B5%96%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86.md)、[自定义装饰器](../../../08-NestJS%20%E8%BF%9B%E9%98%B6/01-%E8%87%AA%E5%AE%9A%E4%B9%89%E8%A3%85%E9%A5%B0%E5%99%A8.md)
+延伸阅读：[IoC 与依赖注入原理](../../../NestJS%20%E8%BF%9B%E9%98%B6/12-IoC%20%E4%B8%8E%E4%BE%9D%E8%B5%96%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86.md)、[自定义装饰器](../../../NestJS%20%E8%BF%9B%E9%98%B6/01-%E8%87%AA%E5%AE%9A%E4%B9%89%E8%A3%85%E9%A5%B0%E5%99%A8.md)
 
 ## 它实现了什么
 
@@ -96,6 +96,6 @@ nestjs-mini/
 
 ## 阅读建议
 
-1. 先读博客 [NestJS 源码分析](../../../08-NestJS%20%E8%BF%9B%E9%98%B6/09-NestJS%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) 与 [IoC 与依赖注入原理](../../../08-NestJS%20%E8%BF%9B%E9%98%B6/12-IoC%20%E4%B8%8E%E4%BE%9D%E8%B5%96%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86.md)。
+1. 先读博客 [NestJS 源码分析](../../../NestJS%20%E8%BF%9B%E9%98%B6/09-NestJS%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) 与 [IoC 与依赖注入原理](../../../NestJS%20%E8%BF%9B%E9%98%B6/12-IoC%20%E4%B8%8E%E4%BE%9D%E8%B5%96%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86.md)。
 2. 按「第一部分 装饰器（@Module / @Controller / @Injectable / @Get / @Body）→ 第二部分 Container.resolve → 第三部分 请求处理链接口 → 第四部分 NestFactory.create / collectControllers / executeRequestChain → 第五部分 使用示例」顺序阅读 `index.ts`。
 3. 重点理解：`@Injectable()` 是触发 `design:paramtypes` 元数据生成的关键，没有它 DI 容器就无法知道构造函数依赖。

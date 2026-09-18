@@ -358,7 +358,7 @@ executeMiddlewareChain(req, res, middlewares, callback)
 
 ## 配套代码
 
-本篇的代码块逐字摘自仓库 `node/04-Express 与 Koa/code/express-mini/index.js`（全文 194 行，零第三方依赖，纯 `node:http` 实现）。
+本篇的代码块逐字摘自仓库 `node/Express 与 Koa/code/express-mini/index.js`（全文 194 行，零第三方依赖，纯 `node:http` 实现）。
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |

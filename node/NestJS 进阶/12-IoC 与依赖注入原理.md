@@ -281,12 +281,12 @@ Potential solutions:
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/07-NestJS 入门/code/nestjs-mini`。
+本篇的可运行示例在仓库 `node/NestJS 入门/code/nestjs-mini`。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
 | `./code/advanced-lab2/src/12-ioc-di.ts` | 手动 new 的代价、容器按类型注入、自定义 Token（`useValue`/`useFactory`/`useExisting`）、三种作用域对照、跨模块注入、真实报错复现 | 从"为什么不需要 new"说起 · IoC 与 DI 的区别 · NestJS 怎么知道要注入 UserService · Provider Token 与四种声明方式 · Provider 作用域（Scope） · DI 报错排查三步法 |
-| `../07-NestJS 入门/code/nestjs-mini/index.ts` | 手写 `Container`：读 `design:paramtypes` 递归注入 + 单例缓存 | NestJS 启动流程（文字图） |
+| `../NestJS 入门/code/nestjs-mini/index.ts` | 手写 `Container`：读 `design:paramtypes` 递归注入 + 单例缓存 | NestJS 启动流程（文字图） |
 | `./code/nestjs-template/src/app.module.ts` | 真实项目里的模块图：`ConfigModule` + `TypeOrmModule.forRootAsync` + 全局 Provider | NestJS 启动流程（文字图） |
 
 运行方式见 `advanced-lab2/README.md`。
@@ -295,7 +295,7 @@ Potential solutions:
 
 ## 参考
 
-- 本模块总结：[总结](../07-NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
+- 本模块总结：[总结](../NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
 - 上一篇：[认证进阶：双 Token 与多设备会话](./11-认证进阶-双Token与多设备会话)
-- 下一篇：[环境管理与配置](../09-部署与工程化/01-环境管理与配置)
+- 下一篇：[环境管理与配置](../部署与工程化/01-环境管理与配置)

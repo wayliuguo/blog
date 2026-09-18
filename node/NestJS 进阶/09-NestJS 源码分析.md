@@ -215,7 +215,7 @@ UserController 构造函数: (userService: UserService)
 
 ## 最小实现
 
-完整源码见 `nestjs-mini/index.ts`（`node/07-NestJS 入门/code/nestjs-mini/index.ts`，593 行，`npm run start` 可直接跑起来）。这里不再把代码堆成一大段，而是**按"谁使用 → 调用到哪些关键逻辑"的顺序**拆成若干片段，顺着调用链阅读更清晰。
+完整源码见 `nestjs-mini/index.ts`（`node/NestJS 入门/code/nestjs-mini/index.ts`，593 行，`npm run start` 可直接跑起来）。这里不再把代码堆成一大段，而是**按"谁使用 → 调用到哪些关键逻辑"的顺序**拆成若干片段，顺着调用链阅读更清晰。
 
 整体调用链如下：
 
@@ -239,7 +239,7 @@ app.listen(3000)
 
 识别一个"标签"有没有、内容是什么，都靠 `reflect-metadata` 在类上存取元数据。先引入依赖，并统一定义 `Key`（相当于元数据的"索引"）。
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 import 'reflect-metadata'
@@ -258,7 +258,7 @@ const PARAM_METADATA = 'param:metadata'
 
 后面各环节共用的接口都汇总在这里。
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 // 类型定义
@@ -321,7 +321,7 @@ interface MatchedRoute {
 @Param('id')/@Body()    → createParamDecorator → 按参数位置记录 {type,key}
 ```
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 /**
@@ -446,7 +446,7 @@ const Query = createParamDecorator('query')
 
 装饰器实现好了，现在"使用"它们定义一个最小应用（Service / Controller / Module）。
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 // --- 定义服务 ---
@@ -514,7 +514,7 @@ class AppModule {}
 
 `NestFactory.create` 启动时「使用」容器创建所有实例。容器靠 `design:paramtypes` 知道构造函数要什么类型，然后递归解析、单例缓存。
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 // DI（Dependency Injection，依赖注入）的核心问题：
@@ -583,7 +583,7 @@ class Container {
 
 这里「使用」了 Step 3 的装饰器元数据和 Step 5 的 DI 容器，完成：**模块系统递归收集 → 实例化 Provider/Controller → 扫描路由 → 建 HTTP 服务器**。
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 /**
@@ -755,7 +755,7 @@ class NestFactory {
 
 路由匹配成功后，服务器就调用这里的处理链：`Guard → 参数解析 → Pipe → Interceptor → Handler`。每个环节都是可选的，靠方法名检测是否存在。（完整源码中该函数定义在 `NestFactory.create` 内部，这里单独列出便于阅读。）
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 /**
@@ -836,7 +836,7 @@ async function executeRequestChain(route: MatchedRoute, req: any, res: any) {
 
 最后「使用」`NestFactory.create` 拿到 app 实例并监听端口。
 
-> 摘自 `../07-NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
+> 摘自 `../NestJS 入门/code/nestjs-mini/index.ts`（运行：`npm run start`）
 
 ```typescript
 // NestFactory.create(AppModule) 完成所有初始化：
@@ -1001,13 +1001,13 @@ NestJS 利用 TypeScript 的 `emitDecoratorMetadata` 和 `reflect-metadata` 库�
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/07-NestJS 入门/code/nestjs-mini`。
+本篇的可运行示例在仓库 `node/NestJS 入门/code/nestjs-mini`。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
-| `../07-NestJS 入门/code/nestjs-mini/index.ts` | 593 行完整最小实现：装饰器 → DI 容器 → 路由匹配 → 请求处理链 | 最小实现（Step 1~8）· 函数调用流程 · 核心机制解析 |
+| `../NestJS 入门/code/nestjs-mini/index.ts` | 593 行完整最小实现：装饰器 → DI 容器 → 路由匹配 → 请求处理链 | 最小实现（Step 1~8）· 函数调用流程 · 核心机制解析 |
 | `./code/advanced-lab2/src/09-decorator-basics.ts` | 前置知识最小示例：四类装饰器 / reflect-metadata / design:paramtypes | 1. TypeScript 装饰器 · 2. reflect-metadata · 3. design:paramtypes（自动类型反射） |
-| `../07-NestJS 入门/code/nestjs-mini/README.md` | 与真实 NestJS 的能力差异对照 | 最小实现 vs NestJS 源码 |
+| `../NestJS 入门/code/nestjs-mini/README.md` | 与真实 NestJS 的能力差异对照 | 最小实现 vs NestJS 源码 |
 
 运行方式见 `nestjs-mini/README.md`；前置知识脚本见 `advanced-lab2/README.md`。
 
@@ -1015,8 +1015,8 @@ NestJS 利用 TypeScript 的 `emitDecoratorMetadata` 和 `reflect-metadata` 库�
 
 ## 参考
 
-- 本模块总结：[总结](../07-NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
-- 源码：`nestjs-mini/package.json`（完整目录见 `blog/node/07-NestJS 入门/code/nestjs-mini/`）
+- 本模块总结：[总结](../NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
+- 源码：`nestjs-mini/package.json`（完整目录见 `blog/node/NestJS 入门/code/nestjs-mini/`）
 - 上一篇：[切换 Fastify 平台](./08-切换Fastify平台)
 - 下一篇：[NestJS 项目模板](./10-NestJS%20项目模板)

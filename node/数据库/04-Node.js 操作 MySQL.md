@@ -63,7 +63,7 @@ const [upd] = await pool.query('UPDATE users SET balance = balance + 100 WHERE i
 
 TypeORM 是 NestJS 官方推荐的 ORM（对象关系映射）框架，让开发者用类和装饰器来操作数据库，而不需要写 SQL。
 
-> TypeORM 部分（Entity / Repository / 关系映射 / N+1 / QueryRunner）的配套工程是仓库里的 `node/05-数据库/code/typeorm-demo`（typeorm 0.3 + @nestjs/typeorm 10，写法与 `node/07-NestJS 入门/code/nestjs-basics` 一致）。它需要连上 MySQL 才有输出，**本机没有 MySQL 服务，因此下面各段均未实跑**；装饰器与类型写法已用 `npm run typecheck`（`tsc --noEmit`）验证通过。
+> TypeORM 部分（Entity / Repository / 关系映射 / N+1 / QueryRunner）的配套工程是仓库里的 `node/数据库/code/typeorm-demo`（typeorm 0.3 + @nestjs/typeorm 10，写法与 `node/NestJS 入门/code/nestjs-basics` 一致）。它需要连上 MySQL 才有输出，**本机没有 MySQL 服务，因此下面各段均未实跑**；装饰器与类型写法已用 `npm run typecheck`（`tsc --noEmit`）验证通过。
 
 ### 什么是 ORM
 
@@ -290,7 +290,7 @@ export class OrderService {
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/05-数据库/code/mysql-demo`。
+本篇的可运行示例在仓库 `node/数据库/code/mysql-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |

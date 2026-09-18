@@ -404,7 +404,7 @@ await Post.updateOne(
 
 ## 配套代码
 
-本篇的示例在仓库 `node/05-数据库/code/mongo-demo`（官方 `mongodb` 驱动 + Mongoose）。
+本篇的示例在仓库 `node/数据库/code/mongo-demo`（官方 `mongodb` 驱动 + Mongoose）。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |

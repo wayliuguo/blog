@@ -202,7 +202,7 @@ koa-basics · 04-stack 运行在 http://localhost:3000
 
 ## 配套代码
 
-本篇每个代码块都逐字摘自仓库 `node/04-Express 与 Koa/code/koa-basics`（真实 `koa`，不是重实现），每个脚本跑完会自己打请求并打印真实结果。可落地的工程骨架在 `code/koa-template`。
+本篇每个代码块都逐字摘自仓库 `node/Express 与 Koa/code/koa-basics`（真实 `koa`，不是重实现），每个脚本跑完会自己打请求并打印真实结果。可落地的工程骨架在 `code/koa-template`。
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |

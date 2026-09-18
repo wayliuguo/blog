@@ -1,11 +1,11 @@
 # typeorm-demo
 
-《Node.js 后端知识体系》05-数据库「Node.js 操作 MySQL」里 **TypeORM 部分**的配套示例。
+《Node.js 后端知识体系》数据库「Node.js 操作 MySQL」里 **TypeORM 部分**的配套示例。
 
 一句话定位：把正文里那 6 段 TypeORM 代码（Entity / Repository / 关系映射 / N+1 / QueryRunner）落成一个能看懂、
 能对着改的工程骨架——**每个文件就是正文某一段的逐字出处**。
 
-> 与 `node/07-NestJS 入门/code/nestjs-basics` 的关系：那个工程讲"NestJS 怎么把 TypeORM 接进依赖注入"，
+> 与 `node/NestJS 入门/code/nestjs-basics` 的关系：那个工程讲"NestJS 怎么把 TypeORM 接进依赖注入"，
 > 这里只挑数据库这一篇要用到的 6 个知识点，两者互补；本工程沿用同一套写法与依赖版本（typeorm 0.3 + @nestjs/typeorm 10）。
 
 ---

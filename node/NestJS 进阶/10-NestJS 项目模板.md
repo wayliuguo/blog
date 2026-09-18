@@ -1154,7 +1154,7 @@ npm run start:prod
 
 ## 配套代码
 
-本篇的可运行示例分两处：`node/08-NestJS 进阶/code/nestjs-template`（完整项目模板，需要 MySQL + Redis）与 `node/08-NestJS 进阶/code/advanced-lab2`（把不依赖数据库的部分抽出来真跑）。
+本篇的可运行示例分两处：`node/NestJS 进阶/code/nestjs-template`（完整项目模板，需要 MySQL + Redis）与 `node/NestJS 进阶/code/advanced-lab2`（把不依赖数据库的部分抽出来真跑）。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
@@ -1183,7 +1183,7 @@ npm run start:prod
 
 ## 参考
 
-- 本模块总结：[总结](../07-NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
+- 本模块总结：[总结](../NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
 - 上一篇：[NestJS 源码分析](./09-NestJS%20源码分析)
 - 下一篇：[认证进阶：双 Token 与多设备会话](./11-认证进阶-双Token与多设备会话)

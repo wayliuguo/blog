@@ -159,7 +159,7 @@ ZRANGEBYSCORE leaderboard 100 200 # 按分数范围获取
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/06-Redis/code/redis-demo`。
+本篇的可运行示例在仓库 `node/Redis/code/redis-demo`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -171,7 +171,7 @@ ZRANGEBYSCORE leaderboard 100 200 # 按分数范围获取
 
 ## 参考
 
-- 本模块总结：[总结](../05-数据库/总结.md)
-- 本模块面试题：[面试题](../05-数据库/面试题.md)
-- 上一篇：[PostgreSQL 与 pgvector](../05-数据库/07-PostgreSQL%20与%20pgvector)
+- 本模块总结：[总结](../数据库/总结.md)
+- 本模块面试题：[面试题](../数据库/面试题.md)
+- 上一篇：[PostgreSQL 与 pgvector](../数据库/07-PostgreSQL%20与%20pgvector)
 - 下一篇：[Redis 持久化与淘汰策略](./02-Redis%20持久化与淘汰策略)
