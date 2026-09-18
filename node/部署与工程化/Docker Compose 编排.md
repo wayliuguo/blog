@@ -178,7 +178,7 @@ services:
 | `restart: 'no'` | 一次性 Job 失败就失败，不留死循环重试 |
 | `ports: '127.0.0.1:${APP_PORT}:${APP_PORT}'` | 只绑定宿主机回环地址，**不暴露公网**——对外只开 Nginx 一个口 |
 | `env_file` | 从 `.env.production` 注入环境变量，密钥不进镜像、不进代码 |
-| named volume `show-track-logs` | 日志跨容器生命周期持久化（见 [日志体系](./02-日志体系)） |
+| named volume `show-track-logs` | 日志跨容器生命周期持久化（见 [日志体系](./日志体系)） |
 
 ### 4.3 网络与跨宿主机访问
 
@@ -253,5 +253,5 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[Docker 容器化](./04-Docker%20容器化)
-- 下一篇：[Nginx 反向代理与网关](./06-Nginx%20反向代理与网关)
+- 上一篇：[Docker 容器化](./Docker%20容器化)
+- 下一篇：[Nginx 反向代理与网关](./Nginx%20反向代理与网关)

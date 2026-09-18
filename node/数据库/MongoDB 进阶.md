@@ -414,7 +414,7 @@ const pendingPlan = await orders.find({ status: 'pending' }).explain('executionS
 
 ## 配套代码
 
-本篇的示例在仓库 `node/数据库/code/mongo-demo`（官方 `mongodb` 驱动 + Mongoose，与上篇 [MongoDB 入门](./05-MongoDB%20入门) 共用同一个工程）。
+本篇的示例在仓库 `node/数据库/code/mongo-demo`（官方 `mongodb` 驱动 + Mongoose，与上篇 [MongoDB 入门](./MongoDB%20入门) 共用同一个工程）。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
@@ -435,5 +435,5 @@ const pendingPlan = await orders.find({ status: 'pending' }).explain('executionS
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[MongoDB 入门](./05-MongoDB%20入门)
-- 下一篇：[PostgreSQL 与 pgvector](./07-PostgreSQL%20与%20pgvector)
+- 上一篇：[MongoDB 入门](./MongoDB%20入门)
+- 下一篇：[PostgreSQL 与 pgvector](./PostgreSQL%20与%20pgvector)

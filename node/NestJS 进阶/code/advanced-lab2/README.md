@@ -16,14 +16,14 @@ npm run typecheck     # tsc --noEmit，全部脚本零类型错误
 
 | 命令 | 文件 | 对应篇目 · 小节 | 说明 | 耗时 |
 | --- | --- | --- | --- | --- |
-| `npm run 07transports` | `src/07-transports.ts` | 07-微服务架构 · RabbitMQ 传输 / Redis 传输 | 打印 TCP / RMQ / Redis 三种传输的 `transport` 与 `options`（只构造配置，不连 broker） | <1s |
-| `npm run 08fastify` | `src/08-fastify-platform.ts` | 08-切换Fastify平台 · 修改 main.ts / 适配器对比 / 中间件兼容性 | 同一业务模块分别挂 Express 与 Fastify 适配器，实测 CORS、静态资源、Cookie、multipart | ~2s |
-| `npm run 08bench` | `src/08-benchmark.ts` | 08-切换Fastify平台 · 性能对比测试 | autocannon 压同一个 `GET /ping`，两个适配器各 100 连接 × 5 秒 | ~15s |
-| `npm run 09decorators` | `src/09-decorator-basics.ts` | 09-NestJS 源码分析 · 前置知识 | 四类装饰器签名、`reflect-metadata` API、`design:paramtypes` 生成条件 | <1s |
-| `npm run 10entity` | `src/10-refresh-token.entity.ts` | 10-NestJS 项目模板 · 实体示例 | RefreshToken 实体 + 用 `getMetadataArgsStorage()` 反查建表元数据 | <1s |
-| `npm run 10infra` | `src/10-common-infra.ts` | 10-NestJS 项目模板 · 公共基础设施 | 统一响应 / 统一异常 / 全局校验的最小可跑应用（含 422、500 降级） | ~1s |
+| `npm run 07transports` | `src/07-transports.ts` | 微服务架构 · RabbitMQ 传输 / Redis 传输 | 打印 TCP / RMQ / Redis 三种传输的 `transport` 与 `options`（只构造配置，不连 broker） | <1s |
+| `npm run 08fastify` | `src/08-fastify-platform.ts` | 切换Fastify平台 · 修改 main.ts / 适配器对比 / 中间件兼容性 | 同一业务模块分别挂 Express 与 Fastify 适配器，实测 CORS、静态资源、Cookie、multipart | ~2s |
+| `npm run 08bench` | `src/08-benchmark.ts` | 切换Fastify平台 · 性能对比测试 | autocannon 压同一个 `GET /ping`，两个适配器各 100 连接 × 5 秒 | ~15s |
+| `npm run 09decorators` | `src/09-decorator-basics.ts` | NestJS 源码分析 · 前置知识 | 四类装饰器签名、`reflect-metadata` API、`design:paramtypes` 生成条件 | <1s |
+| `npm run 10entity` | `src/10-refresh-token.entity.ts` | NestJS 项目模板 · 实体示例 | RefreshToken 实体 + 用 `getMetadataArgsStorage()` 反查建表元数据 | <1s |
+| `npm run 10infra` | `src/10-common-infra.ts` | NestJS 项目模板 · 公共基础设施 | 统一响应 / 统一异常 / 全局校验的最小可跑应用（含 422、500 降级） | ~1s |
 | `npm run 11refresh` | `src/11-refresh-token.ts` | 11-认证进阶 · 全部小节 | 内存版 AuthSession：bcrypt 72 字节截断、SHA-256 入库、多设备、轮换、登出 | ~1s |
-| `npm run 12ioc` | `src/12-ioc-di.ts` | 12-IoC 与依赖注入原理 · 全部小节 | 真实 Nest 应用：类型注入、自定义 Token、`useExisting`、跨模块、三种作用域 | ~1s |
+| `npm run 12ioc` | `src/12-ioc-di.ts` | IoC 与依赖注入原理 · 全部小节 | 真实 Nest 应用：类型注入、自定义 Token、`useExisting`、跨模块、三种作用域 | ~1s |
 
 `src/10-user.entity.ts` 不是独立脚本，它是 `10entity` 引用的 User 实体（与 `nestjs-template` 同源，供 `@ManyToOne` 关系使用）。
 

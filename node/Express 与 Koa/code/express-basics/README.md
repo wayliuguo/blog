@@ -1,21 +1,21 @@
 # express-basics —— Express 快速入门的最小可运行示例集
 
-用**真实 `express`**（不是重实现）把 [Express 快速入门](../../01-Express%20快速入门.md) 一节的每个知识点写成一个能独立跑起来的脚本。每个脚本跑完会自己打几个请求、打印真实的响应状态码 / 响应头 / 响应体，然后退出——博客里贴的「实测输出」就是这些脚本的原样输出。
+用**真实 `express`**（不是重实现）把 [Express 快速入门](../../Express%20快速入门.md) 一节的每个知识点写成一个能独立跑起来的脚本。每个脚本跑完会自己打几个请求、打印真实的响应状态码 / 响应头 / 响应体，然后退出——博客里贴的「实测输出」就是这些脚本的原样输出。
 
 ## 对应博客章节
 
 | 脚本 | 对应文档 | 说明 |
 | --- | --- | --- |
-| `src/00-http-baseline.js` | [Express 快速入门](../../01-Express%20快速入门.md) | 模块二的纯 `node:http` 写法，作为对照基线 |
-| `src/01-hello.js` | [Express 快速入门](../../01-Express%20快速入门.md) | Hello World：`express()` → `app.get` → `res.send` |
-| `src/02-routing.js` | [Express 快速入门](../../01-Express%20快速入门.md) | `app.get/post/put/delete` 四类路由 |
-| `src/03-params.js` | [Express 快速入门](../../01-Express%20快速入门.md) | `req.params` 与 `req.query` |
-| `src/04-middleware.js` | [Express 快速入门](../../01-Express%20快速入门.md) | 应用级 / 路由级中间件与 `next()` |
-| `src/05-builtin.js` | [Express 快速入门](../../01-Express%20快速入门.md) | `express.json` / `urlencoded` / `static` |
-| `src/06-cors.js` | [Express 快速入门](../../01-Express%20快速入门.md) | 第三方中间件 `cors()` 与跨域响应头 |
-| `src/07-error.js` | [Express 快速入门](../../01-Express%20快速入门.md) | 4 参数错误处理中间件 |
+| `src/00-http-baseline.js` | [Express 快速入门](../../Express%20快速入门.md) | 模块二的纯 `node:http` 写法，作为对照基线 |
+| `src/01-hello.js` | [Express 快速入门](../../Express%20快速入门.md) | Hello World：`express()` → `app.get` → `res.send` |
+| `src/02-routing.js` | [Express 快速入门](../../Express%20快速入门.md) | `app.get/post/put/delete` 四类路由 |
+| `src/03-params.js` | [Express 快速入门](../../Express%20快速入门.md) | `req.params` 与 `req.query` |
+| `src/04-middleware.js` | [Express 快速入门](../../Express%20快速入门.md) | 应用级 / 路由级中间件与 `next()` |
+| `src/05-builtin.js` | [Express 快速入门](../../Express%20快速入门.md) | `express.json` / `urlencoded` / `static` |
+| `src/06-cors.js` | [Express 快速入门](../../Express%20快速入门.md) | 第三方中间件 `cors()` 与跨域响应头 |
+| `src/07-error.js` | [Express 快速入门](../../Express%20快速入门.md) | 4 参数错误处理中间件 |
 
-延伸阅读：[Express 源码分析](../../04-Express%20源码分析.md)（手写最小实现）、[Express 项目模板](../../03-Express%20项目模板.md)（可落地的工程骨架）。
+延伸阅读：[Express 源码分析](../../Express%20源码分析.md)（手写最小实现）、[Express 项目模板](../../Express%20项目模板.md)（可落地的工程骨架）。
 
 ## 怎么跑起来
 

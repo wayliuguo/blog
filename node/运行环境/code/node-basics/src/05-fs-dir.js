@@ -1,5 +1,5 @@
 // 05 目录遍历 + 批量读文件（fs / path 最常用的实战形态）
-// 对应文档：node/运行环境/05-Buffer 与 Stream.md
+// 对应文档：node/运行环境/Buffer 与 Stream.md
 // 演示：用 fs/promises + path 扫描目录、过滤 .md、逐个读取并打印「文件名 + 字节数 + 首行」、最后汇总
 // 运行命令：node src/05-fs-dir.js
 //          node src/05-fs-dir.js keep   # 运行完保留临时示例目录（默认跑完自动清理）

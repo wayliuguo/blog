@@ -179,5 +179,5 @@ LEFT JOIN orders ON users.id = orders.user_id;
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[Koa 源码分析](../Express%20与%20Koa/06-Koa%20源码分析)
-- 下一篇：[MySQL 进阶](./02-MySQL%20进阶)
+- 上一篇：[Koa 源码分析](../Express%20与%20Koa/Koa%20源码分析)
+- 下一篇：[MySQL 进阶](./MySQL%20进阶)

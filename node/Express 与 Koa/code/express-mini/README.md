@@ -6,9 +6,9 @@
 
 | 项目 | 对应文档 | 说明 |
 | --- | --- | --- |
-| express-mini | [Express 源码分析](../../04-Express%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) | 配合源码逐行理解中间件与路由实现 |
+| express-mini | [Express 源码分析](../../Express%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) | 配合源码逐行理解中间件与路由实现 |
 
-延伸阅读：[Express 快速入门](../../01-Express%20%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8.md)、[Express 项目模板](../../03-Express%20%E9%A1%B9%E7%9B%AE%E6%A8%A1%E6%9D%BF.md)
+延伸阅读：[Express 快速入门](../../Express%20%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8.md)、[Express 项目模板](../../Express%20%E9%A1%B9%E7%9B%AE%E6%A8%A1%E6%9D%BF.md)
 
 ## 它实现了什么
 
@@ -85,6 +85,6 @@ express-mini/
 
 ## 阅读建议
 
-1. 先读博客 [Express 源码分析](../../04-Express%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) 建立整体认知。
+1. 先读博客 [Express 源码分析](../../Express%20%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.md) 建立整体认知。
 2. 再按 `createApp` → `app.use` / `app[method]` 注册 → `executeMiddlewareChain` 递归 `next` → `matchRoute` → `enhanceRes` 的顺序读 `index.js`。
 3. 重点理解 `next` 既是「进入下一个中间件」也是「错误传递通道」这一设计。

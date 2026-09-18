@@ -312,5 +312,5 @@ export class OrderService {
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[MySQL 高级实战](./03-MySQL%20高级实战)
-- 下一篇：[MongoDB 入门](./05-MongoDB%20入门)
+- 上一篇：[MySQL 高级实战](./MySQL%20高级实战)
+- 下一篇：[MongoDB 入门](./MongoDB%20入门)
