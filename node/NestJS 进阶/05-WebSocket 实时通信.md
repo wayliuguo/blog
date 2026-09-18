@@ -196,12 +196,12 @@ export class NotificationService {
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/08-NestJS 进阶/code/advanced-lab`：一个真实 `@nestjs/*` + socket.io 的聊天服务，脚本自己用 `socket.io-client` 连上去，把连接、广播、入房间、私信、鉴权失败被踢、HTTP 触发广播都跑一遍。
+本篇的可运行示例在仓库 `node/NestJS 进阶/code/advanced-lab`：一个真实 `@nestjs/*` + socket.io 的聊天服务，脚本自己用 `socket.io-client` 连上去，把连接、广播、入房间、私信、鉴权失败被踢、HTTP 触发广播都跑一遍。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
 | `./code/advanced-lab/src/05-websocket-gateway.ts` | `ChatGateway`（连接钩子 + 广播 + 房间）、`ChatModule` 注册、带 token 鉴权的 `AuthGateway`、被 HTTP 控制器复用的 `NotificationService` | 基础 Gateway · 在模块中注册 · 带身份验证的 Gateway · 与 HTTP 控制器共享服务 |
-| `../03-网络编程与实时通信/code/net-lab/src/08-websocket.js` | 原生 WebSocket 与心跳（对照 Gateway 到底封装了什么） | 基础 Gateway |
+| `../网络编程与实时通信/code/net-lab/src/08-websocket.js` | 原生 WebSocket 与心跳（对照 Gateway 到底封装了什么） | 基础 Gateway |
 
 运行方式：`code/advanced-lab` 目录下 `npm install` 后 `npm run 05gateway`；原生版在 `code/net-lab` 下 `npm run 08`。
 
@@ -209,7 +209,7 @@ export class NotificationService {
 
 ## 参考
 
-- 本模块总结：[总结](../07-NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
+- 本模块总结：[总结](../NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
 - 上一篇：[文件上传实战](./04-文件上传实战)
 - 下一篇：[定时任务与队列](./06-定时任务与队列)

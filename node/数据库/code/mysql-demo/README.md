@@ -1,7 +1,7 @@
 # mysql-demo
 
 《Node.js 后端知识体系》模块四「数据与缓存 / 数据库」7 篇文章的配套代码，对应博客目录
-`node/05-数据库/01-MySQL 基础` 到 `node/05-数据库/07-PostgreSQL 与 pgvector`。
+`node/数据库/01-MySQL 基础` 到 `node/数据库/07-PostgreSQL 与 pgvector`。
 
 一句话定位：**刻意不用 ORM**，直接用 `mysql2` 原生驱动，让每一条 SQL 都可见、可改、可观察。
 主线理念是「会用 ORM ≠ 会数据库」——看到一条 SQL，脑子里能想到：走没走索引？回表了吗？

@@ -11,7 +11,7 @@ export default [
     },
     {
         text: 'Node 后端',
-        link: '/node/01-运行环境/01-Node.js 是什么',
+        link: '/node/运行环境/01-Node.js 是什么',
         activeMatch: '/node/'
     }
 ]

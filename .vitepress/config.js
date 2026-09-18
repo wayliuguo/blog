@@ -8,7 +8,7 @@ module.exports = {
     description: "well's blog",
     base: '/blog/',
     // code/ 下是配套示例代码，不是站点页面，排除出页面集合
-    // 根目录的 code/ 与各模块目录内的 code/（如 node/01-运行环境/code/）都要排除
+    // 根目录的 code/ 与各模块目录内的 code/（如 node/运行环境/code/）都要排除
     srcExclude: ['**/node_modules/**', '**/dist/**', 'code/**', '**/code/**'],
     themeConfig: {
         lastUpdated: '最后更新时间',

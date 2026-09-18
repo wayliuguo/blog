@@ -6,7 +6,7 @@
 
 ## 关于技术栈：本篇为什么用 Prisma 举例
 
-本体系前面（[数据库集成](../07-NestJS%20入门/06-数据库集成)、[Express 项目模板](../04-Express%20与%20Koa/03-Express%20项目模板)）统一使用 **TypeORM**，而这一篇的示例用 **Prisma**。两者不是替代关系，而是同一层的两种实现：
+本体系前面（[数据库集成](../NestJS%20入门/06-数据库集成)、[Express 项目模板](../Express%20与%20Koa/03-Express%20项目模板)）统一使用 **TypeORM**，而这一篇的示例用 **Prisma**。两者不是替代关系，而是同一层的两种实现：
 
 | 对比项 | TypeORM | Prisma |
 |--------|---------|--------|
@@ -338,7 +338,7 @@ model AuthSession {
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/08-NestJS 进阶/code/advanced-lab2`：用一张内存表顶替 Prisma Client，把双 Token 的登录 / 刷新轮换 / 多设备 / 登出全部真跑一遍。
+本篇的可运行示例在仓库 `node/NestJS 进阶/code/advanced-lab2`：用一张内存表顶替 Prisma Client，把双 Token 的登录 / 刷新轮换 / 多设备 / 登出全部真跑一遍。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
@@ -353,7 +353,7 @@ model AuthSession {
 
 ## 参考
 
-- 本模块总结：[总结](../07-NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
+- 本模块总结：[总结](../NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
 - 上一篇：[NestJS 项目模板](./10-NestJS%20项目模板)
 - 下一篇：[IoC 与依赖注入原理](./12-IoC%20与依赖注入原理)

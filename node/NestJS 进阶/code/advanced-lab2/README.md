@@ -1,13 +1,13 @@
 # advanced-lab2 —— NestJS 进阶（07~12 篇）配套脚本
 
-`node/08-NestJS 进阶/` 下 07~12 篇正文里引用的可运行脚本都在这里。每个脚本都不依赖 MySQL / Redis，装完依赖直接 `npm run <script>` 就能跑；正文里贴的输出就是它们的真实输出（已去掉终端颜色码）。
+`node/NestJS 进阶/` 下 07~12 篇正文里引用的可运行脚本都在这里。每个脚本都不依赖 MySQL / Redis，装完依赖直接 `npm run <script>` 就能跑；正文里贴的输出就是它们的真实输出（已去掉终端颜色码）。
 
 需要完整项目形态的读者，另见同目录的 `../nestjs-template`（完整模板，需要 MySQL + Redis）与 `../microservice-demo`（三个进程的微服务示例）。
 
 ## 安装与运行
 
 ```bash
-cd "node/08-NestJS 进阶/code/advanced-lab2"
+cd "node/NestJS 进阶/code/advanced-lab2"
 npm install
 npm run typecheck     # tsc --noEmit，全部脚本零类型错误
 ```

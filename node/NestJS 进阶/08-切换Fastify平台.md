@@ -220,7 +220,7 @@ const result = await autocannon({
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/08-NestJS 进阶/code/advanced-lab2`。
+本篇的可运行示例在仓库 `node/NestJS 进阶/code/advanced-lab2`。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
@@ -234,7 +234,7 @@ const result = await autocannon({
 
 ## 参考
 
-- 本模块总结：[总结](../07-NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../07-NestJS 入门/面试题.md)
+- 本模块总结：[总结](../NestJS 入门/总结.md)
+- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
 - 上一篇：[微服务架构](./07-微服务架构)
 - 下一篇：[NestJS 源码分析](./09-NestJS%20源码分析)
