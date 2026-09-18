@@ -230,16 +230,26 @@ viewport 字段逐个说清楚：
 - `async`：下载完立刻执行（可能在解析中途）——适合独立无依赖的统计脚本。
 - `type="module"`：自带 defer 语义 + 严格模式 + 模块作用域，Vite 产物入口默认用它。
 
-> 预加载指令 `dns-prefetch` / `preconnect` / `preload` / `prefetch` 的选型，详见 `04-网络与浏览器` 模块。
+三种方式的执行时机对比：
+
+| 方式 | 下载 | 执行时机 | 对 `DOMContentLoaded` 的影响 |
+| --- | --- | --- | --- |
+| 默认（同步） | 阻塞 HTML 解析 | 遇到即执行 | 推迟（解析被阻塞） |
+| `defer` | 与解析并行 | 解析完成后、`DOMContentLoaded` 之前 | 推迟到脚本执行之后 |
+| `async` | 与解析并行 | 下载完立即执行 | 不推迟 |
+
+记忆要点：`defer` 的脚本"排在解析后面"，所以 `DOMContentLoaded` 要等它执行完才触发；`async` 是"下载完插队即走"，`DOMContentLoaded` 不等它。这也是业务脚本用 `defer`、统计脚本用 `async` 的原因。
+
+> 预加载指令 `dns-prefetch` / `preconnect` / `preload` / `prefetch` 的选型，详见 `网络与浏览器` 模块。
 
 ## HTML5 新增了什么
 
 - **语义化标签**：`header`/`nav`/`main`/`article`/`section`/`aside`/`footer`（见第 3 节）。
 - **媒体标签**：`<video>`、`<audio>` 原生播放音视频，配 `controls`/`autoplay`/`muted` 等属性。
-- **表单增强**：新类型（`email`/`url`/`number`/`search`/`range`/`color`/`date`/`time`…）、新属性（`placeholder`/`autofocus`/`required`/`pattern`…）、原生约束校验——细节见 `02-表单与标签`。
+- **表单增强**：新类型（`email`/`url`/`number`/`search`/`range`/`color`/`date`/`time`…）、新属性（`placeholder`/`autofocus`/`required`/`pattern`…）、原生约束校验——细节见 `表单与标签`。
 - **进度条与度量器**：`<progress>`（任务进度，不确定值不加 `value`）与 `<meter>`（度量，如磁盘用量）。
-- **Web 存储**：`localStorage`（持久）与 `sessionStorage`（会话级）——详见 `04-网络与浏览器`。
-- **DOM 查询**：`document.querySelector()` / `querySelectorAll()`——详见 `03-JavaScript 核心`。
+- **Web 存储**：`localStorage`（持久）与 `sessionStorage`（会话级）——详见 `网络与浏览器`。
+- **DOM 查询**：`document.querySelector()` / `querySelectorAll()`——详见 `JavaScript 核心`。
 - **拖放**：`draggable` + `dragstart`/`dragover`/`drop` 事件实现拖拽。
 - **画布**：`<canvas>` 提供 2D/3D 绘图 API。
 
@@ -283,65 +293,15 @@ viewport 字段逐个说清楚：
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `frontend/基础/HTML 基础/code/site/script-loading/`（对应正文第 10 节「脚本与资源加载」）。
+本篇的可运行示例在仓库 `frontend/基础/HTML 基础/code/site/script-loading/`（对应正文「脚本与资源加载」小节）。
 
 | 文件 | 演示什么 | 对应小节 |
 | --- | --- | --- |
-| `script-loading/sync.html` | 默认（同步）：脚本阻塞解析，页面内容约 2s 后才渲染（白屏） | 第 10 节 |
-| `script-loading/defer.html` | `defer`：下载不阻塞渲染，解析完成后、`DOMContentLoaded` 前执行 | 第 10 节 |
-| `script-loading/async.html` | `async`：不阻塞渲染、不推迟 `DOMContentLoaded`，下载完立即执行 | 第 10 节 |
+| `script-loading/sync.html` | 默认（同步）：脚本阻塞解析，页面内容约 2s 后才渲染（白屏） | 脚本与资源加载 |
+| `script-loading/defer.html` | `defer`：下载不阻塞渲染，解析完成后、`DOMContentLoaded` 前执行 | 脚本与资源加载 |
+| `script-loading/async.html` | `async`：不阻塞渲染、不推迟 `DOMContentLoaded`，下载完立即执行 | 脚本与资源加载 |
 
 启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/` 进入示例目录，依次打开三个验证页，在浏览器控制台（F12）观察日志。
-
-### 代码解析
-
-三个页面是只含一段静态内容的极简页面，差异只在 `<head>` 里加载 `log.js` 的标签属性：
-
-> 摘自 `./code/site/script-loading/sync.html` / `defer.html` / `async.html`
-
-```html
-<script src="log.js?name=sync&delay=2000"></script>       <!-- sync.html：默认（同步） -->
-<script defer src="log.js?name=defer&delay=2000"></script> <!-- defer.html -->
-<script async src="log.js?name=async&delay=2000"></script> <!-- async.html -->
-```
-
-`?delay=2000` 让 `log.js` 慢下载 2 秒（由 `server.js` 支持），把三种方式的执行时机差异放大到肉眼可见：
-
-- **默认（同步）**：解析器被阻塞，脚本下载 2 秒期间页面不渲染——刷新 `sync.html` 会白屏约 2 秒。
-- **defer**：下载期间解析与渲染照常进行，页面立即出现；脚本在解析完成后、`DOMContentLoaded` 之前执行，因此 `DOMContentLoaded` 被推迟到脚本执行之后（也约 2 秒）。
-- **async**：下载期间渲染照常，且 `DOMContentLoaded` 不被推迟（几十毫秒即触发）；脚本下载完立即执行，因此出现在 `DOMContentLoaded` 之后。
-
-`log.js` 执行时向控制台打点，页面内联脚本在 `DOMContentLoaded` / `load` 时各打一点，三个时间点对比即可判断脚本执行顺序：
-
-> 摘自 `./code/site/script-loading/log.js`
-
-```js
-;(() => {
-    const NAMES = { sync: '默认（同步）', defer: 'defer', async: 'async' }
-    const name = new URLSearchParams(document.currentScript.src.split('?')[1]).get('name')
-    console.log(`[${NAMES[name]}] 脚本执行 @ ${performance.now().toFixed(1)}ms`)
-})()
-```
-
-三个页面刷新后的控制台实测输出（时间戳单位 ms）：
-
-> 示意片段（无配套脚本）
-
-```
-sync.html：   [默认（同步）] 脚本执行 @ 2034.1ms   ← 脚本最先执行，且阻塞到 2s 后才渲染
-             [DOMContentLoaded] @ 2035.2ms
-             [load] @ 2036.5ms
-
-defer.html：  [defer] 脚本执行 @ 2031.1ms         ← DCL 被推迟到脚本之后（约 2s）
-             [DOMContentLoaded] @ 2031.5ms
-             [load] @ 2031.9ms
-
-async.html：  [DOMContentLoaded] @ 23.1ms         ← DCL 不受影响，脚本反而在它之后
-             [async] 脚本执行 @ 2038.5ms
-             [load] @ 2039.4ms
-```
-
-对比要点：`defer` 页的 `DOMContentLoaded` 与脚本几乎同时（约 2 秒，DCL 等脚本下载）；`async` 页的 `DOMContentLoaded` 只有 20 多毫秒（不等脚本），脚本 2 秒后才执行——这就是「`defer` 推迟 `DOMContentLoaded`、`async` 不推迟」的直接证据。
 
 ## 总结
 
