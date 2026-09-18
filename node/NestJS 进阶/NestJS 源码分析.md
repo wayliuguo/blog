@@ -153,6 +153,8 @@ TypeScript 编译时如果开启 `emitDecoratorMetadata: true`，会自动为**�
 
 **tsconfig.json 关键配置**：
 
+> 示意片段（无配套脚本）
+
 ```json
 {
   "compilerOptions": {
@@ -1015,8 +1017,8 @@ NestJS 利用 TypeScript 的 `emitDecoratorMetadata` 和 `reflect-metadata` 库�
 
 ## 参考
 
-- 本模块总结：[总结](../NestJS 入门/总结.md)
-- 本模块面试题：[面试题](../NestJS 入门/面试题.md)
+- 本模块总结：[总结](../NestJS%20入门/总结.md)
+- 本模块面试题：[面试题](../NestJS%20入门/面试题.md)
 - 源码：`nestjs-mini/package.json`（完整目录见 `blog/node/NestJS 入门/code/nestjs-mini/`）
 - 上一篇：[切换 Fastify 平台](./切换Fastify平台)
 - 下一篇：[NestJS 项目模板](./NestJS%20项目模板)
