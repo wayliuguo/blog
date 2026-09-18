@@ -1,0 +1,17 @@
+/* 同一份 WXSS 在不同机型上的实际尺寸：750rpx = 屏幕宽度 */
+.card {
+    width: 690rpx;
+    margin: 24rpx auto;
+    border-radius: 16rpx;
+    font-size: 28rpx;
+    border-width: 2rpx;
+}
+
+/* 下面两条是「清单之外」的写法，用选择器检查器把它们挑出来 */
+* {
+    box-sizing: border-box;
+}
+
+.card[data-id] {
+    padding: 0 30rpx;
+}

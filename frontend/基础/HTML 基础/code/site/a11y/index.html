@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>无障碍审查：坏例子与改对之后</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+                color: #1f2937;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1.05rem;
+            }
+            h3,
+            h4 {
+                margin: 0.6rem 0 0.2rem;
+                font-size: 0.95rem;
+            }
+            p {
+                font-size: 0.9rem;
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                color: #374151;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+            .zone {
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 12px 14px;
+                background: #fafafa;
+            }
+            .zone .row {
+                margin: 0.5rem 0;
+            }
+            /* 假按钮：div 装成按钮的样子，但既不可聚焦、也没有按钮语义 */
+            .fake-btn,
+            .btn {
+                display: inline-block;
+                padding: 4px 14px;
+                border-radius: 6px;
+                background: #2563eb;
+                color: #fff;
+                font-size: 0.85rem;
+                cursor: pointer;
+                border: 0;
+            }
+            .icon-btn {
+                width: 30px;
+                height: 30px;
+                padding: 0;
+                background: #e5e7eb;
+                border: 0;
+                border-radius: 6px;
+                cursor: pointer;
+                vertical-align: middle;
+            }
+            /* 坏例子：把浏览器默认的焦点轮廓关掉了 */
+            .no-outline:focus {
+                outline: none;
+            }
+            /* 对照：保留一个显式的可见焦点样式 */
+            .keep-outline:focus {
+                outline: 2px solid #2563eb;
+                outline-offset: 2px;
+            }
+            .contrast-bad {
+                color: #999999;
+                background: #ffffff;
+                font-size: 0.85rem;
+            }
+            .contrast-ok {
+                color: #4b5563;
+                background: #ffffff;
+                font-size: 0.85rem;
+            }
+            a {
+                color: #2563eb;
+            }
+            .note {
+                font-size: 0.82rem;
+                color: #6b7280;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>无障碍审查：坏例子与改对之后的对照</h1>
+        <p>
+            下面两块内容是同一组控件，一块故意写坏（<code>#bad-zone</code>）、一块是改对之后的版本（<code>#good-zone</code>）。
+            页面加载后自动对两块跑同一套检查，结果写在页尾探针里——两块代码的差别只有那么几行，结论差多少可以直接对比。
+        </p>
+
+        <h2>① 坏例子：看起来能用，无障碍树里全是空的</h2>
+        <div class="zone" id="bad-zone">
+            <div class="row">
+                <img src="logo.svg" width="20" height="20" />
+                <span class="note">左边这张图没写 alt</span>
+            </div>
+            <div class="row">
+                <div class="fake-btn" id="bad-fake-btn">提交</div>
+                <span class="note">用 <code>div</code> 装的按钮</span>
+            </div>
+            <div class="row">
+                <button class="icon-btn" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7" fill="none" stroke="#374151" stroke-width="2" />
+                        <line x1="16" y1="16" x2="21" y2="21" stroke="#374151" stroke-width="2" />
+                    </svg>
+                </button>
+                <span class="note">只有图标、没写任何名字的按钮</span>
+            </div>
+            <div class="row">
+                <input placeholder="手机号" />
+                <span class="note">只用 placeholder 当标签的输入框</span>
+            </div>
+            <div class="row">
+                <a href="#" class="no-outline" id="bad-link">去掉了焦点轮廓的链接</a>
+                <span class="note">键盘 Tab 过来时看不出焦点在哪</span>
+            </div>
+            <div class="row">
+                <p class="contrast-bad">这行字的对比度不足（灰字白底）</p>
+            </div>
+            <h4>这级标题跳过了 h3</h4>
+        </div>
+
+        <h2>② 改对之后：同样的外观，多出来的只是语义</h2>
+        <div class="zone" id="good-zone">
+            <div class="row">
+                <img src="logo.svg" width="20" height="20" alt="示例站点图标" />
+                <span class="note">有信息的图：补上 alt</span>
+            </div>
+            <div class="row">
+                <img src="logo.svg" width="20" height="20" alt="" />
+                <span class="note">纯装饰的图：<code>alt=""</code> 明确表示"跳过我"（注意它与"没写 alt"完全是两件事）</span>
+            </div>
+            <div class="row">
+                <button class="btn" type="button" id="good-real-btn">提交</button>
+                <span class="note">直接用 <code>button</code></span>
+            </div>
+            <div class="row">
+                <button class="icon-btn" type="button" aria-label="搜索">
+                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7" fill="none" stroke="#374151" stroke-width="2" />
+                        <line x1="16" y1="16" x2="21" y2="21" stroke="#374151" stroke-width="2" />
+                    </svg>
+                </button>
+                <span class="note">图标按钮用 <code>aria-label</code> 给出名字</span>
+            </div>
+            <div class="row">
+                <label for="a11y-phone">手机号</label>
+                <input id="a11y-phone" placeholder="请输入 11 位手机号" />
+                <span class="note">用 <code>label for</code> 与控件绑定</span>
+            </div>
+            <div class="row">
+                <a href="#" class="keep-outline" id="good-link">保留可见焦点样式的链接</a>
+                <span class="note">焦点可见，且对比度足够</span>
+            </div>
+            <div class="row">
+                <p class="contrast-ok">这行字的对比度达标（深灰字白底）</p>
+            </div>
+            <h3>标题层级不跳级</h3>
+        </div>
+
+        <h2>实测结果</h2>
+        <p>
+            页面内探针跑的是"在页面里自己实现的简化检查"（对比度按 WCAG 公式算、是精确值；"可访问名"只按文本 /
+            <code>aria-label</code> / <code>title</code> / 内部 <code>img</code> 的 <code>alt</code> 拼，是简化版）。<strong
+                >浏览器自己算出来的 role 与 name</strong
+            >要用 CDP 的 <code>Accessibility</code> 域读，命令见本篇《配套代码》。
+        </p>
+        <pre id="probe">…</pre>
+
+        <script src="audit.js"></script>
+    </body>
+</html>

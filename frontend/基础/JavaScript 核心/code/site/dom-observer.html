@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>三个观察者：Intersection / Resize / Mutation</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p {
+                font-size: 0.9rem;
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+            .fold-target {
+                border: 2px dashed #f59e0b;
+                border-radius: 8px;
+                padding: 10px 12px;
+                background: #fffbeb;
+                font-size: 0.85rem;
+            }
+            #resize-box {
+                width: 200px;
+                height: 40px;
+                background: #c7d2fe;
+                border-radius: 6px;
+                margin-top: 6px;
+            }
+            #mutate-host {
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 8px 12px;
+                min-height: 40px;
+                background: #fafafa;
+            }
+            #probe {
+                margin-top: 1rem;
+            }
+            .live {
+                font-size: 0.8rem;
+                color: #6b7280;
+                background: #f3f4f6;
+                border-radius: 6px;
+                padding: 4px 8px;
+                margin-top: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>三个观察者：让浏览器在"变化发生时"通知你</h1>
+        <p>它们替代的都是"轮询 + 手动计算"：判断元素有没有进视口、容器尺寸变没变、DOM 被谁改过。回调都是异步投递的，不需要你自己开定时器去查。</p>
+        <p style="color: #b45309; font-size: 0.85rem">
+            提示：IntersectionObserver 与 ResizeObserver 的<strong>回调投递</strong>依赖浏览器产生渲染帧，无头 Chrome 下不保证投递（实测
+            <code>--dump-dom</code> 抓不到）。所以这两节的结果请看下面灰色那行——需要在真实浏览器窗口里打开；页尾探针给的是任何环境都能核对的几何量与
+            MutationObserver 记录（后者走微任务队列，不依赖渲染帧）。
+        </p>
+
+        <h2>① IntersectionObserver：元素进没进视口</h2>
+        <p>同一个目标元素挂两个观察者：一个用默认 <code>rootMargin</code>，一个把底部边界外扩 100px。后者在元素还看不见时就判定为"已进入"——图片懒加载的预加载带就是这么做的。</p>
+        <div class="live" id="io-log">等待回调…</div>
+        <div id="spacer"></div>
+        <div class="fold-target" id="below-fold">我原本在折叠线下方 50px 处，滚到底才会真正进入视口</div>
+
+        <h2>② ResizeObserver：盒子尺寸变了</h2>
+        <p>它盯的是被观察元素自己的尺寸变化（内容盒），比监听 <code>window.resize</code> 精确得多——容器被 flex 挤窄、侧栏折叠都能感知。</p>
+        <div class="live" id="ro-log">等待回调…</div>
+        <div id="resize-box"></div>
+
+        <h2>③ MutationObserver：DOM 被改了</h2>
+        <p>
+            可以订阅子节点增删、属性变化、文本变化，回调里能读出"改之前是什么"。第三方脚本污染 DOM、富文本编辑器的内容同步都靠它。
+        </p>
+        <div id="mutate-host"></div>
+
+        <h2>实测结果</h2>
+        <pre id="probe">…</pre>
+
+        <script src="dom-observer.js"></script>
+    </body>
+</html>

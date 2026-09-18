@@ -1,0 +1,69 @@
+/* ==========================================================================
+   演示：@layer 层叠层
+   各组元素用的是同一个 .box 类、同样的结构，唯一变量是"规则放在哪个层"。
+   ========================================================================== */
+
+/* 演示用的通用盒子样式（未分层）。放在最前面，后面的 .plain 才能覆盖它的边框色 */
+.box {
+    padding: 0.6rem 0.8rem;
+    border: 2px solid #111827;
+    border-radius: 6px;
+    background: #f9fafb;
+    font-weight: 600;
+    margin-top: 0.4rem;
+}
+
+/* ① 先声明层序 reset → components → utilities：普通声明里越靠后的层越强 */
+@layer reset, components, utilities;
+
+/* ② 层序决定胜负，源码位置不算数：utilities 的规则写在最前面也能靠层序反超 */
+@layer utilities {
+    #layer-order .box {
+        color: #2563eb;
+    }
+}
+@layer reset {
+    #layer-order .box {
+        color: #71717a;
+    }
+}
+@layer components {
+    #layer-order .box {
+        color: #b45309;
+    }
+}
+
+/* ③ 层比特异性更靠前：分层的高特异性（ID + 类）压不过未分层的低特异性（一个类） */
+@layer components {
+    #layer-vs-spec .plain {
+        border-color: #dc2626;
+    }
+}
+.plain {
+    border-color: #16a34a;
+}
+
+/* ④ !important 把层序反过来：最早声明的层最强，未分层反而最弱 */
+@layer reset {
+    #layer-important .box {
+        color: #71717a !important;
+    }
+}
+@layer utilities {
+    #layer-important .box {
+        color: #2563eb !important;
+    }
+}
+#layer-important .box {
+    color: #16a34a !important;
+}
+
+/* ⑤ 同一个层内部，仍然是源码顺序决定胜负 */
+@layer components {
+    #layer-inside .box {
+        color: #7c3aed;
+    }
+    #layer-inside .box {
+        color: #0d9488;
+    }
+}

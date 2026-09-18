@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DOM 查询与批量操作</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 760px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p,
+            li {
+                font-size: 0.9rem;
+                color: #4b5563;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+            button {
+                font: inherit;
+                font-size: 0.85rem;
+                padding: 4px 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 6px;
+                background: #fff;
+                cursor: pointer;
+                margin-right: 8px;
+            }
+            .box {
+                height: 4px;
+                background: #c7d2fe;
+                margin: 1px 0;
+            }
+            #raf-box {
+                width: 120px;
+                height: 8px;
+                background: #fca5a5;
+                border-radius: 4px;
+            }
+            #big-list {
+                height: 90px;
+                overflow: auto;
+                border: 1px dashed #d1d5db;
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>DOM 查询与批量操作：哪些写法在悄悄触发布局</h1>
+        <p>页面加载时自动跑一遍并把结果写进页尾的探针；下面两个按钮用来自己反复验证。</p>
+
+        <h2>① 强制同步布局（layout thrashing）</h2>
+        <p>
+            两段代码做的事完全一样——把每个盒子的宽度 +1px。差别只在读写的顺序：<strong>写一次就读一次</strong>，浏览器为了给出准确的
+            <code>offsetWidth</code> 必须立刻把刚写的样式落地成布局；<strong>先把要读的读完再统一写</strong>，循环里一次布局都不触发。
+        </p>
+        <button id="run-thrash">跑「读写交替」</button>
+        <button id="run-batch">跑「先读后写」</button>
+        <span id="manual" style="font-size: 0.85rem; color: #b45309"></span>
+        <div id="boxes"></div>
+
+        <h2>② 批量插入</h2>
+        <p>3000 个 li 插入到一个已挂载（在文档里）的容器中，三种写法的耗时对比写在页尾探针里。</p>
+        <ul id="big-list"></ul>
+
+        <h2>③ 活集合与静态集合</h2>
+        <p>
+            <code>getElementsByTagName()</code> 返回的是一个<strong>活</strong>集合，DOM 一变它就跟着变；<code>querySelectorAll()</code> 返回的是静态快照。
+        </p>
+        <ul id="live-list"></ul>
+
+        <h2>④ 把连续写合并到下一帧</h2>
+        <p>
+            连续 200 次调整宽度，如果每次都直接写、写完再读回去，就是 200 次强制布局；只把"最终要写什么"记下来、用一个
+            <code>requestAnimationFrame</code> 落到下一帧，实际写操作就只剩 1 次。
+        </p>
+        <div id="raf-box"></div>
+
+        <h2>实测结果</h2>
+        <pre id="probe">…</pre>
+
+        <script src="dom-query-batch.js"></script>
+    </body>
+</html>

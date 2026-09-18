@@ -578,18 +578,7 @@ const cartStore = useCartStore()
 
 掌握这张对照表后，在 Vue 与 React 两个框架之间切换时，路由与状态管理的思路是高度相通的。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-Vue/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `vdom-vue-diff.html` | 轻量 VNode 树 diff 生成 patch，解释路由切换为何不是整页重建（虚拟 DOM diff） |
-| `mini-reactive.html` | 手写响应式 store，演示 Pinia 状态管理"直接改 state 即触发视图更新"的数据驱动原理 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5181/`。
-
-## 总结
+## 小结
 
 - Vue 路由与状态
   - 路由基础与 createRouter
@@ -634,3 +623,21 @@ const cartStore = useCartStore()
   - 与 React Router / Redux 的对应关系
     - 路由 / 状态概念对照
     - 关键差异（副作用来源、响应式 vs 不可变）
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/前端框架-Vue/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/vdom-vue-diff.html` | 轻量 VNode 树 diff 生成 patch，解释路由切换为何不是整页重建（虚拟 DOM diff） | 路由基础与 createRouter |
+| `./code/site/mini-reactive.html` | 手写响应式 store，演示 Pinia 状态管理"直接改 state 即触发视图更新"的数据驱动原理 | Pinia 核心概念 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5181/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[Vue 组件](./Vue%20组件.md)
+- 下一篇：[WXML、WXSS 与基础语法](../小程序/WXML、WXSS%20与基础语法.md)

@@ -1,0 +1,22 @@
+.card {
+    width: 690rpx;
+    padding: 24rpx 30rpx;
+    border-radius: 16rpx;
+    background: #fff;
+    font-size: 28rpx;
+}
+
+.card .title {
+    font-size: 34rpx;
+    font-weight: 600;
+}
+
+.card .item {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20rpx;
+}
+
+.card .price {
+    color: #d92b2b;
+}

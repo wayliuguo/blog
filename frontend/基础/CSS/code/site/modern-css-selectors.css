@@ -1,0 +1,78 @@
+/* ==========================================================================
+   演示：现代选择器与函数（:is / :where / :has / clamp / aspect-ratio / 动效降级）
+   ========================================================================== */
+
+/* ① :is() 会把括号内最高特异性带出来；:where() 恒为 0 */
+:is(#ghost-a, .probe-a) {
+    color: #dc2626;
+}
+.probe-a {
+    color: #16a34a;
+}
+:where(#ghost-b, .probe-b) {
+    color: #dc2626;
+}
+.probe-b {
+    color: #16a34a;
+}
+
+/* ② clamp(下限, 理想值, 上限)：三段分支都能被读出来 */
+.fluid-clamped {
+    font-size: clamp(1rem, 1rem + 2vw, 1.75rem);
+}
+.fluid-free {
+    font-size: clamp(1rem, 0.5rem + 1vw, 3rem);
+}
+
+/* ③ aspect-ratio：只给宽就能锁定比例 */
+.thumb {
+    width: 160px;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, #a5b4fc, #4f46e5);
+    border-radius: 6px;
+}
+
+/* ④ :has() 让"容器"可以按后代状态上样式 */
+.field {
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+}
+/* 有内容就高亮：:placeholder-shown 不依赖窗口焦点，脚本/无头浏览器都能验证 */
+.field:has(input:not(:placeholder-shown)) {
+    border-color: #2563eb;
+}
+/* 必填且非法：空着时整个 .field 变红 */
+.field:has(input:required:invalid) {
+    border-color: #dc2626;
+}
+/* 真人在浏览器里聚焦时再加一圈光晕：:focus 依赖窗口焦点，无头环境下不匹配 */
+.field:has(input:focus) {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.field input {
+    border: 0;
+    outline: 0;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+/* ⑤ 动效降级：系统开了"减少动态效果"就别再动 */
+.pulse {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #fde68a;
+    animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+    50% {
+        transform: scale(1.12);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pulse {
+        animation: none;
+    }
+}

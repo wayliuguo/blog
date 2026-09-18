@@ -127,7 +127,7 @@ JSX 循环必须要有 `key`，它帮助 React 识别哪些元素发生了改变
 
 - 定义类名需要用 `className`（对应 HTML 的 `class`）。
 - `for` 要改为 `htmlFor`。
-- 内联样式 `style` 要写成 JS 对象（不能是字符串），key 采用**驼峰写法**，写法为 `style=&#123;&#123;key: val}}`——外面第一个大括号是表达式，里面是对象。
+- 内联样式 `style` 要写成 JS 对象（不能是字符串），key 采用**驼峰写法**，写法为 <code v-pre>style={{key: val}}</code>——外面第一个大括号是表达式，里面是对象。
 
 > 示意片段（无配套脚本）
 
@@ -349,17 +349,23 @@ class Person extends React.Component {
 - **必填**：添加 `isRequired`，如 `PropTypes.number.isRequired`。
 - **特定值**：只能是 `option1` 或 `option2`：
 
+  > 示意片段（无配套脚本）
+
   ```js
   PropTypes.oneOf(['option1', 'option2'])
   ```
 
 - **特定类型组合**：只能是某几个类型之一：
 
+  > 示意片段（无配套脚本）
+
   ```js
   PropTypes.oneOfType([PropTypes.string, PropTypes.number])
   ```
 
 - **特定数组/对象结构**：
+
+  > 示意片段（无配套脚本）
 
   ```js
   PropTypes.arrayOf(PropTypes.number)
@@ -368,6 +374,8 @@ class Person extends React.Component {
   ```
 
 - **自定义校验规则**：
+
+  > 示意片段（无配套脚本）
 
   ```js
   function (props, propName, componentName) {
@@ -431,17 +439,7 @@ npx create-react-app react-ts-demo --template typescript
 npm create vite@latest react-demo-vite --template react-ts
 ```
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `mini-runtime.html` | 手写极简渲染器 createElement + render + onUpdate，演示虚拟 DOM 与声明式更新 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
-
-## 总结
+## 小结
 
 - React 核心概念
   - 开发依赖
@@ -470,3 +468,20 @@ npm create vite@latest react-demo-vite --template react-ts
     - 判断、循环、属性与事件
   - 创建项目（create-react-app）
     - `create-react-app` / Vite 脚手架
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/mini-runtime.html` | 手写极简渲染器 createElement + render + onUpdate，演示虚拟 DOM 与声明式更新 | JSX 语法与规则 · 组件与 Props |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[前端安全](../网络与浏览器/前端安全.md)
+- 下一篇：[React Hooks](./React%20Hooks.md)

@@ -1,0 +1,5 @@
+<view class="tip" hidden="{{ !visible }}">hidden：节点还在渲染树里，只是被 display:none 藏起来</view>
+
+<view class="tip" wx:if="{{ visible }}">wx:if：条件为真才把节点放进渲染树</view>
+<view class="tip" wx:elif="{{ loading }}">wx:elif：上一个条件为假时才会看这里</view>
+<view class="tip" wx:else>wx:else：兜底分支</view>

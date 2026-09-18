@@ -291,19 +291,7 @@ viewport 字段逐个说清楚：
 - **对爬虫（SEO）**：它不"看"网页，只"读"结构树。`<nav>/<article>/<main>` 和 `h1` 层级能让它瞬间分清正文与导航，正确索引内容。
 - 对读屏器（无障碍）：你闭眼，靠听读屏器浏览。语义化让它能"跳过导航直接读正文"、"把图读成 alt 文字"。`div` 堆出的页面只会被读成一串无意义容器。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/HTML 基础/code/site/script-loading/`（对应正文「脚本与资源加载」小节）。
-
-| 文件 | 演示什么 | 对应小节 |
-| --- | --- | --- |
-| `script-loading/sync.html` | 默认（同步）：脚本阻塞解析，页面内容约 2s 后才渲染（白屏） | 脚本与资源加载 |
-| `script-loading/defer.html` | `defer`：下载不阻塞渲染，解析完成后、`DOMContentLoaded` 前执行 | 脚本与资源加载 |
-| `script-loading/async.html` | `async`：不阻塞渲染、不推迟 `DOMContentLoaded`，下载完立即执行 | 脚本与资源加载 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/` 进入示例目录，依次打开三个验证页，在浏览器控制台（F12）观察日志。
-
-## 总结
+## 小结
 
 - HTML 语义化与结构
   - 标签形态
@@ -360,3 +348,21 @@ viewport 字段逐个说清楚：
   - 语义化价值
     - SEO：爬虫读结构树
     - 无障碍：读屏器朗读
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/HTML 基础/code/site/script-loading/`（对应正文「脚本与资源加载」小节）。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/script-loading/sync.html` | 默认（同步）：脚本阻塞解析，页面内容约 2s 后才渲染（白屏） | 脚本与资源加载 |
+| `./code/site/script-loading/defer.html` | `defer`：下载不阻塞渲染，解析完成后、`DOMContentLoaded` 前执行 | 脚本与资源加载 |
+| `./code/site/script-loading/async.html` | `async`：不阻塞渲染、不推迟 `DOMContentLoaded`，下载完立即执行 | 脚本与资源加载 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5174/` 进入示例目录，依次打开三个验证页，在浏览器控制台（F12）观察日志。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 下一篇：[表单与标签](./表单与标签.md)

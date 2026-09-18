@@ -581,17 +581,7 @@ function App() {
 
 这样一来，单页应用中"URL → 页面 → 布局 → 权限"的整条链路就打通了，后续新增页面只需"加页面 + 加路由 + 挂布局"三步。
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `vdom-diff.html` | 路由切换为何不是整页重建（轻量虚拟 DOM diff） |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
-
-## 总结
+## 小结
 
 - React 路由
   - 路由原理
@@ -630,3 +620,20 @@ function App() {
     - 路由规划
     - Layout 模板
     - 落地步骤（页面、Layout、路由配置、功能串联）
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/vdom-diff.html` | 路由切换为何不是整页重建（轻量虚拟 DOM diff） | 路由原理 |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[React Hooks](./React%20Hooks.md)
+- 下一篇：[React 状态管理](./React%20状态管理.md)

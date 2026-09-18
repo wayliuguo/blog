@@ -268,17 +268,7 @@ export default function Demo() {
 | CSS-in-JS（styled-components 等） | 有（编译为 class） | 强（直接在 JS 中计算） | 中 | 高度动态样式、组件库 |
 | Tailwind | 灵活组合工具类 | 配合 classnames 等 | 中 | 追求开发效率、风格统一 |
 
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
-
-| 文件 | 演示什么 |
-| --- | --- |
-| `css-styles.html` | 三种样式方案对比：内联 style（驼峰对象）、className + 样式表、CSS 变量模拟 CSS Module 隔离 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
-
-## 总结
+## 小结
 
 - React 使用 CSS
   - 普通 CSS
@@ -300,3 +290,20 @@ export default function Demo() {
     - 工具类组合
   - 各方案对比
     - 类名隔离、动态样式、学习成本、适用场景
+
+## 配套代码
+
+本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
+
+| 文件 | 演示什么 | 对应小节 |
+| --- | --- | --- |
+| `./code/site/css-styles.html` | 三种样式方案对比：内联 style（驼峰对象）、className + 样式表、CSS 变量模拟 CSS Module 隔离 | 普通 CSS · CSS Module |
+
+启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
+
+## 参考
+
+- 本模块总结：[总结](./总结.md)
+- 本模块面试题：[面试题](./面试题.md)
+- 上一篇：[React 使用 TS](./React%20使用%20TS.md)
+- 下一篇：[Vue 核心基础](../前端框架-Vue/Vue%20核心基础.md)

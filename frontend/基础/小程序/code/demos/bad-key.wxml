@@ -1,0 +1,3 @@
+<view class="card">
+    <view class="item" wx:for="{{ tags }}" wx:key="id">{{ item }}</view>
+</view>

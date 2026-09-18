@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>现代 CSS · 自定义属性与设计令牌</title>
+        <link rel="stylesheet" href="modern-css-tokens.css" />
+        <style>
+            /* 页面外框样式，与演示结论无关 */
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                line-height: 1.7;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            h2 {
+                margin: 2rem 0 0.4rem;
+                font-size: 1rem;
+            }
+            p {
+                font-size: 0.9rem;
+                color: #4b5563;
+                margin: 0.4rem 0;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 4px;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>自定义属性：把「值」抽成令牌</h1>
+        <p>
+            同一个 <code>.token-box</code>，颜色与间距全部来自 <code>var()</code>。页面尾部的探针会打印浏览器解析后的值，用来佐证继承、作用域、主题切换与
+            <code>@property</code> 这四件事。
+        </p>
+
+        <h2>① 令牌与使用处</h2>
+        <div class="token-box">背景取自 var(--brand)，内边距取自 var(--space)</div>
+
+        <h2>② 局部重定义只影响子树</h2>
+        <div class="scope">
+            <div class="token-box" id="scoped-box">我在 .scope 里，用的是重定义后的 --brand</div>
+        </div>
+        <div class="token-box" id="after-scope">我在 .scope 外面，--brand 没被影响</div>
+
+        <h2>③ 不存在时用兜底值</h2>
+        <p>令牌名写错不会让整条声明作废：<code>var(--not-defined-anywhere, #f59e0b)</code> 直接用了兜底色。</p>
+        <div class="fallback">我的背景来自 var() 的兜底参数</div>
+
+        <h2>④ @property 决定「有没有类型、继不继承」</h2>
+        <p>
+            <code>--no-inherit</code> 注册为 <code>&lt;length&gt;</code> 且 <code>inherits: false</code>：父元素上的 40px
+            <strong>不会</strong>被子元素继承；而未注册的 <code>--space</code> 会照常继承。
+        </p>
+        <div id="parent-box" style="--no-inherit: 40px">
+            <div id="child-box">我是子元素，看看我拿到的两个变量分别是多少</div>
+        </div>
+
+        <h2>⑤ 颜色也能当算式</h2>
+        <p>
+            浅色与半透明色从主色算出来，不用再手抄第二、第三个十六进制：<code>color-mix()</code> 按比例混，
+            <code>oklch()</code> 直接按感知亮度给色。
+        </p>
+        <div class="swatch mix-light">color-mix(in oklab, var(--brand) 80%, #ffffff)</div>
+        <div class="swatch mix-translucent">color-mix(in srgb, var(--brand) 25%, transparent)</div>
+        <div class="swatch oklch-tone">oklch(0.72 0.15 250)</div>
+
+
+        <h2>浏览器实测</h2>
+        <pre id="probe">…</pre>
+
+        <script>
+            const root = document.documentElement
+            const readVar = (el, name) => getComputedStyle(el).getPropertyValue(name).trim()
+            const bgOf = sel => getComputedStyle(document.querySelector(sel)).backgroundColor
+            const lines = []
+
+            lines.push(':root 上的 --brand                  = ' + readVar(root, '--brand'))
+            lines.push(':root 上的 --space                  = ' + readVar(root, '--space'))
+            lines.push('作用域内 .token-box 的 background    = ' + bgOf('#scoped-box'))
+            lines.push('作用域外 .token-box 的 background    = ' + bgOf('#after-scope'))
+            lines.push('兜底 var(--x, #f59e0b) 的 background = ' + bgOf('.fallback'))
+
+            lines.push('--- 切换 data-theme="dark" ---')
+            root.setAttribute('data-theme', 'dark')
+            lines.push(':root 上的 --brand                  = ' + readVar(root, '--brand'))
+            lines.push('作用域外 .token-box 的 background    = ' + bgOf('#after-scope'))
+            root.removeAttribute('data-theme')
+
+            lines.push('--- 继承：注册 vs 未注册 ---')
+            const parentBox = document.querySelector('#parent-box')
+            const childBox = document.querySelector('#child-box')
+            lines.push('父元素 --no-inherit (inherits:false) = ' + readVar(parentBox, '--no-inherit'))
+            lines.push('子元素 --no-inherit (inherits:false) = ' + readVar(childBox, '--no-inherit'))
+            lines.push('父元素 --space      (未注册)         = ' + readVar(parentBox, '--space'))
+            lines.push('子元素 --space      (未注册)         = ' + readVar(childBox, '--space'))
+
+            lines.push('--- 颜色算式 ---')
+            lines.push('color-mix(in oklab, var(--brand) 80%, #fff) = ' + bgOf('.mix-light'))
+            lines.push('color-mix(in srgb,  var(--brand) 25%, transparent) = ' + bgOf('.mix-translucent'))
+            lines.push('oklch(0.72 0.15 250)                       = ' + bgOf('.oklch-tone'))
+
+            document.getElementById('probe').textContent = lines.join('\n')
+        </script>
+    </body>
+</html>
