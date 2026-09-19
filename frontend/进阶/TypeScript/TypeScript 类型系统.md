@@ -22,7 +22,7 @@ const s: string = d // OK：子集可以赋给超集
 
 解封 `//ERR` 行后编译器给出的判断：
 
-```text
+```
 01-assignability.ts
   TS2322  Type 'string' is not assignable to type 'Digit'.
         const d2: Digit = s // 编译错误：string 太大，无法保证落在 Digit 里
@@ -107,7 +107,7 @@ const color: Color = Color.Green
 
 编译产物（typescript 5.8.2 实测）：
 
-```text
+```
 ---- 编译产物 ----
 var Color;
 (function (Color) {
@@ -260,7 +260,7 @@ function area(s: Shape): number {
 //ERR }
 ```
 
-```text
+```
 03-narrowing.ts
   TS2345  Argument of type 'Triangle' is not assignable to parameter of type 'never'.
         return assertNever(s)
@@ -421,7 +421,7 @@ const detached = btn.onClick
 //ERR detached('click') // 编译错误：脱离了 Button 的 this 上下文
 ```
 
-```text
+```
 04-object-types.ts
   TS2684  The 'this' context of type 'void' is not assignable to method's 'this' of type 'Button'.
         detached('click') // 编译错误：脱离了 Button 的 this 上下文
@@ -505,7 +505,7 @@ const name: string = get(user, 'name') // 返回值类型跟着 key 走
 //ERR get(user, 'email') // 编译错误：'email' 不是 user 的 key
 ```
 
-```text
+```
 05-generics.ts
   TS2345  Argument of type '"email"' is not assignable to parameter of type '"name" | "id"'.
         get(user, 'email') // 编译错误：'email' 不是 user 的 key
@@ -780,7 +780,7 @@ declare const b: B
 //ERR const aa: A = b // 编译错误：private 必须来自同一处声明，即使形状一样
 ```
 
-```text
+```
 08-classes.ts
   TS2322  Type 'B' is not assignable to type 'A'.   Types have separate declarations of a private property 'tag'.
         const aa: A = b // 编译错误：private 必须来自同一处声明，即使形状一样

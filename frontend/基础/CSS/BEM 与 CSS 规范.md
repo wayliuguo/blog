@@ -312,7 +312,7 @@ export default () => <Card>内容</Card>;
 
 > 示意片段（无配套脚本）
 
-```text
+```
 小型营销页/文档站    → 普通 CSS + 简洁命名 或 Tailwind
 组件库 / 中后台应用   → CSS Module（组件化隔离）+ 简单 BEM 命名
 需要运行时主题   → CSS-in-JS 或方案之上叠加 CSS 变量
