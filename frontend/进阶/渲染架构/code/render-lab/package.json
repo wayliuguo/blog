@@ -1,0 +1,17 @@
+{
+  "name": "render-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "渲染架构模块配套实验台：零依赖，手写最小 SSR / 流式 / 岛，用无头 Chrome 实测首屏时间线与注水成本",
+  "scripts": {
+    "start": "node server.js",
+    "list": "node cli.mjs list",
+    "panorama": "node cli.mjs panorama",
+    "ssr": "node cli.mjs ssr",
+    "stream": "node cli.mjs stream",
+    "hydrate": "node cli.mjs hydrate",
+    "island": "node cli.mjs island",
+    "all": "node cli.mjs all"
+  }
+}
