@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>网络与协议进阶 · Demo 目录</title>
+        <style>
+            body {
+                margin: 0 auto;
+                max-width: 760px;
+                padding: 32px 20px 64px;
+                font:
+                    15px/1.75 system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    'PingFang SC',
+                    'Microsoft YaHei',
+                    sans-serif;
+                color: #1f2328;
+            }
+            h1 {
+                font-size: 22px;
+            }
+            h2 {
+                font-size: 16px;
+                margin-top: 28px;
+                padding-bottom: 6px;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 1px 5px;
+                border-radius: 4px;
+                font-size: 13px;
+            }
+            li {
+                margin: 6px 0;
+            }
+            .note {
+                background: #f8fafc;
+                border-left: 3px solid #94a3b8;
+                padding: 10px 14px;
+                color: #475569;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>网络与协议进阶 · Demo 目录</h1>
+        <p class="note">
+            这个目录里的页面是「给人看」的演示；所有数字来自 <code>code/net-lab</code> 的场景脚本（<code>npm run http2 / cache /
+            retry / security</code>），零依赖、不需要 <code>npm install</code>。
+        </p>
+
+        <h2>页面</h2>
+        <ul>
+            <li>
+                <a href="./cache.html">cache.html</a> —— 三种 <code>Cache-Control</code> 的第二次请求有什么不同，页面里可以直接看到状态码与
+                字节数
+            </li>
+            <li>
+                <a href="./security.html">security.html</a> —— 带 CSP 与 SRI 的页面：一段带 nonce 的内联脚本能跑，另一段没有 nonce
+                的会被拦下（看 DevTools Console）
+            </li>
+            <li><a href="/site/vendor.js">vendor.js</a> —— 被 SRI 保护的示例脚本，改一个字节校验就失败</li>
+        </ul>
+
+        <h2>可直接访问的端点</h2>
+        <ul>
+            <li><code>/api/cache/immutable/app.js</code> · <code>Cache-Control: public, max-age=31536000, immutable</code></li>
+            <li><code>/api/cache/etag/doc.json</code> · <code>Cache-Control: no-cache</code> + ETag，带 <code>If-None-Match</code> 时回 304</li>
+            <li><code>/api/cache/swr/feed.json?age=300</code> · <code>max-age=60, stale-while-revalidate=600</code></li>
+            <li><code>/api/cache/html</code> · <code>Cache-Control: no-store</code></li>
+            <li><code>/api/slow?ms=200</code> · 延迟响应，用来看队头阻塞</li>
+            <li><code>/api/flaky?key=a&amp;fail=2</code> · 前两次 503 + <code>Retry-After</code>，之后成功</li>
+        </ul>
+
+        <h2>命令行场景</h2>
+        <ul>
+            <li><code>npm run list</code> —— 查看全部场景</li>
+            <li><code>npm run http2</code> —— HTTP/1.1 与 HTTP/2 的多路复用、队头阻塞对照</li>
+            <li><code>npm run cache</code> —— 强缓存 / 协商缓存 / swr / no-store 对照</li>
+            <li><code>npm run retry</code> —— 重试策略、超时与取消、重试风暴、幂等</li>
+            <li><code>npm run security</code> —— SRI 校验、CSP 判定、安全响应头体检</li>
+        </ul>
+    </body>
+</html>
