@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>CLS 对照页</title>
+<link rel="icon" href="data:,">
+<script src="./lab.js"></script>
+<style>
+    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; color: #222; }
+    header { padding: 16px 24px; background: #eef2ff; }
+    header h1 { margin: 0; font-size: 22px; }
+    main { padding: 0 24px; }
+    .card { padding: 16px; margin: 12px 0; background: #f7f7f9; border-radius: 8px; }
+    /* 好版本：给晚到的横幅预留位置，插入时不会把下面的内容顶下去 */
+    .slot { min-height: 240px; }
+    img { max-width: 100%; }
+</style>
+</head>
+<body>
+<header><h1>CLS 对照页</h1></header>
+<main>
+    <div id="slot" class="slot"></div>
+    <div id="hero-slot"></div>
+    <div class="card">第一段内容：这块卡片在图片加载完之后位置会不会变，取决于图片有没有预留尺寸。</div>
+    <div class="card">第二段内容：CLS 统计的是「意外位移」，用户自己滚动、点击引起的位移不计入。</div>
+    <div class="card">第三段内容：位移分数 = 位移距离 × 影响比例，同一帧内所有不稳定元素各算一份。</div>
+</main>
+<script>
+    const mode = new URLSearchParams(location.search).get('mode') || 'bad'
+
+    // 坑 1：图片不给 width / height，浏览器只能等图回来才知道占多大，先按 0 高排，回来后把下面顶下去
+    document.getElementById('hero-slot').innerHTML =
+        mode === 'bad'
+            ? '<img src="/slow?ms=400&kb=60&name=hero.svg" alt="首图">'
+            : '<img src="/slow?ms=400&kb=60&name=hero.svg" alt="首图" width="640" height="240">'
+
+    if (mode === 'bad') document.getElementById('slot').style.minHeight = '0'
+
+    setTimeout(() => {
+        // 坑 2：横幅 500ms 后才到，直接插在最顶部，把整页内容整体往下顶 240px
+        const banner = document.createElement('div')
+        banner.style.cssText = 'box-sizing:border-box;height:240px;padding:24px;background:#ffd166;font-weight:700'
+        banner.textContent = '晚到的活动横幅（240px 高）'
+        if (mode === 'bad') document.body.insertBefore(banner, document.body.firstChild)
+        else document.getElementById('slot').appendChild(banner)
+    }, 500)
+
+    const shifts = []
+    Lab.observe('layout-shift', (e) => shifts.push({ value: +e.value.toFixed(4), at: Math.round(e.startTime), hadInput: e.hadRecentInput }))
+
+    Lab.finish({ mode, shifts, visible: document.visibilityState }, 1000)
+</script>
+</body>
+</html>

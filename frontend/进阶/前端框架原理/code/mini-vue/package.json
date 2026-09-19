@@ -1,0 +1,14 @@
+{
+    "name": "mini-vue",
+    "version": "1.0.0",
+    "private": true,
+    "description": "手写 mini-vue：reactivity → runtime-core → runtime-dom，逐层可运行 + 单测",
+    "scripts": {
+        "step:reactivity": "node steps/01-reactivity.js",
+        "step:effect": "node steps/02-effect-scheduler.js",
+        "step:renderer": "node steps/03-renderer.js",
+        "step:diff": "node steps/04-dom-diff.js",
+        "step:component": "node steps/05-component.js",
+        "test": "node --test test/*.test.js"
+    }
+}

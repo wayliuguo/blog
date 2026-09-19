@@ -193,6 +193,26 @@ export default [
                 ]
             },
             {
+                text: '构建体系',
+                collapsed: false,
+                items: [
+                    { text: '构建全景与选型', link: '/frontend/进阶/构建体系/构建全景与选型' },
+                    { text: '编译与 AST', link: '/frontend/进阶/构建体系/编译与%20AST' },
+                    { text: 'Webpack 深入', link: '/frontend/进阶/构建体系/Webpack%20深入' },
+                    { text: 'Vite', link: '/frontend/进阶/构建体系/Vite' },
+                    { text: 'Rollup', link: '/frontend/进阶/构建体系/Rollup' },
+                    {
+                        text: 'esbuild 与 Rust 工具链',
+                        link: '/frontend/进阶/构建体系/esbuild%20与%20Rust%20工具链'
+                    },
+                    { text: '构建插件开发', link: '/frontend/进阶/构建体系/构建插件开发' },
+                    { text: '产物分析与体积优化', link: '/frontend/进阶/构建体系/产物分析与体积优化' },
+                    { text: '手写 mini-bundler', link: '/frontend/进阶/构建体系/手写%20mini-bundler' },
+                    { text: '模块总结（构建体系）', link: '/frontend/进阶/构建体系/总结' },
+                    { text: '模块面试题（构建体系）', link: '/frontend/进阶/构建体系/面试题' }
+                ]
+            },
+            {
                 text: '交付与质量',
                 collapsed: false,
                 items: [
@@ -207,6 +227,19 @@ export default [
                 ]
             },
             {
+                text: '测试体系',
+                collapsed: false,
+                items: [
+                    { text: '测试策略与分层', link: '/frontend/进阶/测试体系/测试策略与分层' },
+                    { text: '单元测试深入', link: '/frontend/进阶/测试体系/单元测试深入' },
+                    { text: '组件测试', link: '/frontend/进阶/测试体系/组件测试' },
+                    { text: 'E2E 与稳定性', link: '/frontend/进阶/测试体系/E2E%20与稳定性' },
+                    { text: '测试基建与门禁', link: '/frontend/进阶/测试体系/测试基建与门禁' },
+                    { text: '模块总结（测试体系）', link: '/frontend/进阶/测试体系/总结' },
+                    { text: '模块面试题（测试体系）', link: '/frontend/进阶/测试体系/面试题' }
+                ]
+            },
+            {
                 text: '前端框架原理',
                 collapsed: false,
                 items: [
@@ -215,23 +248,43 @@ export default [
                         link: '/frontend/进阶/前端框架原理/React%20高级与原理'
                     },
                     { text: 'Vue3 原理', link: '/frontend/进阶/前端框架原理/Vue3%20原理' },
+                    { text: '手写 mini-react', link: '/frontend/进阶/前端框架原理/手写%20mini-react' },
+                    { text: '手写 mini-vue', link: '/frontend/进阶/前端框架原理/手写%20mini-vue' },
                     { text: '模块总结（前端框架原理）', link: '/frontend/进阶/前端框架原理/总结' },
                     { text: '模块面试题（前端框架原理）', link: '/frontend/进阶/前端框架原理/面试题' }
                 ]
             },
             {
-                text: '性能优化与监控',
+                text: '性能优化',
                 collapsed: false,
                 items: [
-                    { text: '性能指标与评估', link: '/frontend/进阶/性能优化与监控/性能指标与评估' },
-                    { text: '性能优化实践', link: '/frontend/进阶/性能优化与监控/性能优化实践' },
-                    { text: '监控平台', link: '/frontend/进阶/性能优化与监控/监控平台' },
+                    { text: '性能指标与评估', link: '/frontend/进阶/性能优化/性能指标与评估' },
+                    { text: '性能测量工具实操', link: '/frontend/进阶/性能优化/性能测量工具实操' },
+                    { text: '加载与首屏优化', link: '/frontend/进阶/性能优化/加载与首屏优化' },
+                    { text: '构建侧优化', link: '/frontend/进阶/性能优化/构建侧优化' },
+                    { text: '运行时性能', link: '/frontend/进阶/性能优化/运行时性能' },
+                    { text: '性能优化闭环', link: '/frontend/进阶/性能优化/性能优化闭环' },
+                    { text: '优化手段速查', link: '/frontend/进阶/性能优化/优化手段速查' },
+                    { text: '模块总结（性能优化）', link: '/frontend/进阶/性能优化/总结' },
+                    { text: '模块面试题（性能优化）', link: '/frontend/进阶/性能优化/面试题' }
+                ]
+            },
+            {
+                text: '监控与稳定性',
+                collapsed: false,
+                items: [
+                    { text: '监控平台', link: '/frontend/进阶/监控与稳定性/监控平台' },
+                    { text: '前端监控 SDK 实现', link: '/frontend/进阶/监控与稳定性/前端监控 SDK 实现' },
+                    { text: '错误监控', link: '/frontend/进阶/监控与稳定性/错误监控' },
+                    { text: '性能与体验监控', link: '/frontend/进阶/监控与稳定性/性能与体验监控' },
+                    { text: '埋点与行为分析', link: '/frontend/进阶/监控与稳定性/埋点与行为分析' },
+                    { text: '数据管道与告警', link: '/frontend/进阶/监控与稳定性/数据管道与告警' },
                     {
                         text: '企业级性能与监控工程实践',
-                        link: '/frontend/进阶/性能优化与监控/企业级性能与监控工程实践'
+                        link: '/frontend/进阶/监控与稳定性/企业级性能与监控工程实践'
                     },
-                    { text: '模块总结（性能优化与监控）', link: '/frontend/进阶/性能优化与监控/总结' },
-                    { text: '模块面试题（性能优化与监控）', link: '/frontend/进阶/性能优化与监控/面试题' }
+                    { text: '模块总结（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/总结' },
+                    { text: '模块面试题（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/面试题' }
                 ]
             },
             {

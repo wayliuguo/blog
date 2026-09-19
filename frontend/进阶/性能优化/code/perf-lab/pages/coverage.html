@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>构建产物：整包引入 vs 只取用到的</title>
+<link rel="icon" href="data:,">
+<script src="./lab.js"></script>
+<style>
+    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
+    header { padding: 16px 24px; background: #eef2ff; }
+    header h1 { margin: 0; font-size: 22px; }
+    #out { padding: 12px 24px; font: 13px/1.7 monospace; }
+</style>
+</head>
+<body>
+<header><h1>10 个特性、每个 5KB：一次性全打 vs 按需取用</h1></header>
+<div id="out">加载中…</div>
+<script>
+    const mode = new URLSearchParams(location.search).get('mode') || 'full'
+    const FEATURES = 10
+    const USED = [1, 2, 3] // 这个页面真正用到的只有 3 个特性
+    const out = document.getElementById('out')
+
+    // 收集本次会话发出的 JS 资源字节数（transferSize 是压缩后的真实值）
+    function scriptBytes() {
+        return performance
+            .getEntriesByType('resource')
+            .filter((e) => e.initiatorType === 'script' || e.name.includes('/bundle') || e.name.includes('/feature'))
+            .reduce((sum, e) => sum + (e.transferSize || 0), 0)
+    }
+
+    async function main() {
+        const work = Lab.time(async () => {
+            if (mode === 'full') {
+                // 全量：一个 chunk 里塞 10 个特性
+                const mod = await import('/bundle?n=' + FEATURES + '&kbEach=5&name=vendor')
+                return USED.map((i) => mod['f' + i]).filter(Boolean).length
+            }
+            // 按需：只 import 用到的 3 个特性，各自是一个 chunk
+            const mods = await Promise.all(USED.map((i) => import('/feature?i=' + i + '&kbEach=5')))
+            return mods.length
+        })
+
+        const loaded = await work.value
+        const js = scriptBytes()
+        const chunkCount = performance.getEntriesByType('resource').filter((e) => e.name.includes('/bundle') || e.name.includes('/feature')).length
+
+        out.textContent = [
+            `模式        : ${mode}`,
+            `特性总数    : ${FEATURES}`,
+            `实际用到    : ${USED.length}`,
+            `请求的 chunk: ${chunkCount}`,
+            `JS 传输字节 : ${js} B`
+        ].join('\n')
+
+        Lab.finish({ mode, features: FEATURES, used: USED.length, usedLoaded: loaded, chunks: chunkCount, jsBytes: js, loadMs: work.ms }, 200)
+    }
+
+    main()
+</script>
+</body>
+</html>

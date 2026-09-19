@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>错误监控实验页</title>
+<style>
+  body { font: 14px/1.6 system-ui, "Microsoft YaHei", sans-serif; margin: 24px; color: #1f2328; }
+  h1 { font-size: 18px; }
+  #log div { padding: 2px 0; border-bottom: 1px dashed #e5e7eb; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>错误监控实验页</h1>
+<p>本页依次触发 6 类问题，SDK 捕获后攒批上报到 <code>/collect</code>。用 <code>npm start</code> 打开本页，另开一个终端跑 <code>npm run errors</code> 或直接看 <code>/api/events</code>。</p>
+<div id="log"></div>
+<img id="ghost" alt="" />
+
+<script type="module">
+import { init } from '/sdk/index.mjs'
+
+const log = (text) => {
+  const el = document.createElement('div')
+  el.textContent = text
+  document.getElementById('log').appendChild(el)
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// 初始化 SDK：错误采集与性能采集都自动挂上，埋点也开
+const sm = init({ appId: 'errors-lab', url: '/collect', throttleMs: 0, sampleRate: 1 })
+
+async function run() {
+  await sleep(50)
+
+  // 1. 运行时错误：未捕获异常最终会冒泡成 window 的 error 事件
+  log('1) 运行时错误：读取 undefined 的属性')
+  setTimeout(() => { const nothing = undefined; nothing.foo() }, 10)
+
+  // 2. Promise 未处理拒绝：不会走 window.onerror，必须单独监听 unhandledrejection
+  log('2) 未处理的 Promise 拒绝')
+  Promise.reject(new Error('接口数据解析失败'))
+
+  // 3. 资源加载失败：img 的 error 不冒泡，只有捕获阶段能拿到，且事件上没有 message
+  log('3) 资源加载失败：/missing-image.png')
+  document.getElementById('ghost').src = '/missing-image.png'
+
+  await sleep(80)
+
+  // 4. 接口错误：SDK 包裹了 fetch，业务代码不需要 try/catch 也能上报
+  log('4) 接口 404：被包裹的 fetch 自动上报 status')
+  await fetch('/definitely-missing')
+
+  // 5. 网络错误：连接被拒绝，连响应都没有
+  log('5) 网络错误：请求一个没人监听的端口')
+  try { await fetch('http://127.0.0.1:1/nope') } catch { /* 业务自己吞掉，SDK 已上报 */ }
+
+  // 6. 跨域脚本：没带 crossorigin 时浏览器只给一句 "Script error."，细节全被抹掉
+  log('6) 跨域脚本被抹平：只拿到 Script error.')
+  window.dispatchEvent(new ErrorEvent('error', { message: 'Script error.', filename: '', lineno: 0, colno: 0 }))
+
+  await sleep(80)
+  await sm.flushAll('test')
+
+  // 收尾标记：自动化脚本靠它判断这一轮跑完了
+  await fetch('/collect', { method: 'POST', body: JSON.stringify({ events: [{ kind: 'lab-done', ts: Date.now() }] }) })
+  log('—— 本轮结束，已上报 ——')
+}
+
+run()
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+    "name": "mini-react",
+    "version": "1.0.0",
+    "private": true,
+    "description": "手写 mini-react：createElement / Fiber 链表 / diff+commit / hooks 链表，零依赖可运行 + 单测",
+    "scripts": {
+        "step:element": "node steps/01-element.js",
+        "step:mount": "node steps/02-mount.js",
+        "step:keyed": "node steps/03-keyed-diff.js",
+        "step:hooks": "node steps/04-hooks.js",
+        "test": "node --test test/*.test.js"
+    }
+}

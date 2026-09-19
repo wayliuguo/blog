@@ -1,0 +1,29 @@
+{
+    "name": "test-lab",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "description": "测试体系配套实验：测试分层、Vitest 单测与替身、组件测试（RTL）、flaky 复现、覆盖率与门禁",
+    "scripts": {
+        "test": "vitest run",
+        "test:strategy": "vitest run src/strategy",
+        "test:unit": "vitest run src/unit",
+        "test:component": "vitest run src/component",
+        "test:flaky": "vitest run src/flaky",
+        "test:shuffle": "vitest run src/flaky --sequence.shuffle",
+        "test:isolate": "vitest run --isolate false",
+        "coverage": "vitest run src/coverage-demo --coverage",
+        "coverage:partial": "vitest run src/coverage-demo --coverage -t VIP",
+        "coverage:strict": "vitest run --config vitest.strict.config.js --coverage",
+        "report": "node scripts/report.mjs"
+    },
+    "devDependencies": {
+        "@testing-library/react": "^16.3.3",
+        "@testing-library/user-event": "^14.6.7",
+        "@vitest/coverage-v8": "^5.0.1",
+        "jsdom": "^30.1.0",
+        "react": "^19.3.0",
+        "react-dom": "^19.3.0",
+        "vitest": "^5.0.1"
+    }
+}

@@ -47,6 +47,10 @@
             启动方式：在 <code>code</code> 下执行 <code>npm start</code>（即 <code>node server.js</code>），浏览器打开
             <code>http://localhost:5186/</code>。
         </p>
-        <p>附带 <code>check.ts</code>：可选做类型编译校验（见文件顶部注释，用 <code>npx tsc --noEmit</code>）。</p>
+        <p>
+            类型校验在 <code>type-lab/</code>：<code>npm run check</code> 检查全部示例（当前 0 错误），
+            <code>npm run check:errors</code> 解封所有 <code>//ERR</code> 演示行看真实报错，
+            <code>npm run erase</code> 展示类型擦除后的编译产物。旧的 <code>check.ts</code> 仍保留给工程实践篇。
+        </p>
     </body>
 </html>

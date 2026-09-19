@@ -1,0 +1,16 @@
+{
+  "name": "monitor-lab",
+  "version": "2.0.0",
+  "private": true,
+  "description": "监控与稳定性模块配套实验台：零依赖 SDK（错误/性能/埋点）+ 采集端聚合告警 + 5 个可跑场景",
+  "scripts": {
+    "start": "node collector.mjs",
+    "enterprise": "node enterprise-server.js",
+    "transport": "node scenarios/transport.mjs",
+    "errors": "node scenarios/errors.mjs",
+    "perf": "node scenarios/perf.mjs",
+    "track": "node scenarios/track.mjs",
+    "pipeline": "node scenarios/pipeline.mjs",
+    "all": "node scenarios/all.mjs"
+  }
+}

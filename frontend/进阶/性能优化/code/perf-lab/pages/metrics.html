@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>指标采集页</title>
+<script src="./lab.js"></script>
+<style>
+    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; color: #222; }
+    .hero { height: 300px; padding: 24px; color: #fff; background: linear-gradient(135deg, #4f7cff, #7b4fff); }
+    .hero h1 { margin: 0 0 12px; font-size: 40px; }
+    .row { padding: 12px 24px; border-bottom: 1px solid #eee; }
+    img { display: block; }
+</style>
+<script>
+    const mode = new URLSearchParams(location.search).get('mode') || 'light'
+    // 重模式：用 document.write 插一个「慢脚本」，它像真实的 parser 阻塞脚本一样挡住后续解析。
+    // （动态 appendChild 的 script 默认 async，不会阻塞，拿来演示阻塞是无效的）
+    // kbps 让实验台按 2 Mbps 慢发——本机 localhost 是「秒下」，不压带宽两种模式看不出差别。
+    if (mode === 'heavy') {
+        document.write('<script src="/slow?ms=50&kb=500&kbps=2000&name=vendor.js"><\/script>')
+    }
+</script>
+</head>
+<body>
+<div class="hero">
+    <h1>首屏主标题</h1>
+    <p>这块渐变色块和标题一起构成首屏的最大内容元素，也就是 LCP 的候选。</p>
+</div>
+<div id="hero-img"></div>
+<div id="list"></div>
+<script>
+    // 首屏大图也要等阻塞脚本执行完才开始请求，所以它会进一步推后 LCP
+    if (mode === 'heavy') {
+        document.getElementById('hero-img').innerHTML =
+            '<img src="/slow?ms=0&kb=300&kbps=2000&name=hero.svg" width="600" height="300" alt="首屏大图">'
+    }
+    let html = ''
+    for (let i = 0; i < 40; i++) html += `<div class="row">第 ${i + 1} 行，用来撑出可滚动的长页面</div>`
+    document.getElementById('list').innerHTML = html
+    Lab.finish({ mode }, 2500)
+</script>
+</body>
+</html>

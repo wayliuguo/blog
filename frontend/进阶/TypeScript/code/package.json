@@ -2,8 +2,11 @@
   "name": "chapter05-typescript",
   "version": "1.0.0",
   "private": true,
-  "description": "05-TypeScript：结构类型/联合交叉/泛型与infer/手写Partial·Exclude 最小实现 demo",
+  "description": "05-TypeScript：类型系统 lab（结构类型/收窄/泛型/推断/类型运算/类的类型）+ 浏览器 demo 站点",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node type-lab/run.cjs",
+    "check:errors": "node type-lab/run.cjs --errors",
+    "erase": "node type-lab/10-erase.cjs"
   }
 }

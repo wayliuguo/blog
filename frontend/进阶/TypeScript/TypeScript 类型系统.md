@@ -1,1563 +1,917 @@
 # TypeScript 类型系统
 
-TypeScript 是 JavaScript 的超集，它在 JavaScript 之上增加了类型系统。类型系统可以帮助我们在编译阶段就发现错误，让代码更健壮、更易维护。本文梳理 TypeScript 类型系统从安装配置到基础类型、接口、类、函数、泛型、类型推断以及高级类型的完整知识体系。
+TypeScript 的类型系统不是"给变量加个冒号"，而是一套**在编译期对值的集合做运算**的规则：类型描述值的范围，赋值是集合的包含判断，泛型与条件类型是对集合做映射与分支。本篇讲类型本身——心智模型、基础类型、收窄、对象类型、泛型、推断、类型运算、类的类型，以及报错怎么读。配置、`.d.ts` 声明文件、构建集成与 JS 迁移见下一篇 [TypeScript 工程实践](./TypeScript%20工程实践.md)。
 
-## 安装与配置
+## 一、类型系统的心智模型
 
-TypeScript 通常通过 npm 全局安装：
+### 类型就是值的集合
 
-> 示意片段（无配套脚本）
+把每个类型想成一个集合：`string` 是所有字符串的集合，`'GET' | 'POST'` 是只含两个元素的子集，`never` 是空集，`unknown` 是全集。于是"能不能赋值"就变成了一个包含判断——**子集可以赋给超集，反过来不行**。
 
-```bash
-npm install -g typescript
+联合类型 `|` 是并集，交叉类型 `&` 是交集，这些运算都可以在集合视角下直接理解。
+
+> 摘自 `./code/type-lab/01-assignability.ts`（运行：`npm run check:errors`）
+
+```ts
+type Digit = '0' | '1' | '2' | '3'
+
+const d: Digit = '2'
+const s: string = d // OK：子集可以赋给超集
+//ERR const d2: Digit = s // 编译错误：string 太大，无法保证落在 Digit 里
 ```
 
-安装完成后，可以通过 `tsc`（TypeScript Compiler）命令查看版本并编译文件：
+解封 `//ERR` 行后编译器给出的判断：
 
-> 示意片段（无配套脚本）
-
-```bash
-# 查看版本
-tsc -v
-
-# 编译单个文件
-tsc xxx.ts
+```text
+01-assignability.ts
+  TS2322  Type 'string' is not assignable to type 'Digit'.
+        const d2: Digit = s // 编译错误：string 太大，无法保证落在 Digit 里
 ```
 
-在实际项目中，通常使用 `tsconfig.json` 配置文件来描述编译选项。比较关键的几个选项如下：
+`unknown` 与 `never` 也在这个框架里：任何值都能赋给 `unknown`（全集），而没有任何值能赋给 `never`（空集）。所以函数返回 `never` 就意味着"这里到不了"。
 
-> 示意片段（无配套脚本）
+### 结构类型：只看形状，不看名字
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2015",
-    "strict": true,
-    "strictNullChecks": true,
-    "module": "commonjs",
-    "outDir": "./dist"
-  }
-}
-```
+TypeScript 用的是**结构类型**（structural typing，俗称鸭式辨型）：两个类型是否兼容，只取决于成员是否对得上，与它们的名字、是否 `implements` 无关。这是它和 Java / C# 那类名义类型系统最根本的区别。
 
-其中 `strict` 会开启所有严格模式选项，`strictNullChecks` 用于严格控制 `null` 和 `undefined` 的赋值，是写出安全代码的关键开关。
+> 摘自 `./code/type-lab/01-assignability.ts`（运行：`npm run check:errors`）
 
-为了让 TypeScript 直接运行（而不用先编译），还可以使用 `ts-node` 或 `tsx` 等工具。
-
-## 基础类型
-
-TypeScript 支持与 JavaScript 几乎相同的数据类型，此外还提供了枚举 (`enum`) 等额外类型。
-
-### 布尔值 boolean
-
-最基本的数据类型就是简单的 `true`/`false` 值：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let isDone: boolean = false
-```
-
-### 数字 number
-
-与 JavaScript 一样，TypeScript 里的所有数字都是浮点数，类型为 `number`。除了十进制和十六进制，还支持二进制和八进制字面量（ES2015 引入）：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let decLiteral: number = 20
-let hexLiteral: number = 0x14
-let binaryLiteral: number = 0b10100
-let octalLiteral: number = 0o24
-```
-
-### 字符串 string
-
-使用 `string` 表示文本类型，可用双引号、单引号。同时支持模板字符串，用反引号（`` ` ``）包围，并通过 `${ expr }` 内嵌表达式，可定义多行文本：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let name: string = 'bob'
-name = 'smith'
-
-let age: number = 37
-let sentence: string = `Hello, my name is ${name}.
-
-I'll be ${age + 1} years old next month.`
-```
-
-等价于：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let sentence: string = 'Hello, my name is ' + name + '.\n\n' +
-    'I\'ll be ' + (age + 1) + ' years old next month.'
-```
-
-### 数组（学会包含）
-
-数组有两种等价的定义方式，元素类型后接 `[]`，或使用数组泛型 `Array<元素类型>`：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let list: number[] = [1, 2, 3]
-let list_1: Array<number> = [1, 2, 3]
-```
-
-如果你想要一个内部元素可以是不同类型的数组，可以用 `any[]`：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let list: any[] = [1, true, 'free']
-list[1] = 100
-```
-
-### 元组 Tuple
-
-元组类型允许表示一个已知元素数量和类型的数组，各元素的类型不必相同：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let x: [string, number]
-x = ['hello', 10] // OK
-x = [10, 'hello'] // Error
-```
-
-访问已知索引的元素，会得到正确的类型：
-
-> 示意片段（无配套脚本）
-
-```typescript
-console.log(x[0].substr(1)) // OK
-console.log(x[1].substr(1)) // Error, 'number' 不存在 'substr' 方法
-```
-
-> 注意：自从 TypeScript 3.1 之后，访问越界元素会直接报错，不再建议使用该特性。
-
-### 枚举 enum
-
-`enum` 类型为 JavaScript 标准数据类型提供了补充，可以为一组数值赋予友好的名字。默认从 `0` 开始编号，也可以手动赋值：
-
-> 示意片段（无配套脚本）
-
-```typescript
-enum Color {Red, Green, Blue}
-let c: Color = Color.Green
-
-// 从 1 开始编号
-enum Color2 {Red = 1, Green, Blue}
-
-// 全部手动赋值
-enum Color3 {Red = 1, Green = 2, Blue = 4}
-```
-
-枚举还支持由数值反向查找名字：
-
-> 示意片段（无配套脚本）
-
-```typescript
-enum Color {Red = 1, Green, Blue}
-let colorName: string = Color[2]
-console.log(colorName) // 输出 'Green'
-```
-
-### any
-
-当编程阶段还不清楚变量的类型时，可以使用 `any` 跳过类型检查。常用于用户输入或第三方代码库：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let notSure: any = 4
-notSure = 'maybe a string instead'
-notSure = false // 也可以是 boolean
-```
-
-### void
-
-`void` 与 `any` 相反，表示没有任何类型，常用于没有返回值的函数：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function warnUser(): void {
-  console.log('This is my warning message')
+```ts
+interface Point2D {
+    x: number
+    y: number
 }
 
-let unusable: void = undefined // 只能赋值为 undefined
-```
-
-### null 和 undefined
-
-`undefined` 和 `null` 各自有类型，默认情况下它们是所有类型的子类型。但开启 `--strictNullChecks` 后，它们只能赋值给 `void` 和各自类型，从而避免很多问题：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let u: undefined = undefined
-let n: null = null
-
-// 在 strictNullChecks 下需要显式联合
-let sn: string | null = 'bar'
-sn = null // 可以
-```
-
-### never
-
-`never` 表示永不存在的值的类型，例如总是抛出异常或无限循环的函数返回值：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function error(message: string): never {
-  throw new Error(message)
+class Vec2 {
+    constructor(public x: number, public y: number) {}
 }
 
-function infiniteLoop(): never {
-  while (true) {}
-}
+const p: Point2D = new Vec2(1, 2) // OK：形状吻合即可，不要求显式 implements
+
+// 经过变量传递时，多出来的字段不影响兼容
+const rich = { x: 1, y: 2, z: 3 }
+const p2: Point2D = rich // OK
+
+// 但对象字面量直接赋值会触发「额外属性检查」
+//ERR const p3: Point2D = { x: 1, y: 2, z: 3 } // 编译错误：z 不在 Point2D 里
 ```
 
-`never` 是任何类型的子类型，可以赋值给任何类型；但除了 `never` 本身外，没有类型可以赋值给 `never`，即使 `any` 也不行。
+注意最后一行：同一个对象，先赋给变量再传参就通过，直接写字面量就报错。这不是结构类型失效，而是 TS 专门加的**额外属性检查**（excess property check）——字面量多写的字段十有八九是手抖拼错，编译器宁可误报也要拦一下。
 
-### object
+### 可赋值性的两条规则：返回值协变、参数逆变
 
-`object` 表示非原始类型，即排除 `number`、`string`、`boolean`、`symbol`、`null`、`undefined` 之外的类型：
+判断函数之间能不能赋值，方向是反的：
 
-> 示意片段（无配套脚本）
+- **返回值协变**：返回值类型更窄（子集）是安全的——调用方期望 `{ id: number }`，你给 `{ id: number; name: string }`，它只用得着 `id`。
+- **参数逆变**：参数类型更宽（超集）才是安全的——调用方会传任意 `string` 进来，你若按 `'a'` 处理就会漏掉其他字符串。
 
-```typescript
-declare function create(o: object | null): void
+> 摘自 `./code/type-lab/01-assignability.ts`（运行：`npm run check:errors`）
 
-create({ prop: 0 }) // OK
-create(null) // OK
-create(42) // Error
-create('string') // Error
+```ts
+type Handler = (arg: string) => void
+
+// 参数逆变：接受更宽（父集）的参数类型是安全的
+const wider: Handler = (arg: string | number) => void arg
+//ERR const narrower: Handler = (arg: 'a') => void arg // 编译错误：拿到 string 却按 'a' 处理
+
+// 返回值协变：返回任意值都可以赋给返回 void 的函数类型
+type Voider = () => void
+const v: Voider = () => 1 // OK：调用方不会用到这个返回值
 ```
 
-### symbol
+参数逆变只在开启 `strictFunctionTypes` 后才严格检查（属于 `strict` 的一部分）。关闭它，参数会退化成"双向兼容"，能过编译但拦不住真实 bug。
 
-`symbol` 表示独一无二的值，用 `Symbol()` 生成，即使传入相同的描述字符串也不相等：
+### 类型只在编译期存在
 
-> 示意片段（无配套脚本）
+TS 编译成 JS 后，类型信息会被全部擦除。这不是实现细节，而是理解 TS 的前提：**你在类型层面写的一切约束，运行时都不复存在**——所以类型永远替代不了运行时校验（比如接口返回的数据）。
 
-```typescript
-const s1 = Symbol('ts')
-const s2 = Symbol('ts')
-s1 === s2 // false，两个 symbol 永不相等
-```
+> 摘自 `./code/type-lab/11-erase-demo.ts`（运行：`npm run erase`）
 
-它常被用作**对象属性名**（计算属性），且不会被 `for...in`、`Object.keys`、`JSON.stringify` 枚举到——需要 `Object.getOwnPropertySymbols` 或 `Reflect.ownKeys` 才能取到：
-
-> 示意片段（无配套脚本）
-
-```typescript
-const title = Symbol('title')
-const obj = { [title]: 'TypeScript', age: 18 }
-Object.keys(obj) // ['age']，取不到 symbol 属性
-Object.getOwnPropertySymbols(obj) // [Symbol(title)]
-```
-
-`Symbol.for(key)` 会在全局注册表中按字符串查找并返回同一个 symbol（重复调用返回同一个），`Symbol.keyFor(sym)` 则取回该 symbol 的注册键名。
-
-### bigInt
-
-`bigint` 用于安全地存储和操作超出 `Number.MAX_SAFE_INTEGER` 的大整数。普通 number 在大数运算时会出现精度丢失：
-
-> 示意片段（无配套脚本）
-
-```typescript
-const max = Number.MAX_SAFE_INTEGER
-max + 1 === max + 2 // true，number 精度已丢失
-
-const big1 = BigInt(Number.MAX_SAFE_INTEGER) + 1n
-const big2 = BigInt(Number.MAX_SAFE_INTEGER) + 2n
-big1 === big2 // false，bigint 精度安全
-```
-
-写法用 `10n` 或 `BigInt(10)`；需要 `target: "ES2020"` 或更高版本，且不能与 number 直接混用运算（需显式转换）。
-
-## 类型断言
-
-有时你会比 TypeScript 更了解某个值的类型。类型断言告诉编译器「相信我，我知道自己在干什么」，它没有运行时影响，只在编译阶段起作用。
-
-类型断言有两种形式。第一种是「尖括号」语法：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let someValue: any = 'this is a string'
-let strLength: number = (<string>someValue).length
-```
-
-第二种是 `as` 语法。在 JSX 中只能使用 `as` 语法：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let someValue: any = 'this is a string'
-let strLength: number = (someValue as string).length
-```
-
-两种形式是等价的。
-
-## 变量声明
-
-`let` 和 `const` 是较新的变量声明方式，`const` 是 `let` 的增强，阻止对变量再次赋值。TypeScript 作为 JavaScript 的超集，本身就支持它们。
-
-### 为什么不用 var
-
-`var` 存在作用域和捕获相关的怪异问题：
-
-- **函数作用域**：`var` 声明的作用域是函数级，而非块级，导致变量可被意外访问。
-
-> 示意片段（无配套脚本）
-
-```javascript
-function f(shouldInitialize) {
-  if (shouldInitialize) {
-    var x = 10
-  }
-  return x // 可以访问到 x
-}
-```
-
-- **重新声明不报错**：同作用域多次声明同一个变量不会报错。
-
-- **捕获变量怪异**：闭包中的 `var` 循环变量共享同一个引用。
-
-> 示意片段（无配套脚本）
-
-```javascript
-for (var i = 0; i < 10; i++) {
-  setTimeout(function() {
-    console.log(i)
-  }, 100 * i)
-}
-// 输出 10 个 10
-```
-
-解决方法是使用 IIFE 立即执行函数表达式，或改用 `let`。
-
-### let 声明：块作用域
-
-`let` 使用的是块作用域，变量在包含它们的块或 `for` 循环之外不可访问：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function f(input: boolean) {
-  let a = 100
-  if (input) {
-    let b = a + 1
-    return b
-  }
-  // Error: 'b' 在这里不存在
-  return b
-}
-```
-
-块级作用域变量不能在被声明之前读或写，这段区域被称为**暂时性死区**（Temporal Dead Zone）：
-
-> 示意片段（无配套脚本）
-
-```typescript
-a++ // Error: Block-scoped variable 'a' used before its declaration.
-let a
-```
-
-`let` 在同一作用域内不允许重复声明：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let x = 10
-let x = 20 // 错误，不能在 1 个作用域里多次声明 x
-```
-
-在循环中使用 `let`，每次迭代都会创建一个新的变量环境，因此 `setTimeout` 的例子可以得到预期结果：
-
-> 示意片段（无配套脚本）
-
-```typescript
-for (let i = 0; i < 10; i++) {
-  setTimeout(function() {
-    console.log(i)
-  }, 100 * i)
-}
-// 输出 0 1 2 ... 9
-```
-
-### const 声明
-
-`const` 拥有与 `let` 相同的作用域规则，但是不能被重新赋值。需要注意，`const` 变量的内部状态是可修改的（除非使用 `readonly` 或 `Object.freeze` 等特殊手段）：
-
-> 示意片段（无配套脚本）
-
-```typescript
-const kitty = { name: 'Kitty', numLives: 9 }
-
-kitty = { name: 'Tommy', numLives: 9 } // Error，不能重新赋值
-kitty.name = 'Jerry' // OK，内部状态可修改
-```
-
-### let vs. const
-
-使用最小特权原则：除非计划修改变量，否则都应使用 `const`。这样更容易推测数据的流动。
-
-### 解构
-
-解构可以让我们更方便地从数组或对象中提取值，作用于数组：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let input = [1, 2]
-let [first, second] = input
-console.log(first) // outputs 1
-console.log(second) // outputs 2
-
-// 剩余变量
-let [a, ...rest] = [1, 2, 3, 4]
-console.log(rest) // outputs [2, 3, 4]
-```
-
-作用于函数参数：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let input: [number, number] = [1, 2]
-
-function f([first, second]: [number, number]) {
-  console.log(first)
-  console.log(second)
-}
-```
-
-对象解构、属性重命名与默认值：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let o = { a: 'foo', b: 12, c: 'bar' }
-let { a, b } = o
-
-// 属性重命名：a 作为 newName1
-let { a: newName1, b: newName2 } = o
-// 若要指定类型，需写完整模式
-let { a: rename_a, b: rename_b }: { a: string; b: number } = o
-
-// 默认值：属性为 undefined 时使用缺省值
-function keepWholeObject(wholeObject: { a: string; b?: number }) {
-  let { a, b = 1001 } = wholeObject
-}
-```
-
-函数声明结合解构与默认值：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function f({ a = '', b = 0 } = {}): void {
-  // ...
-}
-```
-
-### 展开
-
-展开（spread）操作可以创建浅拷贝：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let first = [1, 2]
-let second = [3, 4]
-let bothPlus = [0, ...first, ...second, 5]
-// [0, 1, 2, 3, 4, 5]
-```
-
-对象的展开是从左至右处理，后面的属性会覆盖前面的属性：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let defaults = { food: 'spicy', price: '$10', ambiance: 'noisy' }
-let search = { ...defaults, food: 'rich' }
-// { food: 'rich', price: '$10', ambiance: 'noisy' }
-```
-
-## 接口 interface
-
-TypeScript 的核心原则之一是对值所具有的结构进行类型检查，这被称为「结构性子类型化」或「鸭式辨型法」。接口的作用就是为这些结构命名并定义契约。
-
-### 接口初探
-
-> 示意片段（无配套脚本）
-
-```typescript
-interface LabelledValue {
-  label: string
+```ts
+interface User {
+    id: number
+    name: string
 }
 
-function printLabel(labelledObj: LabelledValue) {
-  console.log(labelledObj.label)
+enum Color {
+    Red,
+    Green
 }
 
-let myObj = { size: 10, label: 'Size 10 Object' }
-printLabel(myObj)
+function greet(user: User): string {
+    return 'hi ' + user.name
+}
+
+const color: Color = Color.Green
 ```
 
-类型检查器只关注值的外形，只要传入的对象满足必要条件（属性存在且类型匹配）即可，不关心属性的顺序，也不检查多余的属性。
+编译产物（typescript 5.8.2 实测）：
 
-### 可选属性
-
-在属性名后加 `?` 表示可选属性。可选属性既可以预定义可能存在的属性，也能捕获引用了不存在属性的错误：
-
-> 示意片段（无配套脚本）
-
-```typescript
-interface SquareConfig {
-  color?: string
-  width?: number
+```text
+---- 编译产物 ----
+var Color;
+(function (Color) {
+    Color[Color["Red"] = 0] = "Red";
+    Color[Color["Green"] = 1] = "Green";
+})(Color || (Color = {}));
+function greet(user) {
+    return 'hi ' + user.name;
 }
+const color = Color.Green;
+
+---- 结论（typescript 5.8.2） ----
+类型注解与 interface 是否出现在产物里： 否，已被擦除
+enum 是否留下运行时代码： 是（enum 是少数会生成对象的类型语法）
 ```
 
-### 只读属性
+`interface` 和所有类型注解消失了，但 `enum` 留下了真实的对象代码——这也是很多团队改用字面量联合替代 `enum` 的原因之一（见第二节）。
 
-用 `readonly` 指定只能在创建时赋值的只读属性；`ReadonlyArray<T>` 去掉了所有可变方法：
+## 二、基础类型速览
 
-> 示意片段（无配套脚本）
+TS 的基础类型与 JS 一一对应，这里只列**TS 相对 JS 多出来的部分**和容易踩的点。
 
-```typescript
-interface Point {
-  readonly x: number
-  readonly y: number
-}
-let p1: Point = { x: 10, y: 20 }
-p1.x = 5 // error!
+| 类型 | 是什么 | 注意 |
+| --- | --- | --- |
+| `any` | 关闭类型检查 | 会沿着表达式传染，能不用就不用 |
+| `unknown` | 未知类型 | 全集，用之前必须收窄，是 `any` 的安全替代 |
+| `never` | 不可能出现的值 | 空集，用于穷尽性检查 |
+| `void` | 函数没有返回值 | |
+| `object` | 非原始类型 | 太宽，优先写具体结构 |
+| `T[]` / `Array<T>` | 数组 | 两种写法等价 |
+| `[A, B]` | 元组 | 定长，每个位置类型固定 |
+| `bigint` / `symbol` | 大整数 / 唯一值 | 需要 `target` ≥ ES2020 |
 
-let a: number[] = [1, 2, 3, 4]
-let ro: ReadonlyArray<number> = a
-ro[0] = 12 // error!
-ro.push(5) // error!
-a = ro // error! 需要用类型断言重写
-a = ro as number[]
+### any 与 unknown 的分工
+
+`any` 是"我放弃检查"，`unknown` 是"我不知道，你先用收窄证明它是什么"。所有来自外部的数据（接口响应、`JSON.parse`、用户输入）都应该落到 `unknown`，而不是 `any`。
+
+> 摘自 `./code/type-lab/02-basic-types.ts`（运行：`npm run check:errors`）
+
+```ts
+a.foo.bar() // 编译通过（any 放弃了检查），运行时可能崩
+//ERR u.foo // 编译错误：unknown 必须先收窄
 ```
 
-**readonly vs const**：作为变量使用用 `const`，作为属性使用用 `readonly`。
+### 字面量会放宽，as const 能锁住
 
-### 额外的属性检查
+字面量类型默认是**可放宽的**（widening）：`let` 声明会放宽成 `string`，`const` 声明保留字面量。对象的属性同理——属性是可写的，所以也会被放宽。
 
-对象字面量赋给变量或作为参数传递时，会经过额外属性检查。如果存在目标类型不包含的属性，会报错：
+> 摘自 `./code/type-lab/02-basic-types.ts`（运行：`npm run check`）
 
-> 示意片段（无配套脚本）
-
-```typescript
-interface SquareConfig {
-  color?: string
-  width?: number
-}
-
-// Error: 'colour' 不存在于类型 'SquareConfig' 中
-let mySquare = createSquare({ colour: 'red', width: 100 })
+```ts
+let mutable = 'GET' // string
+const frozen = 'GET' // 推断为 'GET'
+const cfg = { method: 'GET' } // method 推断为 string
+const cfgConst = { method: 'GET' } as const // method 推断为 'GET'
 ```
 
-绕开检查的方式有三种：
+`as const` 会递归地把所有属性变成 `readonly` 字面量类型。需要"既能改又能保持字面量"时，用下面这个操作符。
 
-1. **类型断言**：`createSquare({ width: 100, opacity: 0.5 } as SquareConfig)`
-2. **字符串索引签名**（推荐，当确定对象可能有额外属性时）：
+### satisfies：要校验，但别把推断弄丢了
 
-> 示意片段（无配套脚本）
+`satisfies`（TS 4.9+）解决的是一个两难：用类型注解会丢掉精确的字面量推断，不用又没法校验形状。它只做校验、不改变推断结果。
 
-```typescript
-interface SquareConfig {
-  color?: string
-  width?: number
-  [propName: string]: any
-}
+> 摘自 `./code/type-lab/02-basic-types.ts`（运行：`npm run check:errors`）
+
+```ts
+type Method = 'GET' | 'POST'
+type Route = { method: Method; path: string }
+
+const routes = {
+    home: { method: 'GET', path: '/' },
+    login: { method: 'POST', path: '/login' }
+} satisfies Record<string, Route>
+
+// 若换成类型注解，method 会被放宽成 Method，'GET' 这个精确信息就丢了
+const routes2: Record<string, Route> = { home: { method: 'GET', path: '/' } }
+//ERR const m2: 'GET' = routes2.home.method // 编译错误：这里 method 的类型是 Method
+
+// 而 satisfies 保留了字面量（下面这行正常模式能通过）
+const m1: 'GET' = routes.home.method
 ```
 
-3. **赋值给另一个变量**，因为普通变量不会经过额外属性检查。
+`m1` 通过、`m2` 报错，就是这个操作符存在的全部理由。
 
-### 函数类型
+### 枚举的替代品
 
-接口可以描述函数类型，通过定义一个调用签名（只有参数列表和返回值类型的函数定义）：
+`enum` 会生成运行时对象（见第一节的编译产物），且在 `isolatedModules`、类型与值同名等场景下容易出状况。多数场景可以用"常量对象 + 字面量联合"替代，类型与值一次拿到：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/type-lab/02-basic-types.ts`（运行：`npm run check:errors`）
 
-```typescript
-interface SearchFunc {
-  (source: string, subString: string): boolean
-}
+```ts
+const Direction = { Up: 'UP', Down: 'DOWN' } as const
+type Direction = (typeof Direction)[keyof typeof Direction] // 'UP' | 'DOWN'
 
-let mySearch: SearchFunc
-mySearch = function(src, sub) {
-  let result = src.search(sub)
-  return result > -1
-}
+declare function go(dir: Direction): void
+go('UP')
+//ERR go('LEFT') // 编译错误：不在联合里
 ```
 
-参数名不需要与接口里的名字匹配，参数会逐个按位置检查类型。
+值（`Direction.Up`）和类型（`Direction`）同名共存——TS 允许一个名字同时存在于值空间和类型空间。
 
-### 可索引的类型
+## 三、收窄：把联合类型变成具体类型
 
-接口可以描述能够「通过索引得到」的类型（如 `a[10]` 或 `ageMap['daniel']`）：
+拿到一个联合类型，你只能访问所有分支共有的成员。**收窄**（narrowing）就是在某段代码里把类型确定为其中一支的过程，这是 TS 里使用频率最高的技巧。
 
-> 示意片段（无配套脚本）
+### 判别式联合：用一个标签字段
 
-```typescript
-interface StringArray {
-  [index: number]: string
+给联合的每个成员加一个字面量类型的标签字段（通常叫 `kind` 或 `type`），`switch` 之后 TS 会自动收窄。这是可维护性最好的写法。
+
+> 摘自 `./code/type-lab/03-narrowing.ts`（运行：`npm run check`）
+
+```ts
+interface Circle {
+    kind: 'circle'
+    radius: number
 }
-let myArray: StringArray = ['Bob', 'Fred']
-let myStr: string = myArray[0]
-```
-
-TypeScript 支持字符串和数字两种索引签名。若同时使用，数字索引的返回值必须是字符串索引返回值类型的子类型。字符串索引签名也能保证对象所有属性与其返回值类型匹配。
-
-### 类类型：实现接口
-
-接口可以强制一个类符合某种契约：
-
-> 示意片段（无配套脚本）
-
-```typescript
-interface ClockInterface {
-  currentTime: Date
-  setTime(d: Date): void
+interface Square {
+    kind: 'square'
+    size: number
 }
-
-class Clock implements ClockInterface {
-  currentTime: Date
-  setTime(d: Date) {
-    this.currentTime = d
-  }
-  constructor(h: number, m: number) {}
-}
-```
-
-接口只检查类实例部分的公共成员，不检查私有成员。当一个类 `implements` 一个带 `new` 构造签名的接口时会报错，因为 `constructor` 属于类的静态部分，不在检查范围内。
-
-### 继承接口
-
-接口可以相互继承，也可以继承多个接口：
-
-> 示意片段（无配套脚本）
-
-```typescript
-interface Shape {
-  color: string
-}
-interface PenStroke {
-  penWidth: number
-}
-interface Square extends Shape, PenStroke {
-  sideLength: number
-}
-```
-
-### 混合类型
-
-因为 JavaScript 的动态特性，一个对象可以同时作为函数和对象使用，并带有额外属性：
-
-> 示意片段（无配套脚本）
-
-```typescript
-interface Counter {
-  (start: number): string
-  interval: number
-  reset(): void
-}
-```
-
-### 接口继承类
-
-当接口继承一个类类型时，它会继承类的成员但不包括其实现，同时也会继承 `private` 和 `protected` 成员。此时，该接口只能被这个类或其子类实现。
-
-## 类 class
-
-TypeScript 支持基于类的面向对象编程（ES6 已原生支持，TS 允许现在使用这些特性）。
-
-### 基本示例
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Greeter {
-  greeting: string
-  constructor(message: string) {
-    this.greeting = message
-  }
-  greet() {
-    return 'Hello, ' + this.greeting
-  }
-}
-
-let greeter = new Greeter('world')
-```
-
-### 继承
-
-使用 `extends` 关键字继承基类。派生类构造函数中必须调用 `super()`，且在访问 `this` 之前一定要先调用 `super()`：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Animal {
-  name: string
-  constructor(name: string) {
-    this.name = name
-  }
-  move(distance: number = 0) {
-    console.log(`${this.name} moved ${distance}m.`)
-  }
-}
-
-class Snake extends Animal {
-  constructor(name: string) {
-    super(name)
-  }
-  move(distance: number = 5) {
-    console.log('Slithering...')
-    super.move(distance)
-  }
-}
-```
-
-方法可以被重写（override）。即使变量声明为基类类型，实际调用时也会动态分发到实际实例的（重写）方法。
-
-### 访问修饰符
-
-- **public**：默认的修饰符，可以自由访问：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Animal {
-  public name: string
-  public constructor(name: string) {
-    this.name = name
-  }
-  public move(distance: number) {}
-}
-```
-
-- **private**：不能在声明它的类的外部访问。TypeScript 采用结构性类型系统，但当比较包含 `private` 成员的类型时，只有在私有关键字来自同一处声明时，两个类型才兼容：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Animal {
-  private name: string
-  constructor(name: string) {
-    this.name = name
-  }
-}
-new Animal('Cat').name // 错误: 'name' 是私有的
-
-class Rhino extends Animal {}
-class Employee {
-  private name: string
-  constructor(name: string) {}
-}
-let animal = new Animal('Goat')
-let rhino = new Rhino()
-let employee = new Employee('Bob')
-animal = rhino // OK，共享来自 Animal 的私有成员
-animal = employee // 错误，Employee 的私有成员并非来自 Animal
-```
-
-- **protected**：与 `private` 类似，但 `protected` 成员在派生类中仍可访问。构造函数标记为 `protected` 时，类不能在外部被实例化，但可以被继承。
-
-### readonly 修饰符与参数属性
-
-`readonly` 属性必须在声明时或构造函数里初始化。**参数属性**可以让我们在一个地方定义并初始化成员：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Person {
-  constructor(readonly name: string) {}
-}
-// 等价于：声明 readonly name + this.name = name
-
-// 还可以用 private / public / protected 限定参数属性
-class Employee {
-  constructor(private id: number, public name: string) {}
-}
-```
-
-### 存取器 getters / setters
-
-通过 `get` / `set` 截取对对象成员的访问。注意：只带有 `get` 不带有 `set` 的存取器会自动被推断为 `readonly`。
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Employee {
-  private _fullName: string
-  get fullName(): string {
-    return this._fullName
-  }
-  set fullName(newName: string) {
-    this._fullName = newName
-  }
-}
-```
-
-### 静态属性
-
-使用 `static` 定义的成员存在于类本身上（`Grid.xxx`），而非实例上：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Grid {
-  static origin = { x: 0, y: 0 }
-  scale: number
-  constructor(scale: number) {
-    this.scale = scale
-  }
-  calculateDistanceFromOrigin(point: { x: number; y: number }) {
-    let xDist = point.x - Grid.origin.x
-    let yDist = point.y - Grid.origin.y
-    return Math.sqrt(xDist * xDist + yDist * yDist) * this.scale
-  }
-}
-```
-
-### 抽象类
-
-抽象类作为其它派生类的基类，一般不会被直接实例化。与接口不同，抽象类可以包含成员的实现细节。`abstract` 关键字定义抽象类和其中的抽象方法，抽象方法不包含实现且必须在派生类中实现：
-
-> 示意片段（无配套脚本）
-
-```typescript
-abstract class Department {
-  name: string
-  constructor(name: string) {
-    this.name = name
-  }
-  printName(): void {
-    console.log('Department name: ' + this.name)
-  }
-  abstract printMeeting(): void // 必须在派生类中实现
-}
-
-class AccountingDepartment extends Department {
-  constructor() {
-    super('Accounting and Auditing')
-  }
-  printMeeting(): void {
-    console.log('The Accounting Department meets each Monday at 10am.')
-  }
-}
-
-let department: Department // 允许创建对抽象类型的引用
-department = new Department() // 错误: 不能创建抽象类的实例
-department = new AccountingDepartment() // OK
-```
-
-### 类作为类型 / 把类当接口使用
-
-声明一个类时，同时创建了两样东西：实例的类型和构造函数的值。`typeof Greeter` 取的是 Greeter 类的类型（构造函数类型），而非实例类型。
-
-因为类可以创建出类型，所以可以在允许使用接口的地方使用类：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Point {
-  x: number
-  y: number
-}
-
-interface Point3d extends Point {
-  z: number
-}
-
-let point3d: Point3d = { x: 1, y: 2, z: 3 }
-```
-
-### 装饰器（Decorators）
-
-装饰器是一种特殊声明，可以附加在类、方法、属性、参数上，用来监视、修改或替换被装饰的目标（在 Angular、NestJS、Vue2 类组件中常见）。使用前需在 tsconfig 开启 `experimentalDecorators`。
-
-- **类装饰器**：接收构造函数，可为其扩展属性或方法；写成工厂形式（`@factory('参数')`）可以带参复用。
-- **属性/方法装饰器**：装饰实例属性/方法时 `target` 是构造函数原型，装饰静态成员时是构造函数本身；方法装饰器可通过改写 `descriptor.value` 实现 AOP（如统一参数预处理）。
-
-> 示意片段（无配套脚本）
-
-```typescript
-function upperCase(target: any, propertyKey: string) {
-  let value = target[propertyKey]
-  const setter = (newVal: string) => { value = newVal.toUpperCase() }
-  Object.defineProperty(target, propertyKey, { get: () => value, set: setter })
-}
-
-class Person {
-  @upperCase
-  name: string = 'well'
-}
-new Person().name // 'WELL'
-```
-
-- **参数装饰器**：用于给参数附加元信息，接收 `(target, methodName, paramIndex)`。
-- **执行顺序**：属性/方法装饰器按书写顺序执行；同一方法上参数装饰器先于方法装饰器；类装饰器最后执行，且多个类装饰器**自下而上**（后写的先执行）。
-
-## 函数
-
-函数是 JavaScript 应用程序的基础。TypeScript 为函数添加了类型系统支持。
-
-### 函数类型
-
-为参数和返回值添加类型（也可省略返回值类型，由编译依据 return 语句推断）：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function add(x: number, y: number): number {
-  return x + y
-}
-
-let myAdd = function(x: number, y: number): number {
-  return x + y
-}
-```
-
-完整的函数类型由参数类型和返回值类型组成，使用 `=>` 连接：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let myAdd: (baseValue: number, increment: number) => number =
-  function(x: number, y: number): number {
-    return x + y
-  }
-```
-
-参数名只是为了可读性，只要参数类型匹配就算有效函数类型。
-
-### 推断类型（按上下文归类）
-
-在赋值语句的一边指定了类型而另一边没有时，TypeScript 会自动识别出类型：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let myAdd: (baseValue: number, increment: number) => number =
-  function(x, y) {   // x、y 的类型被推断为 number
-    return x + y
-  }
-```
-
-### 可选参数和默认参数
-
-默认情况下每个函数参数都是必须的。使用 `?` 实现可选参数，且可选参数必须跟在必须参数后面：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function buildName(firstName: string, lastName?: string): string {
-  if (lastName) return firstName + ' ' + lastName
-  else return firstName
-}
-```
-
-为参数提供默认值，则无需放在最后（但若默认参数在必须参数前，传入时需要显式传 `undefined` 才能触发默认值）：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function buildName(firstName: string, lastName = 'Smith'): string {
-  return firstName + ' ' + lastName
-}
-```
-
-### 剩余参数
-
-使用 `...` 把所有剩余参数收集到一个数组里：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function buildName(firstName: string, ...restOfName: string[]): string {
-  return firstName + ' ' + restOfName.join(' ')
-}
-
-let buildNameFun: (fname: string, ...rest: string[]) => string = buildName
-```
-
-### this 与箭头函数
-
-JavaScript 中 `this` 的值在函数被调用时才会确定。箭头函数能保存函数创建时的 `this` 值，而不是调用时的值：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let deck = {
-  suits: ['hearts', 'spades', 'clubs', 'diamonds'],
-  cards: Array(52),
-  createCardPicker: function() {
-    return () => {
-      // 使用箭头函数，this 指向 deck
-      let pickedCard = Math.floor(Math.random() * 52)
-      let pickedSuit = Math.floor(pickedCard / 13)
-      return { suit: this.suits[pickedSuit], card: pickedCard % 13 }
+type Shape = Circle | Square
+
+function area(s: Shape): number {
+    switch (s.kind) {
+        case 'circle':
+            return Math.PI * s.radius ** 2
+        case 'square':
+            return s.size ** 2
+        default:
+            return assertNever(s)
     }
-  }
 }
 ```
 
-### this 参数
+`default` 分支里的 `assertNever` 不是装饰，而是**穷尽性守卫**：它的参数是 `never`，一旦有人给 `Shape` 加了新成员却忘了处理，`s` 就不再是 `never`，编译立刻失败。
 
-`this` 参数是个假参数，出现在参数列表最前面。指定 `this: void` 表示此独立函数中不可用 `this`（用于回调）：
+> 摘自 `./code/type-lab/03-narrowing.ts`（运行：`npm run check:errors`）
 
-> 示意片段（无配套脚本）
-
-```typescript
-function f(this: void) {
-  // 确保 "this" 在此独立函数中不可用
-}
-
-class Handler {
-  type: string
-  onClickBad(this: void, e: Event) {
-    console.log('clicked!')
-  }
-}
+```ts
+//ERR interface Triangle { kind: 'triangle'; a: number }
+//ERR function area2(s: Shape | Triangle): number {
+//ERR     switch (s.kind) {
+//ERR         case 'circle':
+//ERR             return 0
+//ERR         case 'square':
+//ERR             return 0
+//ERR         default:
+//ERR             return assertNever(s)
+//ERR     }
+//ERR }
 ```
 
-在回调场景下，箭头函数不会捕获 `this`，因此总是可以把它们传给期望 `this: void` 的函数。
-
-### 函数重载
-
-重载为同一个函数提供多个函数类型定义，编译器会根据传入参数选择合适的重载：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let suits = ['hearts', 'spades', 'clubs', 'diamonds']
-
-function pickCard(x: { suit: string; card: number }[]): number
-function pickCard(x: number): { suit: string; card: number }
-function pickCard(x): any {
-  if (Array.isArray(x)) {
-    let pickedCard = Math.floor(Math.random() * x.length)
-    return pickedCard
-  } else if (typeof x === 'number') {
-    let pickedSuit = Math.floor(x / 13)
-    return { suit: suits[pickedSuit], card: x % 13 }
-  }
-}
+```text
+03-narrowing.ts
+  TS2345  Argument of type 'Triangle' is not assignable to parameter of type 'never'.
+        return assertNever(s)
 ```
 
-需要把最精确的定义放在最前面；最后的实现签名（`x: any`）不属于重载列表。
+这一条价值极高：它把"漏改一个 switch 分支"从线上事故变成了编译错误。
 
-## 泛型
+### 内置收窄手段
 
-软件工程中既要创建定义良好的 API，也要考虑可重用性。泛型可以让一个组件同时支持多种类型的数据。
+`typeof`、`instanceof`、`in`、`Array.isArray`、真值判断、`===` 字面量比较都能触发收窄。
 
-### 基础示例
+> 摘自 `./code/type-lab/03-narrowing.ts`（运行：`npm run check`）
 
-`identity` 函数返回传入的值。使用 `any` 会丢失「传入类型与返回类型相同」的信息，而泛型使用类型变量 `T` 解决了这个问题：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function identity<T>(arg: T): T {
-  return arg
+```ts
+function format(x: string | number | string[] | null): string {
+    if (x === null) return 'null'
+    if (typeof x === 'string') return x.toUpperCase()
+    if (typeof x === 'number') return x.toFixed(2)
+    if (Array.isArray(x)) return x.join(',')
+    return String(x)
 }
 ```
 
-使用泛型函数有两种方式，显式传类型参数，或利用类型推断自动确定 `T`：
+两个坑：
 
-> 示意片段（无配套脚本）
+- `typeof null === 'object'`，判空必须用 `=== null`，不能靠 `typeof`。
+- 真值判断（`if (text)`）会把 `0`、`''`、`false` 一起吞掉。判断"有没有值"请用 `!== undefined`，判断"是不是空字符串"请显式比较。
 
-```typescript
-let output = identity<string>('myString')
-let output2 = identity('myString') // 类型推断
-```
+### 自定义类型谓词
 
-### 使用泛型变量
+收窄逻辑要复用，就写成返回 `x is T` 的函数。
 
-编译器要求你必须要正确地使用泛型。如果需要操作 `T` 类型数组而不仅是 `T`，可这样写（此时 `.length` 属性存在）：
+> 摘自 `./code/type-lab/03-narrowing.ts`（运行：`npm run check`）
 
-> 示意片段（无配套脚本）
-
-```typescript
-function loggingIdentity<T>(arg: T[]): T[] {
-  console.log(arg.length)
-  return arg
+```ts
+function isCircle(s: Shape): s is Circle {
+    return s.kind === 'circle'
 }
 ```
 
-### 泛型接口
+但要记住：**谓词是向编译器做出的承诺，它不校验实现**。下面这段代码能编译通过，然后在运行时崩掉：
 
-泛型函数的类型与非泛型函数类似，只是前面加了一个类型参数。我们可以用对象字面量定义泛型函数，进而写出泛型接口：
+> 摘自 `./code/type-lab/03-narrowing.ts`（运行：`npm run check`）
 
-> 示意片段（无配套脚本）
-
-```typescript
-interface GenericIdentityFn<T> {
-  (arg: T): T
-}
-
-function identity<T>(arg: T): T {
-  return arg
-}
-
-let myIdentity: GenericIdentityFn<number> = identity
-```
-
-### 泛型类
-
-泛型类使用 `<>` 括起泛型类型，跟在类名后面。注意：泛型类型只作用于实例部分，静态属性不能使用泛型类型：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class GenericNumber<T> {
-  zeroValue: T
-  add: (x: T, y: T) => T
-}
-
-let myGenericNumber = new GenericNumber<number>()
-myGenericNumber.zeroValue = 0
-myGenericNumber.add = function(x, y) {
-  return x + y
+```ts
+const isString = (x: unknown): x is string => typeof x === 'number'
+declare const v: unknown
+if (isString(v)) {
+    const upper: string = v.toUpperCase() // 编译通过，但运行时 v 其实是 number
 }
 ```
 
-### 泛型约束
+写谓词时，让判断条件与谓词类型严格对应，别把它当成"断言的逃生舱"。
 
-通过 `extends` 关键字约束泛型类型必须满足某个接口（至少包含该属性）：
+## 四、对象类型：interface 与 type
 
-> 示意片段（无配套脚本）
+### 两者的实质差异
 
-```typescript
-interface Lengthwise {
-  length: number
+`interface` 与 `type` 在描述对象形状时几乎等价，真正的差别只有三条：
+
+1. **interface 可以声明合并**，同名声明会被叠加（这对扩展第三方类型、给库打补丁很重要）；`type` 同名会直接报重复定义。
+2. **`type` 能表达 interface 表达不了的类型**：联合、元组、映射类型、条件类型的结果。
+3. **`interface` 只能描述对象形状**，`type` 可以给任意类型起别名。
+
+> 摘自 `./code/type-lab/04-object-types.ts`（运行：`npm run check`）
+
+```ts
+interface ApiConfig {
+    baseURL: string
+}
+interface ApiConfig {
+    timeout: number
+}
+const api: ApiConfig = { baseURL: '/api', timeout: 3000 } // 两个声明合并了
+
+// type 能表达 interface 表达不了的东西：联合、元组、映射、条件
+type ID = string | number
+type Pair = [string, number]
+type Nullable<T> = T | null
+```
+
+选择建议：**描述对象/类的公开结构用 `interface`**（可合并、报错信息更可读），**做类型运算、起别名、写联合用 `type`**。团队统一即可，不必纠结。
+
+### 可选、只读与索引签名
+
+> 摘自 `./code/type-lab/04-object-types.ts`（运行：`npm run check:errors`）
+
+```ts
+interface Options {
+    color?: string
+    readonly id: number
 }
 
-function loggingIdentity<T extends Lengthwise>(arg: T): T {
-  console.log(arg.length) // OK
-  return arg
+interface Dict {
+    [key: string]: unknown
 }
-
-loggingIdentity(3) // Error: number 没有 length
-loggingIdentity({ length: 10, value: 3 }) // OK
+const dict: Dict = { anything: 1, other: 'x' }
+// 索引签名的代价：取出来的值都是 unknown，用之前要自己收窄
+//ERR const n: number = dict.anything // 编译错误：unknown 不能赋给 number
 ```
 
-#### 在泛型约束中使用类型参数
+索引签名是"放弃对 key 的检查"换来的灵活性——写下去之后，拼错 key 也不会报错了。能枚举的 key 尽量枚举。
 
-可以用一个类型参数约束另一个类型参数，结合 `keyof` 保证属性存在于对象上：
+### 额外属性检查与三种绕法
 
-> 示意片段（无配套脚本）
+对象字面量直接赋值给目标类型时，多出的字段会报错。三种绕法各有代价：
 
-```typescript
-function getProperty<T, K extends keyof T>(obj: T, key: K) {
-  return obj[key]
+> 摘自 `./code/type-lab/04-object-types.ts`（运行：`npm run check:errors`）
+
+```ts
+interface Opt {
+    color?: string
+    width?: number
 }
+declare function create(o: Opt): void
 
-let x = { a: 1, b: 2, c: 3 }
-getProperty(x, 'a') // OK
-getProperty(x, 'm') // error
+const extra = { color: 'red', opacity: 0.5 }
+create(extra) // OK：先赋给变量，不再触发检查
+create({ color: 'red', opacity: 0.5 } as Opt) // OK：断言
+//ERR create({ color: 'red', opacity: 0.5 }) // 编译错误：opacity 不在 Opt 里
 ```
 
-## 类型推断
+推荐顺序：先想想这个字段是不是本该写进 `Opt`（绝大多数情况）；确实要透传，用索引签名；断言是最后的手段，因为它同时关掉了这一处的所有检查。
 
-类型推断（Type Inference）指在没有明确指出类型的地方，TypeScript 自动推导出类型。
+### 调用签名、构造签名与重载
 
-### 基础
+接口不只描述数据，也能描述"可调用"和"可 new"。
 
-在初始化变量、设置默认参数值和决定函数返回值时，类型会被自动推断：
+> 摘自 `./code/type-lab/04-object-types.ts`（运行：`npm run check:errors`）
 
-> 示意片段（无配套脚本）
-
-```typescript
-let x = 3 // 推断为 number
-```
-
-### 最佳通用类型
-
-当从几个表达式中推断类型时，会计算一个兼容所有候选类型的最佳通用类型：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let x = [0, 1, null] // 考虑 number 和 null
-```
-
-若候选类型没有公共超类型，可显式声明期望的类型：
-
-> 示意片段（无配套脚本）
-
-```typescript
-class Animal { numLegs: number }
-class Bee extends Animal {}
-class Lion extends Animal {}
-
-let zoo: Animal[] = [new Bee(), new Lion()]
-// 若不显式声明，结果为联合数组类型 (Bee | Lion)[]
-```
-
-### 上下文类型
-
-上下文类型按表达式的类型及所在位置推断。例如 `window.onmousedown` 提供了右侧函数表达式的类型上下文：
-
-> 示意片段（无配套脚本）
-
-```typescript
-window.onmousedown = function(mouseEvent) {
-  console.log(mouseEvent.clickTime) // Error：mouseEvent 被推断为 MouseEvent
+```ts
+interface Comparator {
+    (a: number, b: number): number
 }
-```
+const cmp: Comparator = (a, b) => a - b // a、b 由上下文推断为 number
 
-如果上下文类型表达式包含了明确的类型信息，上下文的类型会被忽略：
-
-> 示意片段（无配套脚本）
-
-```typescript
-window.onmousedown = function(mouseEvent: any) {
-  console.log(mouseEvent.clickTime) // OK
+interface ClockCtor {
+    new (hour: number): { hour: number }
 }
+declare const Clock: ClockCtor
+const clock = new Clock(9)
 ```
 
-## 高级类型
+TS 还允许给函数声明 `this` 的类型：它是参数列表里的第一个"假参数"，编译后擦除、不占实参位置。把方法从对象上摘下来单独调用时，这条约束就会生效。
 
-### 交叉类型
+> 摘自 `./code/type-lab/04-object-types.ts`（运行：`npm run check:errors`）
 
-交叉类型（`&`）将多个类型合并为一个类型，包含所有类型的特性，常用来做混入（mixin）：
+```ts
+// ---- this 参数：给回调里的 this 定类型（编译后擦除，不占实参位） ----
+interface Button {
+    text: string
+    onClick(this: Button, type: string): void
+}
+declare const btn: Button
+btn.onClick('click') // OK：this 是 btn
 
-> 示意片段（无配套脚本）
+const detached = btn.onClick
+//ERR detached('click') // 编译错误：脱离了 Button 的 this 上下文
+```
 
-```typescript
-function extend<T, U>(first: T, second: U): T & U {
-  let result = {} as T & U
-  for (let id in first) {
-    result[id] = first[id] as any
-  }
-  for (let id in second) {
-    if (!result.hasOwnProperty(id)) {
-      result[id] = second[id] as any
+```text
+04-object-types.ts
+  TS2684  The 'this' context of type 'void' is not assignable to method's 'this' of type 'Button'.
+        detached('click') // 编译错误：脱离了 Button 的 this 上下文
+```
+
+重载让一个函数对不同的入参给出精确的出参类型，注意实现签名不属于重载列表：
+
+> 摘自 `./code/type-lab/04-object-types.ts`（运行：`npm run check:errors`）
+
+```ts
+function parse(input: string): string[]
+function parse(input: number): number
+function parse(input: string | number): string[] | number {
+    return typeof input === 'string' ? input.split('') : input
+}
+const arr: string[] = parse('abc')
+const num: number = parse(1)
+//ERR const bad: boolean = parse('abc') // 编译错误：重载里没有返回 boolean 的签名
+```
+
+能用联合类型 + 收窄讲清楚的场景，不要上重载——重载越多，实现签名越难维护。
+
+## 五、泛型
+
+### 为什么需要泛型
+
+用 `any` 能"通吃"所有类型，代价是丢掉了**入参与返回值之间的关系**：`firstAny([1,2,3])` 的结果是 `any`，后面怎么写都不报错。泛型把这条关系保留下来。
+
+> 摘自 `./code/type-lab/05-generics.ts`（运行：`npm run check:errors`）
+
+```ts
+function firstAny(list: any[]): any {
+    return list[0]
+}
+const r0 = firstAny([1, 2, 3]) // any：后面怎么写都不报错
+
+function first<T>(list: T[]): T {
+    return list[0]
+}
+const r1: number = first([1, 2, 3]) // T 被推断为 number
+//ERR const r2: string = first([1, 2, 3]) // 编译错误：T 是 number
+```
+
+泛型不会让函数变复杂，它只是把"调用时才知道的类型"变成了一个参数 `T`。
+
+### 约束与默认类型参数
+
+`extends` 约束 `T` 必须满足某个形状——这既是对调用方的限制，也是函数体内部能安全使用某些成员的依据。
+
+> 摘自 `./code/type-lab/05-generics.ts`（运行：`npm run check:errors`）
+
+```ts
+interface HasLength {
+    length: number
+}
+function longest<T extends HasLength>(a: T, b: T): T {
+    return a.length >= b.length ? a : b
+}
+const longer = longest('ab', 'abcd') // T 推断为 string
+//ERR longest(1, 2) // 编译错误：number 没有 length
+
+interface Result<T = unknown> {
+    code: number
+    data: T
+}
+const ok: Result<{ id: number }> = { code: 0, data: { id: 1 } }
+```
+
+### keyof 约束：让 key 与对象绑定
+
+`K extends keyof T` 是最实用的一条约束：属性名必须是该对象真实存在的 key，返回值类型 `T[K]` 还会跟着 key 变。
+
+> 摘自 `./code/type-lab/05-generics.ts`（运行：`npm run check:errors`）
+
+```ts
+function get<T extends object, K extends keyof T>(obj: T, key: K): T[K] {
+    return obj[key]
+}
+const user = { id: 1, name: 'well' }
+const name: string = get(user, 'name') // 返回值类型跟着 key 走
+//ERR get(user, 'email') // 编译错误：'email' 不是 user 的 key
+```
+
+```text
+05-generics.ts
+  TS2345  Argument of type '"email"' is not assignable to parameter of type '"name" | "id"'.
+        get(user, 'email') // 编译错误：'email' 不是 user 的 key
+```
+
+### 条件类型的分发
+
+条件类型 `T extends U ? X : Y` 遇到**裸类型参数**时会按联合的每个成员分别计算（分发）；用元组包一层 `[T] extends [U]` 可以阻止分发。这是写工具类型时最容易踩的分水岭。
+
+> 摘自 `./code/type-lab/05-generics.ts`（运行：`npm run check`）
+
+```ts
+type ToArray<T> = T extends unknown ? T[] : never
+type Distributed = ToArray<string | number> // string[] | number[]
+
+// 用元组包一层就能阻止分发
+type ToArrayNoDist<T> = [T] extends [unknown] ? T[] : never
+type Merged = ToArrayNoDist<string | number> // (string | number)[]
+```
+
+`Exclude<T, U>` 正依赖分发——它靠"逐个判断、不匹配的给 `never`"来过滤联合成员。
+
+### 泛型能出现在哪些位置
+
+函数、接口、类型别名、类都可以带类型参数，含义不同：
+
+> 摘自 `./code/type-lab/05-generics.ts`（运行：`npm run check:errors`）
+
+```ts
+interface Box<T> {
+    value: T
+}
+type BoxFactory = <T>(value: T) => Box<T>
+
+class Stack<T> {
+    private items: T[] = []
+    push(item: T): void {
+        this.items.push(item)
     }
-  }
-  return result
+    pop(): T | undefined {
+        return this.items.pop()
+    }
 }
+const stack = new Stack<number>()
+stack.push(1)
+//ERR stack.push('x') // 编译错误：Stack<number> 只收 number
 ```
 
-`Person & Loggable` 同时拥有两者的成员。
+`interface Box<T>` 的 `T` 在**声明接口时**确定（用的时候写 `Box<string>`），而 `type BoxFactory = <T>(...)` 的 `T` 在**每次调用时**确定——这个区别在写工厂、回调类型时常被忽略。
 
-### 联合类型
+## 六、类型推断
 
-联合类型（`|`）表示一个值可以是几种类型之一：
+### 上下文推断：回调参数不用手写类型
 
-> 示意片段（无配套脚本）
+参数类型常常来自它所在的位置（赋值目标、函数签名），这叫上下文类型。所以 `.map((n) => ...)` 里的 `n` 不用标注。
 
-```typescript
-function padLeft(value: string, padding: string | number) {
-  // ...
+> 摘自 `./code/type-lab/06-inference.ts`（运行：`npm run check:errors`）
+
+```ts
+const nums = [1, 2, 3]
+const doubled = nums.map((n) => n * 2) // n 由 map 的签名推断为 number
+//ERR const bad = nums.map((n) => n.toUpperCase()) // 编译错误：number 没有 toUpperCase
+```
+
+### 什么时候必须标注
+
+- **空数组**：不标注就不知道将来装什么，后续 `push` 全靠猜。
+- **对外 API 的返回值**：推断结果可能比你想要的宽，也可能把 `any` 扩散出去。
+- **推断不出来时**：参数没有类型来源，会退化成隐式 `any`，`noImplicitAny` 直接拦下。
+
+> 摘自 `./code/type-lab/06-inference.ts`（运行：`npm run check:errors`）
+
+```ts
+const empty: number[] = []
+empty.push(1)
+
+// ---- 返回值：对外 API 建议显式标注，避免 any 扩散 ----
+function double(x: number) {
+    return x * 2 // 推断为 number，简单场景够用
 }
+function parseJSON(text: string): unknown {
+    return JSON.parse(text) // 显式标注 unknown，把收窄的义务交给调用方
+}
+//ERR const len = parseJSON('{}').length // 编译错误：unknown 必须先收窄
+
+// ---- 推断不出来就退化成 any，noImplicitAny 会拦住 ----
+//ERR function sum(a, b) { return a + b } // 编译错误：参数隐式 any
 ```
 
-如果一个值是联合类型，我们只能访问此联合类型所有类型里共有的成员：
+### 字面量推断与 as const
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/type-lab/06-inference.ts`（运行：`npm run check`）
 
-```typescript
-interface Bird { fly(); layEggs() }
-interface Fish { swim(); layEggs() }
-
-let pet: Fish | Bird
-pet.layEggs() // OK
-pet.swim()    // error，不确定是否为 Fish
+```ts
+let mutable = 'GET' // string
+const frozen = 'GET' // 'GET'
+const actions = ['GET', 'POST'] // string[]
+const actionsConst = ['GET', 'POST'] as const // readonly ['GET', 'POST']
 ```
 
-### 类型守卫（类型保护）
+`as const` 加的是 `readonly`，所以 `actionsConst` 不能 `push`——这正是它作为常量表的意义。
 
-类型守卫是一些在运行时检查以确保某个作用域里类型的表达式。
+### 泛型入参推断
 
-#### 用户自定义类型保护
+调用泛型函数时，`T`、`K` 通常都能从实参反推出来，不需要显式写。
 
-定义一个返回类型谓词（`parameterName is Type`）的函数：
+> 摘自 `./code/type-lab/06-inference.ts`（运行：`npm run check`）
 
-> 示意片段（无配套脚本）
+```ts
+declare function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K>
+const picked = pick({ id: 1, name: 'well', age: 18 }, ['id', 'name']) // { id: number; name: string }
+const onlyId: number = picked.id
+```
 
-```typescript
-function isFish(pet: Fish | Bird): pet is Fish {
-  return (pet as Fish).swim !== undefined
+## 七、类型运算：从已有类型算出新类型
+
+类型也能做计算：遍历（`keyof` + 映射）、分支（条件类型）、提取（`infer`）。工具类型就是这些运算的组合。
+
+### keyof 与索引访问
+
+> 摘自 `./code/type-lab/07-type-ops.ts`（运行：`npm run check`）
+
+```ts
+interface User {
+    id: number
+    name: string
+    email: string
 }
 
-if (isFish(pet)) {
-  pet.swim() // 此时 pet 收窄为 Fish
-} else {
-  pet.fly() // 否则是 Bird
+// ---- keyof 与索引访问 ----
+type UserKeys = keyof User // 'id' | 'name' | 'email'
+type IdType = User['id'] // number
+type IdOrName = User['id' | 'name'] // number | string
+```
+
+`T[K]` 是"取值的类型"，`keyof T` 是"取键的联合"，二者配合就能让类型跟着数据结构走——改了 `User`，所有派生的类型自动跟着变。
+
+### 映射类型与修饰符
+
+映射类型就是"遍历 key 生成新类型"，`+`/`-` 控制 `?` 与 `readonly`：
+
+> 摘自 `./code/type-lab/07-type-ops.ts`（运行：`npm run check`）
+
+```ts
+type MyPartial<T> = { [K in keyof T]?: T[K] }
+type MyRequired<T> = { [K in keyof T]-?: T[K] }
+type MyReadonly<T> = { readonly [K in keyof T]: T[K] }
+type MyMutable<T> = { -readonly [K in keyof T]: T[K] }
+```
+
+`as` 子句还能连属性名一起改（key remapping）：
+
+> 摘自 `./code/type-lab/07-type-ops.ts`（运行：`npm run check`）
+
+```ts
+type Getters<T> = {
+    [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K]
 }
+type UserGetters = Getters<User> // getId / getName / getEmail
 ```
 
-#### typeof 类型保护
+把不要的 key 映射成 `never`，再用 `[keyof T]` 收拢，就能按类型过滤字段：
 
-`typeof` 可直接用作类型守卫，识别形式有 `typeof v === "typename"` 和 `typeof v !== "typename"`。`typename` 必须是 `"number"`、`"string"`、`"boolean"` 或 `"symbol"`：
+> 摘自 `./code/type-lab/07-type-ops.ts`（运行：`npm run check`）
 
-> 示意片段（无配套脚本）
-
-```typescript
-function padLeft(value: string, padding: string | number) {
-  if (typeof padding === 'number') {
-    return Array(padding + 1).join(' ') + value
-  }
-  if (typeof padding === 'string') {
-    return padding + value
-  }
-  throw new Error(`Expected string or number, got '${padding}'.`)
-}
+```ts
+type StringKeys<T> = {
+    [K in keyof T]: T[K] extends string ? K : never
+}[keyof T]
+type UserStringKeys = StringKeys<User> // 'name' | 'email'
 ```
 
-#### instanceof 类型保护
+### 条件类型与 infer
 
-`instanceof` 通过构造函数来细化类型：
+`infer` 用来在匹配过程中"捕获"某个位置的类型，是提取类工具类型的核心。
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/type-lab/07-type-ops.ts`（运行：`npm run check`）
 
-```typescript
-if (pet instanceof Bird) {
-  pet.fly()
-}
-if (pet instanceof Fish) {
-  pet.swim()
-}
-```
-
-### 可以为 null 的类型与类型断言
-
-在 `--strictNullChecks` 下，变量不会自动包含 `null` 或 `undefined`，需要显式联合：
-
-> 示意片段（无配套脚本）
-
-```typescript
-let s = 'foo'
-s = null // 错误
-let sn: string | null = 'bar'
-sn = null // 可以
-```
-
-此时可选参数和可选属性会被自动加上 `| undefined`。
-
-去除 `null` 的方式：
-- 使用类型守卫：`if (sn === null) ... else ...`
-- 使用短路运算符：`return sn || 'default'`
-- 使用非空断言 `!` 手动去除 `null` 与 `undefined`：
-
-> 示意片段（无配套脚本）
-
-```typescript
-function fixed(name: string | null): string {
-  return name!.charAt(0) // name! 去除了 null 与 undefined
-}
-```
-
-### 字符串字面量类型
-
-字符串字面量类型允许指定字符串必须具有的确切值，常与联合类型、类型保护配合，实现类似枚举的效果：
-
-> 示意片段（无配套脚本）
-
-```typescript
-type Easing = 'ease-in' | 'ease-out' | 'ease-in-out'
-
-button.animate(0, 0, 'ease-in') // OK
-button.animate(0, 0, 'uneasy') // error
-```
-
-### 映射类型与索引访问、keyof
-
-`keyof T` 取对象类型所有 key 的联合，索引访问类型 `T[K]` 取对应 key 的值类型。
-
-映射类型基于旧类型创建新类型，例如把每个属性变为可选或只读：
-
-> 示意片段（无配套脚本）
-
-```typescript
-type Person = { name: string; age: number }
-
-type Readonly<T> = { readonly [P in keyof T]: T[P] }
-type Partial<T> = { [P in keyof T]?: T[P] }
-
-type ReadonlyPerson = Readonly<Person>
-type PartialPerson = Partial<Person>
-```
-
-以上 `Readonly`、`Partial` 等正是 TypeScript 内置的映射类型。
-
-### 条件类型
-
-条件类型 `T extends U ? X : Y` 根据类型关系选择结果类型，常用于高级类型推导：
-
-> 示意片段（无配套脚本）
-
-```typescript
-type IsString<T> = T extends string ? true : false
-
-type A = IsString<'hello'> // true
-type B = IsString<number> // false
-```
-
-条件类型配合 `infer` 可以提取函数的返回类型，这正是内置工具类型 `ReturnType` 的实现思路：
-
-> 示意片段（无配套脚本）
-
-```typescript
-type MyReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : never
+```ts
+type IsArray<T> = T extends unknown[] ? true : false
+type MyReturnType<T> = T extends (...args: never[]) => infer R ? R : never
+type MyParameters<T> = T extends (...args: infer P) => unknown ? P : never
 
 type Fn = (a: number, b: string) => boolean
-type R = MyReturnType<Fn> // boolean
+type FnReturn = MyReturnType<Fn> // boolean
+type FnParams = MyParameters<Fn> // [a: number, b: string]
+
+// 递归：一层层解开 Promise
+type DeepAwaited<T> = T extends Promise<infer R> ? DeepAwaited<R> : T
+type A = DeepAwaited<Promise<Promise<number>>> // number
 ```
+
+`MyReturnType` 的约束里写 `never[]` 而不是 `any[]`：参数位置是逆变的，`never[]` 能匹配任意参数列表，同时避免 `any` 扩散。
 
 ### 内置工具类型
 
-TypeScript 内置了大量实用工具类型，这里列举常用的几个：
+| 工具类型 | 作用 |
+| --- | --- |
+| `Partial<T>` / `Required<T>` | 全部属性转可选 / 转必填 |
+| `Readonly<T>` | 全部属性转只读 |
+| `Pick<T, K>` / `Omit<T, K>` | 挑出 / 去掉指定 key |
+| `Record<K, V>` | 用一组 key 构造同构对象 |
+| `Exclude<T, U>` / `Extract<T, U>` | 从联合中剔除 / 保留 |
+| `NonNullable<T>` | 去掉 `null` 与 `undefined` |
+| `ReturnType<T>` / `Parameters<T>` / `InstanceType<T>` | 取函数返回类型 / 参数元组 / 实例类型 |
+| `Awaited<T>` | 解开 Promise（递归） |
 
-**Pick**：从类型中挑选一组属性。
+它们都不是魔法，`Omit` 就是 `Pick` 加 `Exclude`：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/type-lab/07-type-ops.ts`（运行：`npm run check:errors`）
 
-```typescript
-type Person = { name: string; age: number; email: string }
-type NameAndAge = Pick<Person, 'name' | 'age'>
-// { name: string; age: number }
+```ts
+type MyExclude<T, U> = T extends U ? never : T
+type MyOmit<T, K extends keyof T> = Pick<T, MyExclude<keyof T, K>>
+type PublicUser = MyOmit<User, 'email'> // { id: number; name: string }
+
+declare const pub: PublicUser
+const pubId: number = pub.id
+//ERR pub.email // 编译错误：email 已被 Omit 掉
 ```
 
-**Omit**：从类型中忽略一组属性（与 Pick 相反）。
+## 八、类与类型
 
-> 示意片段（无配套脚本）
+现代前端项目里类用得越来越少，但两件事必须清楚：**一个类同时创建了"实例类型"和"构造函数值"**，以及 **TS 对类的检查只覆盖实例侧**。
 
-```typescript
-type WithoutEmail = Omit<Person, 'email'>
-// { name: string; age: number }
-```
+> 摘自 `./code/type-lab/08-classes.ts`（运行：`npm run check:errors`）
 
-**Partial**：将所有属性变为可选。
-
-> 示意片段（无配套脚本）
-
-```typescript
-type PartialPerson = Partial<Person>
-// { name?: string; age?: number; email?: string }
-```
-
-**Required**：将所有属性变为必选（与 Partial 相反）。
-
-**Readonly**：将所有属性变为只读。
-
-> 示意片段（无配套脚本）
-
-```typescript
-type ReadonlyPerson = Readonly<Person>
-```
-
-**Record**：以联合类型的 keys 构造新类型，每个 key 的值类型相同。
-
-> 示意片段（无配套脚本）
-
-```typescript
-type PageInfo = { title: string }
-type Page = 'home' | 'about' | 'contact'
-
-const nav: Record<Page, PageInfo> = {
-  home: { title: 'Home' },
-  about: { title: 'About' },
-  contact: { title: 'Contact' }
+```ts
+class Clock {
+    static brand = 'Seiko'
+    constructor(public hour: number) {} // 参数属性：声明 + 赋值一步完成
+    tick(): void {}
 }
+
+// ---- 一个类同时创建了两样东西：实例类型 + 构造函数值 ----
+type ClockInstance = Clock // 实例类型（写注解时用）
+type ClockCtor = typeof Clock // 构造函数类型（工厂 / DI 时用）
+
+const c: ClockInstance = new Clock(9)
+//ERR const wrong: ClockInstance = Clock // 编译错误：Clock 是构造函数，不是实例
+
+declare function factory(Ctor: new (hour: number) => ClockInstance): ClockInstance
+factory(Clock) // OK：结构对得上就行
 ```
 
-**ReturnType**：获取函数类型的返回值类型。
+`implements` 只校验实例侧，静态成员不在它的检查范围内；`abstract` 类不能实例化，但可以同时提供实现和契约。
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/type-lab/08-classes.ts`（运行：`npm run check:errors`）
 
-```typescript
-type Fn = (a: number) => string
-type R = ReturnType<Fn> // string
+```ts
+interface Ticker {
+    tick(): void
+}
+class MyTicker implements Ticker {
+    tick(): void {}
+}
+//ERR class BadTicker implements Ticker {} // 编译错误：缺少 tick
 ```
 
-其它常用内置类型还有 `Exclude<T, U>`、`Extract<T, U>`、`NonNullable<T>`、`Parameters<T>`、`InstanceType<T>` 等，它们共同构成了 TypeScript 高效的类型运算基础设施。
+一个容易忽略的事实：**`private` / `protected` 成员会让结构类型退化成"名义类型"**——两个形状完全相同、但 `private` 来自不同声明的类互不兼容。
+
+> 摘自 `./code/type-lab/08-classes.ts`（运行：`npm run check:errors`）
+
+```ts
+class A {
+    private tag = 'a'
+}
+class B {
+    private tag = 'a'
+}
+declare const b: B
+//ERR const aa: A = b // 编译错误：private 必须来自同一处声明，即使形状一样
+```
+
+```text
+08-classes.ts
+  TS2322  Type 'B' is not assignable to type 'A'.   Types have separate declarations of a private property 'tag'.
+        const aa: A = b // 编译错误：private 必须来自同一处声明，即使形状一样
+```
+
+## 九、常见编译错误速查
+
+报错信息分两层看：第一层是"这两个类型不兼容"，第二层才是具体原因——**看细节那一层**，第一层往往只是复述你的代码。
+
+> 摘自 `./code/type-lab/09-errors.ts`（运行：`npm run check:errors`）
+
+```ts
+// TS2339 属性不存在：多半是拼错，或这个值还没被收窄到有该属性的类型
+//ERR const e1 = obj.b
+
+// TS2322 赋值类型不匹配：等号右边的类型不在左边声明的范围内
+//ERR const e2: string = 1
+
+// TS2345 实参类型不匹配：对象字面量多写了字段（额外属性检查）也会报这个
+//ERR take({ a: 1, b: 2 })
+
+// TS2554 实参个数不对
+//ERR take()
+
+// TS2367 比较永远不成立：typeof 收窄后的类型与目标字面量没有交集
+//ERR const e5 = n === '1'
+
+// TS7053 用 string 索引一个没有索引签名的对象（隐式 any）
+const e6 = dict[key] // OK：Record<string, number> 有索引签名
+//ERR const e7 = loose[key] // 编译错误：{ a: number } 没有 string 索引签名
+
+// TS18046 / TS2571 unknown 未收窄就使用
+//ERR const e8 = u.toString()
+
+// 重载不匹配：TS 按顺序挑最贴近的签名报错（这里是 TS2345）；
+// 当候选多于一个且全部失败时，你会看到 TS2769 "No overload matches this call"
+declare function load(a: string): string
+declare function load(a: number, b: number): number
+//ERR load(true)
+
+// TS2322 的另一种常见形态：把联合类型直接当其中一支用
+declare const maybeStr: string | undefined
+//ERR const e10: number = maybeStr.length
+```
+
+| 错误码 | 典型原因 | 怎么修 |
+| --- | --- | --- |
+| TS2322 | 赋值/返回类型不匹配 | 看第二层细节，确认是右边太宽还是左边太窄 |
+| TS2339 | 属性不存在 | 拼错，或该值还没被收窄到有此属性的分支 |
+| TS2345 | 实参类型不匹配 | 含字面量额外属性检查、重载不匹配 |
+| TS2353 | 对象字面量多了字段 | 见第四节"额外属性检查" |
+| TS2554 | 实参个数不对 | |
+| TS2367 | 比较的两个类型没有交集 | 通常是 `typeof` 收窄写错了 |
+| TS7053 | 用 `string` 索引无索引签名的对象 | 给类型加索引签名，或把 key 收窄成字面量联合 |
+| TS18046 / TS2571 | `unknown` 未收窄 | 先 `typeof` / 谓词收窄再用 |
+| TS18048 | 可能为 `undefined` | 判空、可选链，或调整类型定义 |
+| TS2769 | 所有重载都不匹配 | 逐个签名比对参数 |
+
+**一条通用排查法**：把鼠标停在表达式上看推断结果是什么，如果推断结果和你以为的不一样，问题出在推断这步，而不是赋值那步。
 
 ## 小结
 
 - TypeScript 类型系统
-  - 安装与配置
-    - npm 安装与 `tsc` 编译
-    - `tsconfig.json` 关键选项
-    - `strict` / `strictNullChecks`
-    - `ts-node` / `tsx` 直接运行
-  - 基础类型
-    - 原始类型：`boolean` / `number` / `string`
-    - 数组与元组 `Tuple`
-    - 枚举 `enum`
-    - 特殊类型：`any` / `void` / `null` / `undefined` / `never` / `object`
-  - 类型断言
-    - 尖括号语法
-    - `as` 语法（JSX 中唯一形式）
-  - 变量声明
-    - `var` 的作用域与捕获缺陷
-    - `let` 块作用域与暂时性死区
-    - `const` 与最小特权原则
-    - 解构与展开
-  - 接口 `interface`
-    - 结构性子类型化（鸭式辨型）
-    - 可选属性 / 只读属性
-    - 额外属性检查与绕开方式
-    - 函数类型 / 可索引类型
-    - 类类型 `implements`
-    - 接口继承 / 混合类型 / 接口继承类
-  - 类 `class`
-    - 继承与 `super`
-    - 访问修饰符 `public` / `private` / `protected`
-    - `readonly` 与参数属性
-    - getter / setter 存取器
-    - 静态属性
-    - 抽象类
-    - 类作为类型
-  - 函数
-    - 函数类型与 `=>` 签名
-    - 按上下文推断
-    - 可选参数 / 默认参数 / 剩余参数
-    - `this` 与箭头函数 / `this` 参数
-    - 函数重载
+  - 类型系统的心智模型
+    - 类型即集合：可赋值 = 子集包含于超集
+    - 结构类型：只看成员形状，与名字、implements 无关
+    - 可赋值性：返回值协变、参数逆变（`strictFunctionTypes`）
+    - 类型只在编译期存在，运行时被擦除（`enum` 除外）
+  - 基础类型速览
+    - `any` 关闭检查、`unknown` 必须收窄、`never` 是空集
+    - 字面量会放宽，`as const` 锁住，`satisfies` 校验但不改变推断
+    - 元组定长；常量对象 + 字面量联合可替代 `enum`
+  - 收窄
+    - 判别式联合（`kind` 标签）+ `assertNever` 穷尽性守卫
+    - `typeof` / `in` / `instanceof` / `Array.isArray` / 真值判断
+    - 自定义谓词 `x is T` 是对编译器的承诺，不校验实现
+  - 对象类型
+    - `interface` 可声明合并；`type` 能表达联合、元组、映射与条件
+    - 可选 `?`、只读 `readonly`、索引签名及其代价
+    - 额外属性检查只作用于对象字面量
+    - 调用签名 / 构造签名 / 函数重载
   - 泛型
-    - 类型变量 `T`
-    - 泛型接口 / 泛型类
-    - 泛型约束 `extends`
-    - `keyof` 约束类型参数
+    - 保留"入参与返回值之间的关系"，优于 `any`
+    - `extends` 约束、`K extends keyof T`、`T[K]`
+    - 条件类型遇到裸类型参数会分发，`[T] extends [U]` 可阻止
+    - 接口泛型在声明时确定，函数泛型在调用时确定
   - 类型推断
-    - 最佳通用类型
-    - 上下文类型
-  - 高级类型
-    - 交叉类型 / 联合类型
-    - 类型守卫：`is` / `typeof` / `instanceof`
-    - 可空类型与非空断言 `!`
-    - 字符串字面量类型
-    - 映射类型与索引访问 / `keyof`
-    - 条件类型与 `infer`
-    - 内置工具类型
+    - 上下文推断让回调参数免标注
+    - 空数组、对外 API 返回值、推断失败处需要显式标注
+    - 字面量 widening 与 `as const`
+  - 类型运算
+    - `keyof T` 取键、`T[K]` 取值
+    - 映射类型与 `+/-` 修饰符、`as` 重映射、按类型过滤 key
+    - 条件类型与 `infer` 提取，可递归解 Promise
+    - 内置工具类型与手写实现
+  - 类与类型
+    - 类同时创建实例类型与构造函数值（`typeof Class`）
+    - `implements` 只检查实例侧
+    - `private` 让结构类型退化成名义类型
+  - 常见编译错误速查
+    - 先看报错的第二层细节
+    - 错误码到原因的对照表
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `frontend/进阶/TypeScript/code/site/`。
+本篇的可运行示例在仓库 `frontend/进阶/TypeScript/code/`。
 
 | 文件 | 演示什么 | 对应小节 |
 | --- | --- | --- |
-| `./code/site/structural.html` | 结构类型（鸭子类型）：对象只要"形状"满足接口即可，多出的字段不影响兼容，运行时仍是普通 JS 对象 | 接口 interface |
-| `./code/site/union-intersection.html` | 联合类型 `\ | 高级类型 |
-| `./code/site/generic-infer.html` | 泛型容器保持"存入类型 = 取出类型"，以及 `infer` 从函数签名提取返回类型（内置 ReturnType 的原理） | 泛型 |
+| `./code/type-lab/01-assignability.ts` | 类型即集合、结构类型、额外属性检查、参数逆变与返回值协变 | 一、类型系统的心智模型 |
+| `./code/type-lab/02-basic-types.ts` | `any` 与 `unknown`、字面量 widening 与 `as const`、`satisfies`、元组、枚举替代 | 二、基础类型速览 |
+| `./code/type-lab/03-narrowing.ts` | 判别式联合、`assertNever` 穷尽性守卫、内置收窄手段、自定义谓词 | 三、收窄 |
+| `./code/type-lab/04-object-types.ts` | `interface` 声明合并、可选与只读、索引签名、额外属性检查、调用/构造签名、重载 | 四、对象类型 |
+| `./code/type-lab/05-generics.ts` | 泛型推断、`extends` 约束、`keyof` 约束、条件类型分发、泛型的位置 | 五、泛型 |
+| `./code/type-lab/06-inference.ts` | 上下文推断、必须标注的三种场景、字面量推断、泛型入参推断 | 六、类型推断 |
+| `./code/type-lab/07-type-ops.ts` | `keyof` 与索引访问、映射类型与修饰符、key 重映射、`infer`、手写 `Omit` | 七、类型运算 |
+| `./code/type-lab/08-classes.ts` | 实例侧与静态侧、`implements`、`private` 的名义性、抽象类 | 八、类与类型 |
+| `./code/type-lab/09-errors.ts` | 常见编译错误速查表（错误行用 `//ERR` 封住） | 九、常见编译错误速查 |
+| `./code/type-lab/11-erase-demo.ts` | 被擦除的样本源码：带 interface、类型注解与 enum 的一段 TS | 一、类型系统的心智模型 |
+| `./code/type-lab/10-erase.cjs` | 编译 11-erase-demo.ts 并对比产物，展示类型信息去哪了 | 一、类型系统的心智模型 |
+| `./code/site/structural.html` | 浏览器里验证结构类型：多出的字段不影响兼容 | 一、类型系统的心智模型 |
+| `./code/site/union-intersection.html` | 联合与交叉类型交互演示 | 三、收窄 |
+| `./code/site/generic-infer.html` | 泛型容器保持"存入 = 取出"，`infer` 提取返回类型 | 五、泛型 · 七、类型运算 |
+| `./code/site/utility-practice.html` | 内置工具类型（`Pick`/`Omit`/`Partial`/`Record` 等）交互演示 | 七、类型运算 |
 
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5186/`。
+运行方式（均在 `code` 目录）：
+
+- `npm run check`：检查全部示例，当前状态应当 0 错误
+- `npm run check:errors`：解封所有 `//ERR` 演示行，打印真实报错
+- `npm run erase`：展示类型擦除后的编译产物
+- `npm start`：启动 `http://localhost:5186/`，查看浏览器 demo
 
 ## 参考
 
