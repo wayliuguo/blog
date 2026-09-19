@@ -249,6 +249,10 @@ export default [
                     { text: 'Vue3 原理', link: '/frontend/进阶/前端框架原理/Vue3%20原理' },
                     { text: '手写 mini-react', link: '/frontend/进阶/前端框架原理/手写%20mini-react' },
                     { text: '手写 mini-vue', link: '/frontend/进阶/前端框架原理/手写%20mini-vue' },
+                    {
+                        text: '状态管理原理与实现',
+                        link: '/frontend/进阶/前端框架原理/状态管理原理与实现'
+                    },
                     { text: '模块总结（前端框架原理）', link: '/frontend/进阶/前端框架原理/总结' },
                     { text: '模块面试题（前端框架原理）', link: '/frontend/进阶/前端框架原理/面试题' }
                 ]
@@ -321,10 +325,13 @@ export default [
                     { text: 'SSR 与同构实现', link: '/frontend/进阶/渲染架构/SSR%20与同构实现' },
                     { text: '新兴渲染范式', link: '/frontend/进阶/渲染架构/新兴渲染范式' },
                     { text: '模块总结（渲染架构）', link: '/frontend/进阶/渲染架构/总结' },
-                    { text: '模块面试题（渲染架构）', link: '/frontend/进阶/渲染架构/面试题' },
-                    { text: '面试方法论', link: '/frontend/进阶/面试方法论' }
+                    { text: '模块面试题（渲染架构）', link: '/frontend/进阶/渲染架构/面试题' }
                 ]
             }
         ]
+    },
+    {
+        text: '面试方法论',
+        link: '/frontend/进阶/面试方法论'
     }
 ]
