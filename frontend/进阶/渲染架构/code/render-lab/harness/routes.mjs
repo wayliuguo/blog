@@ -7,7 +7,7 @@
  * POST /report                页面把采集到的指标回传
  * GET /src/*  /pages/*        静态资源；jslag 只压在 /src/ 上，代表框架运行时的下载开销
  *
- * 手动浏览服务（server.js，端口 5189）与测量服务（harness/server.mjs，端口 0）共用这一份，
+ * 手动浏览服务（server.js，端口 5191）与测量服务（harness/server.mjs，端口 0）共用这一份，
  * 于是「人肉打开的页面」和「无头浏览器测的页面」不可能跑偏。
  */
 import fs from 'node:fs'

@@ -23,7 +23,7 @@ npm run all         # 一次跑完（任一场景失败则以非 0 退出）
 手动浏览：
 
 ```bash
-npm start           # http://localhost:5189/（端口被占自动 +1）
+npm start           # http://localhost:5191/（端口被占自动 +1）
 # /?mode=csr|ssr|ssg|isr|stream|island|hydrate&variant=clean|price|tag|rerender
 # 加 &jslag=300 模拟「框架运行时在慢网下下载 + 解析」的开销
 ```
@@ -37,7 +37,7 @@ npm start           # http://localhost:5189/（端口被占自动 +1）
 | `npm run stream` | `scenarios/stream.mjs` | 每段内容的到达时刻；与非流式 SSR 的首字节对照；乱序补位顺序；浏览器侧 FCP 与入口执行时刻 | SSR 与同构实现 |
 | `npm run hydrate` | `scenarios/hydrate.mjs` | 四个变体的复用/新建/丢弃/改写/失配账，叠加 MutationObserver 数到的真实 DOM 突变 | SSR 与同构实现 |
 | `npm run island` | `scenarios/island.mjs` | 全量 hydration 与岛激活的 JS 文件数、字节数、复用节点数、按钮是否点得动；逐个模块列出岛化后不再下载的那些 | 新兴渲染范式 |
-| `npm start` | `server.js` | 手动浏览七种 mode，端口 5189 | 全模块 |
+| `npm start` | `server.js` | 手动浏览七种 mode，端口 5191 | 全模块 |
 
 ## 目录结构
 
@@ -56,7 +56,7 @@ npm start           # http://localhost:5189/（端口被占自动 +1）
 | `harness/server.mjs` | 测量用服务（端口 0）+ 等页面上报 |
 | `harness/probe.mjs` | Node 侧时间测量：原生 `http` 客户端，能分辨「响应头 / 首段内容 / 完成」三个时刻 |
 | `harness/chrome.mjs` | 启动本机无头 Chrome（零依赖，不用 puppeteer） |
-| `server.js` | 手动浏览服务，端口 5189，占用自动 +1 |
+| `server.js` | 手动浏览服务，端口 5191，占用自动 +1 |
 
 ## 页面与 mode
 

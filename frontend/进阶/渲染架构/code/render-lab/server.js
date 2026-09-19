@@ -1,7 +1,7 @@
 /**
  * 渲染架构 · 模块配套服务（手动浏览用）
  * 启动：npm start
- * 访问：http://localhost:5189/            —— 六种交付方式的同一页面
+ * 访问：http://localhost:5191/            —— 七种交付方式的同一页面
  *       ?mode=csr / ssr / ssg / isr / stream / island / hydrate&variant=clean|price|tag|rerender
  *       &jslag=300                         —— 模拟「框架运行时在慢网下下载 + 解析」的开销
  * 端口被占用会自动 +1 重试（最多 20 个），实际端口以启动日志为准
@@ -9,7 +9,7 @@
 import http from 'node:http'
 import { createHandler } from './harness/routes.mjs'
 
-const PORT = Number(process.env.PORT || 5189)
+const PORT = Number(process.env.PORT || 5191)
 const MODES = [
     ['csr', '客户端渲染：HTML 是空壳，内容全靠 JS'],
     ['ssr', '服务端渲染：每次请求都渲染一遍，等齐慢数据再发'],
