@@ -351,6 +351,16 @@ export default [
                     { text: '模块总结（微前端体系）', link: '/frontend/进阶/微前端体系/总结' },
                     { text: '模块面试题（微前端体系）', link: '/frontend/进阶/微前端体系/面试题' }
                 ]
+            },
+            {
+                text: '可视化与图形',
+                collapsed: true,
+                items: [
+                    { text: 'Canvas 2D 基础与性能', link: '/frontend/进阶/可视化与图形/Canvas%202D%20基础与性能' },
+                    { text: '图表引擎原理', link: '/frontend/进阶/可视化与图形/图表引擎原理' },
+                    { text: '模块总结（可视化与图形）', link: '/frontend/进阶/可视化与图形/总结' },
+                    { text: '模块面试题（可视化与图形）', link: '/frontend/进阶/可视化与图形/面试题' }
+                ]
             }
         ]
     },
