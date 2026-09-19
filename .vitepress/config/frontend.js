@@ -381,7 +381,11 @@ export default [
             {
                 text: '跨端与桌面深化',
                 collapsed: true,
-                items: [{ text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' }]
+                items: [
+                    { text: '跨端框架原理', link: '/frontend/进阶/跨端与桌面深化/跨端框架原理' },
+                    { text: 'Hybrid 与 WebView 深度优化', link: '/frontend/进阶/跨端与桌面深化/Hybrid%20与%20WebView%20深度优化' },
+                    { text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' }
+                ]
             },
             {
                 text: 'AI 前端工程',
