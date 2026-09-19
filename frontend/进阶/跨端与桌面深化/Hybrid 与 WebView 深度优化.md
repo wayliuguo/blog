@@ -183,10 +183,13 @@ assert.equal(r.offline, false, '签名校验失败回退在线')
 | `./code/cross-lab/webview.cjs` | 预热池成本模型 + 离线包命中/兜底/签名拦截 | 二、三 |
 | `./code/cross-lab/jsi.cjs` | Bridge 与 JSI 通信模型（跨端框架篇引用） | — |
 | `./code/cross-lab/twin.cjs` | 双线程 setData 模拟（跨端框架篇引用） | — |
-| `./code/cross-lab/run.cjs` | 总入口：依次执行三探针 | 全篇 |
+| `./code/cross-lab/bridge.cjs` | 桥协议 / 回调表 / 批量 / 白名单（JSBridge 篇引用） | — |
+| `./code/cross-lab/electron.cjs` | IPC / contextBridge / 更新状态机（Electron 篇引用） | — |
+| `./code/cross-lab/run.cjs` | 总入口：依次执行五探针 | 全篇 |
 
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
 - 上一篇：[跨端框架原理](./跨端框架原理.md)
+- 下一篇：[JSBridge 设计与演进](./JSBridge%20设计与演进.md)
 - 参考：[Android `shouldInterceptRequest` 文档](https://developer.android.com/reference/android/webkit/WebViewClient#shouldInterceptRequest(android.webkit.WebView,%20android.webkit.WebResourceRequest)) · [WKURLSchemeHandler](https://developer.apple.com/documentation/webkit/wkurlschemehandler) · [美团 Hybrid 容器建设实践](https://tech.meituan.com/2016/03/14/hybrid-solution.html)

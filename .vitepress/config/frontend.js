@@ -38,6 +38,7 @@ export default [
                     },
                     { text: '现代 CSS', link: '/frontend/基础/CSS/现代%20CSS' },
                     { text: '综合实战', link: '/frontend/基础/CSS/综合实战' },
+                    { text: '模块总结-核心（CSS）', link: '/frontend/基础/CSS/模块总结-核心（CSS）' },
                     { text: '模块总结（CSS）', link: '/frontend/基础/CSS/总结' },
                     { text: '模块面试题（CSS）', link: '/frontend/基础/CSS/面试题' }
                 ]
@@ -65,6 +66,7 @@ export default [
                         text: '手写实现与源码',
                         link: '/frontend/基础/JavaScript%20核心/手写实现与源码'
                     },
+                    { text: '模块总结-核心（JavaScript 核心）', link: '/frontend/基础/JavaScript%20核心/模块总结-核心（JavaScript%20核心）' },
                     { text: '模块总结（JavaScript 核心）', link: '/frontend/基础/JavaScript%20核心/总结' },
                     { text: '模块面试题（JavaScript 核心）', link: '/frontend/基础/JavaScript%20核心/面试题' }
                 ]
@@ -83,6 +85,7 @@ export default [
                         link: '/frontend/基础/网络与浏览器/浏览器存储与本地缓存'
                     },
                     { text: '前端安全', link: '/frontend/基础/网络与浏览器/前端安全' },
+                    { text: '模块总结-核心（网络与浏览器）', link: '/frontend/基础/网络与浏览器/模块总结-核心（网络与浏览器）' },
                     { text: '模块总结（网络与浏览器）', link: '/frontend/基础/网络与浏览器/总结' },
                     { text: '模块面试题（网络与浏览器）', link: '/frontend/基础/网络与浏览器/面试题' }
                 ]
@@ -109,6 +112,7 @@ export default [
                         text: 'React 使用 CSS',
                         link: '/frontend/基础/前端框架-React/React%20使用%20CSS'
                     },
+                    { text: '模块总结-核心（React）', link: '/frontend/基础/前端框架-React/模块总结-核心（前端框架-React）' },
                     { text: '模块总结（React）', link: '/frontend/基础/前端框架-React/总结' },
                     { text: '模块面试题（React）', link: '/frontend/基础/前端框架-React/面试题' }
                 ]
@@ -126,6 +130,7 @@ export default [
                         text: 'Vue 路由与状态',
                         link: '/frontend/基础/前端框架-Vue/Vue%20路由与状态'
                     },
+                    { text: '模块总结-核心（Vue）', link: '/frontend/基础/前端框架-Vue/模块总结-核心（前端框架-Vue）' },
                     { text: '模块总结（Vue）', link: '/frontend/基础/前端框架-Vue/总结' },
                     { text: '模块面试题（Vue）', link: '/frontend/基础/前端框架-Vue/面试题' }
                 ]
@@ -154,6 +159,7 @@ export default [
                         text: '原生与跨端框架差异',
                         link: '/frontend/基础/小程序/原生与跨端框架差异'
                     },
+                    { text: '模块总结-核心（小程序）', link: '/frontend/基础/小程序/模块总结-核心（小程序）' },
                     { text: '模块总结（小程序）', link: '/frontend/基础/小程序/总结' },
                     { text: '模块面试题（小程序）', link: '/frontend/基础/小程序/面试题' }
                 ]
@@ -163,6 +169,7 @@ export default [
                 collapsed: false,
                 items: [
                     { text: 'Git 与协作', link: '/frontend/基础/工程协作/工程协作' },
+                    { text: '模块总结-核心（工程协作）', link: '/frontend/基础/工程协作/模块总结-核心（工程协作）' },
                     { text: '模块总结（工程协作）', link: '/frontend/基础/工程协作/总结' },
                     { text: '模块面试题（工程协作）', link: '/frontend/基础/工程协作/面试题' }
                 ]
@@ -384,7 +391,10 @@ export default [
                 items: [
                     { text: '跨端框架原理', link: '/frontend/进阶/跨端与桌面深化/跨端框架原理' },
                     { text: 'Hybrid 与 WebView 深度优化', link: '/frontend/进阶/跨端与桌面深化/Hybrid%20与%20WebView%20深度优化' },
-                    { text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' }
+                    { text: 'JSBridge 设计与演进', link: '/frontend/进阶/跨端与桌面深化/JSBridge%20设计与演进' },
+                    { text: 'Electron 与桌面端', link: '/frontend/进阶/跨端与桌面深化/Electron%20与桌面端' },
+                    { text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' },
+                    { text: '模块面试题（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/面试题' }
                 ]
             },
             {
