@@ -8,7 +8,7 @@ Vue3 采用**模块化 + 分层**设计，核心包按职责可以划分为三�
 
 > 示意片段（无配套脚本）
 
-```text
+```
 Vue3 包结构
 ├── 编译模块（把源码/模板编译成 render 函数）
 │   ├── @vue/compiler-core  编译核心（平台无关）
@@ -27,7 +27,7 @@ Vue3 包结构
 
 > 示意片段（无配套脚本）
 
-```text
+```
 源码(.vue / render 函数)  --编译-->  render 函数（返回 VNode）
                                           │
                                   运行时(runtime)
@@ -155,7 +155,7 @@ Vue 在编译期会给节点打上 `PatchFlags`（补丁标记），运行时据
 
 > 示意片段（无配套脚本）
 
-```text
+```
 节点类型划分：
 <div>            <!-- 静态：无需更新 -->
 <p>{{ count }}</p> <!-- 动态：含插值，标记需要 patch -->
@@ -183,7 +183,7 @@ _createElementVNode("p", null, toDisplayString(count), 1);
 
 > 示意片段（无配套脚本）
 
-```text
+```
 targetMap (WeakMap)
 │
 ├── 响应式对象1 (target)
@@ -1068,7 +1068,7 @@ export function inject(key) {
 
 > 示意片段（无配套脚本）
 
-```text
+```
 reactivity/
 ├── reactive.ts     reactive / isReactive / toRaw / readonly / shallowReadonly
 ├── baseHandlers.ts createGetter / createSetter 拦截器
@@ -1089,7 +1089,7 @@ reactivity/
 
 > 示意片段（无配套脚本）
 
-```text
+```
 runtime-core/
 ├── vnode.ts         createVNode / shapeFlag
 ├── h.ts             h 封装

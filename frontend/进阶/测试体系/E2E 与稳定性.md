@@ -47,7 +47,7 @@ Playwright 的断言是 "web-first" 的：`expect(locator).toBeVisible()` 会**�
 
 所以：
 
-```text
+```
 // 反例：睡一秒再看 —— 慢机器上不够，快机器上白等
 await page.waitForTimeout(1000)
 expect(await page.getByText('欢迎回来').isVisible()).toBe(true)
@@ -155,7 +155,7 @@ describe('flaky 来源二：用例之间共享了可变状态', () => {
 
 把顺序打乱就能看到它时红时绿。同一条命令跑两次：
 
-```text
+```
 > vitest run src/flaky --sequence.shuffle
       Running tests with seed "1789777062007"
 
@@ -165,7 +165,7 @@ describe('flaky 来源二：用例之间共享了可变状态', () => {
       Tests  4 passed | 3 expected fail (7)
 ```
 
-```text
+```
 > vitest run src/flaky --sequence.shuffle
       Running tests with seed "1789777066673"
 
@@ -243,7 +243,7 @@ it('同一对时间戳，时区不同结论就不同', () => {
 
 本机实测输出：
 
-```text
+```
 本机时区偏移 8 小时，isSameDay 结果 = false
 ```
 
@@ -260,7 +260,7 @@ it('同一对时间戳，时区不同结论就不同', () => {
 
 跑一遍这一组（默认顺序，全部符合预期）：
 
-```text
+```
 > test-lab@1.0.0 test:flaky
 > vitest run src/flaky
 
