@@ -4,7 +4,7 @@
 **版式与内容规约以仓库根 `文档组织规范.md` 为准**（板块/模块/code 结构、测量型模块实验台、单篇体例、代码片段与配套代码表、小结知识树、元页面模板、校验流程）。本文件只记它没写、又必须知道的操作事实。
 
 ## 结构
-VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ node/`，配置 `.vitepress/config/*.js`，产物恒 `.vitepress/dist`。`node/` 11 模块、`frontend/基础/` 8 模块（含「工程协作」）、`frontend/进阶/` 13 模块（含「微前端体系」「可视化与图形」（5 篇全落地），模块清单与顺序以侧边栏配置为准），另散篇 `面试方法论.md` 与**改造方案文档 `frontend/2026-09-18-frontend进阶体系化改造方案.md`**（从 .workbuddy/plans 迁入，任务清单已标注完成状态）——都是**板块级独立入口**，不挂任何模块分组；frontend 全板块 151 篇含元页面（微前端体系、可视化与图形 5 篇全落地）。**目录与文件名不带编号**，NN- 只用于 总结.md 分篇标题与「见第 X 篇」阅读序标签，侧边栏是唯一顺序来源。
+VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ node/`，配置 `.vitepress/config/*.js`，产物恒 `.vitepress/dist`。`node/` 11 模块、`frontend/基础/` 8 模块（含「工程协作」）、`frontend/进阶/` 19 模块（模块清单与顺序以侧边栏配置为准）：已落地 13 个（含微前端体系、可视化与图形、浏览器底层与 V8 各 5/4 篇）+ 6 个占位模块（跨端与桌面深化 / AI 前端工程 / 低代码与搭建体系 / 复杂交互与编辑器 / 研发平台与效能工程 / 工程素养，各只有总结占位页）。另散篇 `面试方法论.md` 为**板块级独立入口**；frontend 全板块 163 篇含元页面。**目录与文件名不带编号**，NN- 只用于 总结.md 分篇标题与「见第 X 篇」阅读序标签，侧边栏是唯一顺序来源。
 
 ## 必须知道的坑
 - **围栏**：禁 ```text（shiki 逐条告警），ASCII 图与实测输出一律用裸围栏。
@@ -16,7 +16,7 @@ VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ 
 
 ## 配套代码与端口
 `frontend/<板块>/<模块>/code/`、`node/<模块>/code/<项目名>/`，靠 `srcExclude` 的 `'**/code/**'` 排除。以零依赖为主，唯一需 npm install 的是 `构建体系/code/build-lab`（唯一 `.gitignore`）。服务统一 `listen(port,tries)` 遇 `EADDRINUSE` 自动 +1。
-**端口**：5174 HTML ·5175 CSS ·5176 JS ·5177 网络(+api 5178)·5179 工程化 ·5180 React·5181 Vue·5182 框架原理 ·5183 交付 ·5184 工程实践 ·5185 小程序 ·5186 TS·5187 性能 ·**5188+5189 都是 monitor-lab 的 `enterprise-server.js`**·5190 网络与协议进阶 ·**5191 渲染架构(render-lab)**。纯 CLI 探针不占端口：`esm-probe`、`mini-react`/`mini-vue`/**`mini-store`**/**`type-gym`**/**`runtime-lab`**/**`sandbox-lab`**/**`mf-demo`**/**`mini-micro`**/**`viz-lab`**/**`screen-lab`**，以及 net-lab 4 个、eng-lab 5 个、render-lab 5 个场景（临时服务器用端口 0）。`eng-lab` 另有 `fixtures/`：故意写坏的示例业务目录（19 文件 / 33 条 import / 5 条违规），与实验台分离、随源码入库。
+**端口**：5174 HTML ·5175 CSS ·5176 JS ·5177 网络(+api 5178)·5179 工程化 ·5180 React·5181 Vue·5182 框架原理 ·5183 交付 ·5184 工程实践 ·5185 小程序 ·5186 TS·5187 性能 ·**5188+5189 都是 monitor-lab 的 `enterprise-server.js`**·5190 网络与协议进阶 ·**5191 渲染架构(render-lab)**。纯 CLI 探针不占端口：`esm-probe`、`mini-react`/`mini-vue`/**`mini-store`**/**`type-gym`**/**`runtime-lab`**/**`sandbox-lab`**/**`mf-demo`**/**`mini-micro`**/**`viz-lab`**/**`screen-lab`**/**`v8-lab`**，以及 net-lab 4 个、eng-lab 5 个、render-lab 5 个场景（临时服务器用端口 0）。`eng-lab` 另有 `fixtures/`：故意写坏的示例业务目录（19 文件 / 33 条 import / 5 条违规），与实验台分离、随源码入库。
 
 ## TypeScript 模块（进阶，4 篇，已全部落地）
 类型系统 / 工程实践 / **类型体操**（配 `code/type-gym/` 50 题练习）/ **类型与运行时**（配 `code/runtime-lab/` 7 个可运行 demo：擦除后果 / 手写校验器 / 守卫与断言 / 品牌类型 / JSON 序列化 / 端到端契约 / 类型发布 .d.ts）。判题套路：`Equal<A,B>` 结构等价 + `Expect<T extends true>`；答案版 0 错误、练习版 `TODO=never` 报 61 错。`Merge` 类"合并两对象"用映射类型而非交叉类型（`Equal` 会误判交叉）。类型体操正文代码块必须连续成段（定义归 A–F 连续、断言 `_tN` 全挪末尾），否则 check-code-sync 报对不上。`runtime-lab` 用 `Module._compile` 转译执行 `.ts`，依赖 `emitDts` 运行时生成 `.d.ts`；`_tsc.cjs` 这类 helper 必须带 `.cjs` 扩展名（Node 扩展名补全不试 `.cjs`）。
