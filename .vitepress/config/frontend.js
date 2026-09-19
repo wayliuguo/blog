@@ -427,7 +427,10 @@ export default [
                 items: [
                     { text: '富文本与编辑器架构', link: '/frontend/进阶/复杂交互与编辑器/富文本与编辑器架构' },
                     { text: '协同编辑', link: '/frontend/进阶/复杂交互与编辑器/协同编辑' },
-                    { text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' }
+                    { text: '复杂表单引擎', link: '/frontend/进阶/复杂交互与编辑器/复杂表单引擎' },
+                    { text: '状态机与流程编排', link: '/frontend/进阶/复杂交互与编辑器/状态机与流程编排' },
+                    { text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' },
+                    { text: '面试题（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/面试题' }
                 ]
             },
             {

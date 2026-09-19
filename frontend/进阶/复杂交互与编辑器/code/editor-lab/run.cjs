@@ -3,7 +3,7 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 
-const cases = ['model.cjs', 'crdt.cjs'];
+const cases = ['model.cjs', 'crdt.cjs', 'form.cjs', 'flow.cjs'];
 let failed = 0;
 
 for (const c of cases) {
