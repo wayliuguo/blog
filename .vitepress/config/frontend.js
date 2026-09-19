@@ -16,6 +16,7 @@ export default [
                         link: '/frontend/基础/HTML%20基础/表单与标签'
                     },
                     { text: '无障碍与可访问性', link: '/frontend/基础/HTML%20基础/无障碍与可访问性' },
+                    { text: '模块总结-核心（HTML 基础）', link: '/frontend/基础/HTML%20基础/模块总结-核心（HTML%20基础）' },
                     { text: '模块总结（HTML 基础）', link: '/frontend/基础/HTML%20基础/总结' },
                     { text: '模块面试题（HTML 基础）', link: '/frontend/基础/HTML%20基础/面试题' }
                 ]
@@ -364,6 +365,48 @@ export default [
                     { text: '模块总结（可视化与图形）', link: '/frontend/进阶/可视化与图形/总结' },
                     { text: '模块面试题（可视化与图形）', link: '/frontend/进阶/可视化与图形/面试题' }
                 ]
+            },
+            {
+                text: '浏览器底层与 V8',
+                collapsed: true,
+                items: [
+                    { text: 'Chrome 多进程与渲染管线', link: '/frontend/进阶/浏览器底层与%20V8/Chrome%20多进程与渲染管线' },
+                    { text: 'V8 执行与优化', link: '/frontend/进阶/浏览器底层与%20V8/V8%20执行与优化' },
+                    { text: '内存模型与 GC', link: '/frontend/进阶/浏览器底层与%20V8/内存模型与%20GC' },
+                    { text: 'WebAssembly', link: '/frontend/进阶/浏览器底层与%20V8/WebAssembly' },
+                    { text: '模块总结（浏览器底层与 V8）', link: '/frontend/进阶/浏览器底层与%20V8/总结' },
+                    { text: '模块面试题（浏览器底层与 V8）', link: '/frontend/进阶/浏览器底层与%20V8/面试题' }
+                ]
+            },
+            {
+                text: '跨端与桌面深化',
+                collapsed: true,
+                items: [{ text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' }]
+            },
+            {
+                text: 'AI 前端工程',
+                collapsed: true,
+                items: [{ text: '模块总结（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/总结' }]
+            },
+            {
+                text: '低代码与搭建体系',
+                collapsed: true,
+                items: [{ text: '模块总结（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/总结' }]
+            },
+            {
+                text: '复杂交互与编辑器',
+                collapsed: true,
+                items: [{ text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' }]
+            },
+            {
+                text: '研发平台与效能工程',
+                collapsed: true,
+                items: [{ text: '模块总结（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/总结' }]
+            },
+            {
+                text: '工程素养',
+                collapsed: true,
+                items: [{ text: '模块总结（工程素养）', link: '/frontend/进阶/工程素养/总结' }]
             }
         ]
     },
