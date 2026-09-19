@@ -189,6 +189,7 @@ export default [
                     { text: '模块化与包管理', link: '/frontend/进阶/前端工程化/模块化与包管理' },
                     { text: '脚手架的诞生', link: '/frontend/进阶/前端工程化/脚手架的诞生' },
                     { text: 'Monorepo 工程化', link: '/frontend/进阶/前端工程化/Monorepo工程化' },
+                    { text: '基建实战总串联', link: '/frontend/进阶/前端工程化/基建实战总串联' },
                     { text: '模块总结（前端工程化）', link: '/frontend/进阶/前端工程化/总结' },
                     { text: '模块面试题（前端工程化）', link: '/frontend/进阶/前端工程化/面试题' }
                 ]
