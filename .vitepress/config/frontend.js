@@ -436,7 +436,13 @@ export default [
             {
                 text: '研发平台与效能工程',
                 collapsed: true,
-                items: [{ text: '模块总结（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/总结' }]
+                items: [
+                    { text: '构建平台与产物治理', link: '/frontend/进阶/研发平台与效能工程/构建平台与产物治理' },
+                    { text: '实验与增长平台', link: '/frontend/进阶/研发平台与效能工程/实验与增长平台' },
+                    { text: '研发效能度量', link: '/frontend/进阶/研发平台与效能工程/研发效能度量' },
+                    { text: '模块总结（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/总结' },
+                    { text: '面试题（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/面试题' }
+                ]
             },
             {
                 text: '工程素养',
