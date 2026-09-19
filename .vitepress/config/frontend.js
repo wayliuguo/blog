@@ -338,6 +338,16 @@ export default [
                     { text: '模块总结（渲染架构）', link: '/frontend/进阶/渲染架构/总结' },
                     { text: '模块面试题（渲染架构）', link: '/frontend/进阶/渲染架构/面试题' }
                 ]
+            },
+            {
+                text: '微前端体系',
+                collapsed: false,
+                items: [
+                    { text: '微前端方案全景与选型', link: '/frontend/进阶/微前端体系/微前端方案全景与选型' },
+                    { text: '沙箱与隔离机制', link: '/frontend/进阶/微前端体系/沙箱与隔离机制' },
+                    { text: '模块总结（微前端体系）', link: '/frontend/进阶/微前端体系/总结' },
+                    { text: '模块面试题（微前端体系）', link: '/frontend/进阶/微前端体系/面试题' }
+                ]
             }
         ]
     },
