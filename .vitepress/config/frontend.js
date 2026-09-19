@@ -345,6 +345,8 @@ export default [
                 items: [
                     { text: '微前端方案全景与选型', link: '/frontend/进阶/微前端体系/微前端方案全景与选型' },
                     { text: '沙箱与隔离机制', link: '/frontend/进阶/微前端体系/沙箱与隔离机制' },
+                    { text: '应用通信与状态共享', link: '/frontend/进阶/微前端体系/应用通信与状态共享' },
+                    { text: '资源加载与依赖共享', link: '/frontend/进阶/微前端体系/资源加载与依赖共享' },
                     { text: '模块总结（微前端体系）', link: '/frontend/进阶/微前端体系/总结' },
                     { text: '模块面试题（微前端体系）', link: '/frontend/进阶/微前端体系/面试题' }
                 ]
@@ -354,5 +356,9 @@ export default [
     {
         text: '面试方法论',
         link: '/frontend/进阶/面试方法论'
+    },
+    {
+        text: '进阶改造方案（进度）',
+        link: '/frontend/2026-09-18-frontend进阶体系化改造方案'
     }
 ]
