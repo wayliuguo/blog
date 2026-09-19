@@ -1,0 +1,13 @@
+{
+    "name": "mini-store",
+    "version": "1.0.0",
+    "private": true,
+    "description": "手写 mini 状态库：reducer（不可变）/ setState（选择器订阅切片）/ signal（依赖追踪）三条路线，零依赖可运行 + 单测",
+    "scripts": {
+        "step:reducer": "node steps/01-reducer.js",
+        "step:selector": "node steps/02-selector.js",
+        "step:signal": "node steps/03-signal.js",
+        "step:compare": "node steps/04-compare.js",
+        "test": "node --test test/*.test.js"
+    }
+}
