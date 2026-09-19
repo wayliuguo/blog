@@ -1,0 +1,15 @@
+{
+  "name": "net-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "网络与协议进阶模块配套实验台：零依赖，实测 HTTP/2 多路复用、缓存决策、重试与弱网、安全头与 SRI",
+  "scripts": {
+    "start": "node server.js",
+    "list": "node cli.mjs list",
+    "http2": "node cli.mjs http2",
+    "cache": "node cli.mjs cache",
+    "retry": "node cli.mjs retry",
+    "security": "node cli.mjs security",
+    "all": "node cli.mjs all"
+  }
+}

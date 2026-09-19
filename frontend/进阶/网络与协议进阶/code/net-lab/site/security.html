@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>CSP 与 SRI 现场演示</title>
+        <style>
+            body {
+                margin: 0 auto;
+                max-width: 860px;
+                padding: 32px 20px 64px;
+                font:
+                    15px/1.75 system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    'PingFang SC',
+                    'Microsoft YaHei',
+                    sans-serif;
+                color: #1f2328;
+            }
+            h1 {
+                font-size: 22px;
+            }
+            h2 {
+                font-size: 16px;
+                margin-top: 28px;
+                padding-bottom: 6px;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            pre {
+                background: #f8fafc;
+                border: 1px solid #e5e7eb;
+                padding: 12px 14px;
+                border-radius: 8px;
+                overflow: auto;
+                font-size: 13px;
+            }
+            .note {
+                background: #f8fafc;
+                border-left: 3px solid #94a3b8;
+                padding: 10px 14px;
+                color: #475569;
+                font-size: 14px;
+            }
+            .ok {
+                color: #15803d;
+            }
+            .bad {
+                color: #b91c1c;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>CSP 与 SRI 现场演示</h1>
+        <p class="note">
+            这个页面的响应头由 <code>lib/endpoints.cjs</code> 发出，每次请求都会生成一个新的 nonce。
+            打开 DevTools 的 Console 与 Network → Response Headers，就能看到下面每一行的实际效果。
+        </p>
+
+        <h2>1. CSP：哪些脚本能跑</h2>
+        <p id="with-nonce">（带 nonce 的内联脚本应该改写这一行）</p>
+        <p id="without-nonce">（没有 nonce 的内联脚本：这行文字不会被改写，Console 里会有 CSP 违规报错）</p>
+        <p id="handler">内联事件处理器 onmousedown：<button onmousedown="document.getElementById('handler').classList.add('bad')">点我（应无反应）</button></p>
+
+        <h2>2. SRI：这个脚本的内容有没有被人动过</h2>
+        <p>
+            下面这行 <code>&lt;script&gt;</code> 带 <code>integrity</code>，哈希由服务端在发送时按 <code>vendor.js</code>
+            的真实内容算出并注入：
+        </p>
+        <pre id="integrity">（脚本会把自己的 integrity 属性打在这里）</pre>
+        <p id="vendor-status">vendor 包是否加载成功：等待…</p>
+
+        <h2>3. 自己动手验证</h2>
+        <pre><code>cd frontend/进阶/网络与协议进阶/code/net-lab
+# 算出 vendor.js 的哈希，改一个字节再看一次
+node -e "const c=require('crypto'),f=require('fs');const b=f.readFileSync('site/vendor.js');console.log('sha384-'+c.createHash('sha384').update(b).digest('base64'))"
+
+npm run security   # SRI 篡改检测 + CSP 判定 + 安全响应头体检</code></pre>
+
+        <!-- 带 nonce：允许执行 -->
+        <script nonce="__NONCE__">
+            document.getElementById('with-nonce').innerHTML =
+                '<span class="ok">✓ 已执行</span>：这段内联脚本带了匹配的 nonce，CSP 放行'
+        </script>
+
+        <!-- 没有 nonce：会被拦截，Console 里报 Refused to execute inline script -->
+        <script>
+            document.getElementById('without-nonce').innerHTML =
+                '<span class="bad">✗ 已执行</span>：如果你看到这行，说明 CSP 没生效'
+        </script>
+
+        <!-- SRI 保护：integrity 由服务端按真实内容注入 -->
+        <script src="./vendor.js" integrity="__INTEGRITY__" crossorigin="anonymous"></script>
+        <script nonce="__NONCE__">
+            const tag = document.querySelector('script[integrity]')
+            document.getElementById('integrity').textContent = tag ? tag.getAttribute('integrity') : '（没找到带 integrity 的脚本）'
+            document.getElementById('vendor-status').innerHTML = window.vendor
+                ? `<span class="ok">✓ 加载成功</span>：vendor@${window.vendor.version}，572 B 会被格式化成 ${window.vendor.formatBytes(572)}`
+                : '<span class="bad">✗ 未加载</span>：SRI 校验没通过，浏览器整块丢弃了它'
+        </script>
+    </body>
+</html>

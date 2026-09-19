@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>缓存决策：三份资源，三种第二次请求</title>
+        <style>
+            body {
+                margin: 0 auto;
+                max-width: 860px;
+                padding: 32px 20px 64px;
+                font:
+                    15px/1.75 system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    'PingFang SC',
+                    'Microsoft YaHei',
+                    sans-serif;
+                color: #1f2328;
+            }
+            h1 {
+                font-size: 22px;
+            }
+            button {
+                font: inherit;
+                padding: 6px 14px;
+                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                background: #f8fafc;
+                cursor: pointer;
+            }
+            pre {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 12px 14px;
+                border-radius: 8px;
+                overflow: auto;
+                font-size: 13px;
+            }
+            .note {
+                background: #f8fafc;
+                border-left: 3px solid #94a3b8;
+                padding: 10px 14px;
+                color: #475569;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>缓存决策：三份资源，三种第二次请求</h1>
+        <p class="note">
+            点下面的按钮会对同一批端点连发两次请求（第二次带上 <code>If-None-Match</code>），把状态码与字节数打在下面。
+            真正打开 DevTools 的 Network 面板刷新页面，还能看到浏览器自己的判定：强缓存命中时那条请求根本不出现。
+        </p>
+        <p><button id="run">连发两次并对比</button></p>
+        <pre id="out">等待运行…</pre>
+
+        <h2 style="font-size: 16px; margin-top: 28px">命令行版本</h2>
+        <pre><code>cd frontend/进阶/网络与协议进阶/code/net-lab
+npm run cache</code></pre>
+        <p>
+            脚本除了这两次请求，还会按 RFC 9111 的公式把响应头翻译成「客户端会不会发请求」，并对
+            <code>stale-while-revalidate</code> 的三个年龄区间做判定。
+        </p>
+
+        <script>
+            const ENDPOINTS = [
+                ['内容哈希的 JS', '/api/cache/immutable/app.js'],
+                ['接口 JSON', '/api/cache/etag/doc.json'],
+                ['HTML 文档', '/api/cache/html']
+            ]
+
+            const size = (text) => (text.length < 1024 ? text.length + ' B' : (text.length / 1024).toFixed(1) + ' KB')
+
+            async function twice(path) {
+                const first = await fetch(path)
+                const firstBody = await first.text()
+                const etag = first.headers.get('etag')
+                const second = await fetch(path, { headers: etag ? { 'If-None-Match': etag } : {} })
+                const secondBody = second.status === 304 ? '' : await second.text()
+                return {
+                    cacheControl: first.headers.get('cache-control'),
+                    first: `${first.status} / ${size(firstBody)}`,
+                    second: `${second.status} / ${size(secondBody)}`
+                }
+            }
+
+            document.getElementById('run').addEventListener('click', async () => {
+                const out = document.getElementById('out')
+                out.textContent = '运行中…'
+                const lines = []
+                for (const [name, path] of ENDPOINTS) {
+                    const r = await twice(path)
+                    lines.push(`${name}\n  Cache-Control: ${r.cacheControl}\n  第一次 ${r.first}   第二次 ${r.second}`)
+                }
+                out.textContent = lines.join('\n\n')
+            })
+        </script>
+    </body>
+</html>

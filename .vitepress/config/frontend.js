@@ -287,6 +287,18 @@ export default [
                 ]
             },
             {
+                text: '网络与协议进阶',
+                collapsed: false,
+                items: [
+                    { text: 'HTTP2 与 HTTP3', link: '/frontend/进阶/网络与协议进阶/HTTP2%20与%20HTTP3' },
+                    { text: 'CDN 与缓存体系', link: '/frontend/进阶/网络与协议进阶/CDN%20与缓存体系' },
+                    { text: '网络可靠性与弱网', link: '/frontend/进阶/网络与协议进阶/网络可靠性与弱网' },
+                    { text: '前端安全进阶', link: '/frontend/进阶/网络与协议进阶/前端安全进阶' },
+                    { text: '模块总结（网络与协议进阶）', link: '/frontend/进阶/网络与协议进阶/总结' },
+                    { text: '模块面试题（网络与协议进阶）', link: '/frontend/进阶/网络与协议进阶/面试题' }
+                ]
+            },
+            {
                 text: '工程实践与架构',
                 collapsed: false,
                 items: [
