@@ -304,6 +304,11 @@ export default [
                 items: [
                     { text: '设计模式在前端', link: '/frontend/进阶/工程实践与架构/设计模式在前端' },
                     { text: '组件设计', link: '/frontend/进阶/工程实践与架构/组件设计' },
+                    { text: '前端架构与分层', link: '/frontend/进阶/工程实践与架构/前端架构与分层' },
+                    { text: '权限系统设计', link: '/frontend/进阶/工程实践与架构/权限系统设计' },
+                    { text: '请求层与缓存设计', link: '/frontend/进阶/工程实践与架构/请求层与缓存设计' },
+                    { text: '大文件上传与断点续传', link: '/frontend/进阶/工程实践与架构/大文件上传与断点续传' },
+                    { text: '虚拟滚动与大数据渲染', link: '/frontend/进阶/工程实践与架构/虚拟滚动与大数据渲染' },
                     { text: '模块总结（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/总结' },
                     { text: '模块面试题（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/面试题' },
                     { text: '面试方法论', link: '/frontend/进阶/面试方法论' }

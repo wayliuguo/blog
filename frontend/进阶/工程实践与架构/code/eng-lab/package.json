@@ -1,0 +1,15 @@
+{
+  "name": "eng-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "工程实践与架构模块配套实验台：零依赖，实测依赖分层扫描、RBAC 权限判定、切片上传与断点续传、虚拟滚动区间计算、请求层竞态与缓存",
+  "scripts": {
+    "list": "node cli.mjs list",
+    "layers": "node cli.mjs layers",
+    "auth": "node cli.mjs auth",
+    "upload": "node cli.mjs upload",
+    "vscroll": "node cli.mjs vscroll",
+    "request": "node cli.mjs request",
+    "all": "node cli.mjs all"
+  }
+}
