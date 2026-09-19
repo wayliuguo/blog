@@ -7,6 +7,8 @@
     "start": "node server.js",
     "check": "node type-lab/run.cjs",
     "check:errors": "node type-lab/run.cjs --errors",
-    "erase": "node type-lab/10-erase.cjs"
+    "erase": "node type-lab/10-erase.cjs",
+    "gym": "node type-gym/run.cjs",
+    "gym:todo": "node type-gym/run.cjs --exercises"
   }
 }
