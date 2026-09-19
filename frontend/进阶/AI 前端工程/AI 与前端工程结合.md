@@ -212,10 +212,13 @@ function estimateTokens(text) {
 | --- | --- | --- |
 | `./code/ai-lab/gen.cjs` | 结构化输出修复重试 / 上下文装配 / token 粗算 | 二、四 |
 | `./code/ai-lab/sse.cjs` | SSE 分帧 / 半开代码块 / 中断 / 重试（上一篇引用） | — |
-| `./code/ai-lab/run.cjs` | 总入口：依次执行全部探针 | 全篇 |
+| `./code/ai-lab/wasm.cjs` | 端侧推理探针（下一篇引用） | — |
+| `./code/ai-lab/perf.cjs` | 性能与成本探针（性能篇引用） | — |
+| `./code/ai-lab/run.cjs` | 总入口：依次执行四探针 | 全篇 |
 
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
 - 上一篇：[LLM 应用前端形态](./LLM%20应用前端形态.md)
+- 下一篇：[端侧推理与 WASM](./端侧推理与%20WASM.md)
 - 参考：[OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs) · [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) · [低代码与搭建体系（本站模块）](../低代码与搭建体系/总结.md)
