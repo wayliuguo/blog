@@ -424,7 +424,11 @@ export default [
             {
                 text: '复杂交互与编辑器',
                 collapsed: true,
-                items: [{ text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' }]
+                items: [
+                    { text: '富文本与编辑器架构', link: '/frontend/进阶/复杂交互与编辑器/富文本与编辑器架构' },
+                    { text: '协同编辑', link: '/frontend/进阶/复杂交互与编辑器/协同编辑' },
+                    { text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' }
+                ]
             },
             {
                 text: '研发平台与效能工程',
