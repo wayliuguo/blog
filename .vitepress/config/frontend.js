@@ -310,7 +310,18 @@ export default [
                     { text: '大文件上传与断点续传', link: '/frontend/进阶/工程实践与架构/大文件上传与断点续传' },
                     { text: '虚拟滚动与大数据渲染', link: '/frontend/进阶/工程实践与架构/虚拟滚动与大数据渲染' },
                     { text: '模块总结（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/总结' },
-                    { text: '模块面试题（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/面试题' },
+                    { text: '模块面试题（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/面试题' }
+                ]
+            },
+            {
+                text: '渲染架构',
+                collapsed: false,
+                items: [
+                    { text: '渲染方案全景', link: '/frontend/进阶/渲染架构/渲染方案全景' },
+                    { text: 'SSR 与同构实现', link: '/frontend/进阶/渲染架构/SSR%20与同构实现' },
+                    { text: '新兴渲染范式', link: '/frontend/进阶/渲染架构/新兴渲染范式' },
+                    { text: '模块总结（渲染架构）', link: '/frontend/进阶/渲染架构/总结' },
+                    { text: '模块面试题（渲染架构）', link: '/frontend/进阶/渲染架构/面试题' },
                     { text: '面试方法论', link: '/frontend/进阶/面试方法论' }
                 ]
             }
