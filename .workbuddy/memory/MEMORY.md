@@ -4,7 +4,7 @@
 **版式与内容规约以仓库根 `文档组织规范.md` 为准**（板块/模块/code 结构、测量型模块实验台、单篇体例、代码片段与配套代码表、小结知识树、元页面模板、校验流程）。本文件只记它没写、又必须知道的操作事实。
 
 ## 结构
-VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ node/`，配置 `.vitepress/config/*.js`，产物恒 `.vitepress/dist`。`node/` 11 模块、`frontend/基础/` 7 模块、`frontend/进阶/` 10 模块（TypeScript、前端工程化、构建体系、交付与质量、测试体系、前端框架原理、性能优化、监控与稳定性、网络与协议进阶、工程实践与架构，另散篇 `面试方法论.md`）；frontend 全板块 120 篇含元页面。**目录与文件名不带编号**，NN- 只用于 总结.md 分篇标题与「见第 X 篇」阅读序标签，侧边栏是唯一顺序来源。
+VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ node/`，配置 `.vitepress/config/*.js`，产物恒 `.vitepress/dist`。`node/` 11 模块、`frontend/基础/` 7 模块、`frontend/进阶/` 10 模块（TypeScript、前端工程化、构建体系、交付与质量、测试体系、前端框架原理、性能优化、监控与稳定性、网络与协议进阶、工程实践与架构，另散篇 `面试方法论.md`）；frontend 全板块 125 篇含元页面。**目录与文件名不带编号**，NN- 只用于 总结.md 分篇标题与「见第 X 篇」阅读序标签，侧边栏是唯一顺序来源。
 
 ## 必须知道的坑
 - **围栏**：禁 ```text（shiki 逐条告警），ASCII 图与实测输出一律用裸围栏。
@@ -15,7 +15,7 @@ VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ 
 
 ## 配套代码与端口
 `frontend/<板块>/<模块>/code/`、`node/<模块>/code/<项目名>/`，靠 `srcExclude` 的 `'**/code/**'` 排除。以零依赖为主，唯一需 npm install 的是 `构建体系/code/build-lab`（唯一 `.gitignore`）。服务统一 `listen(port,tries)` 遇 `EADDRINUSE` 自动 +1。
-**端口**：5174 HTML ·5175 CSS ·5176 JS ·5177 网络(+api 5178)·5179 工程化 ·5180 React·5181 Vue·5182 框架原理 ·5183 交付 ·5184 工程实践 ·5185 小程序 ·5186 TS·5187 性能 ·5188 enterprise ·5189 监控 ·5190 网络与协议进阶。纯 CLI 探针不占端口：`esm-probe`、`mini-react`/`mini-vue`，以及 net-lab 的 4 个场景（临时服务器用端口 0，系统分配）。
+**端口**：5174 HTML ·5175 CSS ·5176 JS ·5177 网络(+api 5178)·5179 工程化 ·5180 React·5181 Vue·5182 框架原理 ·5183 交付 ·5184 工程实践 ·5185 小程序 ·5186 TS·5187 性能 ·5188 enterprise ·5189 监控 ·5190 网络与协议进阶。纯 CLI 探针不占端口：`esm-probe`、`mini-react`/`mini-vue`，以及 net-lab 的 4 个场景与 eng-lab 的 5 个场景（临时服务器用端口 0，系统分配）。**eng-lab 另有 `fixtures/`**：被扫描的示例业务目录（故意写坏，19 文件 / 33 条 import / 5 条违规），与实验台分离、随源码入库。
 
 ## 运行时事实必须实跑（Node 22 探针）
 默认值/阈值/属性/事件顺序/报错码先跑确认，正文引用实测数字要注明来源命令。已纠错：`writableLength` 同步回调恒 0；`new Duplex().allowHalfOpen` 默认 `true`（`net` socket 为 `false`）；`cork()` 只在流实现 `writev` 时合并；内存对比各起子进程（`spawnSync`）。
