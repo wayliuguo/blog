@@ -1,0 +1,16 @@
+{
+  "name": "twin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "一个同时提供 ESM 与 CJS 入口的迷你包，用来观察 exports 条件解析",
+  "exports": {
+    ".": {
+      "browser": "./index.browser.mjs",
+      "import": "./index.mjs",
+      "require": "./index.cjs",
+      "default": "./index.mjs"
+    },
+    "./package.json": "./package.json"
+  }
+}

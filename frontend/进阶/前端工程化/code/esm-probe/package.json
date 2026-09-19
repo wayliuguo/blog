@@ -1,0 +1,14 @@
+{
+  "name": "esm-probe",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "模块化语义探针：活绑定、循环依赖、CJS 互操作、条件导出、双包危险",
+  "imports": {
+    "#internal-esm": "./lib/internal.mjs",
+    "#internal-cjs": "./lib/internal.cjs"
+  },
+  "scripts": {
+    "probe": "node run.mjs"
+  }
+}
