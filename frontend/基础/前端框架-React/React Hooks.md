@@ -6,7 +6,7 @@ React Hooks 是一套让函数组件更强大、更灵活的“钩子”，它�
 
 Hooks 的出现解决了函数组件原本无法管理内部状态、无法执行副作用的问题，它的核心特点有两个：
 
-- **简化逻辑复用**：把公共逻辑抽离成自定义 Hook，一套代码可在多个组件间复用，不必再像 Class 组件那样借助高阶组件等模式。
+- **简化逻辑复用**：把公共逻辑抽离成自定义 Hook，一套代码可在多个组件间复用，不必借助高阶组件的层层包裹。
 - **关注分离**：按功能而不是生命周期来组织代码，逻辑更内聚、更易维护。
 
 使用 Hook 时需要配置 ESLint 来约束规范，安装插件 `eslint-plugin-react-hooks`：
@@ -30,73 +30,52 @@ npm install eslint-plugin-react-hooks --save-dev
 }
 ```
 
-## 逻辑复用：Class 高阶组件 vs Hooks 自定义
+## 逻辑复用：高阶组件 vs 自定义 Hook
 
-设想这样一个场景：多个组件都需要监听浏览器窗口 resize，再根据宽度变化调整布局。用两种方式对比实现。
+设想这样一个场景：多个组件都需要监听浏览器窗口 resize，再根据宽度变化调整布局。用两种复用方式对比实现。
 
-### Class 高阶组件（HOC）
+### 高阶组件（HOC）
 
-定义一个高阶组件，负责监听窗口变化，并把 `size` 作为 props 传给被包裹的组件。
+高阶组件是"接收一个组件、返回一个新组件"的函数。它同样用函数组件 + Hooks 实现，负责监听窗口变化，并把 `size` 作为 props 传给被包裹的组件：
 
 > 示意片段（无配套脚本）
 
 ```tsx
 // WithWindowSize.tsx
-import React from 'react'
+import { useEffect, useState } from 'react'
 
-interface stateType {
-    size: string
-}
-const WithWindowSize = (Component: any) => {
-    class WrappedComponent extends React.PureComponent<any, stateType> {
-        constructor(props: any) {
-            super(props)
-            this.state = {
-                size: this.getSize()
-            }
-        }
-        componentDidMount(): void {
-            // 监听浏览器窗口大小
-            window.addEventListener('resize', this.handleResize)
-        }
-        componentWillUnmount(): void {
-            // 移除监听
-            window.removeEventListener('resize', this.handleResize)
-        }
-        getSize() {
-            return window.innerWidth > 1000 ? 'large' : 'small'
-        }
-        handleResize = () => {
-            this.setState({
-                size: this.getSize()
-            })
-        }
-        render() {
-            return <Component size={this.state.size}></Component>
-        }
+const getSize = () => (window.innerWidth > 1000 ? 'large' : 'small')
+
+// 泛型组件用 function 声明：.tsx 里箭头函数的 <P> 会被当成 JSX 标签
+function WithWindowSize<P extends object>(Component: React.ComponentType<P & { size: string }>) {
+    return function Wrapped(props: P) {
+        const [size, setSize] = useState(getSize())
+        useEffect(() => {
+            const handler = () => setSize(getSize())
+            window.addEventListener('resize', handler)
+            return () => window.removeEventListener('resize', handler)
+        }, [])
+        return <Component {...props} size={size} />
     }
-    return WrappedComponent
 }
 
 export default WithWindowSize
 ```
 
+使用：
+
 > 示意片段（无配套脚本）
 
 ```tsx
 // MyComponent.tsx
-import React from 'react'
 import WithWindowSize from './WithWindowSize'
 
-interface propsTypes {
+interface PropsTypes {
     size: string
 }
 
-class MyComponent extends React.Component<propsTypes> {
-    render() {
-        const { size } = this.props
-        return <div>{size}</div>
-    }
+const MyComponent = ({ size }: PropsTypes) => {
+    return <div>{size}</div>
 }
 
 export default WithWindowSize(MyComponent)
@@ -229,7 +208,7 @@ useEffect(callBack, [])
 - `[]`：依赖数组，只有数组中值发生变化时才会重新执行回调。
 - 组件销毁时会执行回调中 `return` 返回的方法，常用于清理操作、防止内存泄漏。
 
-目前 `useEffect` 相当于 `componentDidMount`、`componentDidUpdate`、`componentWillUnmount` 三个生命周期的综合：其回调会在组件**挂载、更新、卸载**时执行。
+> 迁移对照：`useEffect` 一个 API 覆盖了过去 `componentDidMount`、`componentDidUpdate`、`componentWillUnmount` 三个生命周期的职责，区别是它按**依赖**而不是按**阶段**组织。其回调会在组件**挂载、更新、卸载**时执行。
 
 > 注意：从 React 18 开始，`useEffect` 在**开发环境下**会执行两次（销毁一次），用于模拟组件创建、销毁再创建的完整流程，及早暴露问题（如弹窗重复、bindEvent 重复）。生产环境下不会执行两次。
 
@@ -554,7 +533,7 @@ const alertFn = () => {
     - 简化逻辑复用、关注分离
     - ESLint 规则（`rules-of-hooks`、`exhaustive-deps`）
   - 逻辑复用：HOC vs 自定义 Hook
-    - Class 高阶组件（HOC）
+    - 高阶组件（HOC）：接收组件、返回新组件，同样用函数组件 + Hooks 实现
     - 自定义 Hook（`useState` + `useEffect` 封装）
     - HOC 缺点：嵌套地狱、props 透传、命名冲突
   - `useState`：维护状态

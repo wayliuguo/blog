@@ -154,81 +154,27 @@ const linkStyle = {
 
 - React 使用自定义的（合成）事件，而不是原生 DOM 事件。
 - React 中的事件通过事件委托方式处理（委托给组件最外层元素）。
-- 绑定事件函数中，this 指向组件对象的三种方案：显式 `bind`、箭头函数定义、传入箭头函数执行。
-- 事件处理函数必须传引用，而不是调用：`onClick={handleClick}`，而不是 `onClick={handleClick()}`。
+- 事件处理函数必须**传引用**而不是调用：`onClick={handleClick}`，不是 `onClick={handleClick()}`。
+- 需要传参时包一层箭头函数：`onClick={() => handleClick(id)}`。代价是每次渲染都生成新函数，子组件用 `memo` 优化时要配合 `useCallback`。
 
 > 示意片段（无配套脚本）
 
 ```jsx
-// 方案一：显式绑定
-<button onClick={this.btnClick.bind(this)}>绑定事件</button>
+function Toolbar() {
+  const handleClick = () => console.log('clicked')
+  const handleBlur = (event) => alert(event.target.value)
 
-// 方案一变体：在构造函数中重新赋值
-constructor(props) {
-  this.btnClick = this.btnClick.bind(this)
-}
-
-// 方案二：使用箭头函数定义函数
-btnClickArrow = () => {}
-
-// 方案三：传入一个箭头函数，在其中执行需要执行的函数
-<button onClick={() => this.btnClick()}>箭头函数执行绑定事件</button>
-```
-
-通过 `event` 可以拿到发生事件的 DOM 元素对象，例如 `event.target`：
-
-> 示意片段（无配套脚本）
-
-```jsx
-class Demo extends React.Component {
-  showData = (event) => {
-    alert(event.target.value)
-  }
-  // ...
-  <input onBlur={this.showData} type="text" />
+  return (
+    <>
+      <button onClick={handleClick}>绑定事件</button>
+      <button onClick={() => handleClick(1)}>传参</button>
+      <input onBlur={handleBlur} type="text" />
+    </>
+  )
 }
 ```
 
-Class 组件示例：
-
-> 示意片段（无配套脚本）
-
-```jsx
-class Weather extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      name: 'well',
-      age: 18,
-      names: ['a', 'b', 'c'],
-      style: { color: 'red', fontSize: '18px' }
-    }
-    // this.btnClick = this.btnClick.bind(this)
-  }
-  btnClick() {
-    let { age } = this.state
-    this.setState({ age: ++age })
-  }
-  btnClickArrow = () => {
-    let { age } = this.state
-    this.setState({ age: ++age })
-  }
-  render() {
-    const { name, age, names, style } = this.state
-    return (
-      <div>
-        <h2 className="box">绑定class</h2>
-        <h2 style={style}>绑定style</h2>
-        <h2 style={dfs}>绑定style（展开，dfs 为 const dfs = Object.assign({}, style)）</h2>
-        <button onClick={this.btnClick.bind(this)}>显示绑定事件</button>
-        <button onClick={this.btnClickArrow}>箭头函数绑定事件</button>
-        <button onClick={() => this.btnClick()}>箭头函数执行绑定事件</button>
-      </div>
-    )
-  }
-}
-ReactDOM.render(<Weather />, document.querySelector('#test'))
-```
+通过 `event` 可以拿到发生事件的 DOM 元素对象，例如 `event.target`。需要阻止默认行为用 `event.preventDefault()`，阻止冒泡用 `event.stopPropagation()`。
 
 ### 显示 HTML 代码
 
@@ -270,14 +216,9 @@ React 应用由众多组件构成。组件是一块拥有自身逻辑与外观�
 
 ### 组件就是一个函数
 
-- React 早期是 Class 组件。
-- 现在已被函数组件（FC, Function Component）全面取代。
-- 函数组件输入 props，返回一段 JSX。
+组件就是一个函数：**输入 props，返回一段 JSX**。
 
-函数组件的编写要点：
-
-- 用 TS 定义 props 类型。
-- 可使用 TS 泛型。
+编写要点：用 TS 定义 props 类型，props 类型需要由调用方决定时用泛型。
 
 > 示意片段（无配套脚本）
 
@@ -293,97 +234,45 @@ function Person(props: PersonProps) {
 }
 ```
 
-进阶问题：类型定义用 `type` 还是 `interface`？两者都可以实现类型定义的功能，用哪个都可以。
+类型定义用 `type` 还是 `interface`：描述对象结构用 `interface`（支持声明合并与 `extends`），需要做联合、交叉、条件等类型编程时用 `type`。
 
 补充说明：
 
-- 组件之间的数据传递不仅仅只有 props，课程后面还会继续讲解其他形式。
+- 组件之间的数据传递不仅仅只有 props，还有 Context、状态管理等方式。
 - 函数（回调）也可以当做属性来传递。
 
 ### props 单向数据流与默认值
 
-- **props 单向数据流**：父组件通过 props 向子组件传数据，子组件只能读取、不能直接修改 props，数据流向是单向的。
-- **默认 props（defaultProps）**：为 props 指定默认值，当父组件不传该属性时使用默认值。
-- **props 类型约束（prop-types）**：React 早期用 `prop-types` 校验 props，现在更推荐用 TypeScript。
-
-函数式组件中使用 props 并设置默认值：
+- **props 单向数据流**：父组件通过 props 向子组件传数据，子组件只能读取、不能直接修改 props。子组件要"改"数据，必须由父组件把修改函数一起传下来。
+- **默认值**：用 ES6 默认参数，写在解构里。
+- **类型约束**：用 TypeScript。`prop-types` 已不再维护，React 19 移除了对函数组件 `propTypes` / `defaultProps` 的支持，新项目不要再用。
 
 > 示意片段（无配套脚本）
 
 ```tsx
-function Person(props) {
-  return <div>{props.name} - {props.sex} - {props.age}</div>
+type PersonProps = {
+  name: string
+  sex?: string
+  age?: number
 }
 
-Person.propTypes = {
-  name: PropTypes.string.isRequired
-}
-Person.defaultProps = {
-  sex: '女',
-  age: 18
+// 默认参数直接写在解构里，代替 defaultProps
+function Person({ name, sex = '女', age = 18 }: PersonProps) {
+  return <div>{name} - {sex} - {age}</div>
 }
 ```
 
-Class 组件中定义 props 类型与默认值：
+子组件需要修改数据时，把处理函数一并传下去，子组件只负责调用：
 
 > 示意片段（无配套脚本）
 
-```jsx
-class Person extends React.Component {
-  // 简写：静态属性
-  static propTypes = {
-    name: PropTypes.string.isRequired
-  }
-  static defaultProps = {
-    sex: '女',
-    age: 18
-  }
-  // ...
+```tsx
+function Counter({ count, onAdd }: { count: number; onAdd: () => void }) {
+  return <button onClick={onAdd}>{count}</button>
 }
 ```
 
-### prop-types 常用规则
-
-常见类型：`PropTypes.number`、`PropTypes.string`、`PropTypes.bool`、`PropTypes.symbol`、`PropTypes.bigint`、`PropTypes.array`、`PropTypes.object`、`PropTypes.func`、`PropTypes.node`、`PropTypes.element`、`PropTypes.elementType`。
-
-- **必填**：添加 `isRequired`，如 `PropTypes.number.isRequired`。
-- **特定值**：只能是 `option1` 或 `option2`：
-
-  > 示意片段（无配套脚本）
-
-  ```js
-  PropTypes.oneOf(['option1', 'option2'])
-  ```
-
-- **特定类型组合**：只能是某几个类型之一：
-
-  > 示意片段（无配套脚本）
-
-  ```js
-  PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-  ```
-
-- **特定数组/对象结构**：
-
-  > 示意片段（无配套脚本）
-
-  ```js
-  PropTypes.arrayOf(PropTypes.number)
-  PropTypes.objectOf(PropTypes.number)
-  PropTypes.shape({ name: PropTypes.string })
-  ```
-
-- **自定义校验规则**：
-
-  > 示意片段（无配套脚本）
-
-  ```js
-  function (props, propName, componentName) {
-    if (props[propName] !== 'customValue') {
-      return new Error(`Invalid value for prop ${propName} in component ${componentName}`)
-    }
-  }
-  ```
+> 补充：`prop-types` 曾用于运行时校验（`PropTypes.string.isRequired`、`PropTypes.oneOf([...])` 等）。它的职责已被 TypeScript 的编译期检查取代——类型错误在编译期就暴露，不必等到运行时。
 
 ## 开发者工具
 
@@ -426,18 +315,17 @@ function ListPage() {
 }
 ```
 
-## 创建项目（create-react-app）
+## 创建项目
 
-通常使用脚手架来创建 React 项目：
+用脚手架创建 React 项目，现在以 **Vite** 为主：
 
 > 示意片段（无配套脚本）
 
 ```bash
-npm i create-react-app -g
-npx create-react-app react-ts-demo --template typescript
-
-npm create vite@latest react-demo-vite --template react-ts
+npm create vite@latest react-demo -- --template react-ts
 ```
+
+> 补充：`create-react-app`（CRA）已停止维护，官方不再推荐用于新项目。它基于 webpack、启动慢且配置封闭，新项目直接用 Vite；需要 SSR / 路由约定等能力时考虑 Next.js。老项目迁移时主要工作是替换启动脚本、`index.html` 入口与环境变量前缀（`REACT_APP_` → `VITE_`）。
 
 ## 小结
 
@@ -452,22 +340,22 @@ npm create vite@latest react-demo-vite --template react-ts
     - 判断（`&&`、三元、函数封装）
     - 循环（`map`、唯一 `key`）
     - 绑定属性（`className`、`htmlFor`、style 对象）
-    - 绑定事件（`onXxx`、合成事件、this 绑定）
+    - 绑定事件（`onXxx`、合成事件、传引用与传参）
     - 显示 HTML（`dangerouslySetInnerHTML`）
   - JSX 与 Vue 模板对比
     - 判断 / 循环 / 表达式写法差异
     - 设计理念：React 交给 JS vs Vue 自定义指令
   - 组件与 Props
     - 一切皆组件
-    - 组件就是一个函数（FC、TS 泛型）
-    - props 单向数据流与默认值
-    - `prop-types` 常用规则
+    - 组件就是一个函数（输入 props、返回 JSX、TS 泛型）
+    - props 单向数据流：要改数据由父组件把处理函数传下来
+    - 默认值用解构默认参数，类型约束用 TS（`prop-types` 已废弃）
   - 开发者工具
     - React Developer Tools
   - 【实战】开发 List 页
     - 判断、循环、属性与事件
-  - 创建项目（create-react-app）
-    - `create-react-app` / Vite 脚手架
+  - 创建项目
+    - Vite 脚手架（CRA 已停止维护）
 
 ## 配套代码
 
