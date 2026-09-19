@@ -347,6 +347,7 @@ export default [
                     { text: '沙箱与隔离机制', link: '/frontend/进阶/微前端体系/沙箱与隔离机制' },
                     { text: '应用通信与状态共享', link: '/frontend/进阶/微前端体系/应用通信与状态共享' },
                     { text: '资源加载与依赖共享', link: '/frontend/进阶/微前端体系/资源加载与依赖共享' },
+                    { text: '手写 mini 微前端框架', link: '/frontend/进阶/微前端体系/手写%20mini%20微前端框架' },
                     { text: '模块总结（微前端体系）', link: '/frontend/进阶/微前端体系/总结' },
                     { text: '模块面试题（微前端体系）', link: '/frontend/进阶/微前端体系/面试题' }
                 ]
