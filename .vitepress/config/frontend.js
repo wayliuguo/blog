@@ -176,6 +176,7 @@ export default [
                         link: '/frontend/进阶/TypeScript/TypeScript%20工程实践'
                     },
                     { text: 'TypeScript 类型体操', link: '/frontend/进阶/TypeScript/TypeScript%20类型体操' },
+                    { text: 'TypeScript 类型与运行时', link: '/frontend/进阶/TypeScript/TypeScript%20类型与运行时' },
                     { text: '模块总结（TypeScript）', link: '/frontend/进阶/TypeScript/总结' },
                     { text: '模块面试题（TypeScript）', link: '/frontend/进阶/TypeScript/面试题' }
                 ]

@@ -9,6 +9,7 @@
     "check:errors": "node type-lab/run.cjs --errors",
     "erase": "node type-lab/10-erase.cjs",
     "gym": "node type-gym/run.cjs",
-    "gym:todo": "node type-gym/run.cjs --exercises"
+    "gym:todo": "node type-gym/run.cjs --exercises",
+    "runtime": "node runtime-lab/run.cjs"
   }
 }
