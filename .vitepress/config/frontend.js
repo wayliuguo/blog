@@ -180,16 +180,15 @@ export default [
                 ]
             },
             {
-                text: '前端工程化与构建',
+                text: '前端工程化',
                 collapsed: false,
                 items: [
-                    { text: '前端工程化全景', link: '/frontend/进阶/前端工程化与构建/前端工程化全景' },
-                    { text: '模块化规范', link: '/frontend/进阶/前端工程化与构建/模块化规范' },
-                    { text: '构建工具', link: '/frontend/进阶/前端工程化与构建/构建工具' },
-                    { text: '脚手架的诞生', link: '/frontend/进阶/前端工程化与构建/脚手架的诞生' },
-                    { text: 'Monorepo 工程化', link: '/frontend/进阶/前端工程化与构建/Monorepo工程化' },
-                    { text: '模块总结（前端工程化与构建）', link: '/frontend/进阶/前端工程化与构建/总结' },
-                    { text: '模块面试题（前端工程化与构建）', link: '/frontend/进阶/前端工程化与构建/面试题' }
+                    { text: '前端工程化全景', link: '/frontend/进阶/前端工程化/前端工程化全景' },
+                    { text: '模块化与包管理', link: '/frontend/进阶/前端工程化/模块化与包管理' },
+                    { text: '脚手架的诞生', link: '/frontend/进阶/前端工程化/脚手架的诞生' },
+                    { text: 'Monorepo 工程化', link: '/frontend/进阶/前端工程化/Monorepo工程化' },
+                    { text: '模块总结（前端工程化）', link: '/frontend/进阶/前端工程化/总结' },
+                    { text: '模块面试题（前端工程化）', link: '/frontend/进阶/前端工程化/面试题' }
                 ]
             },
             {
