@@ -3,7 +3,7 @@
 const { spawnSync } = require('node:child_process')
 const path = require('node:path')
 
-const cases = ['jsi.cjs', 'twin.cjs', 'webview.cjs']
+const cases = ['jsi.cjs', 'twin.cjs', 'webview.cjs', 'bridge.cjs', 'electron.cjs']
 let fail = 0
 for (const c of cases) {
   const r = spawnSync(process.execPath, [path.join(__dirname, c)], { encoding: 'utf8' })
