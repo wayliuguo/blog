@@ -211,7 +211,9 @@ function buildIndex(root) {
 | --- | --- | --- |
 | `./code/lowcode-lab/schema.cjs` | 物料协议校验 / 版本迁移 / 索引与环检测 | 二、三、四 |
 | `./code/lowcode-lab/render.cjs` | 表达式沙箱 / 递归渲染 / 更新粒度（下一篇引用） | — |
-| `./code/lowcode-lab/run.cjs` | 总入口：依次执行两探针 | 全篇 |
+| `./code/lowcode-lab/editor.cjs` | 拖拽落点 / 出码 / 手写区锚点 / 属性联动（编辑器篇引用） | — |
+| `./code/lowcode-lab/boundary.cjs` | 适用性打分 / 漂移检测 / 成本盈亏 / 逃逸机制（边界篇引用） | — |
+| `./code/lowcode-lab/run.cjs` | 总入口：依次执行四探针 | 全篇 |
 
 ## 参考
 

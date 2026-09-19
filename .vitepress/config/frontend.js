@@ -415,7 +415,10 @@ export default [
                 items: [
                     { text: '协议与 schema 设计', link: '/frontend/进阶/低代码与搭建体系/协议与%20schema%20设计' },
                     { text: '渲染引擎', link: '/frontend/进阶/低代码与搭建体系/渲染引擎' },
-                    { text: '模块总结（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/总结' }
+                    { text: '编辑器与出码', link: '/frontend/进阶/低代码与搭建体系/编辑器与出码' },
+                    { text: '低代码的边界', link: '/frontend/进阶/低代码与搭建体系/低代码的边界' },
+                    { text: '模块总结（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/总结' },
+                    { text: '模块面试题（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/面试题' }
                 ]
             },
             {
