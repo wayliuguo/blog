@@ -1,0 +1,25 @@
+{
+  "name": "perf-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "性能优化模块配套实验台：零依赖，用 Node + 本机无头 Chrome 实测 FCP/LCP/CLS/长任务/布局抖动/虚拟滚动/内存/懒加载",
+  "scripts": {
+    "start": "node server.js",
+    "list": "node cli.mjs list",
+    "metrics": "node cli.mjs metrics",
+    "waterfall": "node cli.mjs waterfall",
+    "cls": "node cli.mjs cls",
+    "block": "node cli.mjs block",
+    "images": "node cli.mjs images",
+    "thrash": "node cli.mjs thrash",
+    "longtask": "node cli.mjs longtask",
+    "virtual": "node cli.mjs virtual",
+    "worker": "node cli.mjs worker",
+    "memory": "node cli.mjs memory",
+    "lazy": "node cli.mjs lazy",
+    "coverage": "node cli.mjs coverage",
+    "score": "node cli.mjs score",
+    "budget": "node cli.mjs budget",
+    "all": "node cli.mjs all"
+  }
+}

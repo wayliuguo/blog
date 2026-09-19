@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>图片懒加载对照页</title>
+<link rel="icon" href="data:,">
+<script src="./lab.js"></script>
+<style>
+    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
+    header { padding: 16px 24px; background: #eef2ff; }
+    header h1 { margin: 0; font-size: 22px; }
+    #shots { padding: 0 24px; }
+    img { display: block; width: 640px; height: 240px; margin: 12px 0; background: #eee; }
+</style>
+</head>
+<body>
+<header><h1>12 张 200KB 的图，只有前几张在首屏</h1></header>
+<div id="shots"></div>
+<script>
+    const mode = new URLSearchParams(location.search).get('mode') || 'eager'
+    const wrap = document.getElementById('shots')
+
+    for (let i = 0; i < 12; i++) {
+        const img = document.createElement('img')
+        // 宽高都写死：不会因为图片晚到而发生位移
+        img.width = 640
+        img.height = 240
+        img.src = `/slow?ms=40&kb=200&name=shot${i}.svg`
+        // 首屏之外的交给浏览器按需加载
+        if (mode === 'lazy' && i > 0) img.loading = 'lazy'
+        wrap.appendChild(img)
+    }
+
+    setTimeout(() => {
+        const images = [...document.querySelectorAll('img')]
+        const shots = Lab.resources('/slow')
+        Lab.finish({
+            mode,
+            totalImages: images.length,
+            decoded: images.filter((el) => el.complete && el.naturalWidth > 0).length,
+            imageRequests: shots.length,
+            imageBytes: shots.reduce((sum, r) => sum + r.size, 0)
+        })
+    }, 900)
+</script>
+</body>
+</html>

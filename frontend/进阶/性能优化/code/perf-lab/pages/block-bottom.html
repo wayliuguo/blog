@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>阻塞脚本：放到 body 末尾</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/slow?ms=60&kb=8&name=site.css">
+<script src="./lab.js"></script>
+<style>
+    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
+    .hero { padding: 40px 24px; background: #4f7cff; color: #fff; }
+    .row { padding: 10px 24px; border-bottom: 1px solid #eee; }
+</style>
+</head>
+<body>
+<div class="hero">
+    <h1>首屏标题（脚本挪到末尾，首屏内容先渲染）</h1>
+</div>
+<div id="list"></div>
+<!-- 老写法里最常见的「把脚本挪到末尾」：首屏已经画完了，阻塞发生在后面 -->
+<script src="/slow?ms=200&kb=80&name=block.js"></script>
+<script>
+    let html = ''
+    for (let i = 0; i < 20; i++) html += `<div class="row">第 ${i + 1} 行</div>`
+    document.getElementById('list').innerHTML = html
+    Lab.finish({ mode: 'body-bottom' })
+</script>
+</body>
+</html>

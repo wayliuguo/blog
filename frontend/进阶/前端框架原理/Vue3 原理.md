@@ -1185,4 +1185,4 @@ instance.update = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[React 高级与原理](./React%20高级与原理.md)
-- 下一篇：[性能指标与评估](../性能优化与监控/性能指标与评估.md)
+- 下一篇：[手写 mini-react](./手写%20mini-react.md)
