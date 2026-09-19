@@ -38,17 +38,17 @@ Router 组件需要把 `App` 包裹起来，它决定了路由使用哪种策略
 
 ```jsx
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom'
 import App from './App';
 
-ReactDOM.render(
+// React 18+ 用 createRoot 挂载（React 17 及以前的 ReactDOM.render 已移除）
+createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </React.StrictMode>,
-  document.getElementById('root')
+  </React.StrictMode>
 );
 ```
 
@@ -101,7 +101,7 @@ function App() {
 }
 ```
 
-### 路由顺序与 Switch
+### 路由顺序与匹配规则（V5 Switch → V6 Routes）
 
 在 V6 以前（V5），路由必须**按照一定顺序**定义才能准确渲染。例如下面这段代码，在 V5 中 `/product/new` 会匹配到第一个路由并渲染 `Product`，这显然不是我们期望的：
 
@@ -137,43 +137,24 @@ function App() {
 // 一般组件
 <Demo />
 // 路由组件
-<Route path="/about" component={About} />
+<Route path="/about" element={<About />} />
 ```
 
-2. **接收到的 props 不同**
+2. **接收路由信息的方式不同**
    - 一般组件：写组件标签时传了什么 props 就接收什么。
-   - 路由组件：一定会额外接收到三个固定属性 `history`、`location`、`match`（V5 写法）。
+   - 路由组件：路径参数、查询串、location 这些路由信息不在 props 里，而是在组件内部用 `useParams` / `useSearchParams` / `useLocation` 取。
 
-> 示意片段（无配套脚本）
-
-```js
-// 路由组件接收到的固定 props（V5）
-history: {
-  action: "PUSH",
-  go: fn, goBack: fn, goForward: fn,
-  length: 10,
-  location: { pathname, search, hash, state, key },
-  push: fn, replace: fn,
-  ...
-}
-location: {
-  hash: "", key: "...", pathname: "/about", search: "", state: undefined
-}
-match: {
-  isExact: true, params: {}, path: "/about", url: "/about"
-}
-staticContext: undefined
-```
-
-需要注意的是，V6 中路由组件不再自动注入这些 props，而是改由 `useParams`、`useLocation`、`useNavigate` 等 Hook 在组件内部获取。
+> 迁移对照：V5 会向路由组件注入 `history`、`location`、`match` 三个 props，V6 取消了这一注入，统一改用 Hook——好处是路由信息不再依赖组件层级，任意深度的子组件都能直接取到。
 
 ## 路由传参与查询参数
 
-路由之间的参数传递有三种方式，V5 与 V6 的写法有所差异。
+三种传参方式各对应一个 Hook：params 用 `useParams`、查询串用 `useSearchParams`、state 用 `useLocation`。
 
-### V5
+> 迁移对照：V5 会把 `history` / `location` / `match` 三个对象注入路由组件的 props，V6 不再注入，改为在组件内部用 Hook 取。
 
-**1. params 传参**：把参数拼进 URL 路径中。
+### 1. params 传参
+
+把参数拼进 URL 路径，路由上要声明占位符：
 
 > 示意片段（无配套脚本）
 
@@ -181,140 +162,68 @@ staticContext: undefined
 <Link to={`/home/message/detail/${item.id}/${item.title}`}>{item.title}</Link>
 
 {/* 声明接收 params 参数 */}
-<Route path="/home/message/detail/:id/:title" component={Detail}></Route>
+<Route path="/home/message/detail/:id/:title" element={<Detail />} />
 ```
-
-> 示意片段（无配套脚本）
-
-```js
-// 路由组件中通过 props.match.params 获取
-const { id, title } = this.props.match.params
-```
-
-**2. search 传参**：参数拼接在 URL 查询串中，无需在 Route 上声明接收。
 
 > 示意片段（无配套脚本）
 
 ```jsx
-<Link to={`/home/message/detail/?id=${item.id}&title=${item.title}`}>{item.title}</Link>
-<Route path="/home/message/detail" component={Detail}></Route>
+import { useParams } from 'react-router-dom'
+
+const { id = '', title = '' } = useParams()
 ```
 
-> 示意片段（无配套脚本）
+### 2. search（查询串）传参
 
-```js
-import qs from 'querystring'
-const { search } = this.props.location // ?id=???&title=???
-const { id, title } = qs.parse(search.slice(1))
-```
-
-**3. state 传参**：参数放在 `state` 对象中，不在 URL 上体现，同样无需声明接收。
+参数拼在查询串中，路由无需声明接收：
 
 > 示意片段（无配套脚本）
 
 ```jsx
-const linkState = { pathname: '/home/message/detail', state: { id: item.id, title: item.title } }
-<Link to={linkState}>{item.title}</Link>
-<Route path="/home/message/detail" component={Detail}></Route>
+<Link to={`/home/message/detail?id=${item.id}&title=${item.title}`}>{item.title}</Link>
+<Route path="/home/message/detail" element={<Detail />} />
 ```
-
-> 示意片段（无配套脚本）
-
-```js
-// 接收参数
-const { id, title } = this.props.location.state
-```
-
-### V6
-
-V6 中可使用 `useLocation`、`useNavigate` 等 Hook 实现同样的能力。
-
-**1. Link 组件携带 state**
 
 > 示意片段（无配套脚本）
 
 ```jsx
-<Link to="/" state="Form State">注册</Link>
+import { useSearchParams } from 'react-router-dom'
+
+const [searchParams] = useSearchParams()
+const id = searchParams.get('id')
+const title = searchParams.get('title')
+```
+
+`useSearchParams` 用法类似 `useState`：第二个返回值用于改写查询串，`setSearchParams({ id: '1' })` 会触发一次导航。
+
+### 3. state 传参
+
+参数放在 `state` 中，不在 URL 上体现，同样无需声明接收：
+
+> 示意片段（无配套脚本）
+
+```jsx
+<Link to="/home/message/detail" state={{ id: item.id, title: item.title }}>{item.title}</Link>
+<Route path="/home/message/detail" element={<Detail />} />
 ```
 
 > 示意片段（无配套脚本）
 
 ```jsx
 import { useLocation } from 'react-router-dom'
-let location = useLocation()
-console.log(location.state)
+
+const { state } = useLocation() // { id, title }
 ```
 
-**2. Navigate 组件**：`Navigate` 是 V6 新增的重定向组件，也可携带 state。
-
-> 示意片段（无配套脚本）
-
-```jsx
-<Navigate to="/" state="Form State">注册</Navigate>
-```
-
-> 示意片段（无配套脚本）
-
-```jsx
-import { useLocation } from 'react-router-dom'
-let location = useLocation()
-console.log(location.state)
-```
-
-**3. useNavigate 钩子**：在事件回调中以编程方式跳转并携带参数。
-
-> 示意片段（无配套脚本）
-
-```jsx
-const nav = useNavigate()
-// nav('/login?b=20')
-// nav({ pathname: '/login', search: 'b=21' })
-nav({ pathname: '/', state: 'Form State' })
-```
+编程式导航同样能携带 state：`navigate('/detail', { state: { id: 1 } })`。重定向组件 `Navigate` 也支持：` <Navigate to="/" state="Form State" />`。
 
 ## 编程式路由导航
 
-声明式（`Link`）常用于"点击后跳转"，遇到"点击后先做一些处理再跳转"的场景，则需使用编程式导航。
+声明式（`Link`）常用于"点击后跳转"；遇到"点击后先做处理再跳转"的场景，用 `useNavigate`：
 
-### V5
-
-- `push`：往历史栈里压入一条新记录，可以返回；`replace`：替换当前记录，不新增历史。
-- `goBack`、`goForward`、`go(n)`：回退、前进、跳转 n 步。
-
-> 示意片段（无配套脚本）
-
-```jsx
-<button onClick={() => this.pushShow(item.id, item.title)}>push 查看</button>
-<button onClick={this.replaceShow(item.id, item.title)}>replace 查看</button>
-<button onClick={this.back}>回退</button>
-<button onClick={this.forward}>前进</button>
-<button onClick={this.go}>跳转</button>
-```
-
-> 示意片段（无配套脚本）
-
-```jsx
-replaceShow = (id, title) => {
-  return () => {
-    // params 参数
-    this.props.history.replace(`/home/message/detail/${id}/${title}`)
-    // search 参数
-    // this.props.history.replace(`/home/message/detail/?id=${id}&title=${title}`)
-    // state 参数
-    // this.props.history.replace(`/home/message/detail`, { id, title })
-  }
-}
-pushShow = (id, title) => {
-  this.props.history.push(`/home/message/detail/${id}/${title}`)
-}
-back = () => this.props.history.goBack()
-forward = () => this.props.history.goForward()
-go = () => this.props.history.go(-2)
-```
-
-### V6
-
-V6 使用 `useNavigate` 钩子统一实现编程式导航：
+- `navigate(to)`：往历史栈压入一条新记录，可以返回（对应 V5 的 `push`）。
+- `navigate(to, { replace: true })`：替换当前记录，不新增历史（对应 `replace`）。
+- `navigate(-1)` / `navigate(1)` / `navigate(-2)`：回退、前进、跳转 n 步（对应 `goBack` / `goForward` / `go`）。
 
 > 示意片段（无配套脚本）
 
@@ -322,97 +231,88 @@ V6 使用 `useNavigate` 钩子统一实现编程式导航：
 import { FC } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
-const Home: FC = () => {
-  const nav = useNavigate()
-  const clickHandler = () => {
-    // nav('/login?b=20')
-    nav({
-      pathname: '/login',
-      search: 'b=21'
-    })
-  }
+const Message: FC = () => {
+  const navigate = useNavigate()
+  const item = { id: 1, title: '消息一' }
+  const to = `/home/message/detail/${item.id}/${item.title}`
+
   return (
     <div>
-      <p>Home</p>
-      <div>
-        <button onClick={clickHandler}>登录</button>
-        <Link to="/register">注册</Link>
-      </div>
+      <p>Message</p>
+      <button onClick={() => navigate(to)}>push 查看</button>
+      <button onClick={() => navigate(to, { replace: true })}>replace 查看</button>
+      <button onClick={() => navigate(-1)}>回退</button>
+      <button onClick={() => navigate(1)}>前进</button>
+      <button onClick={() => navigate(-2)}>跳转</button>
+      <Link to="/register">注册</Link>
     </div>
   )
 }
 
-export default Home
+export default Message
 ```
+
+> 迁移对照：V5 通过 `this.props.history.push/replace/goBack` 实现同样的事，V6 统一收敛到 `navigate`，且不再依赖组件 props。
 
 ## 动态路由
 
-当路由参数不确定、需要根据用户操作动态变化时，使用动态路由（即通过 params 传参，路径省略号标识）。
-
-### V5
+当路由参数不确定、需要根据用户操作动态变化时，使用动态路由——路径用 `:` 声明占位符，参数用 `useParams` 读取：
 
 > 示意片段（无配套脚本）
 
 ```jsx
 <Link to={`/home/message/detail/${item.id}/${item.title}`}>{item.title}</Link>
-
-{/* 声明接收 params 参数 */}
-<Route path="/home/message/detail/:id/:title" component={Detail}></Route>
-```
-
-> 示意片段（无配套脚本）
-
-```jsx
-// 路由组件中通过 props.match.params 获取
-const { id, title } = this.props.match.params
-```
-
-### V6
-
-V6 通过 `useParams` 获取动态参数：
-
-> 示意片段（无配套脚本）
-
-```jsx
-<Route path="/home/message/detail/:id/:title" component={Detail}></Route>
+<Route path="/home/message/detail/:id/:title" element={<Detail />} />
 ```
 
 > 示意片段（无配套脚本）
 
 ```jsx
 import { useParams } from 'react-router-dom'
-const { id = '' } = useParams()
+
+const { id = '', title = '' } = useParams()
 ```
 
-另外，若需要读取 URL 上的 query 查询参数，V6 提供了 `useSearchParams` Hook，用法类似 React 的 `useState`。
+需要读取 URL 上的查询参数时用 `useSearchParams`，用法类似 `useState`。
 
 ## 嵌套路由
 
-嵌套路由用于实现页面的二级导航结构。父组件中通过 `Route`（V5 用 `Switch`）定义子路由，需要注意子路径要带上父路径前缀。
+嵌套路由用于实现页面的二级导航结构。V6 中在父路由下继续写 `<Route>`，子路径写相对路径即可，父组件用 `<Outlet />` 作为子路由的渲染出口。
 
 > 示意片段（无配套脚本）
 
 ```jsx
-export default class Home extends Component {
-  render() {
-    return (
-      <div>
-        <h3>我是Home的内容</h3>
-        <div>
-          <ul className="nav nav-tabs">
-            <li><NavLink to="/home/news">News</NavLink></li>
-            <li><NavLink to="/home/message">Message</NavLink></li>
-          </ul>
-          <Switch>
-            <Route path="/home/news" component={News} />
-            <Route path="/home/message" component={Message} />
-          </Switch>
-        </div>
-      </div>
-    )
-  }
+import { NavLink, Outlet } from 'react-router-dom'
+
+function Home() {
+  return (
+    <div>
+      <h3>我是 Home 的内容</h3>
+      <ul className="nav nav-tabs">
+        <li><NavLink to="news">News</NavLink></li>
+        <li><NavLink to="message">Message</NavLink></li>
+      </ul>
+      {/* 子路由渲染在这里 */}
+      <Outlet />
+    </div>
+  )
 }
 ```
+
+路由表一侧：
+
+> 示意片段（无配套脚本）
+
+```jsx
+<Routes>
+  <Route path="/home" element={<Home />}>
+    <Route path="news" element={<News />} />
+    <Route path="message" element={<Message />} />
+  </Route>
+</Routes>
+```
+
+> 迁移对照：V5 用 `<Switch>` 包裹子路由、子路径要写全父前缀、且匹配结果与定义顺序有关；V6 的 `<Routes>` 按最具体匹配、顺序无关，子路由写相对路径。
 
 ### Route 配置（useRoutes）
 

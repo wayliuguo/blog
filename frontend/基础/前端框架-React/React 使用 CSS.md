@@ -257,7 +257,7 @@ export default function Demo() {
 </h1>
 ```
 
-安装可参考：[Tailwind CSS 官方 Create React App 指南](https://www.tailwindcss.cn/docs/guides/create-react-app)。
+安装可参考：[Tailwind CSS 官方 Vite 指南](https://www.tailwindcss.cn/docs/guides/vite)。
 
 ## 各方案对比
 

@@ -1,11 +1,10 @@
 # React 使用 TypeScript
 
-React 与 TypeScript 结合使用，可以帮助我们在写组件时获得完整的类型提示与编译期检查。本文围绕写 React 组件时的 TS 实践展开，涵盖函数组件 / 类组件的类型定义、Props 与接口、事件与 ref 的类型、泛型组件、hooks 泛型以及 TSX 的注意事项。
+React 与 TypeScript 结合使用，可以帮助我们在写组件时获得完整的类型提示与编译期检查。本文围绕写 React 组件时的 TS 实践展开，涵盖函数组件的类型定义、Props 与接口、事件与 ref 的类型、泛型组件、hooks 泛型以及 TSX 的注意事项。
 
 ## 组件声明的整体认识
 
-- React 早期以 **类组件** 为主，如今已全面转向 **函数组件**（Functional Component，简称 FC）。
-- 无论哪种写法，核心都是：**输入 props，返回一段 JSX**。
+- 组件以 **函数组件**（Functional Component，简称 FC）为基准写法：**输入 props，返回一段 JSX**。
 - JSX 中，组件标签的首字母必须**大写**，以和原生 HTML 标签区分。
 
 > 提示：组件之间传递数据不仅仅只有 props，后续还会介绍 Context 等其他形式。函数本身也可以作为属性来传递。
@@ -76,231 +75,100 @@ type IProps = {
 
 > 注意：在 `.tsx` 文件中，使用 `const FunctionTs = <P extends any>(props: P) => {...}` 的箭头函数泛型写法可能因 JSX 解析歧义而报错（`<P>` 会被误认为 JSX 标签），因此更推荐使用 `function` 声明的写法。
 
-## 类组件的类型定义
+## Props 用 type 还是 interface
 
-类的定义形式：
+两者都能描述 props，真正的差异在**扩展方式**：
 
-> 示意片段（无配套脚本）
+- `interface` 支持声明合并与 `extends`，适合要被外部扩展的类型（如组件库对外暴露的 props）。
+- `type` 支持联合、交叉、条件类型等类型编程，适合由多个类型组合出来的 props。
 
-```
-React.Component<P, S = {}>
-React.PureComponent<P, S = {}>
-```
-
-其中 `P` 为 props 类型，`S` 为 state 类型。
-
-### 基础写法
-
-> 示意片段（无配套脚本）
-
-```tsx
-interface IProps {
-    name: string
-}
-interface IState {
-    count: number
-}
-
-class ClassTs extends React.PureComponent<IProps, IState> {
-    state = {
-        count: 0
-    }
-    render() {
-        return <div>{this.props.name}</div>
-    }
-}
-```
-
-使用：
-
-> 示意片段（无配套脚本）
-
-```tsx
-<ClassTs name='well' />
-```
-
-### 类组件泛型
-
-可以在组件上定义泛型，将其 props 类型指定为传入的泛型，并在调用时传入：
-
-> 示意片段（无配套脚本）
-
-```tsx
-interface IState {
-    count: number
-}
-
-class ClassTs<P> extends React.PureComponent<P, IState> {
-    internalProps: P
-    constructor(props: P) {
-        super(props)
-        this.internalProps = props
-    }
-    state = {
-        count: 0
-    }
-    render() {
-        return <div>{this.state.count}</div>
-    }
-}
-```
-
-调用时传入泛型：
-
-> 示意片段（无配套脚本）
-
-```tsx
-type IProps = {
-    name: string
-}
-
-<ClassTs<IProps> name='well' />
-```
-
-## Props 与接口：type 还是 interface
-
-`type` 和 `interface` 都能实现类型定义的功能，对于定义一个组件的 props 而言，用哪一个都可以，两者差异不强制区分。随着深入使用，挑选一种自己习惯的方式保持一致即可。
+业务组件用哪个都能跑通，关键是团队内定一条规则并保持一致。常用约定：描述对象结构用 `interface`，做组合与工具类型用 `type`。
 
 ## 事件与 ref 的类型
 
-### 常见事件对象类型
+### 事件对象的类型
 
-React 为不同事件提供了对应的类型，它们都是泛型，泛型中接收的 Element 元素类型就是我们绑定该事件的**标签元素类型**：
+React 的事件类型都是泛型，泛型参数填**绑定该事件的标签元素类型**。命名有规律可循（`Change` / `Mouse` / `Keyboard` / `Form` / `Drag` ... + `Event` 或 `EventHandler`），常用这几个：
 
-- 剪切板事件对象：`ClipboardEvent<T = Element>`
-- 复合事件对象：`CompositionEvent<T = Element>`
-- 拖拽事件对象：`DragEvent<T = Element>`
-- 焦点事件对象：`FocusEvent<T = Element>`
-- 表单事件对象：`FormEvent<T = Element>`
-- Change 事件对象：`ChangeEvent<T = Element>`
-- 键盘事件对象：`KeyboardEvent<T = Element>`
-- 鼠标事件对象：`MouseEvent<T = Element, E = NativeMouseEvent>`
-- 触摸事件对象：`TouchEvent<T = Element>`
-- 指针事件对象：`PointerEvent<T = Element>`
-- 界面事件对象：`UIEvent<T = Element>`
-- 滚轮事件对象：`WheelEvent<T = Element>`
-- 动画事件对象：`AnimationEvent<T = Element>`
-- 过渡事件对象：`TransitionEvent<T = Element>`
+| 场景 | 事件对象类型 | 处理函数类型 |
+| --- | --- | --- |
+| 输入框 change | `ChangeEvent<T>` | `ChangeEventHandler<T>` |
+| 鼠标点击/移入 | `MouseEvent<T>` | `MouseEventHandler<T>` |
+| 键盘按键 | `KeyboardEvent<T>` | `KeyboardEventHandler<T>` |
+| 表单提交 | `FormEvent<T>` | `FormEventHandler<T>` |
+| 拖拽 | `DragEvent<T>` | `DragEventHandler<T>` |
+| 触摸 | `TouchEvent<T>` | `TouchEventHandler<T>` |
 
 示例：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
 
 ```tsx
-const handleEvent = (e: React.DragEvent<HTMLDivElement>) => {
-    console.log(e.target)
+type ChangeEvent<T> = { target: T }
+type ChangeEventHandler<T> = (event: ChangeEvent<T>) => void
+
+const handleInput: ChangeEventHandler<HTMLInputElement> = event => {
+    const value: string = event.target.value // target 已被限定为 HTMLInputElement，能直接取 .value
+    console.log(value)
 }
 ```
 
-这里 `HTMLDivElement` 就是事件绑定的那个 `div` 元素。
+这里 `HTMLInputElement` 就是事件绑定的那个 `input` 元素。把 `T` 换成 `HTMLSelectElement`，`event.target` 就变成下拉框类型，取不到的属性会在编译期报错：
 
-### 事件处理函数类型
-
-> 示意片段（无配套脚本）
-
-```ts
-type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): void }['bivarianceHack']
-type ReactEventHandler<T = Element> = EventHandler<SyntheticEvent<T>>
-
-// 剪切板事件处理函数
-type ClipboardEventHandler<T = Element> = EventHandler<ClipboardEvent<T>>
-// 复合事件处理函数
-type CompositionEventHandler<T = Element> = EventHandler<CompositionEvent<T>>
-// 拖拽事件处理函数
-type DragEventHandler<T = Element> = EventHandler<DragEvent<T>>
-// 焦点事件处理函数
-type FocusEventHandler<T = Element> = EventHandler<FocusEvent<T>>
-// 表单事件处理函数
-type FormEventHandler<T = Element> = EventHandler<FormEvent<T>>
-// Change 事件处理函数
-type ChangeEventHandler<T = Element> = EventHandler<ChangeEvent<T>>
-// 键盘事件处理函数
-type KeyboardEventHandler<T = Element> = EventHandler<KeyboardEvent<T>>
-// 鼠标事件处理函数
-type MouseEventHandler<T = Element> = EventHandler<MouseEvent<T>>
-// 触摸事件处理函数
-type TouchEventHandler<T = Element> = EventHandler<TouchEvent<T>>
-// 指针事件处理函数
-type PointerEventHandler<T = Element> = EventHandler<PointerEvent<T>>
-// 界面事件处理函数
-type UIEventHandler<T = Element> = EventHandler<UIEvent<T>>
-// 滚轮事件处理函数
-type WheelEventHandler<T = Element> = EventHandler<WheelEvent<T>>
-// 动画事件处理函数
-type AnimationEventHandler<T = Element> = EventHandler<AnimationEvent<T>>
-// 过渡事件处理函数
-type TransitionEventHandler<T = Element> = EventHandler<TransitionEvent<T>>
-```
-
-使用示例：
-
-> 示意片段（无配套脚本）
+> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
 
 ```tsx
-const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    console.log(e.currentTarget)
-}
+// const bad: ChangeEventHandler<HTMLInputElement> = (event) => event.target.selectedIndex
+// 编译错误：HTMLInputElement 上没有 selectedIndex（那是 HTMLSelectElement 的属性）
 ```
 
 ### ref 的类型
 
-ref 对象的类型同样与目标标签元素类型一致，例如：
+ref 的类型同样填目标标签元素类型。注意 `current` 可能是 `null`，取用前必须判空：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
 
 ```tsx
-const inputRef = useRef<HTMLInputElement>(null)
+interface RefObject<T> {
+    current: T | null
+}
+function useRef<T>(initial: T | null): RefObject<T> {
+    return { current: initial }
+}
 
-<input ref={inputRef} />
-// 使用时需要判空
-inputRef.current?.focus()
+const inputRef = useRef<HTMLInputElement>(null) // 泛型 T = HTMLInputElement（lib.dom 标准类型）
+if (inputRef.current) {
+    inputRef.current.focus() // 必须先判空：current 的类型是 HTMLInputElement | null
+}
 ```
 
 ## HTML 标签类型与属性类型
 
-### 常见标签元素类型
+标签元素类型的命名有统一规律：`HTML` + 标签名 + `Element`。常用的几个：
 
-书写事件的泛型参数时，需要知道对应的标签元素类型，常见的有：
+| 标签 | 类型 |
+| --- | --- |
+| `a` | `HTMLAnchorElement` |
+| `button` | `HTMLButtonElement` |
+| `div` | `HTMLDivElement` |
+| `form` | `HTMLFormElement` |
+| `img` | `HTMLImageElement` |
+| `input` | `HTMLInputElement` |
+| `select` | `HTMLSelectElement` |
+| `textarea` | `HTMLTextAreaElement` |
 
-- `a`: `HTMLAnchorElement`
-- `body`: `HTMLBodyElement`
-- `br`: `HTMLBRElement`
-- `button`: `HTMLButtonElement`
-- `div`: `HTMLDivElement`
-- `h1` / `h2` / `h3`: `HTMLHeadingElement`
-- `html`: `HTMLHtmlElement`
-- `img`: `HTMLImageElement`
-- `input`: `HTMLInputElement`
-- `ul`: `HTMLUListElement`
-- `li`: `HTMLLIElement`
-- `link`: `HTMLLinkElement`
-- `p`: `HTMLParagraphElement`
-- `span`: `HTMLSpanElement`
-- `style`: `HTMLStyleElement`
-- `table`: `HTMLTableElement`
-- `tbody`: `HTMLTableSectionElement`
-- `video`: `HTMLVideoElement`
-- `audio`: `HTMLAudioElement`
-- `meta`: `HTMLMetaElement`
-- `form`: `HTMLFormElement`
+自定义组件要透传原生标签属性时，用对应的属性类型，命名规律相同（`HTML` + 标签名 + `Attributes`）：`HTMLAttributes<T>`（通用）、`ButtonHTMLAttributes<T>`、`InputHTMLAttributes<T>`、`SelectHTMLAttributes<T>`、`TextareaHTMLAttributes<T>`、`SVGAttributes<T>`。
 
-### 常见标签属性类型
+典型写法是把原生属性和自定义 props 交叉起来，让组件既能用自己的 props，又能接收原生属性：
 
-如果自定义的组件希望透传或继承原生标签的属性，可以使用这些类型：
+> 示意片段（无配套脚本）
 
-- HTML 属性类型：`HTMLAttributes<T>`
-- 按钮属性类型：`ButtonHTMLAttributes<T>`
-- 表单属性类型：`FormHTMLAttributes<T>`
-- 图片属性类型：`ImgHTMLAttributes<T>`
-- 输入框属性类型：`InputHTMLAttributes<T>`
-- 链接属性类型：`LinkHTMLAttributes<T>`
-- meta 属性类型：`MetaHTMLAttributes<T>`
-- 选择框属性类型：`SelectHTMLAttributes<T>`
-- 表格属性类型：`TableHTMLAttributes<T>`
-- 输入区属性类型：`TextareaHTMLAttributes<T>`
-- 视频属性类型：`VideoHTMLAttributes<T>`
-- SVG 属性类型：`SVGAttributes<T>`
-- WebView 属性类型：`WebViewHTMLAttributes<T>`
+```tsx
+type NativeButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>
+type MyButtonProps = NativeButtonProps & { variant?: 'primary' | 'ghost' }
+```
+
+> 提示：这些类型不必死记，把鼠标悬停在 JSX 属性上，编辑器会直接显示推断出的类型。
 
 ## hooks 的泛型
 
@@ -319,7 +187,30 @@ const store = useReducer<MyReducer, MyState>(reducer, initState) // reducer 泛�
 
 ## hooks 封装时的类型处理
 
-开发自定义 hooks 时，往往需要同时导出 TS 类型，便于调用方约束入参与返回值。例如一个常见的习惯是：自定义 hooks 以 `use` 开头，其参数与返回值分别定义 `inProps` / `outProps` 等类型，从而把逻辑与类型解耦，方便复用与测试。
+自定义 hook 要**同时导出类型**：入参与返回值各定义一个类型，随 hook 一起导出，调用方才能拿到完整约束。
+
+> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
+
+```tsx
+interface UseToggleProps {
+    initial?: boolean
+}
+interface UseToggleResult {
+    value: boolean
+    toggle: () => void
+}
+
+function useToggle(props: UseToggleProps = {}): UseToggleResult {
+    const [value, setValue] = useState<boolean>(props.initial ?? false)
+    const toggle = (): void => setValue(prev => !prev)
+    return { value, toggle }
+}
+
+const { value, toggle } = useToggle({ initial: true })
+// toggle('yes') // 编译错误：toggle 不接受参数
+```
+
+`UseToggleResult` 是这次封装真正的产出：调用方解构出来的 `value` 与 `toggle` 都有确定类型，写错会在编译期报错，而不是等运行时才发现。
 
 ## TSX 注意事项
 
@@ -331,35 +222,26 @@ const store = useReducer<MyReducer, MyState>(reducer, initState) // reducer 泛�
 ## 小结
 
 - React 使用 TypeScript
-  - 组件声明的整体认识
-    - 函数组件为主
-    - 输入 props、返回 JSX
-    - 标签首字母大写
-  - 函数组件的类型定义
-    - 直接标注 props 类型
-    - `FC` 泛型（`FC<IProps>`）
-  - 函数组件的泛型
-    - `function` 声明泛型组件
-    - 调用方传入类型
-  - 类组件的类型定义
-    - `React.Component<P, S>` / `PureComponent`
-    - 基础写法与类组件泛型
-  - Props 与接口：type 还是 interface
-    - 两者皆可、保持一致
+  - 组件的写法与 props 类型
+    - 组件以函数组件为基准：输入 props、返回 JSX
+    - props 类型两种写法：直接标注参数，或 `FC<IProps>`
+    - `interface` 描述结构、`type` 做组合，团队内保持一致
+  - 泛型组件
+    - props 类型由调用方传入时，用 `function` 声明组件泛型
+    - `.tsx` 中箭头函数写 `<P>` 会被当成 JSX 标签，故用 `function`
   - 事件与 ref 的类型
-    - 事件对象类型（`ChangeEvent`、`MouseEvent` 等）
-    - 事件处理函数类型（`ChangeEventHandler` 等）
-    - ref 类型（`useRef<HTMLInputElement>`）
-  - HTML 标签类型与属性类型
-    - 标签元素类型（`HTMLDivElement`、`HTMLInputElement` 等）
-    - 属性类型（`HTMLAttributes<T>`、`InputHTMLAttributes<T>` 等）
-  - hooks 的泛型
-    - `useState`、`useRef`、`useContext`、`useReducer`
-  - hooks 封装时的类型处理
-    - 导出 `inProps` / `outProps` 类型
-  - TSX 注意事项
-    - 泛型与 JSX 解析歧义、`function` 声明优先
-    - 泛型传入标签元素类型
+    - 事件类型 = 场景名 + `Event<T>`，处理函数 = 场景名 + `EventHandler<T>`
+    - 泛型 `T` 填绑定事件的标签元素类型，决定 `event.target` 能取到什么
+    - `useRef<T>(null)` 的 `current` 可能为 `null`，取用前判空
+  - 标签元素与属性类型
+    - 命名规律：`HTML` + 标签名 + `Element` / `Attributes`
+    - 透传原生属性时，与自定义 props 交叉组合
+  - hooks 的类型
+    - `useState<T>` / `useRef<T>` / `useContext<T>` / `useReducer<R, S>` 均支持泛型
+    - 自定义 hook 要同时导出入参与返回值类型，把约束交给调用方
+  - TSX 注意
+    - 类型只存在于编译期，运行时仍是 JS
+    - 拿不准的类型用编辑器悬停看推断结果，不必记全表
 
 ## 配套代码
 
@@ -367,7 +249,7 @@ const store = useReducer<MyReducer, MyState>(reducer, initState) // reducer 泛�
 
 | 文件 | 演示什么 | 对应小节 |
 | --- | --- | --- |
-| `./code/site/react-types.ts` | 函数组件 props 类型（interface + FC）、hooks 泛型（useState/useRef）、事件对象类型与泛型组件 | 函数组件的类型定义 · hooks 的泛型 · 事件与 ref 的类型 |
+| `./code/site/react-types.ts` | 函数组件 props 类型（interface + FC）、泛型组件、hooks 泛型（useState/useRef）、事件对象类型、自定义 hook 的入参与返回值类型 | 函数组件的类型定义 · 函数组件的泛型 · hooks 的泛型 · 事件与 ref 的类型 · hooks 封装时的类型处理 |
 
 启动方式：HTML demo 在 `code` 目录执行 `node server.js`（即 `npm start`）打开 `http://localhost:5180/`；`react-types.ts` 用 `npx tsc --noEmit react-types.ts` 检查类型。
 

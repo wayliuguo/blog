@@ -74,6 +74,25 @@ const numbers = [1, 2, 3]
 const numView: ReactNode = List<number>({ items: numbers, renderItem: n => String(n) })
 const strView: ReactNode = List<string>({ items: ['a', 'b'], renderItem: s => s.toUpperCase() })
 
+// ---- 自定义 hook 的类型：入参与返回值各定义一个类型，随 hook 一起导出 ----
+interface UseToggleProps {
+    initial?: boolean
+}
+interface UseToggleResult {
+    value: boolean
+    toggle: () => void
+}
+
+function useToggle(props: UseToggleProps = {}): UseToggleResult {
+    const [value, setValue] = useState<boolean>(props.initial ?? false)
+    const toggle = (): void => setValue(prev => !prev)
+    return { value, toggle }
+}
+
+const { value, toggle } = useToggle({ initial: true })
+// toggle('yes') // 编译错误：toggle 不接受参数
+// const n: number = value // 编译错误：value 是 boolean，不能赋给 number
+
 export {}
 
 // ------------------------------------------------------------------
