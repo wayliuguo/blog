@@ -19,7 +19,7 @@ Canvas 2D 的执行者是 CPU：每条绘制指令由 CPU 解析、光栅化。�
 
 > 示意片段（无配套脚本）
 
-```text
+```
 JavaScript / Three.js
   │ 提交：顶点缓冲(VBO) + 着色器程序 + 状态
   ▼

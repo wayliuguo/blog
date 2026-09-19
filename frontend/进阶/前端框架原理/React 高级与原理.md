@@ -29,7 +29,7 @@ React（以经典同步模式为例）把一个 state 更新到屏幕上，经�
 
 > 示意片段（无配套脚本）
 
-```plaintext
+```
 触发 setState
    │
    ▼
