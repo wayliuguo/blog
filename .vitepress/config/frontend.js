@@ -447,7 +447,13 @@ export default [
             {
                 text: '工程素养',
                 collapsed: true,
-                items: [{ text: '模块总结（工程素养）', link: '/frontend/进阶/工程素养/总结' }]
+                items: [
+                    { text: '技术方案写作与架构评审', link: '/frontend/进阶/工程素养/技术方案写作与架构评审' },
+                    { text: '代码评审与技术债治理', link: '/frontend/进阶/工程素养/代码评审与技术债治理' },
+                    { text: '线上事故复盘与应急响应', link: '/frontend/进阶/工程素养/线上事故复盘与应急响应' },
+                    { text: '模块总结（工程素养）', link: '/frontend/进阶/工程素养/总结' },
+                    { text: '面试题（工程素养）', link: '/frontend/进阶/工程素养/面试题' }
+                ]
             }
         ]
     },
