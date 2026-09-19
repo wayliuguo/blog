@@ -156,6 +156,15 @@ export default [
                     { text: '模块总结（小程序）', link: '/frontend/基础/小程序/总结' },
                     { text: '模块面试题（小程序）', link: '/frontend/基础/小程序/面试题' }
                 ]
+            },
+            {
+                text: '工程协作',
+                collapsed: false,
+                items: [
+                    { text: 'Git 与协作', link: '/frontend/基础/工程协作/工程协作' },
+                    { text: '模块总结（工程协作）', link: '/frontend/基础/工程协作/总结' },
+                    { text: '模块面试题（工程协作）', link: '/frontend/基础/工程协作/面试题' }
+                ]
             }
         ]
     },
@@ -218,12 +227,11 @@ export default [
                 text: '交付与质量',
                 collapsed: false,
                 items: [
-                    { text: '代码规范', link: '/frontend/进阶/交付与质量/代码规范' },
-                    { text: 'Git 与协作', link: '/frontend/进阶/交付与质量/Git%20与协作' },
-                    { text: '调试技巧', link: '/frontend/进阶/交付与质量/调试技巧' },
+                    { text: '代码规范与质量门禁', link: '/frontend/进阶/交付与质量/代码规范与质量门禁' },
+                    { text: '排障方法论', link: '/frontend/进阶/交付与质量/排障方法论' },
                     { text: 'CI/CD 自动化', link: '/frontend/进阶/交付与质量/CI-CD自动化' },
                     { text: '质量体系与测试', link: '/frontend/进阶/交付与质量/质量体系与测试' },
-                    { text: '发布、灰度与监控', link: '/frontend/进阶/交付与质量/发布、灰度与监控' },
+                    { text: '发布、灰度与回滚', link: '/frontend/进阶/交付与质量/发布、灰度与回滚' },
                     { text: '模块总结（交付与质量）', link: '/frontend/进阶/交付与质量/总结' },
                     { text: '模块面试题（交付与质量）', link: '/frontend/进阶/交付与质量/面试题' }
                 ]
