@@ -403,7 +403,10 @@ export default [
                 items: [
                     { text: 'LLM 应用前端形态', link: '/frontend/进阶/AI%20前端工程/LLM%20应用前端形态' },
                     { text: 'AI 与前端工程结合', link: '/frontend/进阶/AI%20前端工程/AI%20与前端工程结合' },
-                    { text: '模块总结（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/总结' }
+                    { text: '端侧推理与 WASM', link: '/frontend/进阶/AI%20前端工程/端侧推理与%20WASM' },
+                    { text: 'AI 应用的性能与体验', link: '/frontend/进阶/AI%20前端工程/AI%20应用的性能与体验' },
+                    { text: '模块总结（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/总结' },
+                    { text: '模块面试题（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/面试题' }
                 ]
             },
             {

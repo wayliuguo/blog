@@ -206,7 +206,9 @@ function backoffDelay(attempt, base = 300, cap = 8000) {
 | --- | --- | --- |
 | `./code/ai-lab/sse.cjs` | SSE 分帧 / 半开代码块 / 中断 / 重试退避 | 二、三、四、五 |
 | `./code/ai-lab/gen.cjs` | 结构化输出 / 上下文装配 / token 估算（下一篇引用） | — |
-| `./code/ai-lab/run.cjs` | 总入口：依次执行全部探针 | 全篇 |
+| `./code/ai-lab/wasm.cjs` | 端侧推理探针（端侧篇引用） | — |
+| `./code/ai-lab/perf.cjs` | 性能与成本探针（性能篇引用） | — |
+| `./code/ai-lab/run.cjs` | 总入口：依次执行四探针 | 全篇 |
 
 ## 参考
 
