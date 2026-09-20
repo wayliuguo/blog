@@ -10,6 +10,9 @@ analyze-lab/src/
 bench/src/
 bench/src-noside/
 
+# Windows 下被仓库文件监视器锁住、rmdir 失败改 rename 丢弃的临时目录（run.cjs 的 safeRemove）
+bench/*.trash*
+
 # 同样是脚本自生成的样本（rollup-lab/external.cjs、vite-lab/assets.cjs、plugins.cjs）
 rollup-lab/src-ext/
 vite-lab/src-assets/
