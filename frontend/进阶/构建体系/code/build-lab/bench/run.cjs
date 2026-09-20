@@ -6,13 +6,26 @@ const os = require('node:os')
 const path = require('node:path')
 const { execFileSync, spawnSync } = require('node:child_process')
 
+// 安全删除：Windows 上仓库文件监视器（host watcher / 编辑器）可能对刚写入的目录持句柄，
+// 导致 rmdir 报 EPERM/EBUSY。先用 rmSync 尝试；失败则改名丢弃（rename 通常仍可用），不阻断流程。
+// 被改名的 .trash-<时间戳> 目录由 .gitignore 忽略，残留无害。
+function safeRemove(target) {
+  try {
+    fs.rmSync(target, { recursive: true, force: true })
+  } catch {
+    try {
+      fs.renameSync(target, `${target}.trash-${Date.now()}`)
+    } catch {}
+  }
+}
+
 const ROOT = __dirname
 const SRC = path.join(ROOT, 'src')
 const DIST = path.join(ROOT, 'dist')
 const N = 200
 
 execFileSync(process.execPath, [path.join(ROOT, 'gen.cjs'), String(N)], { cwd: ROOT, stdio: 'inherit' })
-fs.rmSync(DIST, { recursive: true, force: true })
+safeRemove(DIST)
 fs.mkdirSync(DIST, { recursive: true })
 
 function run(tool, srcDir, outFile) {
@@ -41,8 +54,9 @@ for (const tool of ['esbuild', 'rollup', 'webpack']) {
 }
 
 // 对照实验：webpack 没摇掉 unused，加 sideEffects:false 之后呢？
+// 注意：src-noside 是跨次运行持久存在的目录，可能被仓库文件监视器持句柄锁住而无法 rmdir（EPERM）。
+// 这里改为"原地覆盖"而非先删后建，彻底绕开锁问题（stale 多余文件不影响构建，打包只从 index.js 进树）。
 const SRC2 = path.join(ROOT, 'src-noside')
-fs.rmSync(SRC2, { recursive: true, force: true })
 fs.mkdirSync(SRC2, { recursive: true })
 for (const f of fs.readdirSync(SRC)) fs.copyFileSync(path.join(SRC, f), path.join(SRC2, f))
 fs.writeFileSync(path.join(SRC2, 'package.json'), JSON.stringify({ sideEffects: false }, null, 2))
