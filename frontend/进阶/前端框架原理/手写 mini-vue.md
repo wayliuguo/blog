@@ -790,41 +790,6 @@ const Counter = {
 
 这些都不是新机制，而是在这四层上各自加的一层：PatchFlags 是"编译期多写一个数字、运行时少跑一段比较"，`Teleport` 是换一个插入容器，`provide / inject` 是沿实例的 `parent` 链向上查。骨架对了，加层是顺序问题。
 
-## 小结
-
-- 手写 mini-vue
-  - 四层骨架
-    - reactivity（依赖表）→ runtime-core（vnode / scheduler / renderer / component）→ runtime-dom（宿主操作）→ fake-dom（单测用）
-    - 每层都能单独跑：`step:reactivity` / `step:effect` / `step:renderer` / `step:diff` / `step:component`
-  - 响应式
-    - 三层依赖表 targetMap（WeakMap）→ depsMap（Map）→ dep（Set）
-    - `track` 在 get 里"建表补空"，`trigger` 在 set 里唤醒集合；遍历前先复制，并跳过 `activeEffect` 自己
-    - `activeEffect` 用栈维护，因为 effect 里可能再跑 effect（computed、子组件渲染）
-    - `effect.deps` 是反向索引，支撑 `cleanupEffect`（分支切换）与 `stop`（卸载不泄漏）
-    - 依赖只认"读过"；`readonly` 读不收集（不会被 set，收集没意义）
-    - 深度响应式是惰性的：get 到对象才继续代理；`reactiveMap` 缓存保证同一对象只代理一次
-  - ref 与 computed
-    - `ref` 用 `RefImpl` 包基本类型，值为对象自动转 reactive；`proxyRefs` 让模板里不写 `.value`（只解包第一层）
-    - `computed` = `_dirty` 脏标记 + 带 scheduler 的 effect：依赖变化只置脏 + 通知，重算发生在被读到时
-  - 宿主抽象
-    - `createRenderer` 注入 9 个操作，`insert` 在 anchor 为 null 时即 append（不需要单独的 appendChild）
-    - 实测两个宿主（假 DOM / 字符串）调用次数逐项相同 —— 这就是 runtime-core 与 runtime-dom 分包的依据
-  - VNode 与 diff
-    - `shapeFlag` 位运算同时表达"元素还是组件"与"孩子是文本还是数组"，patch 按位分发
-    - `key` 归一成 `null`（`props.key != null ? key : null`），否则有 props 无 key 的节点每次更新都会被整棵重建
-    - 列表 diff = 头尾同步 + 中间按 key 配对；无 key 退化成按下标对应
-    - 实测删首项：无 key 5 次（4 次改写 + 1 次删），有 key 1 次；纯重排：无 key 6 次全改写，有 key 3 次全搬移
-    - 简化点：没有最长递增子序列，搬移次数偏多
-  - 组件与调度
-    - 组件 render 被包成 effect：`isMounted` 区分 `patch(null, subTree)` 与 `patch(prev, next)`
-    - scheduler 把 update 排进微任务队列，`queue.includes(job)` 保证一个组件一轮只渲染一次（批处理）
-    - `nextTick` 挂在同一个 flush promise 上，所以能等到"DOM 已最新"
-    - props 用 `shallowReadonly`（拦子改父、不挡框架更新），`propsRaw` 保留原引用供更新
-    - 卸载时 `stop` 渲染 effect；父组件重渲染前先比 props / 插槽，没变就不调子组件的 update
-  - 与真实 Vue3 的差距
-    - 没有编译层（模板 / 静态标记 / PatchFlags）、没有 LIS 优化、没有生命周期 / provide-inject / Teleport / SSR
-    - 它们都是在同一骨架上加的一层，不是新机制
-
 ## 配套代码
 
 本篇示例来自 `code/mini-vue`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。

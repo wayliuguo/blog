@@ -327,36 +327,6 @@ npm create vite@latest react-demo -- --template react-ts
 
 > 补充：`create-react-app`（CRA）已停止维护，官方不再推荐用于新项目。它基于 webpack、启动慢且配置封闭，新项目直接用 Vite；需要 SSR / 路由约定等能力时考虑 Next.js。老项目迁移时主要工作是替换启动脚本、`index.html` 入口与环境变量前缀（`REACT_APP_` → `VITE_`）。
 
-## 小结
-
-- React 核心概念
-  - 开发依赖
-    - `react`：核心代码
-    - `react-dom`：Web / Native 渲染
-    - `babel`：JSX 转换
-  - JSX 语法与规则
-    - 根元素与标签（单一根节点、`Fragment`、闭合、大小写）
-    - 嵌入变量与表达式（`{xxx}`、渲染规则）
-    - 判断（`&&`、三元、函数封装）
-    - 循环（`map`、唯一 `key`）
-    - 绑定属性（`className`、`htmlFor`、style 对象）
-    - 绑定事件（`onXxx`、合成事件、传引用与传参）
-    - 显示 HTML（`dangerouslySetInnerHTML`）
-  - JSX 与 Vue 模板对比
-    - 判断 / 循环 / 表达式写法差异
-    - 设计理念：React 交给 JS vs Vue 自定义指令
-  - 组件与 Props
-    - 一切皆组件
-    - 组件就是一个函数（输入 props、返回 JSX、TS 泛型）
-    - props 单向数据流：要改数据由父组件把处理函数传下来
-    - 默认值用解构默认参数，类型约束用 TS（`prop-types` 已废弃）
-  - 开发者工具
-    - React Developer Tools
-  - 【实战】开发 List 页
-    - 判断、循环、属性与事件
-  - 创建项目
-    - Vite 脚手架（CRA 已停止维护）
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。

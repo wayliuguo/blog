@@ -394,36 +394,6 @@ export function b() {
 
 最有意思的一条是第七行：**循环依赖的语义损失不是「我这个实现太简陋」，而是「打包成 CJS」这件事本身的代价**。webpack 用 CJS 语义实现 ESM，就同样带着这个限制；Rollup 通过作用域提升能部分缓解，但也无法完全还原 ESM 的活绑定与 TDZ 行为。理解了这一层，再看「为什么有的打包器一定要走原生 ESM」，就不只是「快」的问题了。
 
-## 小结
-
-- 手写 mini-bundler
-  - 四步骨架
-    - 解析依赖 → 建模块图 → ESM→CJS 转换 → 生成运行时 + 模块表
-    - 真实打包器产物结构相同，差别只在运行时功能多寡
-  - 依赖解析
-    - 相对路径以「引用者所在目录」为基准，所以要带 `importer`
-    - 补后缀（`.js` / `index.js`）；裸模块在本实现里直接抛错
-  - 建图
-    - `modules.has` 兼做去重与防环
-    - 「先登记再递归」是循环依赖不爆栈的前提
-    - id = 发现顺序，DFS 前序（`deps: [1, 3, 2, 4]`）
-    - 用 AST 而非正则，因为 import 写法太多
-  - 转换
-    - 四种 import → `__require(id)` + 解构；别名方向是 `{ imported: local }`
-    - default 约定放在 `exports.default`
-    - export 用「删关键字 + 末尾统一赋值」，代价是**快照而非活绑定**
-  - 运行时
-    - `cache` 让模块只执行一次
-    - `cache[id] = module` 必须早于执行，否则循环依赖死循环
-    - 函数包装 = 模块作用域
-  - 循环依赖（实测）
-    - 函数导出：原生 ESM 读到 `function`，产物读到 `undefined`
-    - const 导出：原生 ESM 抛 `ReferenceError` 并中止，产物静默 `undefined` 且继续跑
-    - 结论：打包把加载期错误推迟成运行期 undefined，是 CJS 语义的固有代价
-  - 边界
-    - 无 tree-shaking / 作用域提升 / 代码分割 / sourcemap / 非 JS 资源
-    - 真实工具的每一项能力，都是在这个骨架上加一层
-
 ## 配套代码
 
 本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。

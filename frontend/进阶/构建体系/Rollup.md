@@ -592,42 +592,6 @@ Vite 的生产构建用的就是 Rollup（新版本逐步换成 Rolldown，配�
 
 一句话总结分工：**应用用 Vite（开发）+ Rolldown/Rollup（生产），库用 Rollup**。两者不是竞争关系，Vite 的生产构建本身就是用同一套打包能力。
 
-## 小结
-
-- Rollup
-  - ESM 优先
-    - 静态 `import` 让构建期就拿到完整依赖图
-    - 收益：精确 tree-shaking、作用域提升、无运行时注入
-    - 代价：CJS 要靠插件，动态 require 不支持
-  - tree-shaking 与副作用
-    - 实测：未被引用的导出被删（false），顶层副作用保留（true）
-    - 两档控制：`/*#__PURE__*/` 管表达式、`treeshake.moduleSideEffects` 管模块
-    - `moduleSideEffects: false` 不等于"模块内副作用语句可删"
-  - 五种输出格式
-    - esm 0.45 KB（最小）→ cjs 0.50 → iife 0.64 → system 0.86 → umd 0.91 KB
-    - 差异只在包裹层；只有 es 能被二次 tree-shaking
-    - `main`→cjs、`module`→esm、`exports` 条件导出
-  - 四个产物开关
-    - `external`：打不打进来（实测 10170 → 23 字符）
-    - `output.globals`：UMD/IIFE 下外部依赖取全局变量，不配就是 undefined
-    - `manualChunks`：拆成几个文件（长缓存）
-    - `preserveModules`：不合并，一比一还原源目录（组件库）
-  - 插件钩子分两类
-    - build 钩子（options → buildEnd）：一次构建只跑一次
-    - output 钩子（renderStart → closeBundle）：每个 output 各跑一次
-    - `resolveId/load/transform/moduleParsed` 按模块数放大
-  - PluginContext
-    - `getModuleIds` / `getModuleInfo` 拿模块图；`emitFile` 出 asset
-    - `warn` 只提示、`error` 直接中断：同一个插件换开关就是"报告"或"门禁"
-  - 真实插件：体积门禁
-    - `generateBundle` 里算 gzip、卡阈值、出 manifest
-    - 量 gzip 而非 raw；按 chunk 定阈值而非总量
-  - CJS 互操作
-    - Rollup 眼里 `module.exports` 只是一行赋值
-    - commonjs 插件的本质是把赋值改写成导出 + interop 包装
-  - 不适合
-    - 应用开发（无 dev server / HMR）、MF、复杂非 JS 资源、大量 CJS 依赖
-
 ## 配套代码
 
 本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。

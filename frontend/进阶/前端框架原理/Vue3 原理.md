@@ -1135,39 +1135,6 @@ instance.update = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.
 - `provide` / `inject`（基于原型链）。
 - 编译模块独立项目（模板 → AST → render），可作为最终进阶。
 
-## 小结
-
-- Vue3 原理
-  - 整体架构
-    - 编译模块：compiler-core / compiler-dom / compiler-sfc
-    - 运行时模块：runtime-core / runtime-dom
-    - 响应式模块：reactivity
-    - 用编译换说法、用响应式驱动、用运行时落地
-  - 编译原理
-    - SFC 单文件组件解析
-    - 模板 → AST → render 函数
-    - 静态节点标记与 `PatchFlags`
-  - 响应式系统
-    - 数据结构：WeakMap → Map → Set
-    - `reactive` 与 Proxy 拦截
-    - `track` 依赖收集 / `trigger` 触发更新
-    - `effect` 与 `ReactiveEffect` / scheduler / stop
-    - `ref` / `RefImpl` / `unref` / `proxyRefs`
-    - `computed` 惰性与缓存
-    - `watch` 侦听器
-    - `readonly` / `shallowReadonly`
-    - 类型判断与特征属性
-  - 运行时原理
-    - `createRenderer` 与宿主操作注入
-    - `h` / `createVNode` / `shapeFlag`
-    - patch 分发与组件实例化 / setup
-    - 挂载 / 更新 / 卸载
-    - 生命周期钩子
-    - props / 插槽 / provide / inject
-  - mini-vue 手写思路
-    - 自底向上：响应式 → 运行时 → 接入响应式
-    - 渲染 effect + scheduler 异步更新
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/进阶/前端框架原理/code/site/`。

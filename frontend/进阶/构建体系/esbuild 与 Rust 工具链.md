@@ -166,28 +166,6 @@ Babel (JS)     总计   1005 ms  单次   20.10 ms  167.5x  产物 1990 字符
 
 一个务实的中间路线：**让快工具做它最擅长的那一环**。比如 Vite 就是典型——esbuild 负责预构建与单文件转换，打包交给 Rolldown/Rollup。不必全套替换。
 
-## 小结
-
-- esbuild 与 Rust 工具链
-  - esbuild 两个 API
-    - `transform`：只转换不解析依赖；`build`：建依赖图出产物
-    - 实测 transform 第二次 3 ms；首次调用含加载原生二进制约 700 ms
-  - target
-    - 降级要注入运行时辅助代码（es2015 产物 685 字符 vs esnext 82）
-    - target 由浏览器基线决定，不是越新越好
-  - metafile
-    - 看占比要读 `outputs[*].inputs` 的 `bytesInOutput`，不是 `inputs`
-    - tree-shaking 默认生效；压缩比实测 0.58
-  - 三工具对比（50 次转换）
-    - SWC 0.13ms / esbuild 1.50ms / Babel 20.10ms（167x）
-    - 单文件转换 SWC 赢（跨进程开销），整包构建 esbuild 赢（一个进程做完）
-    - 批量转换用 SWC，整包构建用 esbuild
-  - Rust 工具链全景
-    - SWC 替 Babel、Rspack 替 webpack、Rolldown 替 Rollup、Biome/Oxlint 替 ESLint/Prettier
-    - 选型关键不是"谁快"，是替换成本：配置兼容 / 行为一致 / 插件生态
-  - 不该换的情况
-    - 构建只要几秒、重度自定义 Babel 插件、瓶颈不在构建、无人能排查
-
 ## 配套代码
 
 本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。

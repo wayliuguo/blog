@@ -525,49 +525,6 @@ const alertFn = () => {
 
 > 注意：**ref 变化不会触发 rerender**，所以需要结合 state 一起使用——用 `useState` 保存驱动 UI 的值，用 `useRef` 保存给异步闭包读取的最新值。
 
-## 小结
-
-- React Hooks
-  - Hooks 是什么与特点
-    - 解决函数组件状态与副作用
-    - 简化逻辑复用、关注分离
-    - ESLint 规则（`rules-of-hooks`、`exhaustive-deps`）
-  - 逻辑复用：HOC vs 自定义 Hook
-    - 高阶组件（HOC）：接收组件、返回新组件，同样用函数组件 + Hooks 实现
-    - 自定义 Hook（`useState` + `useEffect` 封装）
-    - HOC 缺点：嵌套地狱、props 透传、命名冲突
-  - `useState`：维护状态
-    - 参数与返回值、数组解构
-    - 两种更新方式、异步更新
-    - 不可变数据、浅对比
-    - `immer` + `produce` 简化
-  - `useEffect`：执行副作用
-    - 参数：回调 + 依赖数组
-    - 空依赖：仅挂载执行一次
-    - 有依赖：挂载 + 依赖更新
-    - 无依赖：每次渲染执行
-    - 组件销毁时清理
-  - `useRef`：绑定 DOM 与共享数据
-    - `.current`、不触发重新渲染
-    - 绑定 DOM、保存数据
-  - `useMemo`：缓存结果
-    - 依赖项变化才重新计算
-    - 性能优化手段
-  - `useCallback`：缓存回调函数
-    - 稳定函数引用、避免无效渲染
-  - 自定义 Hook：抽离复用逻辑
-    - 三步走：组件内 → 函数 → 独立文件
-    - `useTitle`、`useMouse`、`useGetInfo`
-  - 第三方 Hooks
-    - `ahooks`、`react-use`
-  - 使用 Hooks 的三条规则
-    - 命名 `useXxx`
-    - 调用位置：组件内 / Hook 内
-    - 顺序一致、不放条件与循环
-  - 闭包陷阱与 `useRef` 解法
-    - 异步闭包捕获旧值
-    - `useRef` 引用类型跨渲染共享
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。

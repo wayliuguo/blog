@@ -481,46 +481,6 @@ function App() {
 
 这样一来，单页应用中"URL → 页面 → 布局 → 权限"的整条链路就打通了，后续新增页面只需"加页面 + 加路由 + 挂布局"三步。
 
-## 小结
-
-- React 路由
-  - 路由原理
-    - 前端路由 vs 后端路由
-    - 哈希（hash）路由
-    - History 路由（History API）
-  - React Router 基础
-    - 安装 `react-router-dom`
-    - Router 种类（`BrowserRouter`、`HashRouter`、`MemoryRouter`、`NativeRouter`、`StaticRouter`）
-    - `Link` 与 `NavLink`
-    - `Routes` 与 `Route`
-    - 路由顺序与 `Switch`（V5 → V6）
-  - 一般组件与路由组件
-    - 写法区别
-    - props 区别（`history`、`location`、`match`）
-    - V6 改用 Hooks
-  - 路由传参与查询参数
-    - V5：params / search / state
-    - V6：`useLocation`、`Navigate`、`useNavigate`
-  - 编程式路由导航
-    - V5：`push`、`replace`、`goBack` 等
-    - V6：`useNavigate`
-  - 动态路由
-    - V5：`props.match.params`
-    - V6：`useParams`、`useSearchParams`
-  - 嵌套路由
-    - 子路由带父路径前缀
-    - `useRoutes` 对象配置
-  - 路由守卫
-    - 条件渲染 + HOC / 自定义 Hook
-    - `RequireAuth`、重定向
-  - 懒加载与代码分割
-    - `React.lazy` + `Suspense`
-    - 动态 `import` 拆 chunk
-  - 路由实战
-    - 路由规划
-    - Layout 模板
-    - 落地步骤（页面、Layout、路由配置、功能串联）
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。

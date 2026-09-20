@@ -268,29 +268,6 @@ export default function Demo() {
 | CSS-in-JS（styled-components 等） | 有（编译为 class） | 强（直接在 JS 中计算） | 中 | 高度动态样式、组件库 |
 | Tailwind | 灵活组合工具类 | 配合 classnames 等 | 中 | 追求开发效率、风格统一 |
 
-## 小结
-
-- React 使用 CSS
-  - 普通 CSS
-    - 内联 style（JS 对象、驼峰）
-    - `className`
-    - 尽量不用内联 style
-  - classnames 动态拼接
-    - 对象 / 数组写法
-  - CSS Module
-    - `xxx.module.css` 自动加后缀
-    - 结合 classnames
-    - 使用 Sass（`.module.scss`）
-  - CSS-in-JS
-    - 解决方案而非工具
-    - `styled-components`
-    - `styled-jsx`
-  - Tailwind CSS
-    - Utility-first 原子化
-    - 工具类组合
-  - 各方案对比
-    - 类名隔离、动态样式、学习成本、适用场景
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。

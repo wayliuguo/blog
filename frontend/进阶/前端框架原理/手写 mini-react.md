@@ -654,42 +654,6 @@ test('hooks 顺序错位：放进 if 里会读到别人的状态', () => {
 
 反过来说，上面那些省掉的东西都不是新机制，而是在这五层上各自加的一层：Lane 是给 `nextUnitOfWork` 排优先级，memo 是在 `updateFunctionComponent` 前加一次浅比较，Context 是借 `parent` 指针向上查找。骨架对了，加层是顺序问题。
 
-## 小结
-
-- 手写 mini-react
-  - 五层骨架
-    - element（对象树）→ host（6 个宿主操作）→ reconciler（Fiber / diff / commit）→ hooks（链表）
-    - 每层都能单独跑：`step:element` / `step:mount` / `step:keyed` / `step:hooks` / `step:slice`
-  - createElement
-    - 产物只有 `type` / `key` / `props`，children 统一进 `props.children`
-    - 文本与数字被包成 `TEXT_ELEMENT`，所以"改文案"在 diff 眼里是"更新节点"
-    - `key` 独立成字段，不进 props
-  - 宿主抽象
-    - 渲染器只用 6 个操作，换一组就换平台（浏览器 DOM / Node 假 DOM）
-    - 函数组件与 Fragment 不产生 DOM，父 DOM 要沿 `parent` 往上找（`domParentOf`）
-  - Fiber 与时间切片
-    - `child` / `sibling` / `parent` 三指针把递归换成可中断的循环
-    - `workLoop` 每处理一个单元问一次 `deadline.timeRemaining()`
-    - 实测（4000 项 / 8002 节点）：最长阻塞 18.1 ms → 5.8 ms，总耗时 18.1 → 19.6 ms
-    - 切片不省时间，只把一次长卡顿换成多次短卡顿
-    - 两处不可切分：组件函数本身（第一个工作单元）、commit 阶段（所有 DOM 写入）
-  - diff
-    - 身份 = 有 key 用 key，没 key 退化成下标
-    - 类型相同复用 DOM 只更 props，类型不同整棵重建
-    - 实测删首项：无 key 3 次宿主操作（1 删 + 2 就地改写），有 key 1 次
-  - commit
-    - 先处理 deletions，再走树，最后跑 effect；先删后插
-    - `alternate` 指向旧树 = 双缓存；完成后 `roots` 切换
-    - 根按容器区分（`roots` 是 Map），换容器是另一棵新树
-  - hooks
-    - 状态按调用顺序存在 Fiber 的 hooks 数组里，所以顺序必须固定
-    - `setState` 只推队列，下次渲染按顺序作用到旧状态上（函数式更新读到的是队首结果）
-    - 批处理是"交给调度器"的自然结果，不是额外实现；同步渲染则不批处理
-    - effect 在 commit 之后统一执行，卸载时清理整棵子树
-  - 与真实 React 的差距
-    - 缺事件系统 / Lane 优先级 / Context / memo / Suspense / SSR
-    - 它们都是在同一骨架上加的一层，不是新机制
-
 ## 配套代码
 
 本篇示例来自 `code/mini-react`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。

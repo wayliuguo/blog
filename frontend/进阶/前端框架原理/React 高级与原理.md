@@ -549,40 +549,6 @@ function useState(initialValue) {
 
 `useEffect` 的原理也在这条链表上：React 把 `deps` 存在 hook 节点里，每次渲染时**浅比较旧的 deps 与新的 deps**，若不同才执行副作用，并在 Commit 阶段触发回调。
 
-## 小结
-
-- React 高级与原理
-  - 渲染机制
-    - Render 阶段：纯计算、可中断
-    - Commit 阶段：副作用、不可中断
-    - 并发特性的基础
-  - Fiber 架构
-    - 解决递归不可中断问题
-    - 链表结构：`child` / `sibling` / `return`
-    - 双缓存：current / workInProgress
-    - 时间切片 workLoop
-  - 虚拟 DOM 与 diff
-    - 虚拟 DOM 是普通对象
-    - 三条启发式：类型不同重建 / 同类型只改 props / 同层用 key
-    - key 的意义与 index 陷阱
-    - 最小化 DOM 操作
-  - 性能优化
-    - `React.memo` 缓存组件
-    - `useMemo` 缓存数据
-    - `useCallback` 缓存函数
-    - 状态上移 / 下移与组件拆分
-    - 并发特性：`createRoot` / `startTransition` / `useTransition` / `useDeferredValue`
-    - 代码分割：`lazy` + `Suspense`
-  - mini-react
-    - `createElement` 生成虚拟 DOM
-    - `render` 挂载
-    - diff / commit 补丁
-  - Hooks 原理
-    - Fiber 上的 hooks 链表
-    - 按调用顺序挂载（顶层调用约束）
-    - hook 节点：`memoizedState` / `queue` / `next`
-    - `useEffect` 依赖浅比较
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/进阶/前端框架原理/code/site/`。

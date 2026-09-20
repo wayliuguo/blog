@@ -520,48 +520,6 @@ const formatPrice = (val) => '¥ ' + Number(val).toFixed(2)
 - `@` 是 `v-on` 的简写。
 - `v-model` 是表单双向绑定的专用指令，无简写形式。
 
-## 小结
-
-- Vue 核心基础
-  - MVVM 思想
-    - Model / View / ViewModel
-    - 双向数据绑定
-  - 创建应用（createApp）
-    - `createApp` + `mount`
-    - 最小 Vue 应用
-    - `data` 必须是函数（组件复用需独立实例，根组件可对象）
-  - 模板语法
-    - 插值（<code v-pre>{{ }}</code>、单表达式、`v-html` 防 XSS）
-    - 指令（`v-bind`、`v-on`、`v-if`、`v-for`、`v-model` 等）
-    - `v-text` 简写
-  - 计算属性 computed
-    - 缓存与依赖追踪
-    - 可写计算属性（getter / setter）
-  - 侦听器 watch
-    - `immediate`、`deep`
-    - `watchEffect`
-    - computed vs watch
-  - class 与 style 绑定
-    - 绑定 class（对象 / 数组 / 字符串）
-    - 绑定 style（对象、驼峰）
-  - 条件渲染 v-if / v-show
-    - `v-if` / `v-else-if` / `v-else`
-    - `v-show` 切换 display
-    - 区别与选型
-  - 列表渲染 v-for
-    - 遍历数组 / 对象 / 数字
-    - 唯一 `key` 与 diff 优化
-  - 事件处理
-    - `v-on`（`@`）、`$event`
-    - 事件修饰符（`.stop`、`.prevent`、`.once` 等）
-  - 表单绑定 v-model
-    - 双向绑定语法糖
-    - 不同表单控件的属性与事件
-    - 修饰符（`.trim`、`.number`、`.lazy`）
-  - 过滤器（Vue2）与插值简写
-    - Vue2 过滤器已废弃、用计算属性替代
-    - 插值简写（<code v-pre>{{ }}</code>、`:`、`@`）
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-Vue/code/site/`。

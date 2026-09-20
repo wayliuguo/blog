@@ -217,36 +217,6 @@ turbo 会并行执行无相互依赖的任务，同时保证有依赖的任务�
 | 权限全开放、随便 publish | 收紧 publish 权限 + 变更门禁 |
 | 没有代码规约约束跨包耦合 | 加 lint 规则与评审制度 |
 
-## 小结
-
-- Monorepo 工程化
-  - Monorepo 概念与动机
-    - Multi-repo vs Mono-repo
-    - 原子提交 / 依赖统一 / 增量构建 / 复用基建
-    - pnpm workspace 典型目录结构
-  - pnpm workspace
-    - 硬链接 + 全局内容寻址存储
-    - `workspace:*` 内部依赖
-    - 非扁平 node_modules 防幽灵依赖
-  - lerna
-    - 多包版本联动：`lerna version` / `lerna publish`
-    - `--conventional-commits` 自动推导版本
-  - turborepo
-    - 任务依赖图与增量缓存
-    - `turbo.json`：pipeline / outputs / dependsOn
-    - `--filter` / `--parallel`
-  - 分工定位
-    - pnpm 管依赖 / lerna 管发版 / turborepo 管任务编排
-  - 进阶机制
-    - filters 定向操作
-    - 输入 hash 与远程缓存
-    - DAG 拓扑并发执行
-  - 大型案例
-    - Babel：多版本共生单元包模式
-    - Vue 3：按需拆包 + workspace 共建
-    - Turbo：dogfooding 自举
-    - 常见落地误区与正确做法
-
 ## 配套代码
 
 本篇为纯概念/规范类内容，不提供独立可运行示例；动手验证方式见正文。

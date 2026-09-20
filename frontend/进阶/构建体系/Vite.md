@@ -406,40 +406,6 @@ webpack 的 HMR 需要把变更模块及其"依赖链上的父模块"重新生�
 
 **与 Rollup 的分工**要说清楚：Vite 不是"Rollup 的替代品"，而是"dev server + 一套构建封装"。生产构建的能力来自 Rolldown/Rollup，所以 `build.rollupOptions` 是透传的，`manualChunks`、`external`、`output` 这些知识两边通用；反过来，`config` / `configResolved` / `configureServer` / `transformIndexHtml` / `handleHotUpdate` 是 Vite 独有，用了它们插件就不能给纯 Rollup 用——这正是 unplugin 存在的理由（见[构建插件开发](./构建插件开发.md)）。
 
-## 小结
-
-- Vite
-  - 双引擎
-    - dev：esbuild 预构建 + 单文件转换，浏览器原生 ESM 加载，不打包
-    - build：8.x 起默认 Rolldown（兼容 rollupOptions），全量打包
-    - 实测：dev 只转 1 个模块，build 转 3 个
-  - 依赖预构建
-    - 解决 CJS→ESM 与碎片合并；实测 magic-string → 单个 37.3 KB 文件
-    - `include` 提前声明避免抖动；`exclude` 给本地 workspace 包留活路
-    - 缓存在 `node_modules/.vite`，诡异问题先删缓存或用 `--force`
-  - 环境变量
-    - 编译期静态替换，实测产物里 `import.meta.env` 已消失
-    - 只有 `VITE_` 前缀暴露；不能动态拼接 key
-    - `define` 替换的是代码文本，必须 `JSON.stringify`
-  - 静态资源与产物形态
-    - `assetsInlineLimit`：0.6KB 内联 / 10.8KB 发文件；内联的图不进 HTTP 缓存
-    - `build.target` 只管语法不管 API；es2015 下 `??` 与 `?.` 都被改写
-    - `import.meta.glob`：默认懒加载（4 chunk），`eager` 合并（1 chunk）
-  - 配置
-    - 按阶段分：通用 / 仅 dev / 仅 build / SSR
-    - `server.proxy` 只在 dev 生效；SSR 的 external 与浏览器产物的 external 是两件事
-    - Rolldown 下 `manualChunks` 只接受函数形式
-  - 插件
-    - `enforce` 排同一钩子的顺序：实测 pre → normal → post
-    - `apply` 决定加载与否：`'build'` / `'serve'`
-    - `transformIndexHtml` 的 `ctx.bundle` 仅 build；dev 侧用 `configureServer`
-    - 真实插件案例：注入 modulepreload 时必须查重，Vite 默认已注入过
-  - HMR
-    - 只重转变更模块 + WS 通知，与项目规模无关
-    - 没有 accept 边界会向上冒泡，冒泡不到就整页刷新；`handleHotUpdate` 可接管
-  - 边界
-    - 老浏览器、webpack 专有 loader、MF、多格式库产物
-
 ## 配套代码
 
 本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。

@@ -515,47 +515,6 @@ export function createStore<S, A>(
 - 依赖没有类型时优先 `npm i -D @types/xxx`，没有类型包的再写 `.d.ts`。
 - 用 `unknown` 而不是 `any` 表达「暂不确定」，再用守卫逐步收窄。
 
-## 小结
-
-- TypeScript 工程实践
-  - tsconfig.json 关键配置
-    - `target` / `lib` / `module` / `moduleResolution`
-    - `strict` 系列严格检查
-    - `noImplicitAny` / `noUncheckedIndexedAccess`
-    - `paths` 路径别名
-    - `noEmit` / `isolatedModules` / `esModuleInterop`
-  - 项目落地
-    - 分层推进：选方案 → 自然推导 → 边界显式 → 类型驱动
-    - api 封装层泛型 `request<T>`
-  - 声明文件 `.d.ts`
-    - `declare` 关键字只描述类型
-    - 全局声明 `declare global`
-    - 模块声明与模块增强
-    - 简写兜底 `declare module "xxx"`
-  - 类型断言与守卫
-    - `as` 断言 / `as const`
-    - `typeof` / `instanceof` / `in` 守卫
-    - 自定义守卫 `x is T`
-    - 可辨识联合（Discriminated Union）
-  - 类型体操
-    - 条件类型 + `infer`
-    - 映射类型与键重映射
-    - `keyof` + 索引访问
-    - 递归模板 `[...infer _Rest, infer L]`
-  - 内置工具类型
-    - `typeof` / `keyof`
-    - `Partial` / `Required` / `Pick` / `Omit`
-    - `Record` / `Readonly` / `ReturnType` / `Awaited`
-  - vite / webpack 集成
-    - Vite：esbuild 转译 + `tsc --noEmit` 检查
-    - resolve.alias 与 `paths` 同步
-    - Webpack：`ts-loader` / `babel-loader`
-  - JS 迁移到 TS
-    - 渐进式迁移路线
-    - `allowJs` / `checkJs`
-    - `@ts-nocheck` / `@ts-ignore` / `@ts-expect-error`
-    - `unknown` 优先于 `any`
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/进阶/TypeScript/code/site/`。

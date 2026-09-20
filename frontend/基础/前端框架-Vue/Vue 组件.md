@@ -618,39 +618,6 @@ const AsyncComp = defineAsyncComponent({
 
 > 应用场景：图表库、富文本编辑器、超大表单页等不常访问的重组件，适合做成异步组件。
 
-## 小结
-
-- Vue 组件
-  - 组件注册
-    - 全局注册（`app.component`）
-    - 局部注册（setup import / components 选项）
-  - 组件通信
-    - 父传子：props（`defineProps`）
-    - 子传父：emit（`defineEmits`）
-    - 父访问子：ref + `defineExpose`
-    - 双向绑定：v-model（`modelValue` / `update:modelValue`）
-    - 依赖注入：provide / inject
-    - 跨级通信：EventBus（Vue2）/ Pinia（Vue3）
-    - 通信方式选择建议
-  - 插槽 Slots
-    - 默认插槽
-    - 具名插槽（`v-slot` / `#`）
-    - 作用域插槽（`{ user, index }`）
-  - 选项式 vs 组合式 API
-    - 选项式：data / computed / methods
-    - 组合式：`setup` / `<script setup>`
-    - 对比与推荐
-  - 生命周期钩子
-    - 选项式钩子（`created`、`mounted`、`unmounted` 等）
-    - 组合式钩子（`onMounted`、`onUnmounted` 等）
-  - 动态组件
-    - `<component :is>` 切换
-    - `<KeepAlive>` 缓存
-  - 异步组件与懒加载
-    - `defineAsyncComponent`
-    - 路由级懒加载
-    - loading / error 配置
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-Vue/code/site/`。

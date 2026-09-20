@@ -241,17 +241,6 @@ mini-micro 已实现            生产级框架（qiankun/micro-app）还要补
 
 最重要的跃迁是**从手动调度到路由驱动**：生产框架监听 popstate/hashchange，把 `start/stop` 变成路由变化后的自动副作用——但内部执行的仍是本篇这几步。
 
-## 小结
-
-- 手写 mini 微前端框架
-  - 四层结构：sandbox（隔离）/ entry（解析+样式）/ scheduler（调度）/ run（模拟环境自检）
-  - 沙箱 = 多例 Proxy（写落 fakeWindow、读沿原型链回落）+ get 陷阱记账副作用 + cleanup 统一清账
-  - HTML entry 正则摘 script/style，scoped 给选择器加 `[data-app=xx]` 前缀
-  - 调度器：url 级缓存 → `new Function('window','with(window){'+code+'}')` 沙箱执行 → bootstrap→mount→unmount→cleanup
-  - `with(window)` 是裸标识符不逃逸的关键（micro-app 同款）
-  - 四场景实测：启动顺序 / 样式前缀 / 卸载清账 / 预加载零网络，`node:assert` 全绿
-  - 与生产的差距：完整解析、document 代理、路由驱动、keep-alive、MF 组合
-
 ## 配套代码
 
 | 文件 | 作用 | 对应小节 |

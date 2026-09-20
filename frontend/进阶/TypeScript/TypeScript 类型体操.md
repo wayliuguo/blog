@@ -161,19 +161,6 @@ type Merge<A, B> = { [K in keyof A | keyof B]: K extends keyof B ? B[K] : K exte
 - **模板字面量的 `string` 兜底**：`` `${string}/:${infer P}` `` 里的 `string` 是贪婪的，多段 `/:` 的路由要先吃最长的那段再递归，否则会漏掉中间参数。
 - **`infer` 只能用于条件分支**：写在 `extends` 右侧之外会直接报语法错；推断出来的值也只在命中分支内有效。
 
-## 小结
-
-- **类型体操 = 类型层面的计算**：条件类型做分支、`infer` 提取片段、映射类型遍历键、模板字面量玩字符串、递归处理不定长，五样凑齐覆盖绝大多数需求
-- **判题靠编译器**：`Equal<A,B>` + `Expect<true>` 把"答案对不对"交给 `tsc`，训练场 `exercises.ts`（未解 61 错）/ `solutions.ts`（0 错）就是现成的类型单测
-- **五大套路**
-  - 提取：`X extends (...)=>infer R ? R : never`，内置 `ReturnType`/`Parameters`/`Awaited`/`InstanceType` 同构
-  - 改写键：`{ [K in keyof T]?: T[K] }` + `?`/`-?`/`readonly`/`-readonly` + key 重映射 `as`
-  - 递归：元组解构 `[infer F, ...infer R]` 取首项与剩余项，用 `T extends object` 当终止条件
-  - 字符串：`${infer X}` 抠片段 + `Uppercase`/`Capitalize`，路由 `:param` 解析、key 改名都靠它
-  - 集合运算：裸 `T extends U ? never : T` 对联合分发，`Exclude`/`Extract`/`NonNullable` 由此而来
-- **实战落点**：判别联合（`LoadingState`）、属性映射（`FormErrors`）、对象覆盖（`Merge` 用映射而非交叉）是日常最高频的三类
-- **两条纪律**：要比较就用扁平对象别用交叉类型；递归类型别用于无限长结构
-
 ## 配套代码
 
 本篇的可运行训练场在仓库 `frontend/进阶/TypeScript/code/type-gym/`。

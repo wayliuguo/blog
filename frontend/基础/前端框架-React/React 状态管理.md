@@ -441,42 +441,6 @@ const increase = useBearStore((s) => s.increase)
 - 喜欢 Vue 式的响应式体验：选 MobX。
 - 无论是哪种，都要牢记 **不可变数据** 与 **单一数据源（Single Source of Truth）** 的原则，才能写出可维护的状态管理代码。
 
-## 小结
-
-- React 状态管理
-  - 为何需要状态管理
-    - 状态提升的局限（props 传递链长、跨页面无法共享）
-    - 集中 Store、单一数据源
-  - Context
-    - `createContext` 与 `Provider` 注入
-    - 跨层级传递
-    - `useContext` 获取值
-    - 适合低频全局数据、不适合频繁变化大数据
-  - `useReducer`
-    - 四概念：`state` / `action` / `reducer` / `dispatch`
-    - 不可变数据
-    - 局限：无模块化、需结合 `useContext`
-  - Redux
-    - 核心概念（store、action、reducer、dispatch）
-    - 单向数据流工作流
-    - 核心组成（Action、Reducer、Store）
-    - 与 TypeScript 结合（RTK `createSlice`、`useSelector`、`useDispatch`）
-    - 实战：管理用户信息
-    - Redux DevTools
-  - MobX
-    - 核心三要素（state、action、derivation）
-    - `computed`、`observer`、`autorun`
-    - `makeAutoObservable`
-    - 使用建议（优先 `computed`、惰性求值）
-  - Zustand 简要
-    - 极简 API（`create`）
-    - 无需 Provider、选择器
-    - 适合中小型项目
-  - 如何选型
-    - 方案对比（Context、useReducer、Redux、MobX、Zustand）
-    - 选型建议
-    - 原则：不可变数据、单一数据源
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
