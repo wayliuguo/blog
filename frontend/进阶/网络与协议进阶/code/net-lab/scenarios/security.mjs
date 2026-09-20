@@ -27,7 +27,7 @@ function allows(policy, candidate) {
     const via = directives.has(candidate.directive) ? candidate.directive : 'default-src'
 
     if (candidate.type === 'inline') {
-        if (candidate.nonce && values.some((v) => v === `'nonce-${candidate.nonce}'`)) {
+        if (candidate.nonce && values.some(v => v === `'nonce-${candidate.nonce}'`)) {
             return { allow: true, via, why: 'nonce 匹配' }
         }
         if (values.includes("'unsafe-inline'")) return { allow: true, via, why: "'unsafe-inline'" }
@@ -41,7 +41,7 @@ function allows(policy, candidate) {
     const url = new URL(candidate.url)
     if (values.includes('*')) return { allow: true, via, why: '通配 *' }
     if (values.includes("'self'") && url.origin === candidate.origin) return { allow: true, via, why: "'self'" }
-    const host = values.find((v) => v.startsWith('http') && new URL(v).host === url.host)
+    const host = values.find(v => v.startsWith('http') && new URL(v).host === url.host)
     if (host) return { allow: true, via, why: `源 ${host}` }
     return { allow: false, via, why: '不在允许的来源清单里' }
 }
@@ -90,15 +90,33 @@ export default async function run() {
             { label: '内联 <script>（没带 nonce）', directive: 'script-src', type: 'inline', nonce: null },
             { label: '页面里的 onclick="…"', directive: 'script-src', type: 'inline', nonce: null },
             { label: 'eval / new Function', directive: 'script-src', type: 'eval' },
-            { label: '第三方 CDN 的脚本', directive: 'script-src', type: 'url', url: 'https://cdn.example.com/app.js', origin: base },
-            { label: '同源脚本 vendor.js', directive: 'script-src', type: 'url', url: `${base}/site/vendor.js`, origin: base },
-            { label: '第三方 CDN 的图片', directive: 'img-src', type: 'url', url: 'https://img.example.com/a.png', origin: base }
+            {
+                label: '第三方 CDN 的脚本',
+                directive: 'script-src',
+                type: 'url',
+                url: 'https://cdn.example.com/app.js',
+                origin: base
+            },
+            {
+                label: '同源脚本 vendor.js',
+                directive: 'script-src',
+                type: 'url',
+                url: `${base}/site/vendor.js`,
+                origin: base
+            },
+            {
+                label: '第三方 CDN 的图片',
+                directive: 'img-src',
+                type: 'url',
+                url: 'https://img.example.com/a.png',
+                origin: base
+            }
         ]
         console.log(title('同一份策略下的判定结果'))
         console.log(
             table(
                 ['要加载的东西', '命中指令', '判定', '依据'],
-                candidates.map((c) => {
+                candidates.map(c => {
                     const r = allows(policy, c)
                     return [c.label, r.via, r.allow ? '允许' : '拦截', r.why]
                 })

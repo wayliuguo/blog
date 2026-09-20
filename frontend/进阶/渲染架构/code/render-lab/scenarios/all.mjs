@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url'
 const DIR = path.dirname(fileURLToPath(import.meta.url))
 const names = fs
     .readdirSync(DIR)
-    .filter((f) => f.endsWith('.mjs') && f !== 'all.mjs')
-    .map((f) => f.replace(/\.mjs$/, ''))
+    .filter(f => f.endsWith('.mjs') && f !== 'all.mjs')
+    .map(f => f.replace(/\.mjs$/, ''))
     .sort()
 
 const failed = []
@@ -22,5 +22,7 @@ for (const name of names) {
         console.error(`\n[${name}] 失败：${error.message}`)
     }
 }
-console.log(`\n===== 共 ${names.length} 个场景，失败 ${failed.length} 个${failed.length ? '：' + failed.join(' ') : ''} =====`)
+console.log(
+    `\n===== 共 ${names.length} 个场景，失败 ${failed.length} 个${failed.length ? '：' + failed.join(' ') : ''} =====`
+)
 process.exit(failed.length ? 1 : 0)

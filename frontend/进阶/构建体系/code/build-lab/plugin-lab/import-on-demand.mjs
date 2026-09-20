@@ -42,7 +42,7 @@ const unplugin = createUnplugin(({ libraryName = 'ui-lib', style = true } = {}) 
             for (const node of ast.program.body) {
                 if (node.type !== 'ImportDeclaration') continue
                 if (node.source.value !== libraryName) continue
-                const specs = node.specifiers.filter((sp) => sp.type === 'ImportSpecifier')
+                const specs = node.specifiers.filter(sp => sp.type === 'ImportSpecifier')
                 if (!specs.length) continue
 
                 const lines = []
@@ -64,10 +64,14 @@ const unplugin = createUnplugin(({ libraryName = 'ui-lib', style = true } = {}) 
 })
 
 function report(label, code, map) {
-    const hit = (s) => String(code.includes(s)).padEnd(5)
+    const hit = s => String(code.includes(s)).padEnd(5)
     const size = String(code.length).padStart(5)
     const m = map ? ` · sourcemap mappings ${map.mappings.length} 字符` : ''
-    console.log(`  ${label.padEnd(18)} button:${hit('button 被注册')} table:${hit('table 被注册')} form:${hit('form 被注册')} ${size} 字符${m}`)
+    console.log(
+        `  ${label.padEnd(18)} button:${hit('button 被注册')} table:${hit('table 被注册')} form:${hit(
+            'form 被注册'
+        )} ${size} 字符${m}`
+    )
 }
 
 async function main() {
@@ -93,7 +97,7 @@ async function main() {
         build: { write: false, minify: false, rollupOptions: { input: ENTRY } }
     })
     const vout = (Array.isArray(res) ? res[0] : res).output
-    report('Vite', vout.find((o) => o.type === 'chunk').code)
+    report('Vite', vout.find(o => o.type === 'chunk').code)
 
     // webpack
     await new Promise((resolve, reject) => {
@@ -125,7 +129,7 @@ async function main() {
     console.log('  同一份实现跑三个打包器：差异只在 unplugin.rollup / .vite / .webpack 这一行')
 }
 
-main().catch((e) => {
+main().catch(e => {
     console.error(e.message || e)
     process.exit(1)
 })

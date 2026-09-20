@@ -25,7 +25,7 @@ function useState(initial) {
         hook.state = typeof action === 'function' ? action(hook.state) : action
     }
 
-    const setState = (action) => {
+    const setState = action => {
         hook.queue.push(action)
         scheduleRerender(state.wipFiber) // 重渲染"这个组件所属的那棵树"
     }

@@ -35,8 +35,8 @@ function webpackPlugin() {
     return {
         apply(compiler) {
             // 拦截解析：把虚拟 id 指向一个"不存在的绝对路径"，再由 loader 提供内容
-            compiler.hooks.normalModuleFactory.tap('build-info-webpack', (nmf) => {
-                nmf.hooks.beforeResolve.tap('build-info-webpack', (resolveData) => {
+            compiler.hooks.normalModuleFactory.tap('build-info-webpack', nmf => {
+                nmf.hooks.beforeResolve.tap('build-info-webpack', resolveData => {
                     if (resolveData.request === VIRTUAL) {
                         resolveData.request = path.join(ROOT, 'virtual-build-info.js')
                     }
@@ -139,7 +139,7 @@ async function main() {
         }
     })
     const out = Array.isArray(res) ? res[0].output : res.output
-    const code = out.find((o) => o.type === 'chunk').code
+    const code = out.find(o => o.type === 'chunk').code
     console.log('  产物含 BUILD_INFO:', code.includes('BUILD_INFO'))
     console.log('  产物片段:', snippetOf(code, 'builtAt'))
 
@@ -149,7 +149,7 @@ async function main() {
     console.log('  能力差异就来自这里：webpack 暴露的是内部工厂钩子，更灵活也更难写对')
 }
 
-main().catch((e) => {
+main().catch(e => {
     console.error(e)
     process.exit(1)
 })

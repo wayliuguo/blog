@@ -17,12 +17,7 @@ function App() {
         Fragment,
         null,
         h(Header, { title: '待办清单' }),
-        h(
-            'ul',
-            null,
-            h('li', { key: 'a' }, '写文档'),
-            h('li', { key: 'b' }, '跑单测')
-        )
+        h('ul', null, h('li', { key: 'a' }, '写文档'), h('li', { key: 'b' }, '跑单测'))
     )
 }
 

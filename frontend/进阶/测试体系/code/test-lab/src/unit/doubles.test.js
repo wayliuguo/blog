@@ -9,7 +9,7 @@ import { loadUserName } from './profile.js'
 //   fake  —— 能跑的简化实现，有自己的内部状态（下面手写的 fakeFetch）
 
 function fakeFetch(routes) {
-    return (url) => {
+    return url => {
         const route = routes[url]
         if (!route) return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve(null) })
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(route) })

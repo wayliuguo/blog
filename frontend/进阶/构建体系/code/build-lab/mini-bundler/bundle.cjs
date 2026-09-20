@@ -10,7 +10,7 @@ const ROOT = __dirname
 const ENTRY = path.resolve(ROOT, process.argv[2] || 'src/entry.js')
 const OUT_FILE = path.join(ROOT, 'dist', 'bundle.js')
 
-const rel = (file) => path.relative(ROOT, file).split(path.sep).join('/')
+const rel = file => path.relative(ROOT, file).split(path.sep).join('/')
 
 // ---------- 1. 依赖解析：把 import 里的相对路径变成磁盘上的真实文件 ----------
 function resolveId(specifier, importer) {
@@ -52,7 +52,7 @@ function transform(record) {
 
     for (const node of record.ast.body) {
         if (node.type === 'ImportDeclaration') {
-            const id = record.deps.find((d) => d.spec === node.source.value).id
+            const id = record.deps.find(d => d.spec === node.source.value).id
             s.overwrite(node.start, node.end, renderImport(node, id))
         } else if (node.type === 'ExportDefaultDeclaration') {
             s.overwrite(node.start, node.declaration.start, 'exports.default = ')
@@ -79,13 +79,13 @@ function renderImport(node, id) {
     const specs = node.specifiers
     if (specs.length === 0) return `__require(${id})` // 只为副作用
 
-    const ns = specs.find((s) => s.type === 'ImportNamespaceSpecifier')
+    const ns = specs.find(s => s.type === 'ImportNamespaceSpecifier')
     if (ns) return `const ${ns.local.name} = __require(${id})`
 
-    const def = specs.find((s) => s.type === 'ImportDefaultSpecifier')
+    const def = specs.find(s => s.type === 'ImportDefaultSpecifier')
     const named = specs
-        .filter((s) => s.type === 'ImportSpecifier')
-        .map((s) => (s.imported.name === s.local.name ? s.local.name : `${s.imported.name}: ${s.local.name}`))
+        .filter(s => s.type === 'ImportSpecifier')
+        .map(s => (s.imported.name === s.local.name ? s.local.name : `${s.imported.name}: ${s.local.name}`))
 
     if (!def) return `const { ${named.join(', ')} } = __require(${id})`
 
@@ -98,13 +98,13 @@ function renderImport(node, id) {
 
 // export const { a, b } = x 这种解构声明，要把每个名字都取出来
 function declaredNames(decl) {
-    if (decl.type === 'VariableDeclaration') return decl.declarations.flatMap((d) => patternNames(d.id))
+    if (decl.type === 'VariableDeclaration') return decl.declarations.flatMap(d => patternNames(d.id))
     return [decl.id.name]
 }
 
 function patternNames(node) {
     if (node.type === 'Identifier') return [node.name]
-    if (node.type === 'ObjectPattern') return node.properties.flatMap((p) => patternNames(p.value))
+    if (node.type === 'ObjectPattern') return node.properties.flatMap(p => patternNames(p.value))
     if (node.type === 'ArrayPattern') return node.elements.filter(Boolean).flatMap(patternNames)
     return []
 }
@@ -129,7 +129,12 @@ function generate(list) {
     for (const r of list) {
         out.push(`    // ${r.id}: ${rel(r.file)}`)
         out.push(`    ${r.id}: function (module, exports, __require) {`)
-        out.push(r.output.split('\n').map((line) => (line ? '        ' + line : line)).join('\n'))
+        out.push(
+            r.output
+                .split('\n')
+                .map(line => (line ? '        ' + line : line))
+                .join('\n')
+        )
         out.push('    },')
     }
     out.push('})')
@@ -146,18 +151,18 @@ fs.writeFileSync(OUT_FILE, generate(list), 'utf8')
 
 console.log('---- 1. 模块图（DFS 发现顺序，id 0 是入口）----')
 for (const r of list) {
-    console.log(`  ${String(r.id).padStart(2)}  ${rel(r.file).padEnd(28)} → 依赖 [${r.deps.map((d) => d.id).join(', ')}]`)
+    console.log(`  ${String(r.id).padStart(2)}  ${rel(r.file).padEnd(28)} → 依赖 [${r.deps.map(d => d.id).join(', ')}]`)
 }
 console.log(`  共 ${list.length} 个模块`)
 
 console.log('\n---- 2. ESM → CJS 转换（取第一个含 import 的模块）----')
-const sample = list.find((r) => /^import /m.test(r.code))
+const sample = list.find(r => /^import /m.test(r.code))
 console.log(`  文件：${rel(sample.file)}`)
-for (const line of sample.code.split('\n').filter((l) => /^(import|export)/.test(l))) {
+for (const line of sample.code.split('\n').filter(l => /^(import|export)/.test(l))) {
     console.log('  - ' + line)
 }
 console.log('  =>')
-for (const line of sample.output.split('\n').filter((l) => /__require\(|^exports\./.test(l))) {
+for (const line of sample.output.split('\n').filter(l => /__require\(|^exports\./.test(l))) {
     console.log('  + ' + line.trim())
 }
 
@@ -185,7 +190,7 @@ for (const [label, r] of pairs) {
     } else {
         // 报错时只报关键那行：Node 的栈末尾是版本号，没有信息量
         const lines = r.text.split('\n').filter(Boolean)
-        const reason = lines.find((l) => /^\w*Error\b/.test(l)) || lines[lines.length - 1]
+        const reason = lines.find(l => /^\w*Error\b/.test(l)) || lines[lines.length - 1]
         console.log(`    [退出码 ${r.status}] ${reason}`)
     }
 }

@@ -54,7 +54,9 @@ function renderCase(c) {
     const warn = c.warnings.map(w => `<div class="warn">[warn] 第 ${w.line} 行 ${esc(w.message)}</div>`).join('')
     const err = c.error ? `<div class="err">${esc(c.error)}</div>` : ''
     const body = c.error
-        ? `<div class="cols"><div class="col"><div class="cap">WXML 源码</div><pre>${esc(c.source)}</pre></div></div>${err}`
+        ? `<div class="cols"><div class="col"><div class="cap">WXML 源码</div><pre>${esc(
+              c.source
+          )}</pre></div></div>${err}`
         : `<div class="cols">
             <div class="col"><div class="cap">WXML 源码</div><pre>${esc(c.source)}</pre></div>
             <div class="col"><div class="cap">编译产物 / 渲染效果</div><pre>${esc(c.output)}</pre>
@@ -84,7 +86,14 @@ function renderSection(section) {
 
     if (section.selectors) {
         const lines = section.selectors.length
-            ? section.selectors.map(s => `<div class="warn">[out] 第 ${s.line} 行 ${esc(s.selector)} 不在 WXSS 支持的选择器清单内</div>`).join('')
+            ? section.selectors
+                  .map(
+                      s =>
+                          `<div class="warn">[out] 第 ${s.line} 行 ${esc(
+                              s.selector
+                          )} 不在 WXSS 支持的选择器清单内</div>`
+                  )
+                  .join('')
             : '<p class="tip">全部在清单内</p>'
         body += lines
     }
@@ -115,7 +124,7 @@ ${run().map(renderSection).join('')}
 // 端口被占用时自动 +1 重试（最多 20 个），实际端口以启动日志为准
 function listen(port, tries = 0) {
     server.removeAllListeners('error')
-    server.on('error', (err) => {
+    server.on('error', err => {
         if (err.code !== 'EADDRINUSE' || tries >= 20) throw err
         console.log(`  端口 ${port} 被占用，自动改用 ${port + 1}`)
         listen(port + 1, tries + 1)

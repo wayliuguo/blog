@@ -20,9 +20,7 @@ const config = {
         ]
     },
     optimization: { minimize: false },
-    cache: useCache
-        ? { type: 'filesystem', cacheDirectory: path.join(ROOT, '.wp-cache'), name: 'bench' }
-        : false,
+    cache: useCache ? { type: 'filesystem', cacheDirectory: path.join(ROOT, '.wp-cache'), name: 'bench' } : false,
     performance: { hints: false },
     stats: 'errors-only'
 }

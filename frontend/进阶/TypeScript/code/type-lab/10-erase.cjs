@@ -24,9 +24,7 @@ const output = ts.transpileModule(source, {
 console.log('---- 编译产物 ----')
 console.log(output.outputText.trim())
 
-const left = ['interface User', ': User', ': string', ': Color'].filter((s) =>
-    output.outputText.includes(s)
-)
+const left = ['interface User', ': User', ': string', ': Color'].filter(s => output.outputText.includes(s))
 console.log(`---- 结论（typescript ${version}） ----`)
 console.log('类型注解与 interface 是否出现在产物里：', left.length === 0 ? '否，已被擦除' : '是')
 console.log(

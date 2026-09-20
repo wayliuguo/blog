@@ -44,7 +44,8 @@
     <body>
         <h1>自定义属性：把「值」抽成令牌</h1>
         <p>
-            同一个 <code>.token-box</code>，颜色与间距全部来自 <code>var()</code>。页面尾部的探针会打印浏览器解析后的值，用来佐证继承、作用域、主题切换与
+            同一个 <code>.token-box</code>，颜色与间距全部来自
+            <code>var()</code>。页面尾部的探针会打印浏览器解析后的值，用来佐证继承、作用域、主题切换与
             <code>@property</code> 这四件事。
         </p>
 
@@ -63,8 +64,8 @@
 
         <h2>④ @property 决定「有没有类型、继不继承」</h2>
         <p>
-            <code>--no-inherit</code> 注册为 <code>&lt;length&gt;</code> 且 <code>inherits: false</code>：父元素上的 40px
-            <strong>不会</strong>被子元素继承；而未注册的 <code>--space</code> 会照常继承。
+            <code>--no-inherit</code> 注册为 <code>&lt;length&gt;</code> 且 <code>inherits: false</code>：父元素上的
+            40px <strong>不会</strong>被子元素继承；而未注册的 <code>--space</code> 会照常继承。
         </p>
         <div id="parent-box" style="--no-inherit: 40px">
             <div id="child-box">我是子元素，看看我拿到的两个变量分别是多少</div>
@@ -78,7 +79,6 @@
         <div class="swatch mix-light">color-mix(in oklab, var(--brand) 80%, #ffffff)</div>
         <div class="swatch mix-translucent">color-mix(in srgb, var(--brand) 25%, transparent)</div>
         <div class="swatch oklch-tone">oklch(0.72 0.15 250)</div>
-
 
         <h2>浏览器实测</h2>
         <pre id="probe">…</pre>

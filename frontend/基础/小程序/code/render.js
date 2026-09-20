@@ -26,9 +26,7 @@ for (const section of run()) {
     if (section.table) {
         const nameWidth = Math.max(...section.table.widths.map(w => wide(w.name))) + 2
         console.log(
-            pad('机型', nameWidth) +
-                pad('屏宽', 8) +
-                section.table.rows.map(r => pad(`${r.rpx}rpx`, 11)).join('')
+            pad('机型', nameWidth) + pad('屏宽', 8) + section.table.rows.map(r => pad(`${r.rpx}rpx`, 11)).join('')
         )
         section.table.widths.forEach((w, i) => {
             console.log(

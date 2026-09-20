@@ -3,8 +3,7 @@
 
 // 判断 A 与 B 是否是同一个类型（结构等价）。
 // 思路：构造两个只接收单一类型参数的函数类型，如果它们能互相赋值，说明 A、B 等价。
-export type Equal<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+export type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false
 
 // 把"应当成立"的等式包成类型，便于在题目里写 `Expect<Equal<你的答案, 期望>>`。
 // 只有成立（true）时才不会报错；不成立则编译失败，正好用来"判题"。

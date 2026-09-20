@@ -98,12 +98,12 @@ export default async function run() {
         { name: 'B 每批都判（样本 ≥500）', minSample: 500, lastOnly: false },
         { name: 'C 样本 ≥3000 才判', minSample: 3000, lastOnly: false }
     ]
-    const results = arms.map((a) => ({ ...a, ...simulate(a) }))
+    const results = arms.map(a => ({ ...a, ...simulate(a) }))
 
     console.log(
         table(
             ['策略', '坏版本：平均受影响用户', '坏版本：漏放率', '坏版本：第几批发现', '正常版本：误回滚率'],
-            results.map((r) => [
+            results.map(r => [
                 r.name,
                 pct(r.badExposed),
                 pct(r.missedRate),

@@ -79,9 +79,7 @@ describe('异步中间态：把 Promise 捏在手里', () => {
 
 describe('waitFor：断言"某件事最终会发生"', () => {
     it('等待 DOM 变化而不是睡固定时间', async () => {
-        const onSubmit = vi.fn().mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve(true), 10))
-        )
+        const onSubmit = vi.fn().mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(true), 10)))
 
         const user = userEvent.setup()
         render(<LoginForm onSubmit={onSubmit} />)

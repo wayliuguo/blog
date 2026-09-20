@@ -36,8 +36,14 @@ function walk(dir) {
     const res = await fetch(`${base}/src/main.js`)
     const code = await res.text()
     console.log('  请求 /src/main.js 状态:', res.status)
-    console.log('  返回内容里 import.meta.env.VITE_APP_NAME 被替换成：', /"([^"]*build-lab[^"]*)"/.exec(code)?.[1] ?? '(未替换)')
-    console.log('  dev 下还留有原始 import 语句：', code.includes('from "/src/helper.js"') || code.includes("from '/src/helper.js'"))
+    console.log(
+        '  返回内容里 import.meta.env.VITE_APP_NAME 被替换成：',
+        /"([^"]*build-lab[^"]*)"/.exec(code)?.[1] ?? '(未替换)'
+    )
+    console.log(
+        '  dev 下还留有原始 import 语句：',
+        code.includes('from "/src/helper.js"') || code.includes("from '/src/helper.js'")
+    )
     await server.close()
 
     // ---------- 2. build：全量走 Rollup ----------
@@ -57,7 +63,7 @@ function walk(dir) {
     }
 
     // ---------- 3. 产物里环境变量是否变成了字面量 ----------
-    const entry = output.find((o) => o.type === 'chunk' && o.isEntry)
+    const entry = output.find(o => o.type === 'chunk' && o.isEntry)
     const entryCode = entry ? entry.code : ''
     console.log('\n---- 3. 编译期替换证据 ----')
     console.log('  产物里含 "build-lab-prod"（.env.production）：', entryCode.includes('build-lab-prod'))
@@ -75,7 +81,7 @@ function walk(dir) {
     })
     // 预构建缓存落在最近的 node_modules/.vite 下（这里是 build-lab/node_modules/.vite）
     const depsDir = path.join(ROOT, '..', 'node_modules', '.vite', 'deps')
-    const files = walk(depsDir).filter((f) => f.endsWith('.js'))
+    const files = walk(depsDir).filter(f => f.endsWith('.js'))
     if (files.length === 0) {
         console.log('  （本次运行没有触发预构建，可先执行 vite optimize --force）')
     } else {

@@ -6,7 +6,9 @@ import { activate } from './activate.mjs'
 import { LikeButton } from './components/like-button.mjs'
 
 const entryAt = Math.round(performance.now() * 10) / 10
-const { value, ...measured } = await Lab.observeMutations('#app', () => activate({ 'like-button': LikeButton }, document))
+const { value, ...measured } = await Lab.observeMutations('#app', () =>
+    activate({ 'like-button': LikeButton }, document)
+)
 
 // 岛是活的吗？真点一下：监听器没挂上，文案就不会变
 const like = document.querySelector('.like')

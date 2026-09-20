@@ -59,16 +59,18 @@ const base = sorted[0].buildMs
 console.log('工具'.padEnd(28) + '构建耗时'.padStart(10) + '进程总耗时'.padStart(12) + '产物'.padStart(10) + '含 unused')
 for (const r of sorted) {
     console.log(
-        `${r.label.padEnd(28)}${(r.buildMs + ' ms').padStart(10)}${(r.wall + ' ms').padStart(12)}${((r.size / 1024).toFixed(1) + ' KB').padStart(10)}  ${r.hasUnused}`
+        `${r.label.padEnd(28)}${(r.buildMs + ' ms').padStart(10)}${(r.wall + ' ms').padStart(12)}${(
+            (r.size / 1024).toFixed(1) + ' KB'
+        ).padStart(10)}  ${r.hasUnused}`
     )
 }
 
 console.log('\n---- 结论（由上面的实测数据推导）----')
 console.log('最快/最慢倍数：', (sorted[sorted.length - 1].buildMs / base).toFixed(1) + 'x')
-const shaken = rows.filter((r) => r.hasUnused === false)
-const kept = rows.filter((r) => r.hasUnused === true)
-console.log('摇掉了未使用代码：', shaken.map((r) => r.label).join(' / ') || '（无）')
-console.log('仍保留未使用代码：', kept.map((r) => r.label).join(' / ') || '（无）')
+const shaken = rows.filter(r => r.hasUnused === false)
+const kept = rows.filter(r => r.hasUnused === true)
+console.log('摇掉了未使用代码：', shaken.map(r => r.label).join(' / ') || '（无）')
+console.log('仍保留未使用代码：', kept.map(r => r.label).join(' / ') || '（无）')
 console.log('webpack 的 tree-shaking 是"标记 + 压缩器删除"两步：关掉 minimize 就只剩标记')
 
 console.log('\n---- 环境 ----')

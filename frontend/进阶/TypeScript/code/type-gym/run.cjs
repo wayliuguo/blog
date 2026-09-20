@@ -19,46 +19,51 @@ const exercisesMode = process.argv.includes('--exercises')
 const dir = __dirname
 
 const options = {
-  target: ts.ScriptTarget.ES2020,
-  module: ts.ModuleKind.CommonJS,
-  moduleResolution: ts.ModuleResolutionKind.Node10,
-  lib: ['lib.es2020.d.ts', 'lib.dom.d.ts'],
-  strict: true,
-  noEmit: true,
-  skipLibCheck: true
+    target: ts.ScriptTarget.ES2020,
+    module: ts.ModuleKind.CommonJS,
+    moduleResolution: ts.ModuleResolutionKind.Node10,
+    lib: ['lib.es2020.d.ts', 'lib.dom.d.ts'],
+    strict: true,
+    noEmit: true,
+    skipLibCheck: true
 }
 
 // 默认只编译 utils + solutions；--exercises 才编译 utils + exercises。
 const fileNames = exercisesMode
-  ? [path.join(dir, 'utils.ts'), path.join(dir, 'exercises.ts')]
-  : [path.join(dir, 'utils.ts'), path.join(dir, 'solutions.ts')]
+    ? [path.join(dir, 'utils.ts'), path.join(dir, 'exercises.ts')]
+    : [path.join(dir, 'utils.ts'), path.join(dir, 'solutions.ts')]
 
 const program = ts.createProgram(fileNames, options)
 const all = ts.getPreEmitDiagnostics(program)
 
 const byFile = new Map()
 for (const d of all) {
-  const name = d.file ? path.basename(d.file.fileName) : '(全局)'
-  if (!byFile.has(name)) byFile.set(name, [])
-  const text = ts.flattenDiagnosticMessageText(d.messageText, ' ')
-  let line = ''
-  if (d.file && d.start !== undefined) {
-    const pos = d.file.getLineAndCharacterOfPosition(d.start)
-    line = d.file.text.split('\n')[pos.line].trim()
-  }
-  byFile.get(name).push({ code: d.code, text, line })
+    const name = d.file ? path.basename(d.file.fileName) : '(全局)'
+    if (!byFile.has(name)) byFile.set(name, [])
+    const text = ts.flattenDiagnosticMessageText(d.messageText, ' ')
+    let line = ''
+    if (d.file && d.start !== undefined) {
+        const pos = d.file.getLineAndCharacterOfPosition(d.start)
+        line = d.file.text.split('\n')[pos.line].trim()
+    }
+    byFile.get(name).push({ code: d.code, text, line })
 }
 
-console.log(`typescript ${ts.version} · ${exercisesMode ? 'exercises（未解题）' : 'solutions（答案）'} · ${all.length} 个诊断`)
+console.log(
+    `typescript ${ts.version} · ${exercisesMode ? 'exercises（未解题）' : 'solutions（答案）'} · ${all.length} 个诊断`
+)
 
 if (byFile.size === 0) {
-  console.log(exercisesMode ? '\n⚠ 未解题居然 0 错误，说明 exercises 的答案位没写成 TODO' : '\n✓ 0 错误（答案全部成立）')
+    console.log(
+        exercisesMode ? '\n⚠ 未解题居然 0 错误，说明 exercises 的答案位没写成 TODO' : '\n✓ 0 错误（答案全部成立）'
+    )
 } else {
-  for (const [name, list] of byFile) {
-    console.log(`\n${name}  ${list.length} 处`)
-    for (const it of list.slice(0, 60)) console.log(`  TS${it.code}  ${it.text}${it.line ? '\n        ' + it.line : ''}`)
-    if (list.length > 60) console.log(`  … 其余 ${list.length - 60} 处省略`)
-  }
+    for (const [name, list] of byFile) {
+        console.log(`\n${name}  ${list.length} 处`)
+        for (const it of list.slice(0, 60))
+            console.log(`  TS${it.code}  ${it.text}${it.line ? '\n        ' + it.line : ''}`)
+        if (list.length > 60) console.log(`  … 其余 ${list.length - 60} 处省略`)
+    }
 }
 
 // 默认模式：必须 0 错误才算通过；--exercises 模式：本来就期望有错误，直接 0 退出。

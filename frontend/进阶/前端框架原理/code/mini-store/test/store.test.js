@@ -99,7 +99,7 @@ test('选择器切片不变时跳过重渲染', () => {
 
 test('选择器返回新对象：Object.is 失守，shallowEqual 才拦得住', () => {
     const store = makeZustand()
-    const toObject = () => (state) => ({ name: state.user.name })
+    const toObject = () => state => ({ name: state.user.name })
     const byReference = mount(store, toObject(), () => {})
     const byShallow = mount(store, toObject(), () => {}, shallowEqual)
 

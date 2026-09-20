@@ -47,7 +47,7 @@ const REVIEWS = [
 
 const RECOMMEND = [{ name: '云南日晒豆 250g' }, { name: '玻璃分享壶' }, { name: '咖啡渣收纳盒' }]
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 /** 慢接口一：评价服务 */
 export async function loadReviews(latency = REVIEWS_LATENCY) {

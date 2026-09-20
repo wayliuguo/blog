@@ -12,9 +12,18 @@ const fruits = [
     { id: 'c', name: '橘子' }
 ]
 
-const noKey = (items) => h('ul', null, items.map((it) => h('li', { 'data-id': it.id }, it.name)))
-const withKey = (items) =>
-    h('ul', null, items.map((it) => h('li', { key: it.id, 'data-id': it.id }, it.name)))
+const noKey = items =>
+    h(
+        'ul',
+        null,
+        items.map(it => h('li', { 'data-id': it.id }, it.name))
+    )
+const withKey = items =>
+    h(
+        'ul',
+        null,
+        items.map(it => h('li', { key: it.id, 'data-id': it.id }, it.name))
+    )
 
 // 只记录"第二次渲染"产生的宿主操作
 function opsOfUpdate(before, after) {
@@ -51,18 +60,21 @@ test('无 key：纯重排靠"就地改写"完成（内容按位置重写）', ()
     const { ops } = opsOfUpdate(noKey(fruits), noKey(reordered))
     // 三个 <li>：每个都被改了属性 + 改了文案，节点一个都没动
     assert.equal(ops.length, 6)
-    assert.equal(ops.every((line) => !line.startsWith('insert')), true)
+    assert.equal(
+        ops.every(line => !line.startsWith('insert')),
+        true
+    )
 })
 
 test('有 key：纯重排只搬移节点，不改内容', () => {
     const reordered = [fruits[2], fruits[0], fruits[1]]
     const { ops, container } = opsOfUpdate(withKey(fruits), withKey(reordered))
     assert.equal(ops.length, 3, '三次搬移')
-    assert.equal(ops.every((line) => line.startsWith('insert')), true)
     assert.equal(
-        container.childNodes[0].childNodes.map((li) => li.getAttribute('data-id')).join(','),
-        'c,a,b'
+        ops.every(line => line.startsWith('insert')),
+        true
     )
+    assert.equal(container.childNodes[0].childNodes.map(li => li.getAttribute('data-id')).join(','), 'c,a,b')
 })
 
 test('头部新增：插到旧节点之前', () => {
@@ -70,11 +82,7 @@ test('头部新增：插到旧节点之前', () => {
         h('ul', null, [h('li', { key: 'b' }, 'b')]),
         h('ul', null, [h('li', { key: 'a' }, 'a'), h('li', { key: 'b' }, 'b')])
     )
-    assert.deepEqual(ops, [
-        'createElement(<li>)',
-        'setElementText(<li>, "a")',
-        'insert(<li>, before <li>)'
-    ])
+    assert.deepEqual(ops, ['createElement(<li>)', 'setElementText(<li>, "a")', 'insert(<li>, before <li>)'])
     assert.equal(container.childNodes[0].childNodes.length, 2)
 })
 
@@ -83,7 +91,7 @@ test('尾部新增与尾部删除', () => {
         h('ul', null, [h('li', { key: 'a' }, 'a')]),
         h('ul', null, [h('li', { key: 'a' }, 'a'), h('li', { key: 'b' }, 'b')])
     )
-    assert.equal(add.ops.filter((l) => l.startsWith('insert')).length, 1)
+    assert.equal(add.ops.filter(l => l.startsWith('insert')).length, 1)
 
     const del = opsOfUpdate(
         h('ul', null, [h('li', { key: 'a' }, 'a'), h('li', { key: 'b' }, 'b')]),
@@ -97,16 +105,24 @@ test('类型变了：即使 key 相同也不复用', () => {
         h('div', null, [h('p', { key: 'x' }, '文字')]),
         h('div', null, [h('span', { key: 'x' }, '文字')])
     )
-    assert.equal(ops.some((l) => l.startsWith('remove')), true, '旧节点被摘掉')
-    assert.equal(ops.some((l) => l.startsWith('createElement(<span>)')), true, '新节点被创建')
+    assert.equal(
+        ops.some(l => l.startsWith('remove')),
+        true,
+        '旧节点被摘掉'
+    )
+    assert.equal(
+        ops.some(l => l.startsWith('createElement(<span>)')),
+        true,
+        '新节点被创建'
+    )
     assert.equal(printDom(document.createElement('div')).length > 0, true)
 })
 
 test('同一位置换成组件：走组件挂载而不是元素 patch', () => {
     const Child = { setup: () => () => h('b', null, 'child') }
-    const { ops } = opsOfUpdate(
-        h('div', null, [h('i', null, 'i')]),
-        h('div', null, [h(Child)])
+    const { ops } = opsOfUpdate(h('div', null, [h('i', null, 'i')]), h('div', null, [h(Child)]))
+    assert.equal(
+        ops.some(l => l.includes('createElement(<b>)')),
+        true
     )
-    assert.equal(ops.some((l) => l.includes('createElement(<b>)')), true)
 })

@@ -13,13 +13,13 @@ const PLANS = [
     ['stream', '流式渲染']
 ]
 
-const jsOf = (report) => report.resources.filter((r) => r.name.startsWith('/src/')).reduce((sum, r) => sum + r.decoded, 0)
+const jsOf = report => report.resources.filter(r => r.name.startsWith('/src/')).reduce((sum, r) => sum + r.decoded, 0)
 
 export default async function run() {
     console.log(title('渲染方案全景：同一个页面，四种交付方式'))
     console.log('每种方案跑两轮，取 load 更小的那一轮 —— 无头 Chrome 每次冷启动的抖动能有上百毫秒')
 
-    await withServer({}, async (server) => {
+    await withServer({}, async server => {
         const collected = {}
         for (const jslag of [300, 0]) {
             for (const [mode] of PLANS) collected[`${mode}-${jslag}`] = await bestOf(server, { mode, query: { jslag } })
@@ -29,7 +29,15 @@ export default async function run() {
             const rows = PLANS.map(([mode, label]) => {
                 const report = collected[`${mode}-${jslag}`]
                 const m = report.metrics
-                return [label, ms(m.ttfb), ms(m.fcp), ms(report.marks.products), ms(report.marks.reviews), bytes(jsOf(report)), ms(m.load)]
+                return [
+                    label,
+                    ms(m.ttfb),
+                    ms(m.fcp),
+                    ms(report.marks.products),
+                    ms(report.marks.reviews),
+                    bytes(jsOf(report)),
+                    ms(m.load)
+                ]
             })
             console.log(section(jslag ? '模拟 300ms 的 JS 下载 + 解析开销（jslag=300）' : '本机理想网络（jslag=0）'))
             console.log(table(['方案', 'TTFB', 'FCP', '商品列表出现', '评价出现', 'JS 字节', 'load'], rows))
@@ -45,7 +53,7 @@ export default async function run() {
         const browser = collected['stream-300']
         console.log(
             `\n浏览器侧看到的分段：` +
-                browser.chunks.map((c) => `${c.name}@${ms(c.at)}`).join(' → ') +
+                browser.chunks.map(c => `${c.name}@${ms(c.at)}`).join(' → ') +
                 `；入口模块 ${ms(browser.extra.entryAt)} 才开始执行`
         )
 

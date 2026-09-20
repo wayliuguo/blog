@@ -29,7 +29,7 @@ export function heavyAggregate(items) {
     const buckets = {}
     for (const it of items) buckets[it.tag] = (buckets[it.tag] || 0) + Number(it.price)
     const sorted = [...items].sort((a, b) => b.score - a.score)
-    return { sum: Math.round(sum), max, buckets, top: sorted.slice(0, 5).map((it) => it.name) }
+    return { sum: Math.round(sum), max, buckets, top: sorted.slice(0, 5).map(it => it.name) }
 }
 
 /**
@@ -37,7 +37,7 @@ export function heavyAggregate(items) {
  * 为什么不用 setTimeout(0)：它有 4ms  clamping，片数一多（2000/200=10 片）就白等 40ms
  */
 export function sliceAggregate(items, chunk = 200) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         let i = 0
         let sum = 0
         let max = 0
@@ -54,7 +54,7 @@ export function sliceAggregate(items, chunk = 200) {
             if (i < items.length) return channel.port2.postMessage(0)
             channel.port2.close()
             const sorted = [...items].sort((a, b) => b.score - a.score)
-            resolve({ sum: Math.round(sum), max, buckets, top: sorted.slice(0, 5).map((it) => it.name) })
+            resolve({ sum: Math.round(sum), max, buckets, top: sorted.slice(0, 5).map(it => it.name) })
         }
         channel.port1.onmessage = step
         step()

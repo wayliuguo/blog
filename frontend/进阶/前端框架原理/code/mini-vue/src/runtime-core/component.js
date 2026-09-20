@@ -60,7 +60,7 @@ function setupStatefulComponent(instance) {
     finishComponentSetup(instance)
 }
 
-const publicInstanceProxyHandlers = (instance) => ({
+const publicInstanceProxyHandlers = instance => ({
     get(target, key) {
         const { setupState, props } = instance
         if (key in setupState) return setupState[key] // setup 返回的（ref 已被解包）
@@ -101,7 +101,7 @@ function renderComponentRoot(instance) {
 function hasPropsChanged(prevProps = {}, nextProps = {}) {
     const nextKeys = Object.keys(nextProps)
     if (nextKeys.length !== Object.keys(prevProps).length) return true
-    return nextKeys.some((key) => nextProps[key] !== prevProps[key])
+    return nextKeys.some(key => nextProps[key] !== prevProps[key])
 }
 
 function updateProps(instance, nextProps) {

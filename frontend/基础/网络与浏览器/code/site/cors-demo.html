@@ -47,11 +47,12 @@
         <h1>同源策略与 CORS：浏览器到底拦了什么</h1>
         <p>
             本页由 <code>http://localhost:5177</code> 提供，页面里所有请求都打到
-            <code>http://localhost:5178</code>——<strong>端口不同就是不同源</strong>，所以每一条结果都是浏览器真的按同源策略判定过的。
+            <code>http://localhost:5178</code
+            >——<strong>端口不同就是不同源</strong>，所以每一条结果都是浏览器真的按同源策略判定过的。
         </p>
         <p class="warn">
-            请务必通过 <code>http://localhost:5177/cors-demo.html</code> 打开；用 <code>file://</code> 直接打开时页面的 Origin 是
-            <code>null</code>，同源判定与 CORS 行为都不一样，看到的结果没有参考价值。
+            请务必通过 <code>http://localhost:5177/cors-demo.html</code> 打开；用 <code>file://</code> 直接打开时页面的
+            Origin 是 <code>null</code>，同源判定与 CORS 行为都不一样，看到的结果没有参考价值。
         </p>
 
         <h2>怎么跑</h2>

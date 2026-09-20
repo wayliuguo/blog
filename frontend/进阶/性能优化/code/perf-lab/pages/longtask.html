@@ -1,85 +1,104 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<title>长任务对照页</title>
-<link rel="icon" href="data:,">
-<script src="./lab.js"></script>
-<style>
-    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
-    header { padding: 16px 24px; background: #eef2ff; }
-    header h1 { margin: 0; font-size: 22px; }
-    #list { padding: 0 12px; }
-    .row { height: 20px; line-height: 20px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
-</style>
-</head>
-<body>
-<header><h1>60000 行列表：一次做完 vs 切片让出主线程</h1></header>
-<div id="list"></div>
-<script>
-    const mode = new URLSearchParams(location.search).get('mode') || 'sync'
-    const ROWS = 60000
-    const list = document.getElementById('list')
+    <head>
+        <meta charset="utf-8" />
+        <title>长任务对照页</title>
+        <link rel="icon" href="data:," />
+        <script src="./lab.js"></script>
+        <style>
+            body {
+                margin: 0;
+                font:
+                    16px/1.6 system-ui,
+                    'Microsoft YaHei',
+                    sans-serif;
+            }
+            header {
+                padding: 16px 24px;
+                background: #eef2ff;
+            }
+            header h1 {
+                margin: 0;
+                font-size: 22px;
+            }
+            #list {
+                padding: 0 12px;
+            }
+            .row {
+                height: 20px;
+                line-height: 20px;
+                border-bottom: 1px solid #f0f0f0;
+                font-size: 13px;
+            }
+        </style>
+    </head>
+    <body>
+        <header><h1>60000 行列表：一次做完 vs 切片让出主线程</h1></header>
+        <div id="list"></div>
+        <script>
+            const mode = new URLSearchParams(location.search).get('mode') || 'sync'
+            const ROWS = 60000
+            const list = document.getElementById('list')
 
-    function build(from, to) {
-        let html = ''
-        for (let i = from; i < to; i++) html += `<div class="row">第 ${i + 1} 行数据</div>`
-        list.insertAdjacentHTML('beforeend', html)
-    }
+            function build(from, to) {
+                let html = ''
+                for (let i = from; i < to; i++) html += `<div class="row">第 ${i + 1} 行数据</div>`
+                list.insertAdjacentHTML('beforeend', html)
+            }
 
-    // 关键：用一次强制同步布局把「主线程真正被独占多久」量出来。
-    // 只测字符串拼接会得到十几毫秒的假象——真正卡住用户的是浏览器必须把这 6 万个盒子排完才能画第一帧。
-    function buildAndFlush(from, to) {
-        build(from, to)
-        void list.offsetHeight // 读一次布局属性 → 浏览器必须立刻结算，无法拖到下一帧
-    }
+            // 关键：用一次强制同步布局把「主线程真正被独占多久」量出来。
+            // 只测字符串拼接会得到十几毫秒的假象——真正卡住用户的是浏览器必须把这 6 万个盒子排完才能画第一帧。
+            function buildAndFlush(from, to) {
+                build(from, to)
+                void list.offsetHeight // 读一次布局属性 → 浏览器必须立刻结算，无法拖到下一帧
+            }
 
-    if (mode === 'sync') {
-        // 一次做完：从第一行到最后一行的全部工作都在同一个同步块里，中间浏览器一帧都插不进来
-        const work = Lab.time(() => buildAndFlush(0, ROWS))
-        Lab.finish(
-            {
-                mode,
-                rows: ROWS,
-                totalMs: work.ms,
-                chunks: 1,
-                longestBlock: work.ms,
-                firstContentMs: work.ms // 只有全部做完，第一批内容才可能出现
-            },
-            200
-        )
-    } else {
-        // 切片：每片 6000 行，用 MessageChannel 把控制权还给浏览器（宏任务，能让渲染插进来）
-        const CHUNK = 6000
-        const blocks = []
-        let done = 0
-        let firstContentMs = null
-        const t0 = performance.now()
-        const channel = new MessageChannel()
-
-        channel.port1.onmessage = () => {
-            const started = performance.now()
-            buildAndFlush(done, Math.min(done + CHUNK, ROWS))
-            blocks.push(Math.round(performance.now() - started))
-            done += CHUNK
-            if (firstContentMs == null) firstContentMs = Math.round(performance.now() - t0)
-            if (done < ROWS) channel.port2.postMessage(null)
-            else
+            if (mode === 'sync') {
+                // 一次做完：从第一行到最后一行的全部工作都在同一个同步块里，中间浏览器一帧都插不进来
+                const work = Lab.time(() => buildAndFlush(0, ROWS))
                 Lab.finish(
                     {
                         mode,
                         rows: ROWS,
-                        totalMs: Math.round(performance.now() - t0),
-                        chunks: blocks.length,
-                        longestBlock: Math.max(...blocks),
-                        firstContentMs,
-                        blocks
+                        totalMs: work.ms,
+                        chunks: 1,
+                        longestBlock: work.ms,
+                        firstContentMs: work.ms // 只有全部做完，第一批内容才可能出现
                     },
                     200
                 )
-        }
-        channel.port2.postMessage(null)
-    }
-</script>
-</body>
+            } else {
+                // 切片：每片 6000 行，用 MessageChannel 把控制权还给浏览器（宏任务，能让渲染插进来）
+                const CHUNK = 6000
+                const blocks = []
+                let done = 0
+                let firstContentMs = null
+                const t0 = performance.now()
+                const channel = new MessageChannel()
+
+                channel.port1.onmessage = () => {
+                    const started = performance.now()
+                    buildAndFlush(done, Math.min(done + CHUNK, ROWS))
+                    blocks.push(Math.round(performance.now() - started))
+                    done += CHUNK
+                    if (firstContentMs == null) firstContentMs = Math.round(performance.now() - t0)
+                    if (done < ROWS) channel.port2.postMessage(null)
+                    else
+                        Lab.finish(
+                            {
+                                mode,
+                                rows: ROWS,
+                                totalMs: Math.round(performance.now() - t0),
+                                chunks: blocks.length,
+                                longestBlock: Math.max(...blocks),
+                                firstContentMs,
+                                blocks
+                            },
+                            200
+                        )
+                }
+                channel.port2.postMessage(null)
+            }
+        </script>
+    </body>
 </html>

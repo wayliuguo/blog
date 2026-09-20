@@ -9,7 +9,7 @@ export function h(type, props, ...children) {
     return {
         type,
         props: props || {},
-        children: children.flat(Infinity).filter((c) => c != null && c !== false)
+        children: children.flat(Infinity).filter(c => c != null && c !== false)
     }
 }
 
@@ -58,7 +58,7 @@ export function applyProps(dom, props, stats) {
         }
         if (key === 'style' && typeof value === 'object') {
             for (const [prop, v] of Object.entries(value)) {
-                const css = prop.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())
+                const css = prop.replace(/[A-Z]/g, m => '-' + m.toLowerCase())
                 dom.style.setProperty(css, v)
             }
             if (stats) stats.patched++

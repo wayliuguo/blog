@@ -26,8 +26,12 @@ export default async function run() {
     for (const { name, report } of rows) {
         const total = Math.max(report.metrics.load, 100)
         const items = report.resources
-            .filter((r) => r.type === 'script' || r.type === 'link')
-            .map((r) => ({ label: r.name.replace('/slow?ms=', 'slow ms=').slice(0, 23), start: r.start, duration: r.duration }))
+            .filter(r => r.type === 'script' || r.type === 'link')
+            .map(r => ({
+                label: r.name.replace('/slow?ms=', 'slow ms=').slice(0, 23),
+                start: r.start,
+                duration: r.duration
+            }))
         console.log(`\n[${name}] FCP=${ms(report.metrics.fcp)} LCP=${ms(report.metrics.lcp)}`)
         console.log(items.length ? timeline(items, total) : '（没有阻塞型资源）')
     }

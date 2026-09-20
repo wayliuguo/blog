@@ -44,26 +44,31 @@
     <body>
         <h1>@layer：用「层」替代选择器优先级战争</h1>
         <p>
-            下面几组元素都套了 <code>.box</code>，唯一变量是把规则放进了哪个层。页面尾部的探针会把浏览器真正生效的计算值打出来——这就是结论的佐证。
+            下面几组元素都套了
+            <code>.box</code
+            >，唯一变量是把规则放进了哪个层。页面尾部的探针会把浏览器真正生效的计算值打出来——这就是结论的佐证。
         </p>
 
         <h2>① 层序决定胜负，源码位置不算数</h2>
         <p>
-            层序声明为 <code>@layer reset, components, utilities;</code>，而 <code>utilities</code> 的规则写在源码最前面。三条规则同一选择器，
+            层序声明为 <code>@layer reset, components, utilities;</code>，而
+            <code>utilities</code> 的规则写在源码最前面。三条规则同一选择器，
             <code>utilities</code> 最后声明，所以它赢。
         </p>
         <div id="layer-order"><div class="box">我的文字颜色由 utilities 层决定</div></div>
 
         <h2>② 层比特异性更靠前</h2>
         <p>
-            红色边框那条在 components 层里、选择器是 <code>#layer-vs-spec .plain</code>（一个 ID + 一个类）；绿色边框那条没进任何层、选择器只有一个
+            红色边框那条在 components 层里、选择器是 <code>#layer-vs-spec .plain</code>（一个 ID +
+            一个类）；绿色边框那条没进任何层、选择器只有一个
             <code>.plain</code>。层先于特异性比较，所以<strong>低特异性的未分层规则赢</strong>。
         </p>
         <div id="layer-vs-spec"><div class="box plain">我的边框颜色由层外那条低特异性规则决定</div></div>
 
         <h2>③ !important 把层序反转</h2>
         <p>
-            <code>reset</code>（最早声明的层）里的 <code>!important</code> 最强，未分层的 <code>!important</code> 反而最弱——正好与普通声明相反。
+            <code>reset</code>（最早声明的层）里的 <code>!important</code> 最强，未分层的
+            <code>!important</code> 反而最弱——正好与普通声明相反。
         </p>
         <div id="layer-important"><div class="box">我的文字颜色由最早层 reset 决定</div></div>
 

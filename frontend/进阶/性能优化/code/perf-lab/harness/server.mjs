@@ -26,7 +26,7 @@ const MIME = {
     '.svg': 'image/svg+xml',
     '.json': 'application/json; charset=utf-8'
 }
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const sleep = ms => new Promise(r => setTimeout(r, ms))
 const CACHEABLE = { 'Cache-Control': 'public, max-age=300' }
 
 /** 按带宽分片慢发：kbps 为 0 时一次性发完 */
@@ -48,7 +48,9 @@ function filler(name, kb) {
     const pad = `/* ${'x'.repeat(74)} */\n`.repeat(rows)
     if (name.endsWith('.svg')) {
         // 真 SVG：有确定的内在尺寸，可以做 CLS / 图片懒加载实验
-        return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240" viewBox="0 0 640 240"><rect width="640" height="240" fill="#7b4fff"/><text x="24" y="132" fill="#ffffff" font-size="28">${name} · ${kb}KB</text><!-- ${'x'.repeat(kb * 1024)} --></svg>`
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240" viewBox="0 0 640 240"><rect width="640" height="240" fill="#7b4fff"/><text x="24" y="132" fill="#ffffff" font-size="28">${name} · ${kb}KB</text><!-- ${'x'.repeat(
+            kb * 1024
+        )} --></svg>`
     }
     if (name.endsWith('.css')) return `/* ${name} · ${kb}KB 体积填充 */\n${pad}`
     return `/* ${name} · ${kb}KB 体积填充 */\n${pad}export default ${kb}\n`
@@ -97,7 +99,13 @@ export async function startServer(options = {}) {
             const name = url.searchParams.get('name') || 'asset.js'
             if (delay) await sleep(delay)
             const ext = path.extname(name)
-            return send(res, filler(name, kb), MIME[ext] || MIME['.js'], headers, Number(url.searchParams.get('kbps') || 0))
+            return send(
+                res,
+                filler(name, kb),
+                MIME[ext] || MIME['.js'],
+                headers,
+                Number(url.searchParams.get('kbps') || 0)
+            )
         }
 
         if (url.pathname === '/bundle') {
@@ -114,7 +122,13 @@ export async function startServer(options = {}) {
 
         if (VENDOR[url.pathname]) {
             if (spaLatency) await sleep(spaLatency)
-            return send(res, fs.readFileSync(VENDOR[url.pathname]), MIME['.js'], spaCache ? CACHEABLE : headers, Number(url.searchParams.get('kbps') || 0))
+            return send(
+                res,
+                fs.readFileSync(VENDOR[url.pathname]),
+                MIME['.js'],
+                spaCache ? CACHEABLE : headers,
+                Number(url.searchParams.get('kbps') || 0)
+            )
         }
 
         const name = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname)
@@ -130,7 +144,7 @@ export async function startServer(options = {}) {
         res.end(fs.readFileSync(file))
     })
 
-    await new Promise((resolve) => server.listen(port, '127.0.0.1', resolve))
+    await new Promise(resolve => server.listen(port, '127.0.0.1', resolve))
     return {
         origin: `http://127.0.0.1:${server.address().port}`,
         reports,
@@ -139,15 +153,15 @@ export async function startServer(options = {}) {
             return new Promise((resolve, reject) => {
                 const entry = { resolve }
                 const timer = setTimeout(() => {
-                    waiters = waiters.filter((w) => w !== entry)
+                    waiters = waiters.filter(w => w !== entry)
                     reject(new Error(`等页面上报超时（${timeout}ms）`))
                 }, timeout)
-                waiters.push((payload) => {
+                waiters.push(payload => {
                     clearTimeout(timer)
                     resolve(payload)
                 })
             })
         },
-        close: () => new Promise((resolve) => server.close(resolve))
+        close: () => new Promise(resolve => server.close(resolve))
     }
 }

@@ -8,8 +8,8 @@
 // ---------- 浏览器宿主 ----------
 function browserHost() {
     return {
-        createInstance: (type) => document.createElement(type),
-        createTextInstance: (text) => document.createTextNode(text),
+        createInstance: type => document.createElement(type),
+        createTextInstance: text => document.createTextNode(text),
         appendChild: (parent, child) => parent.appendChild(child),
         insertBefore: (parent, child, before) => parent.insertBefore(child, before),
         removeChild: (parent, child) => parent.removeChild(child),
@@ -36,8 +36,8 @@ const TEXT_NODE = '#text'
 
 function nodeHost() {
     return {
-        createInstance: (type) => makeNode(type),
-        createTextInstance: (text) => makeNode(TEXT_NODE, text),
+        createInstance: type => makeNode(type),
+        createTextInstance: text => makeNode(TEXT_NODE, text),
         appendChild: (parent, child) => {
             if (child.parent) child.parent.children.splice(child.parent.children.indexOf(child), 1)
             child.parent = parent
@@ -78,7 +78,7 @@ function printTree(node, indent = 0) {
         .join('')
     const head = `${pad}<${node.type}${attrs}>`
     if (!node.children.length) return head
-    return [head, ...node.children.map((c) => printTree(c, indent + 1)), `${pad}</${node.type}>`].join('\n')
+    return [head, ...node.children.map(c => printTree(c, indent + 1)), `${pad}</${node.type}>`].join('\n')
 }
 
 module.exports = { host, printTree, TEXT_NODE, makeNode }

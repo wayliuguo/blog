@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url'
 const DIR = path.dirname(fileURLToPath(import.meta.url))
 const names = fs
     .readdirSync(DIR)
-    .filter((f) => f.endsWith('.mjs') && f !== 'all.mjs')
-    .map((f) => f.replace(/\.mjs$/, ''))
+    .filter(f => f.endsWith('.mjs') && f !== 'all.mjs')
+    .map(f => f.replace(/\.mjs$/, ''))
     .sort()
 
 export default async function run() {

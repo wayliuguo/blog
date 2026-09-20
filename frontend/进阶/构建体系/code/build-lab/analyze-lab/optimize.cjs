@@ -80,7 +80,7 @@ esbuild.buildSync({
 })
 const splitFiles = require('node:fs')
     .readdirSync(splitOut)
-    .map((f) => ({ name: f, size: require('node:fs').statSync(path.join(splitOut, f)).size }))
+    .map(f => ({ name: f, size: require('node:fs').statSync(path.join(splitOut, f)).size }))
     .sort((a, b) => b.size - a.size)
 const splitFirstScreen = require('node:fs').readFileSync(
     path.join(splitOut, splitFiles[splitFiles.length - 1].name),
@@ -118,7 +118,9 @@ console.log('\n---- 压缩后的效果（取 A 与 B）----')
 for (const idx of [0, 1]) {
     const res = build(cases[idx].entry, { minify: true })
     const meta = Object.values(res.metafile.outputs)[0]
-    console.log(`  ${cases[idx].name}: ${rows[idx].bytes} → ${meta.bytes} 字节（${(meta.bytes / rows[idx].bytes).toFixed(2)}）`)
+    console.log(
+        `  ${cases[idx].name}: ${rows[idx].bytes} → ${meta.bytes} 字节（${(meta.bytes / rows[idx].bytes).toFixed(2)}）`
+    )
 }
 
 console.log('\n---- 体积优化的四条手段与收益量级 ----')

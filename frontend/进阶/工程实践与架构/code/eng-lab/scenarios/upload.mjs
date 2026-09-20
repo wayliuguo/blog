@@ -26,7 +26,7 @@ function makeFile(size) {
     return buf
 }
 
-const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex')
+const sha256 = buf => crypto.createHash('sha256').update(buf).digest('hex')
 
 function makeServer() {
     const jobs = new Map() // uploadId -> { size, chunkSize, fileHash, parts: Map<index, Buffer> }
@@ -72,14 +72,14 @@ function makeServer() {
             const received = [...job.parts.keys()].sort((a, b) => a - b)
             return json(res, {
                 received,
-                missing: Array.from({ length: total }, (_, i) => i).filter((i) => !job.parts.has(i))
+                missing: Array.from({ length: total }, (_, i) => i).filter(i => !job.parts.has(i))
             })
         }
 
         if (url.pathname === '/api/upload/complete') {
             const job = jobs.get(url.searchParams.get('uploadId'))
             const total = Math.ceil(job.size / job.chunkSize)
-            const missing = Array.from({ length: total }, (_, i) => i).filter((i) => !job.parts.has(i))
+            const missing = Array.from({ length: total }, (_, i) => i).filter(i => !job.parts.has(i))
             if (missing.length) return json(res, { ok: false, missing }, 400)
             const hash = crypto.createHash('sha256')
             let size = 0
@@ -113,7 +113,11 @@ export default async function run() {
     const { handler, stats } = makeServer()
     const server = await startServer(handler)
     console.log(title('实验设置'))
-    console.log(`文件 ${bytes(file.length)}，切片 ${bytes(CHUNK_SIZE)} → ${parts.length} 片，每片服务端耗时约 ${PART_LATENCY} ms`)
+    console.log(
+        `文件 ${bytes(file.length)}，切片 ${bytes(CHUNK_SIZE)} → ${
+            parts.length
+        } 片，每片服务端耗时约 ${PART_LATENCY} ms`
+    )
     console.log(`文件指纹 sha256=${fileHash.slice(0, 16)}…`)
 
     const put = async (uploadId, index) => {
@@ -135,19 +139,14 @@ export default async function run() {
                 chunkSize: CHUNK_SIZE,
                 fileHash: limit === 1 ? fileHash : fileHash + '-twin'
             })
-        }).then((r) => r.json())
+        }).then(r => r.json())
         const uploadId = init.uploadId
 
         const pool = createPool(limit)
         const started = performance.now()
         await pool.runAll(parts.map((_, i) => () => put(uploadId, i)))
         const elapsed = performance.now() - started
-        timingRows.push([
-            limit === 1 ? '串行（1 片）' : `并发（${limit} 片）`,
-            ms(elapsed),
-            pool.peak,
-            stats.peak
-        ])
+        timingRows.push([limit === 1 ? '串行（1 片）' : `并发（${limit} 片）`, ms(elapsed), pool.peak, stats.peak])
     }
     console.log(section('一、串行与并发的对照'))
     console.log(table(['上传方式', '客户端耗时', '客户端并发峰值', '服务端观测并发峰值'], timingRows))
@@ -160,35 +159,36 @@ export default async function run() {
     const partial = await fetch(`${server.base}/api/upload/init`, {
         method: 'POST',
         body: JSON.stringify({ size: file.length, chunkSize: CHUNK_SIZE, fileHash: fileHash + '-break' })
-    }).then((r) => r.json())
+    }).then(r => r.json())
     const poolBreak = createPool(3)
-    await poolBreak.runAll([0, 1, 2].map((i) => () => put(partial.uploadId, i))) // 只传 3 片，模拟断线
-    const status1 = await fetch(`${server.base}/api/upload/status?uploadId=${partial.uploadId}`).then((r) => r.json())
+    await poolBreak.runAll([0, 1, 2].map(i => () => put(partial.uploadId, i))) // 只传 3 片，模拟断线
+    const status1 = await fetch(`${server.base}/api/upload/status?uploadId=${partial.uploadId}`).then(r => r.json())
     console.log(`掉线时已传 [${status1.received.join(', ')}]，缺 [${status1.missing.join(', ')}]`)
     const restarted = await fetch(`${server.base}/api/upload/init`, {
         method: 'POST',
         body: JSON.stringify({ size: file.length, chunkSize: CHUNK_SIZE, fileHash: fileHash + '-break' })
-    }).then((r) => r.json())
+    }).then(r => r.json())
     const total = parts.length
-    const stillMissing = Array.from({ length: total }, (_, i) => i).filter((i) => !restarted.received.includes(i))
+    const stillMissing = Array.from({ length: total }, (_, i) => i).filter(i => !restarted.received.includes(i))
     const poolRest = createPool(3)
     const startedRest = performance.now()
-    await poolRest.runAll(stillMissing.map((i) => () => put(restarted.uploadId, i)))
+    await poolRest.runAll(stillMissing.map(i => () => put(restarted.uploadId, i)))
     const restCost = performance.now() - startedRest
     console.log(
-        `重连后 init 返回 received=[${restarted.received.join(', ')}]，按总量 ${total} 片推出还缺 [${stillMissing.join(', ')}]；` +
-            `这一轮只发了 ${stillMissing.length} 片、耗时 ${ms(restCost)}，若从头重传要发 ${total} 片`
+        `重连后 init 返回 received=[${restarted.received.join(', ')}]，按总量 ${total} 片推出还缺 [${stillMissing.join(
+            ', '
+        )}]；` + `这一轮只发了 ${stillMissing.length} 片、耗时 ${ms(restCost)}，若从头重传要发 ${total} 片`
     )
 
     // —— 3. 秒传
     console.log(section('三、秒传：同一份文件第二次上传'))
     const complete1 = await fetch(`${server.base}/api/upload/complete?uploadId=${partial.uploadId}`, {
         method: 'POST'
-    }).then((r) => r.json())
+    }).then(r => r.json())
     const again = await fetch(`${server.base}/api/upload/init`, {
         method: 'POST',
         body: JSON.stringify({ size: file.length, chunkSize: CHUNK_SIZE, fileHash: fileHash + '-break' })
-    }).then((r) => r.json())
+    }).then(r => r.json())
     console.log(
         table(
             ['轮次', 'init 返回', '后续要发的分片', '实际传输字节'],
@@ -199,7 +199,9 @@ export default async function run() {
         )
     )
     console.log(
-        `服务端本次运行累计收到 ${stats.parts} 个分片、${bytes(stats.bytes)}、完成 ${stats.merges} 次合并（含上面的对照组）。`
+        `服务端本次运行累计收到 ${stats.parts} 个分片、${bytes(stats.bytes)}、完成 ${
+            stats.merges
+        } 次合并（含上面的对照组）。`
     )
     console.log('秒传省掉的是"整份文件"的传输，代价是客户端得先算完文件指纹。')
 
@@ -208,7 +210,7 @@ export default async function run() {
     const missingJob = await fetch(`${server.base}/api/upload/init`, {
         method: 'POST',
         body: JSON.stringify({ size: file.length, chunkSize: CHUNK_SIZE, fileHash: fileHash + '-gap' })
-    }).then((r) => r.json())
+    }).then(r => r.json())
     await put(missingJob.uploadId, 0)
     const badRes = await fetch(`${server.base}/api/upload/complete?uploadId=${missingJob.uploadId}`, { method: 'POST' })
     const badBody = await badRes.json()

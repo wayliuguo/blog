@@ -53,18 +53,23 @@
     <body>
         <h1>CSP 与 SRI 现场演示</h1>
         <p class="note">
-            这个页面的响应头由 <code>lib/endpoints.cjs</code> 发出，每次请求都会生成一个新的 nonce。
-            打开 DevTools 的 Console 与 Network → Response Headers，就能看到下面每一行的实际效果。
+            这个页面的响应头由 <code>lib/endpoints.cjs</code> 发出，每次请求都会生成一个新的 nonce。 打开 DevTools 的
+            Console 与 Network → Response Headers，就能看到下面每一行的实际效果。
         </p>
 
         <h2>1. CSP：哪些脚本能跑</h2>
         <p id="with-nonce">（带 nonce 的内联脚本应该改写这一行）</p>
         <p id="without-nonce">（没有 nonce 的内联脚本：这行文字不会被改写，Console 里会有 CSP 违规报错）</p>
-        <p id="handler">内联事件处理器 onmousedown：<button onmousedown="document.getElementById('handler').classList.add('bad')">点我（应无反应）</button></p>
+        <p id="handler">
+            内联事件处理器 onmousedown：<button onmousedown="document.getElementById('handler').classList.add('bad')">
+                点我（应无反应）
+            </button>
+        </p>
 
         <h2>2. SRI：这个脚本的内容有没有被人动过</h2>
         <p>
-            下面这行 <code>&lt;script&gt;</code> 带 <code>integrity</code>，哈希由服务端在发送时按 <code>vendor.js</code>
+            下面这行 <code>&lt;script&gt;</code> 带 <code>integrity</code>，哈希由服务端在发送时按
+            <code>vendor.js</code>
             的真实内容算出并注入：
         </p>
         <pre id="integrity">（脚本会把自己的 integrity 属性打在这里）</pre>
@@ -93,9 +98,13 @@ npm run security   # SRI 篡改检测 + CSP 判定 + 安全响应头体检</code
         <script src="./vendor.js" integrity="__INTEGRITY__" crossorigin="anonymous"></script>
         <script nonce="__NONCE__">
             const tag = document.querySelector('script[integrity]')
-            document.getElementById('integrity').textContent = tag ? tag.getAttribute('integrity') : '（没找到带 integrity 的脚本）'
+            document.getElementById('integrity').textContent = tag
+                ? tag.getAttribute('integrity')
+                : '（没找到带 integrity 的脚本）'
             document.getElementById('vendor-status').innerHTML = window.vendor
-                ? `<span class="ok">✓ 加载成功</span>：vendor@${window.vendor.version}，572 B 会被格式化成 ${window.vendor.formatBytes(572)}`
+                ? `<span class="ok">✓ 加载成功</span>：vendor@${
+                      window.vendor.version
+                  }，572 B 会被格式化成 ${window.vendor.formatBytes(572)}`
                 : '<span class="bad">✗ 未加载</span>：SRI 校验没通过，浏览器整块丢弃了它'
         </script>
     </body>

@@ -29,8 +29,8 @@ const flakyAttempts = new Map()
 const idempotency = new Map()
 let orderSeq = 0
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const etagOf = (body) => '"' + crypto.createHash('sha1').update(body).digest('hex').slice(0, 16) + '"'
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+const etagOf = body => '"' + crypto.createHash('sha1').update(body).digest('hex').slice(0, 16) + '"'
 
 /** 一份体积稳定的 JSON，用于让「200 vs 304」的字节差异可比 */
 function docBody() {
@@ -176,9 +176,9 @@ async function handle(req, res) {
 }
 
 function readBody(req) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         let data = ''
-        req.on('data', (c) => (data += c))
+        req.on('data', c => (data += c))
         req.on('end', () => resolve(data))
     })
 }
@@ -199,13 +199,21 @@ function serveSite(p, res) {
         const nonce = crypto.randomBytes(8).toString('base64')
         // vendor.js 的 SRI 哈希本该由构建期算好写进 HTML，这里由服务端代劳，保证与文件内容永远一致
         const integrity =
-            'sha384-' + crypto.createHash('sha384').update(fs.readFileSync(path.join(SITE, 'vendor.js'))).digest('base64')
+            'sha384-' +
+            crypto
+                .createHash('sha384')
+                .update(fs.readFileSync(path.join(SITE, 'vendor.js')))
+                .digest('base64')
         // 带 nonce 的内联脚本合法；页面里另一段没有 nonce 的内联脚本会被 CSP 拦下
         body = Buffer.from(
-            body.toString('utf8').replace(/__NONCE__/g, nonce).replace(/__INTEGRITY__/g, integrity)
+            body
+                .toString('utf8')
+                .replace(/__NONCE__/g, nonce)
+                .replace(/__INTEGRITY__/g, integrity)
         )
-        headers['Content-Security-Policy'] =
-            `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://img.example.com; object-src 'none'; base-uri 'self'`
+        headers[
+            'Content-Security-Policy'
+        ] = `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://img.example.com; object-src 'none'; base-uri 'self'`
         headers['X-Content-Type-Options'] = 'nosniff'
         headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'

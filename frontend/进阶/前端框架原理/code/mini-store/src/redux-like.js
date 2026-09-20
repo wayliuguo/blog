@@ -20,7 +20,7 @@ function createStore(reducer, preloadedState) {
     function subscribe(listener) {
         listeners.push(listener)
         return function unsubscribe() {
-            listeners = listeners.filter((item) => item !== listener)
+            listeners = listeners.filter(item => item !== listener)
         }
     }
 

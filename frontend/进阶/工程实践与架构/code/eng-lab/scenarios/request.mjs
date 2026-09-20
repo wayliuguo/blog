@@ -74,7 +74,7 @@ function createClient(base, { limit = 4, ttl = 300, swr = false, trace = null } 
         let p = inflight.get(key)
         const reused = !!p
         if (!p) {
-            p = once(path).then((ctx) => {
+            p = once(path).then(ctx => {
                 cache.set(key, { value: ctx.data, at: Date.now() })
                 inflight.delete(key)
                 return ctx
@@ -105,8 +105,8 @@ function createClient(base, { limit = 4, ttl = 300, swr = false, trace = null } 
     const background = []
     return {
         get,
-        use: (fn) => reqs.push(fn),
-        after: (fn) => ress.push(fn),
+        use: fn => reqs.push(fn),
+        after: fn => ress.push(fn),
         settle: () => Promise.all(background.splice(0)),
         pool,
         cache
@@ -116,7 +116,7 @@ function createClient(base, { limit = 4, ttl = 300, swr = false, trace = null } 
 export default async function run() {
     const { handler, stats } = makeServer()
     const server = await startServer(handler)
-    const reset = () => fetch(`${server.base}/api/stats/reset`, { method: 'POST' }).then((r) => r.json())
+    const reset = () => fetch(`${server.base}/api/stats/reset`, { method: 'POST' }).then(r => r.json())
 
     // —— 1. 拦截器的洋葱模型
     console.log(title('实验设置'))
@@ -125,27 +125,27 @@ export default async function run() {
     console.log(section('一、拦截器的执行顺序'))
     const trace = []
     const c1 = createClient(server.base, { trace })
-    c1.use((ctx) => {
+    c1.use(ctx => {
         trace.push('请求拦截器 A：注入 token')
         return ctx
     })
-    c1.use((ctx) => {
+    c1.use(ctx => {
         trace.push('请求拦截器 B：加公共参数')
         return ctx
     })
-    c1.use((ctx) => {
+    c1.use(ctx => {
         trace.push('请求拦截器 C：埋点开始')
         return ctx
     })
-    c1.after((ctx) => {
+    c1.after(ctx => {
         trace.push('响应拦截器 A：解包 data')
         return ctx
     })
-    c1.after((ctx) => {
+    c1.after(ctx => {
         trace.push('响应拦截器 B：业务码校验')
         return ctx
     })
-    c1.after((ctx) => {
+    c1.after(ctx => {
         trace.push('响应拦截器 C：埋点结束')
         return ctx
     })
@@ -164,8 +164,8 @@ export default async function run() {
             ['B（用户改主意，服务端 50ms）', 'B', 50]
         ].map(([, q, latency], i) =>
             fetch(`${server.base}/api/list?q=${q}&ms=${latency}`)
-                .then((r) => r.json())
-                .then((data) => {
+                .then(r => r.json())
+                .then(data => {
                     raceWrites.push({ q, order: raceWrites.length + 1, latency, data: data.q })
                     return data
                 })
@@ -174,7 +174,7 @@ export default async function run() {
     console.log(
         table(
             ['发出的请求', '服务端耗时', '到达顺序', '无保护时对视图的写入'],
-            raceWrites.map((w) => [w.q, `${w.latency} ms`, `第 ${w.order} 个`, `写入 ${w.q}`])
+            raceWrites.map(w => [w.q, `${w.latency} ms`, `第 ${w.order} 个`, `写入 ${w.q}`])
         )
     )
     console.log(
@@ -186,7 +186,7 @@ export default async function run() {
     const guardedWrites = []
     async function search(q, latency) {
         const mine = ++token
-        const data = await fetch(`${server.base}/api/list?q=${q}&ms=${latency}`).then((r) => r.json())
+        const data = await fetch(`${server.base}/api/list?q=${q}&ms=${latency}`).then(r => r.json())
         if (mine !== token) return { q, applied: false, reason: '已有更新的请求发出' }
         guardedWrites.push(q)
         return { q, applied: true, data: data.q }
@@ -196,7 +196,7 @@ export default async function run() {
         '\n' +
             table(
                 ['请求', '是否写入视图', '原因'],
-                guarded.map((g) => [g.q, g.applied ? '写入' : '丢弃', g.applied ? '它是最新的一次请求' : g.reason])
+                guarded.map(g => [g.q, g.applied ? '写入' : '丢弃', g.applied ? '它是最新的一次请求' : g.reason])
             )
     )
     console.log(`最终视图是「${guardedWrites.join('')}」。两种保护手段——`)
@@ -209,12 +209,18 @@ export default async function run() {
     const c2 = createClient(server.base)
     const dupKey = '/api/list?q=dedup&ms=120'
     const results = await Promise.all(Array.from({ length: 5 }, () => c2.get(dupKey, { key: 'dedup' })))
-    const afterDedup = await fetch(`${server.base}/api/stats`).then((r) => r.json())
+    const afterDedup = await fetch(`${server.base}/api/stats`).then(r => r.json())
     console.log(
         table(
             ['情形', '并发调用', '真实发出请求', '命中去重', '服务端收到'],
             [
-                ['有去重（实跑）', 5, results.filter((r) => r.from === 'network').length, results.filter((r) => r.from === 'dedup').length, afterDedup.total],
+                [
+                    '有去重（实跑）',
+                    5,
+                    results.filter(r => r.from === 'network').length,
+                    results.filter(r => r.from === 'dedup').length,
+                    afterDedup.total
+                ],
                 ['无去重（推演）', 5, 5, 0, 5]
             ]
         )
@@ -231,7 +237,7 @@ export default async function run() {
         const started = performance.now()
         await Promise.all(Array.from({ length: 20 }, (_, i) => client.get(`/api/list?q=limit${i}&ms=120`)))
         const elapsed = performance.now() - started
-        const s = await fetch(`${server.base}/api/stats`).then((r) => r.json())
+        const s = await fetch(`${server.base}/api/stats`).then(r => r.json())
         limitRows.push([`并发上限 ${limit}`, ms(elapsed), s.peak, s.total])
     }
     console.log(table(['配置', '总耗时', '服务端观测并发峰值', '服务端收到请求数'], limitRows))
@@ -250,7 +256,7 @@ export default async function run() {
     const t2 = performance.now()
     const r2 = await c3.get(path3, { key: 'cache', useCache: true })
     const d2 = performance.now() - t2
-    const s3 = await fetch(`${server.base}/api/stats`).then((r) => r.json())
+    const s3 = await fetch(`${server.base}/api/stats`).then(r => r.json())
     console.log(
         table(
             ['第几次取', '返回值来源', '耗时', '缓存年龄', '是否发请求'],
@@ -260,7 +266,9 @@ export default async function run() {
             ]
         )
     )
-    console.log(`服务端累计收到 ${s3.total} 次请求：TTL 内命中缓存，时延从 ${num(d1, 1)}ms 掉到 ${num(d2, 2)}ms，且没有走网络。`)
+    console.log(
+        `服务端累计收到 ${s3.total} 次请求：TTL 内命中缓存，时延从 ${num(d1, 1)}ms 掉到 ${num(d2, 2)}ms，且没有走网络。`
+    )
 
     await reset()
     const c4 = createClient(server.base, { limit: 4, ttl: 100, swr: true })
@@ -272,9 +280,9 @@ export default async function run() {
     const t3 = performance.now()
     const f2 = await c4.get(path4, { key: 'swr', useCache: true })
     const d3 = performance.now() - t3
-    const duringSwr = await fetch(`${server.base}/api/stats`).then((r) => r.json())
+    const duringSwr = await fetch(`${server.base}/api/stats`).then(r => r.json())
     await c4.settle()
-    const afterSwr = await fetch(`${server.base}/api/stats`).then((r) => r.json())
+    const afterSwr = await fetch(`${server.base}/api/stats`).then(r => r.json())
     console.log(
         '\n' +
             table(

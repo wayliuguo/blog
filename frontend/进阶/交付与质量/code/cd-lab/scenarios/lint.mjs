@@ -27,7 +27,9 @@ function loadEslint() {
         return require(require.resolve('eslint', { paths: [root] }))
     } catch {
         console.error(`没找到 ESLint（在 ${root} 下没解析到）`)
-        console.error('可以：npm i -D eslint@8，或用 ESLINT_DIR=/path/to/project npm run lint 指定一个装了 eslint 的目录')
+        console.error(
+            '可以：npm i -D eslint@8，或用 ESLINT_DIR=/path/to/project npm run lint 指定一个装了 eslint 的目录'
+        )
         process.exit(1)
     }
 }
@@ -85,7 +87,7 @@ async function rounds(eslint, files, n = 3) {
     const runs = []
     for (let i = 0; i < n; i++) runs.push(await lintFiles(eslint, files))
     return {
-        cost: median(runs.map((r) => r.cost)),
+        cost: median(runs.map(r => r.cost)),
         count: runs[0].count,
         problems: runs[0].problems,
         errors: runs[0].errors
@@ -127,7 +129,9 @@ export default async function run() {
     console.log(`- 一次提交少等 ${num(saved, 1)} 秒`)
     console.log(`- 5 人团队每人每天 8 次提交 = 40 次 → 每天省 ${num((saved * 40) / 60, 1)} 分钟`)
     console.log('- 但 pre-commit 只是第一道门：CI 上仍然要跑全量，否则「别人改的代码」永远没人查')
-    console.log(`- 所以增量不是「更严格或更松」，是**把反馈时间从 ${ms(full.cost)} 压到 ${ms(incr.cost)} 而不降低 CI 的标准**`)
+    console.log(
+        `- 所以增量不是「更严格或更松」，是**把反馈时间从 ${ms(full.cost)} 压到 ${ms(incr.cost)} 而不降低 CI 的标准**`
+    )
 
     console.log(section('这个耗时随规模怎么长（决定要不要做增量）'))
     const scale = []
@@ -146,7 +150,10 @@ export default async function run() {
     const a = path.join(CONTRACT, 'a.js')
     const b = path.join(CONTRACT, 'b.js')
     fs.writeFileSync(a, 'export function getUserName(u) { return u.name }\n')
-    fs.writeFileSync(b, "import { getUserName } from './a.js'\nexport function greet(u) { return 'hi ' + getUserName(u) }\n")
+    fs.writeFileSync(
+        b,
+        "import { getUserName } from './a.js'\nexport function greet(u) { return 'hi ' + getUserName(u) }\n"
+    )
     const before = await lintFiles(eslint, [CONTRACT])
 
     // 把 a.js 的导出改名：b.js 的 import 从此拿不到东西，但两份文件各自都是「合法」的

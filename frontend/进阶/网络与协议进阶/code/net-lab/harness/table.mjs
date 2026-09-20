@@ -19,18 +19,18 @@ export function pad(text, len, align = 'left') {
 
 /** 打印一张对齐的表，首行为表头 */
 export function table(head, rows) {
-    const all = [head, ...rows].map((r) => r.map((c) => String(c)))
-    const widths = head.map((_, i) => Math.max(...all.map((r) => width(r[i] ?? ''))))
-    const line = (r) => '| ' + r.map((c, i) => pad(c ?? '', widths[i])).join(' | ') + ' |'
-    const sep = '|' + widths.map((n) => '-'.repeat(n + 2)).join('|') + '|'
+    const all = [head, ...rows].map(r => r.map(c => String(c)))
+    const widths = head.map((_, i) => Math.max(...all.map(r => width(r[i] ?? ''))))
+    const line = r => '| ' + r.map((c, i) => pad(c ?? '', widths[i])).join(' | ') + ' |'
+    const sep = '|' + widths.map(n => '-'.repeat(n + 2)).join('|') + '|'
     return [line(head), sep, ...rows.map(line)].join('\n')
 }
 
-export const title = (t) => `\n=== ${t} ===`
+export const title = t => `\n=== ${t} ===`
 
-export const section = (t) => `\n--- ${t} ---`
+export const section = t => `\n--- ${t} ---`
 
-export const ms = (v) => (v == null ? '—' : `${Math.round(v)} ms`)
+export const ms = v => (v == null ? '—' : `${Math.round(v)} ms`)
 
 export const num = (v, digits = 1) => (v == null ? '—' : Number(v).toFixed(digits))
 
@@ -41,7 +41,7 @@ export function bytes(v) {
     return `${(v / 1024 / 1024).toFixed(2)} MB`
 }
 
-export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+export const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 export function median(list) {
     const a = [...list].sort((x, y) => x - y)

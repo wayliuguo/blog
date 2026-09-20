@@ -12,14 +12,14 @@ type First<T> = T extends [infer F, ...any[]] ? F : never
 type Last<T> = T extends [...any[], infer L] ? L : never
 type Length<T extends any[]> = T['length']
 type Includes<T extends any[], U> = T extends [infer F, ...infer R]
-  ? Equal<F, U> extends true
-    ? true
-    : Includes<R, U>
-  : false
+    ? Equal<F, U> extends true
+        ? true
+        : Includes<R, U>
+    : false
 
 // ───────────────────────── B. 函数与 infer ─────────────────────────
 declare class Foo {
-  value: number
+    value: number
 }
 type MyReturnType<F> = F extends (...a: any) => infer R ? R : never
 type MyAwaited<T> = T extends Promise<infer U> ? MyAwaited<U> : T
@@ -42,13 +42,11 @@ type MyRecord<K extends keyof any, V> = { [P in K]: V }
 // ───────────────────────── D. 条件类型与递归 ─────────────────────────
 type Reverse<T extends any[]> = T extends [infer F, ...infer R] ? [...Reverse<R>, F] : []
 type Flatten<T extends any[]> = T extends [infer F, ...infer R]
-  ? F extends any[]
-    ? [...F, ...Flatten<R>]
-    : [F, ...Flatten<R>]
-  : []
-type Repeat<N extends number, T, A extends any[] = []> = A['length'] extends N
-  ? A
-  : Repeat<N, T, [T, ...A]>
+    ? F extends any[]
+        ? [...F, ...Flatten<R>]
+        : [F, ...Flatten<R>]
+    : []
+type Repeat<N extends number, T, A extends any[] = []> = A['length'] extends N ? A : Repeat<N, T, [T, ...A]>
 type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T
 type DeepReadonly<T> = T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } : T
 type Get<T, K extends keyof T> = T[K]
@@ -58,42 +56,32 @@ type IsNever<T> = [T] extends [never] ? true : false
 
 // ───────────────────────── E. 模板字面量类型 ─────────────────────────
 type CapitalizeStr<S extends string> = S extends `${infer C}${infer R}` ? `${Uppercase<C>}${R}` : S
-type Join<D extends string, T extends string[]> = T extends [
-  infer F extends string,
-  ...infer R extends string[]
-]
-  ? R['length'] extends 0
-    ? F
-    : `${F}${D}${Join<D, R>}`
-  : ''
+type Join<D extends string, T extends string[]> = T extends [infer F extends string, ...infer R extends string[]]
+    ? R['length'] extends 0
+        ? F
+        : `${F}${D}${Join<D, R>}`
+    : ''
 type Trim<S extends string> = S extends ` ${infer R}` | `${infer R} ` ? Trim<R> : S
 type ParseParams<S extends string> = S extends `${string}/:${infer P}/${infer R}`
-  ? P | ParseParams<R>
-  : S extends `${string}/:${infer P}`
-  ? P
-  : never
+    ? P | ParseParams<R>
+    : S extends `${string}/:${infer P}`
+    ? P
+    : never
 type EventName<K extends string> = `on${Capitalize<K>}`
 type Replace<S extends string, F extends string, T extends string> = S extends `${infer P}${F}${infer X}`
-  ? `${P}${T}${X}`
-  : S
+    ? `${P}${T}${X}`
+    : S
 type StartsWith<S extends string, P extends string> = S extends `${P}${string}` ? true : false
 type EndsWith<S extends string, P extends string> = S extends `${string}${P}` ? true : false
 
 // ───────────────────────── F. 实战组合 ─────────────────────────
 type ApiResponse<T> = { code: number; data: T; msg: string }
-type LoadingState<T> =
-  | { status: 'loading' }
-  | { status: 'success'; data: T }
-  | { status: 'error'; error: string }
+type LoadingState<T> = { status: 'loading' } | { status: 'success'; data: T } | { status: 'error'; error: string }
 type FormErrors<T> = { [K in keyof T]?: string }
 type Merge<A, B> = { [K in keyof A | keyof B]: K extends keyof B ? B[K] : K extends keyof A ? A[K] : never }
 type ValueOf<T> = T[keyof T]
 type If<C extends boolean, T, F> = C extends true ? T : F
-type And<A extends boolean, B extends boolean> = A extends true
-  ? B extends true
-    ? true
-    : false
-  : false
+type And<A extends boolean, B extends boolean> = A extends true ? (B extends true ? true : false) : false
 type Or<A extends boolean, B extends boolean> = A extends true ? true : B extends true ? true : false
 type Not<T extends boolean> = T extends true ? false : true
 type IsTuple<T> = T extends readonly any[] ? (number extends T['length'] ? false : true) : false
@@ -146,15 +134,15 @@ type _t40a = Expect<Equal<EndsWith<'hello', 'lo'>, true>>
 type _t40b = Expect<Equal<EndsWith<'hello', 'he'>, false>>
 type _t41 = Expect<Equal<ApiResponse<number>, { code: number; data: number; msg: string }>>
 type _t42 = Expect<
-  Equal<
-    LoadingState<number>,
-    { status: 'loading' } | { status: 'success'; data: number } | { status: 'error'; error: string }
-  >
+    Equal<
+        LoadingState<number>,
+        { status: 'loading' } | { status: 'success'; data: number } | { status: 'error'; error: string }
+    >
 >
 type _t43 = Expect<Equal<FormErrors<{ name: string; age: number }>, { name?: string; age?: string }>>
 type _t44 = Expect<Equal<Merge<{ a: 1; b: 2 }, { b: 3; c: 4 }>, { a: 1; b: 3; c: 4 }>>
 type _t45 = Expect<Equal<ValueOf<{ a: 1; b: 2 }>, 1 | 2>>
-type _t46a = Expect<Equal<If<true, 1,2>, 1>>
+type _t46a = Expect<Equal<If<true, 1, 2>, 1>>
 type _t46b = Expect<Equal<If<false, 1, 2>, 2>>
 type _t47a = Expect<Equal<And<true, false>, false>>
 type _t47b = Expect<Equal<And<true, true>, true>>

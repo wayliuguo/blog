@@ -11,10 +11,16 @@ import pipeline from './pipeline.mjs'
 import { runAsMain } from '../harness.mjs'
 
 export default async function run() {
-  for (const [name, scene] of [['transport', transport], ['errors', errors], ['perf', perf], ['track', track], ['pipeline', pipeline]]) {
-    console.log(`\n>>> 开始场景 ${name}`)
-    await scene()
-  }
+    for (const [name, scene] of [
+        ['transport', transport],
+        ['errors', errors],
+        ['perf', perf],
+        ['track', track],
+        ['pipeline', pipeline]
+    ]) {
+        console.log(`\n>>> 开始场景 ${name}`)
+        await scene()
+    }
 }
 
 runAsMain(import.meta.url, run)

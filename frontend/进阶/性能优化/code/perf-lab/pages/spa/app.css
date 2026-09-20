@@ -8,7 +8,10 @@
 }
 body {
     margin: 0;
-    font: 14px/1.5 system-ui, 'Microsoft YaHei', sans-serif;
+    font:
+        14px/1.5 system-ui,
+        'Microsoft YaHei',
+        sans-serif;
     color: var(--ink);
     background: #fff;
 }

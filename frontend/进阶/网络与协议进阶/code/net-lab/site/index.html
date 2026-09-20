@@ -48,27 +48,34 @@
     <body>
         <h1>网络与协议进阶 · Demo 目录</h1>
         <p class="note">
-            这个目录里的页面是「给人看」的演示；所有数字来自 <code>code/net-lab</code> 的场景脚本（<code>npm run http2 / cache /
-            retry / security</code>），零依赖、不需要 <code>npm install</code>。
+            这个目录里的页面是「给人看」的演示；所有数字来自 <code>code/net-lab</code> 的场景脚本（<code
+                >npm run http2 / cache / retry / security</code
+            >），零依赖、不需要 <code>npm install</code>。
         </p>
 
         <h2>页面</h2>
         <ul>
             <li>
-                <a href="./cache.html">cache.html</a> —— 三种 <code>Cache-Control</code> 的第二次请求有什么不同，页面里可以直接看到状态码与
-                字节数
+                <a href="./cache.html">cache.html</a> —— 三种
+                <code>Cache-Control</code> 的第二次请求有什么不同，页面里可以直接看到状态码与 字节数
             </li>
             <li>
-                <a href="./security.html">security.html</a> —— 带 CSP 与 SRI 的页面：一段带 nonce 的内联脚本能跑，另一段没有 nonce
-                的会被拦下（看 DevTools Console）
+                <a href="./security.html">security.html</a> —— 带 CSP 与 SRI 的页面：一段带 nonce
+                的内联脚本能跑，另一段没有 nonce 的会被拦下（看 DevTools Console）
             </li>
             <li><a href="/site/vendor.js">vendor.js</a> —— 被 SRI 保护的示例脚本，改一个字节校验就失败</li>
         </ul>
 
         <h2>可直接访问的端点</h2>
         <ul>
-            <li><code>/api/cache/immutable/app.js</code> · <code>Cache-Control: public, max-age=31536000, immutable</code></li>
-            <li><code>/api/cache/etag/doc.json</code> · <code>Cache-Control: no-cache</code> + ETag，带 <code>If-None-Match</code> 时回 304</li>
+            <li>
+                <code>/api/cache/immutable/app.js</code> ·
+                <code>Cache-Control: public, max-age=31536000, immutable</code>
+            </li>
+            <li>
+                <code>/api/cache/etag/doc.json</code> · <code>Cache-Control: no-cache</code> + ETag，带
+                <code>If-None-Match</code> 时回 304
+            </li>
             <li><code>/api/cache/swr/feed.json?age=300</code> · <code>max-age=60, stale-while-revalidate=600</code></li>
             <li><code>/api/cache/html</code> · <code>Cache-Control: no-store</code></li>
             <li><code>/api/slow?ms=200</code> · 延迟响应，用来看队头阻塞</li>

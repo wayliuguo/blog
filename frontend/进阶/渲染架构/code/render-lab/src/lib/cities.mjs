@@ -12,10 +12,10 @@ export const cities = RAW.split(',').map((name, i) => ({
 }))
 
 /** 每个站点一条运营位文案：纯静态内容，不需要任何 JavaScript */
-export const slogans = cities.map((city) => `${city.name}站 · 满 99 减 20 · 次日达`)
+export const slogans = cities.map(city => `${city.name}站 · 满 99 减 20 · 次日达`)
 
 export function byName(name) {
-    return cities.find((city) => city.name === name) || cities[0]
+    return cities.find(city => city.name === name) || cities[0]
 }
 
 export function sloganAt(index) {

@@ -9,7 +9,14 @@ const DIR = path.join(__dirname, 'src-plugins')
 fs.mkdirSync(DIR, { recursive: true })
 fs.writeFileSync(
     path.join(DIR, 'index.html'),
-    ['<!doctype html>', '<html>', '  <head><title>lab</title></head>', '  <body><script type="module" src="/main.js"></script></body>', '</html>', ''].join('\n')
+    [
+        '<!doctype html>',
+        '<html>',
+        '  <head><title>lab</title></head>',
+        '  <body><script type="module" src="/main.js"></script></body>',
+        '</html>',
+        ''
+    ].join('\n')
 )
 fs.writeFileSync(
     path.join(DIR, 'main.js'),
@@ -26,11 +33,11 @@ function htmlGuard({ nonce = 'lab-nonce', skipExisting = false } = {}) {
         transformIndexHtml: {
             order: 'post', // 排在其它 HTML 变换之后，保证看到的是最终产物
             handler(html, ctx) {
-                const entry = Object.values(ctx.bundle).find((o) => o.type === 'chunk' && o.isEntry)
+                const entry = Object.values(ctx.bundle).find(o => o.type === 'chunk' && o.isEntry)
                 // Vite 默认已经注入过 modulepreload，不查重就会重复发请求
-                const imports = (entry?.imports || []).filter((f) => !(skipExisting && html.includes(f)))
+                const imports = (entry?.imports || []).filter(f => !(skipExisting && html.includes(f)))
                 const preloads = imports
-                    .map((f) => `<link rel="modulepreload" href="/${f}" nonce="${nonce}">`)
+                    .map(f => `<link rel="modulepreload" href="/${f}" nonce="${nonce}">`)
                     .join('\n    ')
                 const withNonce = html.replace(/<script /g, `<script nonce="${nonce}" `)
                 return withNonce.replace('</head>', `    ${preloads}\n  </head>`)
@@ -103,9 +110,9 @@ async function htmlBuild(skipExisting) {
         }
     })
     const output = Array.isArray(result) ? result[0].output : result.output
-    const html = output.find((o) => o.fileName === 'index.html')
+    const html = output.find(o => o.fileName === 'index.html')
     const text = typeof html.source === 'string' ? html.source : Buffer.from(html.source).toString('utf8')
-    const entry = output.find((o) => o.type === 'chunk' && o.isEntry)
+    const entry = output.find(o => o.type === 'chunk' && o.isEntry)
     return { text, imports: entry.imports || [] }
 }
 
@@ -126,15 +133,19 @@ async function htmlBuild(skipExisting) {
     const smart = await htmlBuild(true)
     console.log('\n---- ② 真实插件：产物 HTML 收尾 ----')
     console.log('  入口 chunk 的依赖 chunk：', naive.imports.join(', ') || '(无)')
-    console.log('  不查重时 modulepreload 条数：', (naive.text.match(/rel="modulepreload"/g) || []).length, '（Vite 默认 1 条 + 插件又加 1 条）')
+    console.log(
+        '  不查重时 modulepreload 条数：',
+        (naive.text.match(/rel="modulepreload"/g) || []).length,
+        '（Vite 默认 1 条 + 插件又加 1 条）'
+    )
     console.log('  查重后   modulepreload 条数：', (smart.text.match(/rel="modulepreload"/g) || []).length)
     console.log('  <script> 带 nonce：', /<script nonce="lab-nonce"/.test(smart.text))
     console.log('  最终 HTML：')
     console.log(
         smart.text
             .split('\n')
-            .filter((l) => l.includes('modulepreload') || l.includes('<script'))
-            .map((l) => '    ' + l.trim())
+            .filter(l => l.includes('modulepreload') || l.includes('<script'))
+            .map(l => '    ' + l.trim())
             .join('\n')
     )
 
@@ -151,7 +162,10 @@ async function htmlBuild(skipExisting) {
     const res = await fetch(`http://127.0.0.1:${port}/__manifest`)
     console.log('\n---- ③ dev 侧：apply 与中间件 ----')
     console.log('  GET /__manifest →', res.status, await res.text())
-    console.log("  apply:'build' 的插件在 dev 下被调用：", htmlGuardRan.build && !htmlGuardRan.serve ? '否（build 时 true、dev 时未被调用）' : '（见下）')
+    console.log(
+        "  apply:'build' 的插件在 dev 下被调用：",
+        htmlGuardRan.build && !htmlGuardRan.serve ? '否（build 时 true、dev 时未被调用）' : '（见下）'
+    )
     await server.close()
 
     console.log('\n---- 结论 ----')

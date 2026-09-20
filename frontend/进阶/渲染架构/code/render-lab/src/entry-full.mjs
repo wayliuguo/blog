@@ -19,7 +19,10 @@ const treeOf = () => {
     }
     if (variant === 'tag') {
         // 标签不一致：只用 div 换掉 section，整段评价子树就没有可复用的结构
-        return App({ data: window.__DATA__, reviewsSlot: h('div', { class: 'reviews', 'data-marker': 'reviews' }, '评价') })
+        return App({
+            data: window.__DATA__,
+            reviewsSlot: h('div', { class: 'reviews', 'data-marker': 'reviews' }, '评价')
+        })
     }
     return App({ data: window.__DATA__ })
 }

@@ -11,9 +11,9 @@ const fruits = [
 ]
 
 // 无 key：身份退化成下标
-const noKey = (items) => h('ul', null, ...items.map((it) => h('li', null, it.name)))
+const noKey = items => h('ul', null, ...items.map(it => h('li', null, it.name)))
 // 有 key：身份跟着数据走
-const withKey = (items) => h('ul', null, ...items.map((it) => h('li', { key: it.id }, it.name)))
+const withKey = items => h('ul', null, ...items.map(it => h('li', { key: it.id }, it.name)))
 
 // 首屏挂载不在对比范围内，只记录"第二次渲染"产生的宿主操作
 function opsOfUpdate(before, after) {
@@ -30,11 +30,7 @@ function opsOfUpdate(before, after) {
 
 test('无 key：删掉第一项时，剩下的元素被就地改写', () => {
     const { ops } = opsOfUpdate(noKey(fruits), noKey(fruits.slice(1)))
-    assert.deepEqual(ops, [
-        'remove <li> from <ul>',
-        '"苹果".nodeValue = "香蕉"',
-        '"香蕉".nodeValue = "橘子"'
-    ])
+    assert.deepEqual(ops, ['remove <li> from <ul>', '"苹果".nodeValue = "香蕉"', '"香蕉".nodeValue = "橘子"'])
 })
 
 test('有 key：删掉第一项只需要摘掉一个节点', () => {
@@ -45,10 +41,7 @@ test('有 key：删掉第一项只需要摘掉一个节点', () => {
 })
 
 test('类型不同：整棵子树重建，不尝试复用', () => {
-    const { ops } = opsOfUpdate(
-        h('div', null, h('p', null, '文本')),
-        h('div', null, h('span', null, '文本'))
-    )
+    const { ops } = opsOfUpdate(h('div', null, h('p', null, '文本')), h('div', null, h('span', null, '文本')))
     assert.deepEqual(ops, [
         'create <span>',
         'createText "文本"',
@@ -77,7 +70,7 @@ test('末尾新增：appendChild 追加到父节点末尾', () => {
         h('div', null, h('a', { key: '1' }), h('b', { key: '2' }))
     )
     assert.deepEqual(ops, ['create <b>', 'append <b> → <div>'])
-    assert.equal(container.children[0].children.map((c) => c.type).join(','), 'a,b')
+    assert.equal(container.children[0].children.map(c => c.type).join(','), 'a,b')
 })
 
 test('头部插入：insertBefore 把新节点插到旧节点之前', () => {
@@ -86,7 +79,7 @@ test('头部插入：insertBefore 把新节点插到旧节点之前', () => {
         h('div', null, h('a', { key: '1' }), h('b', { key: '2' }))
     )
     assert.deepEqual(ops, ['create <a>', 'insert <a> before <b>'])
-    assert.equal(container.children[0].children.map((c) => c.type).join(','), 'a,b')
+    assert.equal(container.children[0].children.map(c => c.type).join(','), 'a,b')
 })
 
 test('改名不改身份：key 相同就复用节点，只改属性', () => {

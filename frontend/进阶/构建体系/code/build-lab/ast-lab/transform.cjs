@@ -42,10 +42,7 @@ console.log('改 AST 之后是否必须 generate：', '是，AST 与源码文本
 const ast2 = parser.parse('function f() {\n  return 1\n}', { sourceType: 'module' })
 traverse(ast2, {
     FunctionDeclaration(path) {
-        path.get('body').unshiftContainer(
-            'body',
-            t.expressionStatement(t.stringLiteral('entered f'))
-        )
+        path.get('body').unshiftContainer('body', t.expressionStatement(t.stringLiteral('entered f')))
     }
 })
 console.log('\n---- 插入语句后 ----')

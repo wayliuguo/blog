@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 
 const { h, render, useState, useEffect, host, printTree, printFibers } = require('../src/index')
 
-const textOf = (node) => {
+const textOf = node => {
     if (node.text !== null) return node.text
     for (const child of node.children) {
         const found = textOf(child)
@@ -39,8 +39,8 @@ test('函数式更新：在队列里基于上一个结果继续算', () => {
     const container = host.createInstance('div')
     render(h(Counter, null), container, { sync: true })
 
-    bump((c) => c + 1)
-    bump((c) => c + 1)
+    bump(c => c + 1)
+    bump(c => c + 1)
     assert.equal(textOf(container), '2')
 })
 
@@ -137,7 +137,7 @@ test('组件卸载：整棵子树上的 effect 都会被清理', () => {
     render(h('p', null, '换成别的'), container, { sync: true })
 
     assert.deepEqual(log, ['child effect', 'child cleanup'])
-    assert.equal(container.children.map((c) => c.type).join(','), 'p')
+    assert.equal(container.children.map(c => c.type).join(','), 'p')
 })
 
 test('hooks 顺序错位：放进 if 里会读到别人的状态', () => {

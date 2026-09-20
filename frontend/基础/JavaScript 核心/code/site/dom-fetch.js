@@ -5,11 +5,11 @@
  * 以 file:// 打开时自动把请求指向 http://localhost:5176（接口带 CORS 头），因此两种打开方式都能跑。
  */
 const BASE = location.protocol === 'file:' ? 'http://localhost:5176' : ''
-const api = (path) => BASE + path
+const api = path => BASE + path
 
 const lines = []
-const log = (line) => lines.push(line)
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const log = line => lines.push(line)
+const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 /* ------------------------------------------------ ① 基本用法与响应状态 */
 async function basic() {
@@ -55,8 +55,8 @@ async function race() {
     let noGuard = null
     const searchNoGuard = (q, delay) =>
         fetch(api('/api/search?q=' + q + '&delay=' + delay))
-            .then((r) => r.json())
-            .then((d) => {
+            .then(r => r.json())
+            .then(d => {
                 noGuard = d.q
             })
     await Promise.all([searchNoGuard('a', 400), searchNoGuard('ab', 80)])
@@ -103,7 +103,14 @@ function xhrGet(url) {
 
 async function xhrCompare() {
     const r = await xhrGet(api('/api/echo?msg=hello'))
-    log('⑥ 同一件事用 XMLHttpRequest：readyState = ' + r.readyState + '（DONE），status = ' + r.status + '，响应体 ' + r.body)
+    log(
+        '⑥ 同一件事用 XMLHttpRequest：readyState = ' +
+            r.readyState +
+            '（DONE），status = ' +
+            r.status +
+            '，响应体 ' +
+            r.body
+    )
     log('   XHR 只有回调式 API，要自己拼 Promise；fetch 原生返回 Promise，但少了上传进度、同步模式这些能力')
 }
 

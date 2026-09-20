@@ -14,9 +14,9 @@ function http1Batch(base, specs, maxSockets) {
     const t0 = performance.now()
     return Promise.all(
         specs.map(
-            (spec) =>
-                new Promise((resolve) => {
-                    const req = http.get(new URL(`/api/slow?ms=${spec.ms}`, base), { agent }, (res) => {
+            spec =>
+                new Promise(resolve => {
+                    const req = http.get(new URL(`/api/slow?ms=${spec.ms}`, base), { agent }, res => {
                         res.resume()
                         res.on('end', () =>
                             resolve({ label: spec.label, done: performance.now() - t0, sockets: maxSockets })
@@ -35,21 +35,21 @@ function http2Batch(base, specs) {
     const t0 = performance.now()
     return Promise.all(
         specs.map(
-            (spec) =>
-                new Promise((resolve) => {
+            spec =>
+                new Promise(resolve => {
                     const req = client.request({ ':path': `/api/slow?ms=${spec.ms}` })
                     req.resume()
                     req.on('end', () => resolve({ label: spec.label, done: performance.now() - t0, sockets: 1 }))
                     req.on('error', () => resolve({ label: spec.label, done: NaN, sockets: 1 }))
                 })
         )
-    ).then((rows) => {
+    ).then(rows => {
         client.close()
         return rows
     })
 }
 
-const avg = (list) => list.reduce((a, b) => a + b, 0) / list.length
+const avg = list => list.reduce((a, b) => a + b, 0) / list.length
 
 export default async function run() {
     const h1 = await startHttp1()
@@ -62,7 +62,7 @@ export default async function run() {
         const serial = await http1Batch(base1, six, 1)
         const parallel = await http1Batch(base1, six, 6)
         const multiplexed = await http2Batch(base2, six)
-        const total = (rows) => Math.max(...rows.map((r) => r.done))
+        const total = rows => Math.max(...rows.map(r => r.done))
 
         console.log(title('6 个 200ms 的请求，三种发法（同一台机器、同一个 handler）'))
         console.log(
@@ -70,8 +70,18 @@ export default async function run() {
                 ['发法', 'TCP 连接数', '批次总耗时', '相对串行'],
                 [
                     ['HTTP/1.1 单连接（maxSockets=1）', 1, ms(total(serial)), '1.00×'],
-                    ['HTTP/1.1 六连接（maxSockets=6）', 6, ms(total(parallel)), (total(serial) / total(parallel)).toFixed(2) + '×'],
-                    ['HTTP/2 单连接（6 个 stream）', 1, ms(total(multiplexed)), (total(serial) / total(multiplexed)).toFixed(2) + '×']
+                    [
+                        'HTTP/1.1 六连接（maxSockets=6）',
+                        6,
+                        ms(total(parallel)),
+                        (total(serial) / total(parallel)).toFixed(2) + '×'
+                    ],
+                    [
+                        'HTTP/2 单连接（6 个 stream）',
+                        1,
+                        ms(total(multiplexed)),
+                        (total(serial) / total(multiplexed)).toFixed(2) + '×'
+                    ]
                 ]
             )
         )
@@ -81,7 +91,10 @@ export default async function run() {
         console.log('- 并发度不再需要用连接数去凑，这正是「域名分片」这类老优化手段可以退休的原因')
 
         // —— 队头阻塞：慢请求后面压着的快请求
-        const slowThenFast = [{ label: '慢 500ms', ms: 500 }, ...Array.from({ length: 5 }, (_, i) => ({ label: '快 20ms #' + (i + 1), ms: 20 }))]
+        const slowThenFast = [
+            { label: '慢 500ms', ms: 500 },
+            ...Array.from({ length: 5 }, (_, i) => ({ label: '快 20ms #' + (i + 1), ms: 20 }))
+        ]
         const h1Head = (await http1Batch(base1, slowThenFast, 1)).slice(1)
         const h2Head = (await http2Batch(base2, slowThenFast)).slice(1)
 
@@ -90,8 +103,18 @@ export default async function run() {
             table(
                 ['发法', '快请求平均完成于', '快请求最晚完成于', '说明'],
                 [
-                    ['HTTP/1.1 单连接', ms(avg(h1Head.map((r) => r.done))), ms(Math.max(...h1Head.map((r) => r.done))), '同一连接上只能一个一个来，全被慢请求挡住'],
-                    ['HTTP/2 单连接', ms(avg(h2Head.map((r) => r.done))), ms(Math.max(...h2Head.map((r) => r.done))), '各 stream 独立，慢的不拖累快的']
+                    [
+                        'HTTP/1.1 单连接',
+                        ms(avg(h1Head.map(r => r.done))),
+                        ms(Math.max(...h1Head.map(r => r.done))),
+                        '同一连接上只能一个一个来，全被慢请求挡住'
+                    ],
+                    [
+                        'HTTP/2 单连接',
+                        ms(avg(h2Head.map(r => r.done))),
+                        ms(Math.max(...h2Head.map(r => r.done))),
+                        '各 stream 独立，慢的不拖累快的'
+                    ]
                 ]
             )
         )
@@ -99,7 +122,9 @@ export default async function run() {
         console.log('- HTTP/1.1：一个连接同时只处理一个请求，已发出的请求无法并行，后面的只能等')
         console.log('- HTTP/2：多路复用把「连接」与「请求」解耦，一条连接上 N 个 stream 各走各的')
         console.log('- 但 HTTP/2 仍跑在同一条 TCP 连接上：TCP 层丢包要让整条连接的所有 stream 一起等（TCP 层队头阻塞）')
-        console.log('- 彻底解决要靠 HTTP/3（QUIC over UDP，stream 级重传）——本机没有 QUIC 服务端，这一条只能讲原理，不在这里编数字')
+        console.log(
+            '- 彻底解决要靠 HTTP/3（QUIC over UDP，stream 级重传）——本机没有 QUIC 服务端，这一条只能讲原理，不在这里编数字'
+        )
     } finally {
         h1.close()
         h2.close()

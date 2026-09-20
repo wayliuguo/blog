@@ -34,7 +34,7 @@ function ref(value) {
     return new RefImpl(value)
 }
 
-const isRef = (value) => !!(value && value.__v_isRef)
+const isRef = value => !!(value && value.__v_isRef)
 
 function unref(value) {
     return isRef(value) ? value.value : value

@@ -12,7 +12,7 @@ document.getElementById('app').textContent = `${appName} | prod=${inProd} | ${he
 
 // lazy.js 只有静态路径、没有静态引用 —— 用来对比 dev 与 build 的转换范围
 document.getElementById('app').addEventListener('click', () => {
-    import('./lazy.js').then((m) => console.log(m.lazy()))
+    import('./lazy.js').then(m => console.log(m.lazy()))
 })
 
 console.log(ms.toString())

@@ -10,13 +10,13 @@ import { fileURLToPath } from 'node:url'
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'scenarios')
 const names = fs
     .readdirSync(DIR)
-    .filter((f) => f.endsWith('.mjs'))
-    .map((f) => f.replace(/\.mjs$/, ''))
+    .filter(f => f.endsWith('.mjs'))
+    .map(f => f.replace(/\.mjs$/, ''))
     .sort()
 const name = process.argv[2]
 
 if (!name || name === 'list') {
-    console.log('可用场景：\n  ' + names.filter((n) => n !== 'all').join('\n  '))
+    console.log('可用场景：\n  ' + names.filter(n => n !== 'all').join('\n  '))
     process.exit(name ? 0 : 1)
 }
 if (!names.includes(name)) {

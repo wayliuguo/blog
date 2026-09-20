@@ -10,9 +10,9 @@ const { transpileFile, version } = require('./_tsc.cjs')
 const demosDir = path.join(__dirname, 'demos')
 const files = fs
     .readdirSync(demosDir)
-    .filter((f) => f.endsWith('.ts'))
+    .filter(f => f.endsWith('.ts'))
     .sort()
-    .map((f) => path.join(demosDir, f))
+    .map(f => path.join(demosDir, f))
 
 console.log(`runtime-lab · typescript ${version} · ${files.length} 个 demo`)
 let failed = 0

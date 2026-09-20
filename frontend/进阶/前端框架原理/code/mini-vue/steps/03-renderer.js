@@ -15,20 +15,16 @@ const { printDom } = require('../test/fake-dom')
 const Card = {
     props: { title: String },
     setup(props) {
-        return () =>
-            h('div', { class: 'card' }, [
-                h('h2', null, props.title),
-                h('p', null, '同一份 render，两个宿主')
-            ])
+        return () => h('div', { class: 'card' }, [h('h2', null, props.title), h('p', null, '同一份 render，两个宿主')])
     }
 }
 
 // ---------- 宿主 B：不建节点，直接拼字符串 ----------
 function stringHost() {
     return {
-        createElement: (tag) => ({ tag, attrs: {}, children: [], text: null }),
-        createText: (text) => ({ tag: null, text }),
-        createComment: (text) => ({ tag: null, text, comment: true }),
+        createElement: tag => ({ tag, attrs: {}, children: [], text: null }),
+        createText: text => ({ tag: null, text }),
+        createComment: text => ({ tag: null, text, comment: true }),
         setText: (node, text) => {
             node.text = text
         },
@@ -39,7 +35,7 @@ function stringHost() {
             parent.children.push(child)
             child.parent = parent
         },
-        remove: (child) => {
+        remove: child => {
             const at = child.parent.children.indexOf(child)
             if (at >= 0) child.parent.children.splice(at, 1)
         },
@@ -98,13 +94,11 @@ console.log(serialize(containerB))
 
 console.log('\n==== 两个宿主的操作次数 ====')
 const keys = Object.keys(counterA)
-const width = Math.max(...keys.map((k) => k.length))
+const width = Math.max(...keys.map(k => k.length))
 const pad = (s, w) => String(s).padEnd(w, ' ')
 console.log(`  ${pad('操作', width)}   假 DOM   字符串`)
 for (const key of keys) {
-    console.log(
-        `  ${pad(key, width)}   ${String(counterA[key]).padStart(5)}   ${String(counterB[key]).padStart(6)}`
-    )
+    console.log(`  ${pad(key, width)}   ${String(counterA[key]).padStart(5)}   ${String(counterB[key]).padStart(6)}`)
 }
 
 console.log('\n---- 结论 ----')

@@ -35,7 +35,7 @@ async function main() {
     const vm = createApp(Counter, { label: '计数器' }).mount(container)
 
     // 取 counter 里那个 <span> 的文本，读起来比整棵 DOM 树方便
-    const counterText = (el) => el.childNodes[0].childNodes[0].textContent
+    const counterText = el => el.childNodes[0].childNodes[0].textContent
 
     console.log('==== 1. 挂载：setup 返回值 + props 都能在 render 里通过 this 访问 ====')
     console.log(printDom(container))
@@ -95,10 +95,7 @@ async function main() {
             return { n }
         },
         render() {
-            return h('div', null, [
-                h(Child, { label: '固定不变' }),
-                h('b', null, `父组件 n=${this.n}`)
-            ])
+            return h('div', null, [h(Child, { label: '固定不变' }), h('b', null, `父组件 n=${this.n}`)])
         }
     }
 
@@ -107,7 +104,11 @@ async function main() {
     const childBefore = childRenders
     parentVm.n++ // 只改父组件的状态
     await nextTick()
-    console.log(`  父组件重新渲染后：子组件渲染次数 +${childRenders - childBefore}，父组件文案「${stage.childNodes[0].childNodes[1].textContent}」`)
+    console.log(
+        `  父组件重新渲染后：子组件渲染次数 +${childRenders - childBefore}，父组件文案「${
+            stage.childNodes[0].childNodes[1].textContent
+        }」`
+    )
     console.log('  → 子组件的 props 与插槽都没变，跳过一次没有意义的子渲染')
 
     console.log('\n==== 6. 卸载：渲染 effect 必须被停掉 ====')

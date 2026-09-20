@@ -13,14 +13,13 @@ const userReducer = (state = initialState.user, action) =>
 const cartReducer = (state = initialState.cart, action) =>
     action.type === 'cart/setItems' ? { ...state, items: action.items } : state
 
-const themeReducer = (state = initialState.theme, action) =>
-    action.type === 'theme/set' ? action.theme : state
+const themeReducer = (state = initialState.theme, action) => (action.type === 'theme/set' ? action.theme : state)
 
 // 三个"组件"各订阅一个切片，切片值都是原始类型，便于比较
 const selectors = {
-    header: (state) => state.user.name,
-    badge: (state) => state.cart.items,
-    toggle: (state) => state.theme
+    header: state => state.user.name,
+    badge: state => state.cart.items,
+    toggle: state => state.theme
 }
 
 module.exports = { initialState, userReducer, cartReducer, themeReducer, selectors }

@@ -6,7 +6,16 @@
  */
 
 const { createRenderer } = require('./renderer')
-const { createVNode, createTextVNode, createCommentVNode, h, normalizeVNode, Text, Fragment, Comment } = require('./vnode')
+const {
+    createVNode,
+    createTextVNode,
+    createCommentVNode,
+    h,
+    normalizeVNode,
+    Text,
+    Fragment,
+    Comment
+} = require('./vnode')
 const { queueJob, nextTick, flushJobs } = require('./scheduler')
 const { createComponentInstance, setupComponent } = require('./component')
 

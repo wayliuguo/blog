@@ -6,7 +6,7 @@
 
 // ---- 上下文推断：回调参数不用手写类型 ----
 const nums = [1, 2, 3]
-const doubled = nums.map((n) => n * 2) // n 由 map 的签名推断为 number
+const doubled = nums.map(n => n * 2) // n 由 map 的签名推断为 number
 //ERR const bad = nums.map((n) => n.toUpperCase()) // 编译错误：number 没有 toUpperCase
 
 // ---- 空数组：不标注就不知道将来装什么 ----

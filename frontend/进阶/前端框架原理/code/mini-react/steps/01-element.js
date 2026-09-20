@@ -35,7 +35,7 @@ function describe(node, indent = 0) {
     const key = node.key === null ? '' : ` key="${node.key}"`
     const tag = isFragment ? 'Fragment' : node.type
     const open = `${pad}<${tag}${isFragment ? '' : attrs}${isFragment ? '' : key}>`
-    const children = node.props.children.map((child) => describe(child, indent + 1))
+    const children = node.props.children.map(child => describe(child, indent + 1))
     return [open, ...children, `${pad}</${tag}>`].join('\n')
 }
 
@@ -49,8 +49,5 @@ console.log('props.className :', vdom.props.className)
 console.log('props.children  :', vdom.props.children.length, '个子节点（文本也被包成节点）')
 console.log('children[0].type:', JSON.stringify(vdom.props.children[0].type))
 console.log('children[1].type:', JSON.stringify(vdom.props.children[1].type))
-console.log(
-    '数字 1+1 被转成了:',
-    JSON.stringify(vdom.props.children[1].props.children[0].props.nodeValue)
-)
+console.log('数字 1+1 被转成了:', JSON.stringify(vdom.props.children[1].props.children[0].props.nodeValue))
 console.log('children[2].type:', String(vdom.props.children[2].type))

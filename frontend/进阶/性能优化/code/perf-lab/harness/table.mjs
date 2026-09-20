@@ -19,14 +19,14 @@ export function pad(text, len, align = 'left') {
 
 /** 打印一张对齐的表，首行为表头 */
 export function table(head, rows) {
-    const all = [head, ...rows].map((r) => r.map((c) => String(c)))
-    const widths = head.map((_, i) => Math.max(...all.map((r) => width(r[i] ?? ''))))
-    const line = (r) => '| ' + r.map((c, i) => pad(c ?? '', widths[i])).join(' | ') + ' |'
-    const sep = '|' + widths.map((n) => '-'.repeat(n + 2)).join('|') + '|'
+    const all = [head, ...rows].map(r => r.map(c => String(c)))
+    const widths = head.map((_, i) => Math.max(...all.map(r => width(r[i] ?? ''))))
+    const line = r => '| ' + r.map((c, i) => pad(c ?? '', widths[i])).join(' | ') + ' |'
+    const sep = '|' + widths.map(n => '-'.repeat(n + 2)).join('|') + '|'
     return [line(head), sep, ...rows.map(line)].join('\n')
 }
 
-export const ms = (v) => (v == null ? '—' : `${Math.round(v)} ms`)
+export const ms = v => (v == null ? '—' : `${Math.round(v)} ms`)
 export const num = (v, digits = 1) => (v == null ? '—' : Number(v).toFixed(digits))
 export const pct = (v, digits = 1) => (v == null ? '—' : `${(v * 100).toFixed(digits)}%`)
 
@@ -47,13 +47,21 @@ export function median(list) {
 /** 主线程时间线的 ASCII 近似：把每段任务的起止按比例画成横条 */
 export function timeline(items, total, cols = 56) {
     const head = pad('0 ms', 24) + '+' + '-'.repeat(cols) + '+ ' + ms(total)
-    const rows = items.map((it) => {
+    const rows = items.map(it => {
         const from = Math.round((it.start / total) * cols)
         const to = Math.max(from + 1, Math.round(((it.start + it.duration) / total) * cols))
-        return pad(it.label, 24) + '|' + ' '.repeat(from) + '#'.repeat(to - from) + ' '.repeat(Math.max(0, cols - to)) + '| ' + ms(it.duration)
+        return (
+            pad(it.label, 24) +
+            '|' +
+            ' '.repeat(from) +
+            '#'.repeat(to - from) +
+            ' '.repeat(Math.max(0, cols - to)) +
+            '| ' +
+            ms(it.duration)
+        )
     })
     return [head, ...rows].join('\n')
 }
 
-export const title = (text) => `\n${'='.repeat(64)}\n${text}\n${'='.repeat(64)}`
-export const section = (text) => `\n---- ${text} ----`
+export const title = text => `\n${'='.repeat(64)}\n${text}\n${'='.repeat(64)}`
+export const section = text => `\n---- ${text} ----`

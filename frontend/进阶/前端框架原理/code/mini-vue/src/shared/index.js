@@ -13,10 +13,10 @@ const ShapeFlags = {
     SLOTS_CHILDREN: 1 << 4
 }
 
-const isObject = (val) => val !== null && typeof val === 'object'
+const isObject = val => val !== null && typeof val === 'object'
 const isArray = Array.isArray
-const isString = (val) => typeof val === 'string'
-const isFunction = (val) => typeof val === 'function'
+const isString = val => typeof val === 'string'
+const isFunction = val => typeof val === 'function'
 const hasChanged = (value, oldValue) => !Object.is(value, oldValue)
 
 const EMPTY_OBJ = {}

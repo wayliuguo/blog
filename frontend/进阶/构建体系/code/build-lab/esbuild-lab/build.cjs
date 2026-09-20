@@ -29,7 +29,11 @@ for (const target of ['esnext', 'es2020', 'es2015']) {
         loader: 'ts',
         target
     })
-    console.log(`  target=${target.padEnd(8)} 产物长度 ${String(r.code.length).padStart(4)}  ${r.code.slice(0, 70).replace(/\n/g, ' ')}`)
+    console.log(
+        `  target=${target.padEnd(8)} 产物长度 ${String(r.code.length).padStart(4)}  ${r.code
+            .slice(0, 70)
+            .replace(/\n/g, ' ')}`
+    )
 }
 
 console.log('\n---- 3. build：解析依赖并打包 ----')

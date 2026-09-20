@@ -24,12 +24,12 @@ export default async function run() {
     const results = []
     for (const { name, report } of rows) {
         const m = report.metrics
-        const js = report.resources.filter((r) => r.type === 'script').reduce((sum, r) => sum + r.size, 0)
+        const js = report.resources.filter(r => r.type === 'script').reduce((sum, r) => sum + r.size, 0)
         const items = [
             ['TTFB', m.ttfb, BUDGET.ttfb, ms],
             ['FCP', m.fcp, BUDGET.fcp, ms],
             ['LCP', m.lcp, BUDGET.lcp, ms],
-            ['CLS（全量位移）', m.clsRaw, BUDGET.clsRaw, (v) => num(v, 3)],
+            ['CLS（全量位移）', m.clsRaw, BUDGET.clsRaw, v => num(v, 3)],
             ['JS 字节', js, BUDGET.jsBytes, bytes],
             ['长任务数', report.longtasks.length, BUDGET.longtasks, String]
         ]
@@ -42,13 +42,18 @@ export default async function run() {
         console.log(
             table(
                 ['指标', '实测', '预算', '结论'],
-                items.map(([label, value, limit, fmt]) => [label, fmt(value), fmt(limit), value <= limit ? 'PASS' : 'FAIL'])
+                items.map(([label, value, limit, fmt]) => [
+                    label,
+                    fmt(value),
+                    fmt(limit),
+                    value <= limit ? 'PASS' : 'FAIL'
+                ])
             )
         )
     }
 
-    const all = results.flatMap((r) => r.items.map(([label, value, limit]) => ({ page: r.name, label, value, limit })))
-    const failed = all.filter((i) => i.value > i.limit)
+    const all = results.flatMap(r => r.items.map(([label, value, limit]) => ({ page: r.name, label, value, limit })))
+    const failed = all.filter(i => i.value > i.limit)
 
     console.log(section('汇总'))
     console.log(`${all.length - failed.length} / ${all.length} 项在预算内，${failed.length} 项超线。`)

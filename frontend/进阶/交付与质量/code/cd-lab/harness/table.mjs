@@ -19,14 +19,14 @@ export function pad(text, len, align = 'left') {
 
 /** 打印一张对齐的表，首行为表头 */
 export function table(head, rows) {
-    const all = [head, ...rows].map((r) => r.map((c) => String(c)))
-    const widths = head.map((_, i) => Math.max(...all.map((r) => width(r[i] ?? ''))))
-    const line = (r) => '| ' + r.map((c, i) => pad(c ?? '', widths[i])).join(' | ') + ' |'
-    const sep = '|' + widths.map((n) => '-'.repeat(n + 2)).join('|') + '|'
+    const all = [head, ...rows].map(r => r.map(c => String(c)))
+    const widths = head.map((_, i) => Math.max(...all.map(r => width(r[i] ?? ''))))
+    const line = r => '| ' + r.map((c, i) => pad(c ?? '', widths[i])).join(' | ') + ' |'
+    const sep = '|' + widths.map(n => '-'.repeat(n + 2)).join('|') + '|'
     return [line(head), sep, ...rows.map(line)].join('\n')
 }
 
-export const ms = (v) => (v == null ? '—' : `${Math.round(v)} ms`)
+export const ms = v => (v == null ? '—' : `${Math.round(v)} ms`)
 export const num = (v, digits = 1) => (v == null ? '—' : Number(v).toFixed(digits))
 export const pct = (v, digits = 1) => (v == null ? '—' : `${(v * 100).toFixed(digits)}%`)
 
@@ -37,5 +37,5 @@ export function median(list) {
     return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2
 }
 
-export const title = (text) => `\n${'='.repeat(64)}\n${text}\n${'='.repeat(64)}`
-export const section = (text) => `\n---- ${text} ----`
+export const title = text => `\n${'='.repeat(64)}\n${text}\n${'='.repeat(64)}`
+export const section = text => `\n---- ${text} ----`

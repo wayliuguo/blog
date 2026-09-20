@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url'
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'scenarios')
 const names = fs
     .readdirSync(DIR)
-    .filter((f) => f.endsWith('.mjs'))
-    .map((f) => f.replace(/\.mjs$/, ''))
+    .filter(f => f.endsWith('.mjs'))
+    .map(f => f.replace(/\.mjs$/, ''))
     .sort()
 const name = process.argv[2]
 

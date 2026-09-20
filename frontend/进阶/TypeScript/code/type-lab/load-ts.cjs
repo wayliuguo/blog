@@ -19,9 +19,7 @@ function loadTypeScript() {
         if (up === dir) break
         dir = up
     }
-    throw new Error(
-        '未找到 typescript。请在仓库根目录执行：npm i -D typescript（或 npm i typescript@5）'
-    )
+    throw new Error('未找到 typescript。请在仓库根目录执行：npm i -D typescript（或 npm i typescript@5）')
 }
 
 module.exports = { loadTypeScript }

@@ -1,11 +1,7 @@
 // 被测源码：跨天判断 + 一个共享的模块级集合（用来复现"用例之间串味"）
 
 export function isSameDay(a, b) {
-    return (
-        a.getFullYear() === b.getFullYear() &&
-        a.getMonth() === b.getMonth() &&
-        a.getDate() === b.getDate()
-    )
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
 // 同一件事的另一种写法：只认 UTC，不受运行环境的时区影响

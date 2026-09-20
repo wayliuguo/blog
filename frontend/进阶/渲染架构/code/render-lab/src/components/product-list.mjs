@@ -10,7 +10,7 @@ export function ProductList({ products, priceOf = formatPrice }) {
         h(
             'ul',
             null,
-            products.map((item) =>
+            products.map(item =>
                 h(
                     'li',
                     { class: 'card', 'data-id': item.id },

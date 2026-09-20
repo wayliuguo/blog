@@ -17,6 +17,6 @@ export function useOrderList() {
 
     return {
         load,
-        rowActions: (order) => ({ cancel: canEdit(order), pageSize: PAGE_SIZE })
+        rowActions: order => ({ cancel: canEdit(order), pageSize: PAGE_SIZE })
     }
 }

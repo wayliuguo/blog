@@ -4,10 +4,25 @@
  */
 import { resolve } from './vdom.mjs'
 
-const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'])
+const VOID = new Set([
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr'
+])
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
-export const escapeHtml = (value) => String(value).replace(/[&<>"]/g, (c) => ESC[c])
+export const escapeHtml = value => String(value).replace(/[&<>"]/g, c => ESC[c])
 
 /** 事件监听器不进 HTML；style 对象序列化成 css 文本；其余照写 */
 export function attrsToString(props) {
@@ -17,7 +32,7 @@ export function attrsToString(props) {
         if (/^on[A-Z]/.test(key)) continue
         if (key === 'style' && typeof value === 'object') {
             const css = Object.entries(value)
-                .map(([prop, v]) => `${prop.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())}:${v}`)
+                .map(([prop, v]) => `${prop.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}:${v}`)
                 .join(';')
             out += ` style="${escapeHtml(css)}"`
             continue

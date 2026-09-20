@@ -23,13 +23,10 @@ function dump(fiber, indent) {
     if (!fiber) return ''
     const lines = []
     for (let f = fiber; f; f = f.sibling) {
-        const name =
-            f.type === 'ROOT' ? 'ROOT' : typeof f.type === 'function' ? f.type.name : String(f.type)
+        const name = f.type === 'ROOT' ? 'ROOT' : typeof f.type === 'function' ? f.type.name : String(f.type)
         let dom = '（无）'
         if (f.dom) dom = f.dom.type === TEXT_NODE ? `"${f.dom.text}"` : `<${f.dom.type}>`
-        const hooks = (f.hooks || [])
-            .map((hk) => (hk.fn ? 'effect' : `state=${JSON.stringify(hk.state)}`))
-            .join(', ')
+        const hooks = (f.hooks || []).map(hk => (hk.fn ? 'effect' : `state=${JSON.stringify(hk.state)}`)).join(', ')
         lines.push(`${'  '.repeat(indent)}- ${name}  dom:${dom}${hooks ? `  hooks:[${hooks}]` : ''}`)
         const child = dump(f.child, indent + 1)
         if (child) lines.push(child)

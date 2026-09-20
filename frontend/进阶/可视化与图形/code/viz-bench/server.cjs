@@ -8,32 +8,36 @@ const PORT = 5193
 const ROOT = __dirname
 const REPORT = path.join(ROOT, '.last-report.json')
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' }
+const MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8'
+}
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url === '/report') {
-    let body = ''
-    req.on('data', (c) => (body += c))
-    req.on('end', () => {
-      try {
-        const data = JSON.parse(body)
-        fs.writeFileSync(REPORT, JSON.stringify(data))
-      } catch (e) {}
-      res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok')
-    })
-    return
-  }
-  let name = req.url.split('?')[0]
-  if (name === '/' || name === '') name = '/index.html'
-  const file = path.join(ROOT, name)
-  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-    res.writeHead(404).end('Not Found')
-    return
-  }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'text/plain' })
-  res.end(fs.readFileSync(file))
+    if (req.method === 'POST' && req.url === '/report') {
+        let body = ''
+        req.on('data', c => (body += c))
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body)
+                fs.writeFileSync(REPORT, JSON.stringify(data))
+            } catch (e) {}
+            res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok')
+        })
+        return
+    }
+    let name = req.url.split('?')[0]
+    if (name === '/' || name === '') name = '/index.html'
+    const file = path.join(ROOT, name)
+    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+        res.writeHead(404).end('Not Found')
+        return
+    }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'text/plain' })
+    res.end(fs.readFileSync(file))
 })
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`viz-bench server on http://127.0.0.1:${PORT}/`)
+    console.log(`viz-bench server on http://127.0.0.1:${PORT}/`)
 })

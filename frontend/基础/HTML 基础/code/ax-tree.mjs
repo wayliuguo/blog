@@ -25,7 +25,7 @@ if (!url) {
 const SKIP_ROLES = new Set(['InlineTextBox', 'LineBreak', 'none'])
 
 const PORT = 9500 + Math.floor(Math.random() * 300)
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 const child = spawn(
     CHROME,
@@ -45,7 +45,7 @@ async function findTarget() {
     for (let i = 0; i < 60; i++) {
         try {
             const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
-            const page = list.find((t) => t.type === 'page' && t.webSocketDebuggerUrl)
+            const page = list.find(t => t.type === 'page' && t.webSocketDebuggerUrl)
             if (page) return page
         } catch {
             /* 还没起来 */
@@ -59,7 +59,7 @@ function connect(wsUrl) {
     return new Promise((resolve, reject) => {
         const ws = new WebSocket(wsUrl)
         ws.addEventListener('open', () => resolve(ws))
-        ws.addEventListener('error', (e) => reject(new Error('WS 连接失败: ' + e.message)))
+        ws.addEventListener('error', e => reject(new Error('WS 连接失败: ' + e.message)))
     })
 }
 
@@ -67,7 +67,7 @@ let msgId = 1
 function send(ws, method, params = {}) {
     const id = msgId++
     return new Promise((resolve, reject) => {
-        const onMsg = (ev) => {
+        const onMsg = ev => {
             const msg = JSON.parse(ev.data)
             if (msg.id !== id) return
             ws.removeEventListener('message', onMsg)
@@ -99,9 +99,7 @@ try {
         const role = n.role?.value || ''
         if (SKIP_ROLES.has(role)) continue
         const name = n.name?.value || ''
-        console.log(
-            `${n.ignored ? '[被忽略] ' : ''}role = ${JSON.stringify(role)}  name = ${JSON.stringify(name)}`
-        )
+        console.log(`${n.ignored ? '[被忽略] ' : ''}role = ${JSON.stringify(role)}  name = ${JSON.stringify(name)}`)
     }
 
     ws.close()

@@ -24,7 +24,10 @@ function transform(src) {
     traverse(ast, {
         MemberExpression(p) {
             const node = p.node
-            if (t.isIdentifier(node.object, { name: 'React' }) && t.isIdentifier(node.property, { name: 'createElement' })) {
+            if (
+                t.isIdentifier(node.object, { name: 'React' }) &&
+                t.isIdentifier(node.property, { name: 'createElement' })
+            ) {
                 count += 1
                 p.replaceWith(t.identifier('h'))
             }
@@ -43,7 +46,7 @@ console.log(output)
 console.log('\n替换处数:', count)
 
 console.log('\n---- 为什么 codemod 不能靠正则 ----')
-const tricky = "const s = 'React.createElement(\"div\")'  // 字符串里长得一模一样"
+const tricky = 'const s = \'React.createElement("div")\'  // 字符串里长得一模一样'
 const re = /React\.createElement/g
 console.log('正则替换会误伤字符串:', tricky.replace(re, 'h'))
 const { output: safe } = transform(tricky)

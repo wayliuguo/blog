@@ -9,9 +9,11 @@ async function build(label, treeshake) {
     const bundle = await rollup({ input: INPUT, treeshake })
     const { output } = await bundle.generate({ format: 'es' })
     const code = output[0].code
-    const hit = (s) => String(code.includes(s)).padEnd(5)
+    const hit = s => String(code.includes(s)).padEnd(5)
     console.log(
-        `  ${label.padEnd(26)} lib求值:${hit('lib 被求值')} pure求值:${hit('pure 被求值')} make('pure'):${hit("'pure'")} make('nopure'):${hit("'nopure'")} ${String(code.length).padStart(4)} 字符`
+        `  ${label.padEnd(26)} lib求值:${hit('lib 被求值')} pure求值:${hit('pure 被求值')} make('pure'):${hit(
+            "'pure'"
+        )} make('nopure'):${hit("'nopure'")} ${String(code.length).padStart(4)} 字符`
     )
     await bundle.close()
 }
@@ -21,7 +23,7 @@ async function build(label, treeshake) {
     await build('① 默认（都存在副作用）', true)
     await build('② moduleSideEffects: false', { moduleSideEffects: false })
     await build('③ 只把 pure.js 标成无副作用', {
-        moduleSideEffects: (id) => !id.includes('pure.js')
+        moduleSideEffects: id => !id.includes('pure.js')
     })
 
     console.log('\n---- 结论 ----')

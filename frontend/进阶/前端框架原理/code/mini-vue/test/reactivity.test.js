@@ -3,7 +3,22 @@ const assert = require('node:assert/strict')
 
 require('./fake-dom')
 
-const { reactive, readonly, isReactive, isReadonly, isProxy, ref, isRef, unref, proxyRefs, computed, effect, stop, describeDeps, resetDebug } = require('../src/reactivity')
+const {
+    reactive,
+    readonly,
+    isReactive,
+    isReadonly,
+    isProxy,
+    ref,
+    isRef,
+    unref,
+    proxyRefs,
+    computed,
+    effect,
+    stop,
+    describeDeps,
+    resetDebug
+} = require('../src/reactivity')
 
 test('reactive：effect 读过才收集依赖，没读过的不触发', () => {
     const state = reactive({ a: 1, b: 2 })
@@ -96,7 +111,13 @@ test('effect：带 scheduler 时不直接执行', () => {
     const state = reactive({ n: 0 })
     let runs = 0
     const jobs = []
-    effect(() => { void state.n; runs++ }, { scheduler: () => jobs.push(1) })
+    effect(
+        () => {
+            void state.n
+            runs++
+        },
+        { scheduler: () => jobs.push(1) }
+    )
 
     state.n = 1
     assert.equal(runs, 1, 'effect 体没被执行')

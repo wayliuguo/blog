@@ -5,29 +5,39 @@
  */
 import { withServer, bestOf, table, section, title, ms, bytes, pct } from '../harness/index.mjs'
 
-const scriptsOf = (report) => {
-    const list = report.resources.filter((r) => r.name.startsWith('/src/')).sort((a, b) => b.decoded - a.decoded)
+const scriptsOf = report => {
+    const list = report.resources.filter(r => r.name.startsWith('/src/')).sort((a, b) => b.decoded - a.decoded)
     return { files: list.length, bytes: list.reduce((sum, r) => sum + r.decoded, 0), list }
 }
 
 export default async function run() {
     console.log(title('岛化：只给交互点下发 JavaScript'))
-    await withServer({}, async (server) => {
+    await withServer({}, async server => {
         const full = await bestOf(server, { mode: 'ssr', query: { jslag: 300 } })
         const island = await bestOf(server, { mode: 'island', query: { jslag: 300 } })
         const f = scriptsOf(full)
         const i = scriptsOf(island)
-        const iNames = new Set(i.list.map((x) => x.name))
-        const fBytes = new Map(f.list.map((x) => [x.name, x.decoded]))
+        const iNames = new Set(i.list.map(x => x.name))
+        const fBytes = new Map(f.list.map(x => [x.name, x.decoded]))
         // 两侧的并集：只被岛加载的模块（如激活逻辑）也要出现在表里
-        const union = [...new Set([...f.list, ...i.list].map((x) => x.name))]
-            .map((name) => ({ name, full: fBytes.get(name) ?? 0, island: iNames.has(name) }))
+        const union = [...new Set([...f.list, ...i.list].map(x => x.name))]
+            .map(name => ({ name, full: fBytes.get(name) ?? 0, island: iNames.has(name) }))
             .sort((a, b) => b.full - a.full)
 
         console.log(section('一、整页对照'))
         console.log(
             table(
-                ['客户端入口', 'JS 文件数', 'JS 字节', '复用节点', '新建节点', '挂上的监听器', '按钮点得动', '入口开始执行', 'FCP'],
+                [
+                    '客户端入口',
+                    'JS 文件数',
+                    'JS 字节',
+                    '复用节点',
+                    '新建节点',
+                    '挂上的监听器',
+                    '按钮点得动',
+                    '入口开始执行',
+                    'FCP'
+                ],
                 [
                     [
                         '全量 hydration',
@@ -61,7 +71,7 @@ export default async function run() {
         console.log(
             table(
                 ['模块', '全量 hydration 下载', '岛化是否下载', '它服务什么'],
-                union.map((item) => [
+                union.map(item => [
                     item.name.replace('/src/', ''),
                     item.full ? bytes(item.full) : '不下载',
                     item.island ? '仍然要' : '不再要',

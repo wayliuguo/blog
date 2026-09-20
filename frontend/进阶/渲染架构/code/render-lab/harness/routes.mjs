@@ -63,7 +63,7 @@ ul{list-style:none;padding:0;margin:0}
 .like{padding:6px 14px;border:1px solid #d4380d;color:#d4380d;background:#fff;border-radius:4px;cursor:pointer}
 .hint{color:#8c8c8c}`
 
-const scriptTag = (data) => `<script>window.__DATA__ = ${serializeData(data)}</script>`
+const scriptTag = data => `<script>window.__DATA__ = ${serializeData(data)}</script>`
 
 /** 文档头：所有 mode 共用 */
 const docHead = ({ mode, stream = false }) => `<!DOCTYPE html>
@@ -115,7 +115,7 @@ export function createHandler({ onReport, bodyLag = 260 } = {}) {
         if (Date.now() - isr.builtAt > ISR_TTL) {
             if (!isr.rebuilding) {
                 isr.rebuilding = true
-                slow().then((data) => {
+                slow().then(data => {
                     isr.html = renderToString(App({ data }))
                     isr.data = data
                     isr.builtAt = Date.now()
@@ -140,7 +140,10 @@ export function createHandler({ onReport, bodyLag = 260 } = {}) {
         }
         const body = fs.readFileSync(file)
         const send = () => {
-            res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'text/plain', 'Cache-Control': 'no-store' })
+            res.writeHead(200, {
+                'Content-Type': MIME[path.extname(file)] || 'text/plain',
+                'Cache-Control': 'no-store'
+            })
             res.end(body)
         }
         // 只压 /src/：它就是「要下载并解析的 JavaScript」本身
@@ -171,18 +174,27 @@ export function createHandler({ onReport, bodyLag = 260 } = {}) {
 
         if (mode === 'ssg') {
             if (!ssg.html) await warm()
-            return send(docHead({ mode }) + ssg.html + docTail({ data: scriptTag(ssg.data), entry: '/src/entry-full.mjs' }), 'ssg')
+            return send(
+                docHead({ mode }) + ssg.html + docTail({ data: scriptTag(ssg.data), entry: '/src/entry-full.mjs' }),
+                'ssg'
+            )
         }
 
         if (mode === 'isr') {
             const { html, data, state } = await isrPage()
-            return send(docHead({ mode }) + html + docTail({ data: scriptTag(data), entry: '/src/entry-full.mjs' }), state)
+            return send(
+                docHead({ mode }) + html + docTail({ data: scriptTag(data), entry: '/src/entry-full.mjs' }),
+                state
+            )
         }
 
         if (mode === 'island') {
             // 岛化不下发注水数据，但**服务端该渲染的还是要渲染**：它省的是客户端 JS，不是服务端渲染
             const data = await slow()
-            return send(docHead({ mode }) + renderToString(App({ data })) + docTail({ entry: '/src/entry-islands.mjs' }), 'island')
+            return send(
+                docHead({ mode }) + renderToString(App({ data })) + docTail({ entry: '/src/entry-islands.mjs' }),
+                'island'
+            )
         }
 
         if (mode === 'stream') {
@@ -200,13 +212,13 @@ export function createHandler({ onReport, bodyLag = 260 } = {}) {
                     id: 'reviews',
                     data: () => reviewsPromise,
                     fallback: h(ReviewsSkeleton),
-                    render: (reviews) => h(Reviews, { reviews })
+                    render: reviews => h(Reviews, { reviews })
                 }),
                 recommendSlot: h(Await, {
                     id: 'recommend',
                     data: () => recommendPromise,
                     fallback: h(RecommendSkeleton),
-                    render: (items) => h(Recommend, { items })
+                    render: items => h(Recommend, { items })
                 })
             })
             for await (const segment of renderSections(app)) res.write(marker(segment.name) + segment.html)
@@ -219,7 +231,12 @@ export function createHandler({ onReport, bodyLag = 260 } = {}) {
 
         // ssr / hydrate：同一个页面，入口相同，只差客户端拿哪棵树去接管
         const data = await slow()
-        send(docHead({ mode }) + renderToString(App({ data })) + docTail({ data: scriptTag(data), entry: '/src/entry-full.mjs' }), mode === 'hydrate' ? `hydrate-${variant}` : 'ssr')
+        send(
+            docHead({ mode }) +
+                renderToString(App({ data })) +
+                docTail({ data: scriptTag(data), entry: '/src/entry-full.mjs' }),
+            mode === 'hydrate' ? `hydrate-${variant}` : 'ssr'
+        )
     }
 
     async function handle(req, res) {
@@ -237,7 +254,8 @@ export function createHandler({ onReport, bodyLag = 260 } = {}) {
             return
         }
 
-        if (pathname.startsWith('/src/') || pathname.startsWith('/pages/')) return serveStatic(req, res, pathname, jslag)
+        if (pathname.startsWith('/src/') || pathname.startsWith('/pages/'))
+            return serveStatic(req, res, pathname, jslag)
 
         if (pathname === '/api/data') {
             if (url.searchParams.get('reviews') === '1') return json(res, await slow())

@@ -23,7 +23,7 @@ export default async function run() {
                     ms(report.extra.firstViewMs),
                     `${report.extra.criticalJs} 个 / ${bytes(report.extra.jsBytes)}`,
                     report.longtasks.length,
-                    ms(Math.max(0, ...report.longtasks.map((t) => t.duration))),
+                    ms(Math.max(0, ...report.longtasks.map(t => t.duration))),
                     report.extra.domNodes
                 ]
             })
@@ -32,10 +32,19 @@ export default async function run() {
 
     console.log(section('首屏各自下了哪些 JS'))
     for (const { name, report } of rows) {
-        const js = report.resources.filter((r) => r.name.includes('/spa/') || r.name.includes('/vendor/'))
+        const js = report.resources.filter(r => r.name.includes('/spa/') || r.name.includes('/vendor/'))
         const critical = report.extra.criticalJs
-        console.log(`\n[${name}] 首屏关键路径 ${critical} 个，整个会话 ${js.length} 个 / ${bytes(js.reduce((s, r) => s + r.size, 0))}`)
-        console.log(table(['资源', '开始', '耗时', '体积'], js.map((r) => [r.name, ms(r.start), ms(r.duration), bytes(r.size)])))
+        console.log(
+            `\n[${name}] 首屏关键路径 ${critical} 个，整个会话 ${js.length} 个 / ${bytes(
+                js.reduce((s, r) => s + r.size, 0)
+            )}`
+        )
+        console.log(
+            table(
+                ['资源', '开始', '耗时', '体积'],
+                js.map(r => [r.name, ms(r.start), ms(r.duration), bytes(r.size)])
+            )
+        )
     }
 
     console.log(section('怎么读这张表'))

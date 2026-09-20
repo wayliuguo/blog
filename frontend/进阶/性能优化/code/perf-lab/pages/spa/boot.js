@@ -15,9 +15,9 @@ function parseHash() {
     return { name: ROUTES.includes(name) ? name : 'list', param }
 }
 
-const settle = (ms) => new Promise((r) => setTimeout(r, ms))
+const settle = ms => new Promise(r => setTimeout(r, ms))
 /** 等到「下一帧画完」：INP 的口径就是事件到下一帧，这里用它做近似 */
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(performance.now()))))
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(performance.now()))))
 
 async function waitFor(fn, timeout = 8000) {
     const t0 = performance.now()
@@ -28,7 +28,8 @@ async function waitFor(fn, timeout = 8000) {
     return false
 }
 
-const jsResources = () => performance.getEntriesByType('resource').filter((e) => e.name.includes('/spa/') || e.name.includes('/vendor/'))
+const jsResources = () =>
+    performance.getEntriesByType('resource').filter(e => e.name.includes('/spa/') || e.name.includes('/vendor/'))
 
 export async function mount({ loaders, split }) {
     const cache = {}
@@ -85,16 +86,16 @@ export async function mount({ loaders, split }) {
     const firstViewMs = Math.round(performance.now() - t0)
     // 首屏这一刻的绝对时间点：用它切分「首屏关键路径上下了哪些 JS」，之后的预取不算进去
     const firstViewAt = performance.now()
-    const critical = jsResources().filter((r) => r.startTime <= firstViewAt)
+    const critical = jsResources().filter(r => r.startTime <= firstViewAt)
 
     // 空闲时把没去过的路由预取下来：切过去时不用再等 chunk
     const prefetchOn = split && flag('prefetch', true)
     window.__spa.prefetchOn = prefetchOn
     if (prefetchOn) {
-        const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200))
+        const idle = window.requestIdleCallback || (fn => setTimeout(fn, 200))
         idle(async () => {
             for (const name of ROUTES) if (!cache[name]) await load(name)
-            window.__spa.prefetched = ROUTES.filter((n) => timings[n] !== undefined)
+            window.__spa.prefetched = ROUTES.filter(n => timings[n] !== undefined)
         })
     }
 
@@ -128,7 +129,7 @@ async function drive() {
         location.hash = '#/detail/1'
         await waitFor(() => document.querySelector('[data-route="detail"]'))
         out.navMs = Math.round((await nextFrame()) - t0)
-        out.navChunks = jsResources().filter((r) => r.startTime >= t0 && r.name.includes('/routes/')).length
+        out.navChunks = jsResources().filter(r => r.startTime >= t0 && r.name.includes('/routes/')).length
     } else if (act === 'sort') {
         const btn = document.querySelector('[data-act="sort"]')
         if (btn) {
@@ -150,6 +151,6 @@ async function drive() {
 
     const added = Lab.longtasks.slice(mark)
     out.newTasks = added.length
-    out.longestTask = Math.round(Math.max(0, ...added.map((t) => t.duration)))
+    out.longestTask = Math.round(Math.max(0, ...added.map(t => t.duration)))
     return out
 }

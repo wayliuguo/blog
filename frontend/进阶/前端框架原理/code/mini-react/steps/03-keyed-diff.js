@@ -21,11 +21,11 @@ function nodeName(node) {
 function instrument() {
     const raw = { ...host }
 
-    host.createInstance = (type) => {
+    host.createInstance = type => {
         record('createInstance', `<${type}>`)
         return raw.createInstance(type)
     }
-    host.createTextInstance = (text) => {
+    host.createTextInstance = text => {
         record('createTextInstance', `"${text}"`)
         return raw.createTextInstance(text)
     }
@@ -55,9 +55,9 @@ const fruits = [
 ]
 
 // 无 key：只能按下标对号入座
-const noKey = (items) => h('ul', null, ...items.map((it) => h('li', null, it.name)))
+const noKey = items => h('ul', null, ...items.map(it => h('li', null, it.name)))
 // 有 key：身份跟着数据走
-const withKey = (items) => h('ul', null, ...items.map((it) => h('li', { key: it.id }, it.name)))
+const withKey = items => h('ul', null, ...items.map(it => h('li', { key: it.id }, it.name)))
 
 function run(label, factory) {
     const container = host.createInstance('div')
@@ -74,7 +74,7 @@ function run(label, factory) {
     console.log(
         printTree(container)
             .split('\n')
-            .map((line) => '    ' + line)
+            .map(line => '    ' + line)
             .join('\n')
     )
     return ops.length
