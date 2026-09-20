@@ -126,6 +126,8 @@ GLSL 没有「循环遍历数组改 JS 变量」这种思维——它是**一次
 
 > 提示：WebGL 的成本不在「学 API」而在「三维素养」——相机、光照、纹理、优化（draw call 合批、实例化 instancing、LOD）都是独立知识块。业务项目优先 Three.js，把裸 WebGL 留给特效库作者。
 
+实测佐证（`./code/viz-bench/`）：5 万点逐帧动画，WebGL 仍 21.2fps（最长帧 716.7ms 出现在首帧着色器编译，之后平稳），而同场景 SVG 只剩 3.6fps、Canvas 23.9fps——上 WebGL 的回报在「规模继续往上」时才显著。注意无头基准走 swiftshader 软件渲染，绝对帧率偏低，真机有 GPU 会高得多；但它的价值是锁定「三者的相对趋势」，真机一致。
+
 ## 小结
 
 - WebGL 与 Three.js 入门
@@ -136,6 +138,10 @@ GLSL 没有「循环遍历数组改 JS 变量」这种思维——它是**一次
   - 着色器是一次算一个顶点/像素的纯函数，时间变化走 uniform
   - 坐标换算靠矩阵，改物体属性优于改顶点；裁剪面太宽会 z-fighting
   - 与前两篇的关系：显示列表（Canvas）与场景图（SVG/Three.js）是同一问题的两种解
+
+## 配套代码
+
+三路渲染帧率基准 `./code/viz-bench/`（bench.cjs + index.html + server.cjs）给出 Canvas / SVG / WebGL 的实测决策边界，见 Canvas 篇第七节与本篇第七节。
 
 ## 参考
 
