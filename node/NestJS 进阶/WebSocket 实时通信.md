@@ -185,15 +185,6 @@ export class NotificationService {
 
 `setServer` 是给 `NotificationService` 注入 io server 的地方——真实项目里在网关的 `afterInit(server)` 里调一次即可，脚本为了少一堆样板代码，直接从容器里取 `ChatGateway.server` 塞进去。
 
-## 小结
-
-- **Gateway 即 WS 层的 Controller**：`@WebSocketGateway({ cors, namespace })` 声明并注册为 provider；`handleConnection`/`handleDisconnect` 处理上下线
-- **消息收发与房间**：`@WebSocketServer()` 取实例，`server.emit` 全局广播、`client.to(room).emit` 定向推；`@SubscribeMessage` 收消息，回调 `(client, payload)`，`client.join(room)` 入房
-- **连接即校验身份**：令牌取自 `client.handshake.auth.token`，失败 `client.disconnect()`；通过后置 `client.data.user`，后续随取随用
-- **HTTP 与 WS 共享 Service**：把 `server` 注入 `NotificationService`，HTTP 控制器也能触发 WS 广播
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/NestJS 进阶/code/advanced-lab`：一个真实 `@nestjs/*` + socket.io 的聊天服务，脚本自己用 `socket.io-client` 连上去，把连接、广播、入房间、私信、鉴权失败被踢、HTTP 触发广播都跑一遍。

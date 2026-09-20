@@ -215,21 +215,6 @@ export class AppController {
 {"code":0,"data":"Hello, NestJS!","message":"success"}
 ```
 
-## 小结
-
-- **为什么需要 DI**：手动 `new` 紧耦合、难替换 Mock 做单测、改构造方式要改所有调用点；DI 改为在构造函数声明 `private readonly userService: UserService`，实例由容器创建并注入
-- **两个装饰器与一行声明**
-  - `@Injectable()` 的作用：把类登记进 DI 容器的"可注入"名单，没有它容器不认识这个类
-  - 构造函数注入一行三用：`private readonly userService: UserService` 同时声明字段、类型和依赖
-  - 按 Token 注入：非类依赖（如配置对象）用 `@Inject('CONFIG')` 取值
-- **DI 容器装配依赖**：发现（`@Injectable` 标记）→ 分析（读构造函数参数类型）→ 递归（先创建依赖实例）→ 注入并返回（塞进构造函数）
-- **三种自定义 Provider**
-  1. `useClass`：`{ provide: UserService, useClass: UserService }`，Token 即类，最常用
-  2. `useValue`：`{ provide: 'CONFIG', useValue: { port: 3000 } }` 注入常量或配置对象，取值配 `@Inject('CONFIG')`
-  3. `useFactory`：`{ provide: 'DB_CONNECTION', useFactory: cfg => ..., inject: [ConfigService] }` 用于运行时逻辑或异步实例
-
----
-
 ## 配套代码
 
 本篇的可运行示例分两个项目：`nestjs-mini` 手写 DI 容器讲"内部怎么实现"，`nestjs-basics` 用真实 `@nestjs/*` 讲"业务里怎么写"。

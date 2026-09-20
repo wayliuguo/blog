@@ -611,41 +611,6 @@ path.resolve('/etc', 'x');    // '/etc/x'（遇到绝对路径 /etc 即停止）
 
 经验法则：只是拼一段路径用 `path.join`；要得到"从项目根出发的绝对路径"才用 `path.resolve`。
 
-## 小结
-
-- **Buffer：固定长度的字节序列，字节本身无编码**
-  - Node 4+ 的 Buffer 是 Uint8Array 子类（buf instanceof Uint8Array 为 true），能与整个 TypedArray 体系互操作
-  - 同一段字节用 utf8/hex/base64 解读得到不同字符串——这正是 Buffer.from(str) 与 buf.toString() 成对出现的原因
-  - alloc(n) 清零分配（待填充缓冲）；from(x) 从已有数据编码、不清零；别用未清零的旧 Buffer(size)，会泄漏堆上旧数据
-- **字符长度 ≠ 字节长度（Content-Length 的坑）**
-  - '你好'.length 是 2，Buffer.from('你好').length 是 6（UTF-8 每汉字 3 字节）
-  - 算响应头 Content-Length、切二进制帧、限上传体积必须用 Buffer.length（字节），否则长度算小、下游截断错乱
-- **Buffer 的五个典型场景**
-  1. 文件读取（readFile 不指定 encoding 拿到 Buffer）
-  2. TCP socket 的 data 事件（原始字节 chunk）
-  3. 图片/音频/视频（本质二进制字节流）
-  4. 加密（明文/密文都是 Buffer）
-  5. Base64 编解码（把二进制塞进只认文本的协议）
-- **Stream：一块一块搬，与 Buffer 是"水桶 vs 水管"**
-  - readFile 读 10GB 整文件进内存会 OOM；Stream 一次只搬一小块（通常 64KB），内存恒定几十 KB~几 MB
-  - Buffer 是"一桶水"，Stream 是"水管"——没有 Buffer 没东西运，没有 Stream 只能整块堆内存
-- **四种 Stream**
-  1. Readable：只生产（on('data')/read()/for await），pipe 返回目标流可链式
-  2. Writable：只消费，write() 返 false 表示缓冲满须暂停上游，end() 后再 write 报 ERR_STREAM_WRITE_AFTER_END
-  3. Duplex：双向（典型 TCP socket），allowHalfOpen 默认值不统一（new Duplex 是 true，net socket 是 false）
-  4. Transform：Duplex+转换（gzip/加解密），实现 transform()+flush()，objectMode 时 chunk 可是任意 JS 值
-- **工程实践：复制、背压、pipe / pipeline**
-  - 复制大文件必须 Stream：readFile+writeFile 整文件进内存 OOM；pipe 数据 Disk→Buffer→Stream→Disk，内存恒定
-  - 背压：write() 返 false 表示缓冲达上限应暂停读取，降下来触发 'drain' 再 resume（可观测 writableLength / writableNeedDrain / readableLength）
-  - highWaterMark 两侧不同：createReadStream 64KB、createWriteStream 16KB；手写 pause/resume 易错，直接用 pipe/pipeline
-  - pipe 出错不销毁上游（可能留悬挂流/FD）；pipeline 任意环出错统一销毁所有流并抛错，还能串联多个 Transform——简单搬运用 pipe，长链路/需错误兜底用 pipeline
-- **流式推送为什么必须用 Stream**
-  - 日志流/进度/大文件/实时数据这类持续产生的数据，先拼成大字符串再一次性返回会让客户端干等、服务端内存被撑
-  - 把数据源做成 Readable 边产生边推，res 本身是 Writable，stream.pipe(res) 即可，别提前设 Content-Length（交给 chunked）
-- **落地 fs 与 path**
-  - fs 三风格：回调版（易嵌套）/ fs.promises（配 async/await，主流）/ *Sync（阻塞事件循环，只适合启动初始化、CLI）
-  - 拼路径永远用 path.join（跨平台）；path.resolve 遇绝对路径停下并解析成基于 cwd 的绝对路径——只需拼路径用 join，要从项目根出发才用 resolve
-
 ## 配套代码
 
 | 文件 | 对应小节 | 演示什么 |

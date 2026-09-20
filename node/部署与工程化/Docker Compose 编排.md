@@ -220,35 +220,6 @@ docker compose -f docker-compose.infra.prod.yml --env-file .env.production up -d
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
 
-## 小结
-
-- **Compose 解决的痛点**：`docker run` 一个个起容器要敲几十参数（参数记不住、网络手动 `--link`、重启重组织命令、无法版本化）；Compose 一份 YAML 声明整组服务，`docker compose up -d` 一条命令拉起
-- **一个文件声明全栈**
-  - app + mysql + redis 写进同一 YAML，用 `up -d` / `ps` / `logs -f` / `down` 管理整套服务
-  - 服务名互访：Compose 自动建网并 DNS 解析，容器间直接用服务名（`mysql` / `redis`）当主机名——与 `docker run` 本质区别
-- **数据持久化**
-  - 命名卷：`volumes: mysql_data:/var/lib/mysql`，容器删了数据还在
-  - Redis 持久化：`--appendonly yes --appendfsync everysec` 每秒刷盘，崩溃最多丢 1 秒
-  - 日志命名卷：`show-track-logs:/app/logs/` 让日志跨容器生命周期持久化
-- **生产堆栈分离**
-  - `docker-compose.infra.prod.yml` 管 MySQL + Redis（一次性启动之后不管）；`docker-compose.prod.yml` 管 migration + 应用（日常部署）
-  - 为什么拆：数据库几年不动、应用天天更新、生命周期不同；拆开可自建 Docker / 上云 RDS / 混合，切换只改 env 不动编排
-  - 基础设施细节：`restart: always` 让库挂掉自动拉起；`./__data/redis/` 挂宿主机；上云时注释掉 mysql 服务
-- **迁移 Job**：把启动顺序变硬依赖
-  - `depends_on: condition: service_completed_successfully`：应用等迁移 Job 成功完成才启动，比默认“只等容器启动”严格
-  - 同镜像不同入口：迁移与业务共用镜像，只靠 `entrypoint` 覆盖区分；`restart: 'no'` 让一次性任务失败就失败，不留死循环重试
-- **入口收敛与跨宿主机访问**
-  - `ports: '127.0.0.1:${APP_PORT}:${APP_PORT}'`：只绑回环、不暴露公网，对外只开 Nginx 一个口
-  - `env_file: .env.production`：环境变量从文件注入，密钥不进镜像不进代码
-  - 显式命名网络：`networks: name: show_track_net` 让多个 compose 文件共享同一网络
-  - 跨宿主机访问：`extra_hosts` 配 `host.docker.internal:host-gateway`，`DB_HOST` 填 `host.docker.internal`（自建库）或云 RDS 地址
-- **三种部署场景**
-  1. 全部 Docker（自建 MySQL + Redis）：先 `infra.prod.yml` 起基础设施，再 `prod.yml` 部署应用
-  2. 混合（MySQL 上云 + Redis 本地）：infra 注释掉 mysql，`.env` 里 `DB_HOST` 填云地址
-  3. 全部云服务：跳过 infra 文件，`.env` 全填云地址，只用 `prod.yml`
-
----
-
 ## 参考
 
 - 本模块总结：[总结](./总结.md)

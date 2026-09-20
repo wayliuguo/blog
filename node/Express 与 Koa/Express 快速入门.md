@@ -346,26 +346,6 @@ Error: 故意炸一个
 | 模块化 | 无 | @Module |
 | 适合场景 | 小型项目、学习 | 中大型项目、企业级 |
 
-## 小结
-
-- **Express 的定位与心智模型**
-  - 不提供 `node:http` 之外的新能力：把路由分发、请求体读取、响应封装收敛成约定（`if (req.url)` → `app.get(path, handler)`）
-  - Hello World 五步：`require('express')` → `express()` → `app.get('/')` → `res.send()` → `app.listen(3000)`
-- **路由匹配规则**
-  - `app.get/post/put/delete(path, handler)` 按方法与路径分发，`:id` 是路径占位符
-  - `use` 与 `get` 的差异：`use` 匹配所有方法且前缀匹配（`/user` 命中 `/user/123`），`get` 只匹配 GET 且精确匹配
-- **请求数据的三个来源**
-  1. `req.params`：路径占位符的值，恒为字符串，当数字用必须先 `Number()`
-  2. `req.query`：查询串自动解析（`?page=1` 进 `req.query.page`）
-  3. `req.body`：挂了 `express.json()`/`urlencoded()` 才存在，`multipart/form-data` 要另上 multer
-- **中间件执行模型**
-  - 签名 `(req, res, next)`，调 `next()` 才推进，否则请求挂起；每个请求都会经过
-  - 错误处理中间件靠 4 参数（`fn.length === 4`）识别，`next(err)` 跳过后续普通中间件直奔错误处理器
-- **中间件生态**：内置 `express.json()`/`urlencoded()`/`static('public')`；跨域、鉴权、限流等靠第三方包（如 `cors()`）
-- **框架选型（Express vs NestJS）**：Express 无架构约束、TS 可选、无 DI，适合小型/学习；NestJS 强制 MVC/TS/DI/`@Module`，适合中大型长期项目
-
----
-
 ## 配套代码
 
 本篇每个代码块都逐字摘自仓库 `node/Express 与 Koa/code/express-basics`（真实 `express`，不是重实现），每个脚本跑完会自己打请求并打印真实结果。可落地的工程骨架在 `code/express-template`。

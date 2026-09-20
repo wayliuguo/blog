@@ -777,44 +777,6 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 □ 优化后验证：rows 是否明显减少，Extra 是否更优
 ```
 
-## 小结
-
-- **索引原理**
-  - 聚簇索引即 InnoDB 主键、数据按主键物理存放（一个表只一个）；非聚簇索引叶子存主键值、查完需回表
-  - 最左前缀与字段顺序：索引 `(name, age)` 支持 `name` 与 `name+age`、单独查 `age` 用不上；等值高频列放最左、范围列其后、排序列末尾免 filesort
-- **EXPLAIN 定位慢查询**
-  - `type`：ALL 全表扫描 / range 索引范围 / ref 索引查找 / eq_ref 唯一索引
-  - `rows` / `Extra`：扫描行数越小越好；Using index 是覆盖索引、Using filesort 需额外排序
-- **SQL 执行顺序**：FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT；WHERE 分组前过滤行（不能用聚合函数），HAVING 分组后过滤组（只能用聚合函数或 `GROUP BY` 列）
-- **子查询取舍**
-  - EXISTS 与 IN：外层小 / 子查询结果集大用 EXISTS，外层大 / 结果集小用 IN；关联子查询只能用 EXISTS
-  - 现代写法：取"每个用户最新一笔"用 `ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC)` 窗口函数替代关联子查询
-- **事务与锁**
-  - ACID 与隔离级别：InnoDB 默认可重复读（RR），RR 挡不住幻读，靠间隙锁与 Next-Key Lock 兜底
-  - MVCC：每行有 Undo Log 版本链、每事务有 Read View，"读"不阻塞"写"、"写"不阻塞"读"
-  - 锁粒度：`WHERE` 走索引才是行锁，不走索引锁住所有行（等价表锁）
-- **快照读与当前读**
-  - 快照读：普通 `SELECT` 读事务开始时的 MVCC 快照、不加锁
-  - 当前读：`UPDATE` / `DELETE` / `SELECT ... FOR UPDATE` 读最新已提交版本并加锁；RR 下刚 UPDATE 的未提交改动别人看不到，`FOR UPDATE` 把读升级成当前读，写并发控制必须用当前读
-- **防超卖的原子 UPDATE**
-  - 把判断下推到 `WHERE ... AND balance >= 1`，用 affectedRows 判定成败（1 成功、0 余额不足），避免先 SELECT 再 UPDATE 被并发插空扣成负数
-  - 需跨表校验才上 `FOR UPDATE` 悲观锁；偶发并发更新用 version 乐观锁、冲突重试
-- **索引失效五大原因**
-  1. 隐式类型转换：`WHERE phone = 13800138000`（列为 VARCHAR）等价于对列用函数，要写成 `phone = '13800138000'`
-  2. 函数或运算包住索引列：`DATE(created_at) = ...`、`amount * 1.1 > 100`，改范围条件或把运算挪到常量侧
-  3. `%x` 前缀模糊：`LIKE '%张三'` 用不了 B-Tree，改 `LIKE '张三%'` 或上 FULLTEXT / ES
-  4. `OR` 中一列无索引：改 `UNION` 或给另一列建索引走 index_merge
-  5. 低区分度列单独建索引：优化器认为扫全表更快，应放联合索引或改部分索引
-- **COUNT 与分页优化**
-  - `COUNT(*)` 与 `COUNT(1)` 等价（InnoDB 已优化）；`COUNT(列)` 只数非 `NULL` 行、结果可能不同
-  - 大表 COUNT：选最小非空二级索引 `USE INDEX`、`SHOW TABLE STATUS` 取估算值、Redis 维护计数，或分页用 `EXISTS` 判"是否有下一页"
-  - 深度分页：`LIMIT 10 OFFSET 100000` 越翻越慢，换游标 `WHERE id > 100000 ORDER BY id LIMIT 10`
-- **慢查询排查流程**
-  - 开启日志：`slow_query_log = ON`、`long_query_time = 1`、`log_queries_not_using_indexes = ON`，生产用 `pt-query-digest` 分析
-  - 定位到优化：`EXPLAIN` 确认是否走索引，把函数包裹列改成范围查询，`type` 从 ALL 变 range、扫描行数大幅下降
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/数据库/code/mysql-demo`。

@@ -498,35 +498,6 @@ rs.pipe(socket)
 
 TCP 只给你一条可靠字节流，那"我要 `GET /users`"这层语义该由谁来定义？答案就是下一篇的 HTTP——它在 TCP 之上约定好了请求行、头、体的格式，让字节流变成可读的请求与响应。
 
-## 小结
-
-- **TCP/IP 分层模型**
-  - 四层：应用层（HTTP/HTTPS/WebSocket/业务协议）→ 传输层（TCP 可靠有序 / UDP 快不可靠）→ 网络层（IP 寻址+路由）→ 网络接口层（Ethernet/Wi-Fi）；每层只解决一件事，排障先定位故障落在哪一层
-  - 请求下降链路：`GET /users` 属应用层，HTTP 只定义报文不管送达 → TCP 可靠有序送达 → IP 寻址路由 → 网卡变电信号
-- **TCP 的三重保证与三次握手**
-  1. 面向连接：通信前三次握手建立连接，否则对方可能没准备好
-  2. 可靠：丢包重传、校验和、确认应答，否则文件残缺
-  3. 有序：序号保证到达顺序，否则消息乱序
-  - 不能省成两次：两次握手时服务端收到 `SYN` 就分配资源，滞留的旧报文会让它空等超时（SYN Flood 即利用此）；第三次握手才确认客户端已收到回应
-- **字节流不是消息流**
-  - `data` 是 `Buffer`：网络上流动的是字节，`socket.on('data')` 拿到的是 Buffer，需手动 `.toString('utf8')` 才是字符串
-  - 粘包/拆包：`hello`+`world` 可能粘成一次收到或拆成多次；TCP 只保证可靠有序，不认业务消息边界
-  - 边界方案：长度前缀（`Length(4B)+Body(NB)`）最通用，不依赖分隔符、不浪费补齐字节、对二进制同样适用；定长与分隔符（`\n`）次之；HTTP 用 `Content-Length` 自定边界
-- **Socket：OS 网络能力的接口抽象**
-  - 四元组唯一区分连接（`源IP:源Port → 目标IP:目标Port`），服务端固定端口、客户端端口随机复用，故单机可撑万连接
-  - `node:net` 是最底层入口：处理 `data`/`end`/`error` 三类事件
-  - `net.Socket` 是 Duplex Stream（同时 Readable+Writable），收发可并行不阻塞，即 TCP 全双工的体现
-- **内核、epoll 与 libuv 的分工**
-  - 盯着 Socket 的是内核：10,000 个 Socket 忙轮询低效，Linux `epoll` 让内核主动通知就绪
-  - libuv 抹平平台差异：Linux `epoll` / macOS `kqueue` / Windows `IOCP` 抽象成统一异步接口
-  - 单线程扛万连接：等待交给内核与 libuv，主线程只处理就绪事件——"等待不占线程"
-  - 网络 I/O 不走线程池：`net`/`http`/`https` 走 OS 事件通知、主线程回调；只有文件 I/O、DNS、crypto、zlib 等才进线程池，不要记成"异步=线程池"
-- **背压：`write()` 返回值与 `drain`**
-  - 生产远快于消费会积压内存直至 OOM；`socket.write()` 返回 `false` 表示缓冲到阈值，应等 `drain` 再继续写
-- **`pipe` / `pipeline`：别自己接背压**
-  - 反例：`on('data') + write` 丢掉背压，返回 `false` 也照写
-  - `pipe()` 内部协调快慢，下游跟不上就暂停上游；`pipeline()` 出错能统一销毁整条链路，生产更推荐
-
 ## 配套代码
 
 | 文件 | 演示什么 |

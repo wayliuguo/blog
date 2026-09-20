@@ -338,24 +338,6 @@ executeMiddlewareChain(req, res, middlewares, callback)
 | 错误处理 | 简单 4 参数 | 支持异步错误、多层错误传播 |
 | 性能 | 每次请求线性遍历 | 路由压缩（trie/radix tree）、Layer 缓存 |
 
-## 小结
-
-- **Express 的核心抽象**
-  - 只有三件事：路由注册、中间件链、响应封装；不到 100 行即可写出能跑的最小版本
-  - 两个核心数据结构：`middlewares = [{ path, handler }]`（app.use 填充）与 `routes = [{ method, path, handler }]`（app.get 等填充）
-- **注册 API 的重载设计**：`app.use` 靠 `handler === undefined` 区分 `use(fn)` 与 `use(path, fn)`，前者补 `path = '/'`
-- **路由匹配与参数提取**：`/users/:id` 把 `:id` 替换成 `([^/]+)` 拼成 `^/users/([^/]+)$`，`url.match` 后捕获组写回 `req.params`
-- **中间件链（线性递归）**
-  - `executeMiddlewareChain` 维护 `index`，每次 `next()` 取走 `middlewareList[index++]`，走到末尾执行回调（路由匹配）
-  - 前缀匹配：`mw.path !== '/'` 且 `url` 不以它开头时直接 `next()` 跳过
-  - `next` 双重语义：既是推进下一个中间件，也是错误通道——`next(err)` 有值时跳过剩余中间件直奔 `errorHandler`，未注册则回落 500
-- **响应封装（`enhanceRes`）**：给原生 `res` 挂 `status(code)`（链式）、`json(data)`（设 JSON 头+end）、`send(body)`（对象走 json、其余走 text/html）
-- **能力边界：最小实现 vs 真实源码**
-  - 同步 `try/catch` 只能接住同步抛出的异常
-  - 真实源码有 `Router` 类、Layer 缓存与路由压缩（trie/radix tree），非每次线性遍历；"100 行跑通"≠"100 行能上生产"
-
----
-
 ## 配套代码
 
 本篇的代码块逐字摘自仓库 `node/Express 与 Koa/code/express-mini/index.js`（全文 194 行，零第三方依赖，纯 `node:http` 实现）。

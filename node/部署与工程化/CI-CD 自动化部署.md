@@ -216,30 +216,6 @@ curl https://api.example.com/api/health
 
 到这一步，你已经拥有从"本地开发"到"推送即上线"的完整生产链路。
 
-## 小结
-
-- **手动部署的问题与核心区别**
-  - 四个问题：易漏步骤、构建吃服务器资源、无法快速回滚、多人发版不可控
-  - 核心区别：构建从服务器挪到云端 CI，服务器只拉新镜像、重启容器
-  - 对应关系：触发从 SSH 敲命令变 `git tag`；镜像从本地构建变仓库拉取；回滚从重新构建变切旧 tag（秒级）
-- **workflow 三概念（`.github/workflows/*.yml`）**
-  1. 触发（`on`）：`push` / `tag` / 手动
-  2. 任务（`jobs`）：步骤集合，可并行
-  3. 步骤（`steps`）：`checkout` / `build` / `deploy`
-- **双流水线**：build 负责构建推送，deploy 等 build 成功后再 SSH 部署——构建失败不触发部署，deploy 可在多机复用
-  - 流水线一（build-stable.yml）：`on: push: tags: ['v*']`，`docker/login-action` 登录后 `build-push-action` `push: true`，同时打 `stable` 与 `v1.0.0` 两 tag，回滚拉旧 tag
-  - 流水线二（deploy.yml）：`on: workflow_run` 监听构建 `completed` 且 `if: success`，`appleboy/ssh-action` 连接，服务器只跑 `pull` + `up -d`；`pull` 替代 `--build`，服务器压力大降
-- **Secrets**：在仓库 Settings 配 `DOCKER_USERNAME/PASSWORD`、`DOCKER_IMAGE`、`SERVER_HOST/USER`、`SERVER_SSH_KEY`；建议为 CI/CD 单独生成密钥对（ed25519 + `ssh-copy-id`），不用日常账号
-- **迁移进流水线**
-  - 安全迁移（新增表/字段/索引）在 deploy 用隔离容器自动执行：`docker compose -f docker-compose.prod.yml run --rm --entrypoint "" my-app node ./node_modules/typeorm/cli.js migration:run -d ./dist/config/data-source.js`
-  - 破坏性迁移（删除/重命名）不可逆，自动化没“看一眼”机会，必须人工确认后手动执行
-- **触发、回滚与验证**
-  - 发版：`git tag v1.0.0 && git push origin master && git push origin v1.0.0`；删 tag：`git tag -d` + `git push --delete`
-  - 回滚 = 用旧 tag 再部署一次：CI 重建旧代码镜像并部署，秒级
-  - 验证：GitHub Actions 看日志；服务器 `docker ps | grep my-app`、`docker logs -f my-app-server`、`curl https://api.example.com/api/health`
-
----
-
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
