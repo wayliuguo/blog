@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>HTTP 缓存四策略实测</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 720px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                color: #222;
+            }
+            pre {
+                background: #f5f5f5;
+                padding: 12px;
+                border-radius: 6px;
+                overflow: auto;
+                white-space: pre-wrap;
+            }
+            button {
+                cursor: pointer;
+                padding: 8px 14px;
+                margin: 4px 6px 8px 0;
+            }
+            .ok {
+                color: #15803d;
+            }
+            .bad {
+                color: #b91c1c;
+            }
+            .warn {
+                color: #b45309;
+            }
+            .summary {
+                margin-top: 8px;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>HTTP 缓存四策略实测</h1>
+        <p>
+            本页通过 <code>/api/resource</code> 接口，演示四类缓存策略的真实行为。核心思路：读取
+            <code>/api/hits</code> 的服务端计数，前后对比判断某次点击是否<b>真正发起了网络请求</b>。
+        </p>
+
+        <h2>强缓存（Cache-Control: max-age=60）</h2>
+        <button id="btn-maxage">点一次 maxage</button>
+        <p id="msg-maxage" class="summary"></p>
+        <div id="box-maxage"><pre>（点击后展示）</pre></div>
+
+        <h2>no-cache（每次都协商）</h2>
+        <button id="btn-nocache">点一次 no-cache</button>
+        <p id="msg-nocache" class="summary"></p>
+        <div id="box-nocache"><pre>（点击后展示）</pre></div>
+
+        <h2>协商缓存（ETag / If-None-Match）</h2>
+        <button id="btn-etag">连点两次 etag</button>
+        <p id="msg-etag" class="summary"></p>
+        <div id="box-etag"><pre>（点击后展示）</pre></div>
+
+        <h2>协商缓存（Last-Modified / If-Modified-Since）</h2>
+        <button id="btn-lastmod">连点两次 lastmod</button>
+        <p id="msg-lastmod" class="summary"></p>
+        <div id="box-lastmod"><pre>（点击后展示）</pre></div>
+
+        <p class="warn">
+            提示：maxage 强缓存命中时，浏览器直接取本地副本、<b>不发网络请求</b>，因此服务端计数不会增加；
+            其余三种每次都会真正发请求（no-cache/ETag/Last-Modified 走协商，服务器说“没变”才回 304）。
+            ETag/Last-Modified 请<b>连续点击两次</b>，观察「第一次 200 → 第二次 304」。
+        </p>
+
+        <script>
+            // 统一输出到指定 box，并给最后一行加自定义 class
+            function out(boxSel, text, cls, clear) {
+                var box = document.querySelector(boxSel)
+                if (clear) box.innerHTML = ''
+                var p = document.createElement('pre')
+                p.textContent = text
+                if (cls) p.className = cls
+                box.appendChild(p)
+            }
+
+            function readHits() {
+                return fetch('/api/hits')
+                    .then(function (r) {
+                        return r.json()
+                    })
+                    .then(function (d) {
+                        return d.hits
+                    })
+            }
+
+            // 通用流程：读基线 -> 打资源 -> 读增量 -> 输出
+            async function runMode(mode, btn, boxSel, msgSel, label) {
+                var box = document.querySelector(boxSel)
+                var msg = document.querySelector(msgSel)
+                box.innerHTML = ''
+                var before = await readHits()
+                out(boxSel, '① 读取服务端计数（前）: maxage=' +
+                    before.maxage + ' nocache=' + before.nocache +
+                    ' etag=' + before.etag + ' lastmod=' + before.lastmod)
+
+                var t0 = performance.now()
+                var resp = await fetch('/api/resource?mode=' + mode)
+                var ms = Math.round(performance.now() - t0)
+                var status = resp.status
+                var body = null
+                var d1 = null
+                try { body = await resp.clone().json() } catch (e) {}
+                if (status === 304) {
+                    out(boxSel, '② 请求 /api/resource?mode=' + mode + ' → HTTP ' + status +
+                        ' （304 Not Modified：服务端确认资源没变，复用本地缓存）', 'warn')
+                } else {
+                    out(boxSel, '② 请求 /api/resource?mode=' + mode + ' → HTTP ' + status +
+                        '，times=' + (body ? body.times : '?') + '，耗时 ' + ms + 'ms', 'ok')
+                }
+
+                var after = await readHits()
+                out(boxSel, '③ 读取服务端计数（后）: maxage=' +
+                    after.maxage + ' nocache=' + after.nocache +
+                    ' etag=' + after.etag + ' lastmod=' + after.lastmod)
+
+                var key = { maxage: 'maxage', nocache: 'nocache', etag: 'etag', lastmod: 'lastmod' }[mode]
+                var inc = (after[key] || 0) - (before[key] || 0)
+                var hitsMap = { maxage: after.maxage, nocache: after.nocache, etag: after.etag, lastmod: after.lastmod }
+                if (mode === 'maxage') {
+                    var maxageInc = after.maxage - before.maxage
+                    if (maxageInc === 0 && hitsMap.maxage > 0) {
+                        msg.textContent = '✅ 强缓存命中：这次点击服务端计数没增加，说明浏览器直接用了本地副本，没发请求。'
+                        msg.className = 'summary ' + (after.maxage > 0 ? 'ok' : 'warn')
+                    } else {
+                        msg.textContent = '⚠️ 尚在观察：服务端已收到 ' + after.maxage +
+                            ' 次请求。再次点击若计数不再增加，即为强缓存命中。'
+                        msg.className = 'summary warn'
+                    }
+                } else if (mode === 'nocache') {
+                    msg.textContent = inc > 0
+                        ? '✅ no-cache：每次都真正发请求去服务器协商（计数增加），等它确认后由本地缓存决定是否复用。'
+                        : 'ℹ️ 计数未变？可再次点击以确认每次都发请求。'
+                    msg.className = 'summary ' + (inc > 0 ? 'ok' : 'warn')
+                } else if (mode === 'etag' || mode === 'lastmod') {
+                    msg.textContent = status === 304
+                        ? '✅ ' + label + ' 命中 304：服务端返回 Not Modified，浏览器复用本地缓存（计数仍增加=请求确实发出去了）。'
+                        : '🕐 第一次拿到 200。请再次点击，观察第二次是否变 304。'
+                    msg.className = 'summary ' + (status === 304 ? 'ok' : 'warn')
+                }
+                msg.textContent += '  [服务端该 mode 累计=' + hitsMap[key] + ']'
+            }
+
+            document.querySelector('#btn-maxage').addEventListener('click', function () {
+                runMode('maxage', this, '#box-maxage', '#msg-maxage', '强缓存')
+            })
+            document.querySelector('#btn-nocache').addEventListener('click', function () {
+                runMode('nocache', this, '#box-nocache', '#msg-nocache', 'no-cache')
+            })
+            document.querySelector('#btn-etag').addEventListener('click', function () {
+                runMode('etag', this, '#box-etag', '#msg-etag', 'ETag')
+            })
+            document.querySelector('#btn-lastmod').addEventListener('click', function () {
+                runMode('lastmod', this, '#box-lastmod', '#msg-lastmod', 'Last-Modified')
+            })
+        </script>
+    </body>
+</html>
