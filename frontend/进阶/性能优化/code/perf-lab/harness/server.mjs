@@ -14,6 +14,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PAGES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'pages')
+const ROOT = path.join(PAGES, '..')
+// SPA 实验要一个真 Vue：这里把 node_modules 里的 ESM 浏览器版挂到 /vendor/vue.js
+const VENDOR = {
+    '/vendor/vue.js': path.join(ROOT, 'node_modules/vue/dist/vue.esm-browser.prod.js')
+}
 const MIME = {
     '.html': 'text/html; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
@@ -22,6 +27,7 @@ const MIME = {
     '.json': 'application/json; charset=utf-8'
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const CACHEABLE = { 'Cache-Control': 'public, max-age=300' }
 
 /** 按带宽分片慢发：kbps 为 0 时一次性发完 */
 async function send(res, body, contentType, headers, kbps) {
@@ -61,7 +67,12 @@ function bundle(n, kbEach) {
     return `// 全量打包：${n} 个特性挤在同一个 chunk 里\n${body}`
 }
 
-export async function startServer() {
+export async function startServer(options = {}) {
+    // port：默认 0（系统分配）。做缓存实验时要固定端口——HTTP 缓存按 origin 存，
+    //        端口每次都变的话，上一次访问留下的缓存根本用不上
+    // spaCache：给 /spa/ 下的静态资源发强缓存头，用来对照「二次访问」
+    // spaLatency：给 /spa/ 下的资源加一段固定延迟，模拟真实网络的 RTT
+    const { port = 0, spaCache = false, spaLatency = 0 } = options
     const reports = []
     let waiters = []
     const server = http.createServer(async (req, res) => {
@@ -101,15 +112,25 @@ export async function startServer() {
             return send(res, feature(i, kbEach), MIME['.js'], headers, Number(url.searchParams.get('kbps') || 0))
         }
 
+        if (VENDOR[url.pathname]) {
+            if (spaLatency) await sleep(spaLatency)
+            return send(res, fs.readFileSync(VENDOR[url.pathname]), MIME['.js'], spaCache ? CACHEABLE : headers, Number(url.searchParams.get('kbps') || 0))
+        }
+
         const name = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname)
         const file = path.normalize(path.join(PAGES, name))
         if (!file.startsWith(PAGES)) return res.writeHead(403, headers).end('Forbidden')
         if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) return res.writeHead(404, headers).end('Not Found')
-        res.writeHead(200, { ...headers, 'Content-Type': MIME[path.extname(file)] || 'text/plain' })
+        const cacheable = spaCache && /\.(js|css)$/.test(file) && file.includes(`${path.sep}spa${path.sep}`)
+        const cache = cacheable ? CACHEABLE : headers
+        // spaLatency 给 /spa/ 下的资源统一加一段延迟，模拟真实网络的 RTT
+        // 本机 localhost 是「秒下」，不加上这一跳，路由懒加载的代价根本看不出来
+        if (spaLatency && file.includes(`${path.sep}spa${path.sep}`)) await sleep(spaLatency)
+        res.writeHead(200, { ...cache, 'Content-Type': MIME[path.extname(file)] || 'text/plain' })
         res.end(fs.readFileSync(file))
     })
 
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    await new Promise((resolve) => server.listen(port, '127.0.0.1', resolve))
     return {
         origin: `http://127.0.0.1:${server.address().port}`,
         reports,

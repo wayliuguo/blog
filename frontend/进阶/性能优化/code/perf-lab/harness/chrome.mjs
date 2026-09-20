@@ -28,8 +28,8 @@ export function findChrome() {
 // 复用同一个 profile 目录：省掉每次启动的初始化开销，也避免频繁创建/删除临时目录
 export const PROFILE_DIR = process.env.PERF_LAB_PROFILE || path.join(os.tmpdir(), 'perf-lab-chrome-profile')
 
-/** 打开 url，返回子进程句柄（调用方拿到上报后 kill） */
-export function openChrome(url, flags = []) {
+/** 打开 url，返回子进程句柄（调用方拿到上报后 kill）。profileDir 用来隔离/复用浏览器档案 */
+export function openChrome(url, flags = [], profileDir = PROFILE_DIR) {
     const args = [
         '--headless=new',
         '--disable-gpu',
@@ -38,7 +38,7 @@ export function openChrome(url, flags = []) {
         '--disable-extensions',
         '--disable-background-networking',
         '--window-size=1280,800',
-        `--user-data-dir=${PROFILE_DIR}`,
+        `--user-data-dir=${profileDir}`,
         ...flags,
         url
     ]

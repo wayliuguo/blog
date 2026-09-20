@@ -11,9 +11,14 @@ const path = require('path')
 const PORT = 5187
 const ROOT = path.join(__dirname, 'pages')
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' }
+// SPA 实验页要一个真 Vue：把 node_modules 里的 ESM 浏览器版挂到 /vendor/vue.js
+const VENDOR = {
+    '/vendor/vue.js': path.join(__dirname, 'node_modules/vue/dist/vue.esm-browser.prod.js')
+}
 
 function safePath(url) {
     const name = decodeURIComponent(url.split('?')[0])
+    if (VENDOR[name]) return VENDOR[name]
     if (name === '/') return path.join(ROOT, 'index.html')
     const file = path.normalize(path.join(ROOT, name))
     // 防止路径逃逸出 pages/ 目录
