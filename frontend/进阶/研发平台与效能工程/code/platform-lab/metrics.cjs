@@ -90,3 +90,65 @@ const stages = { 编码: 4, 等待评审: 60, 评审修改: 6, 等待发布: 2 }
   assert.ok(gaming.deploys > honest.deploys, '拆 PR 后部署次数翻 5 倍，指标好看但交付没变化');
   console.log(`[4] 反模式：同样的 200 行改动，拆成 10 个 PR 后"部署次数"从 ${honest.deploys} 变 ${gaming.deploys} —— 古德哈特定律：指标一旦成为目标，就不再是好指标`);
 }
+
+// ---------- 场景四：季度曲线——「变好了」和「噪声」必须分开看 ----------
+// 汇报里最常见的错误：把季度间的零点几小时波动写成「本季度效能提升」。
+// 判断标准不是「数字变小了」，而是「变化幅度有没有超过它自己的波动幅度」。
+function quarterStats(list) {
+  const sorted = [...list].sort((a, b) => a - b);
+  const mean = list.reduce((a, b) => a + b, 0) / list.length;
+  const sd = Math.sqrt(list.reduce((a, b) => a + (b - mean) ** 2, 0) / list.length);
+  return { mean, sd, cv: sd / mean, median: sorted[sorted.length >> 1], p75: sorted[Math.floor(sorted.length * 0.75)] };
+}
+
+// 信号 / 噪声：差值 ÷ 两季波动的平均值。≥1 才值得拿出来说
+function compare(a, b) {
+  const delta = a.mean - b.mean;
+  const noise = (a.sd + b.sd) / 2;
+  return { delta, noise, ratio: Math.abs(delta) / noise, significant: Math.abs(delta) / noise >= 1 };
+}
+
+{
+  // 六个季度，每季 12 个变更的前置时间（小时）
+  const Q = {
+    Q1: [40, 52, 36, 60, 44, 55, 48, 38, 51, 47, 43, 58],
+    Q2: [42, 50, 39, 57, 45, 53, 49, 41, 52, 46, 44, 56],
+    Q3: [44, 49, 41, 55, 46, 51, 47, 43, 50, 45, 48, 54],
+    Q4: [43, 48, 40, 56, 45, 52, 46, 42, 51, 44, 47, 53],
+    Q5: [30, 38, 26, 44, 33, 40, 35, 28, 37, 32, 34, 42],
+    Q6: [31, 37, 28, 42, 34, 39, 36, 30, 38, 33, 35, 40]
+  };
+  const s = {};
+  for (const k of Object.keys(Q)) s[k] = quarterStats(Q[k]);
+
+  const q34 = compare(s.Q3, s.Q4);
+  const q45 = compare(s.Q4, s.Q5);
+  assert.equal(q34.significant, false, 'Q3→Q4 只降了不到 1 小时，远小于自身波动 → 噪声');
+  assert.equal(q45.significant, true, 'Q4→Q5 降了十几个小时，超过波动 → 真变化');
+  assert.ok(q45.ratio > q34.ratio * 10);
+
+  for (const k of Object.keys(s)) {
+    console.log(`      ${k}：均值 ${s[k].mean.toFixed(1)}h · 标准差 ${s[k].sd.toFixed(1)} · 变异系数 ${(s[k].cv * 100).toFixed(0)}% · P75 ${s[k].p75}h`);
+  }
+  console.log(`[5] 季度曲线：Q3→Q4 降 ${q34.delta.toFixed(1)}h 但波动就有 ${q34.noise.toFixed(1)}h（信噪比 ${q34.ratio.toFixed(2)}）→ 噪声，别写进汇报；Q4→Q5 降 ${q45.delta.toFixed(1)}h（信噪比 ${q45.ratio.toFixed(2)}）→ 真变化`);
+}
+
+// ---------- 场景五：窗口裁剪——同一份数据，换个窗口结论就变了 ----------
+// 前四种是"改指标定义"，这一种是"改统计范围"，更隐蔽也更常见。
+{
+  // 30 天窗口：20 次变更，2 次失败；其中一次失败发生在第 27 天（最后一周）
+  const changes = [];
+  for (let d = 1; d <= 18; d++) changes.push({ failed: d === 6, day: d });
+  changes.push({ failed: false, day: 20 });
+  changes.push({ failed: true, day: 27 });
+  const all = changes.filter(c => c.day <= 30);
+  const trimmed = changes.filter(c => c.day <= 23); // 掐掉最后一周
+  const rate = (list) => list.filter(c => c.failed).length / list.length;
+  const rAll = rate(all);
+  const rTrim = rate(trimmed);
+  assert.equal(all.length, 20);
+  assert.equal(trimmed.length, 19);
+  assert.ok(Math.abs(rAll - 0.1) < 1e-9, '完整窗口：2/20 = 10%');
+  assert.ok(Math.abs(rTrim - 1 / 19) < 1e-9, '掐掉最后一周：1/19 ≈ 5.3%');
+  console.log(`[6] 窗口裁剪：同样是这批变更，30 天窗口失败率 ${(rAll * 100).toFixed(1)}%，掐掉最后一周变成 ${(rTrim * 100).toFixed(1)}% —— 跨过 elite 门槛只差一个「选哪天开始算」；固定窗口、固定口径，否则每个季度都能算出自己想要的结论`);
+}
