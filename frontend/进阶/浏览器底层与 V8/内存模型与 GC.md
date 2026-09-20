@@ -84,6 +84,47 @@ assert.ok(freed <= base + 5, '引用放开后可回收')
 
 实测：`GC 后仍占 88MB（引用还在）→ 放开引用 88MB → 4MB`。**88MB 与 4MB 之间隔着的，只是「引用是否还活着」**。
 
+> 摘自 `./code/v8-lab/gc.cjs`（场景三 / 四）
+
+```js
+// 场景三：未清理的定时器闭包 → 大对象被长期持有（泄漏）
+function timerLeak() {
+  let leak3 = 0
+  const big = Array.from({ length: 1e6 }, (_, i) => ({ i }))
+  const timer = setInterval(() => { leak3 += big.length }, 50) // big 被回调闭包捕获
+  global.gc(); global.gc(); global.gc()
+  const held = mb()
+  clearInterval(timer) // 清掉定时器，闭包随之失引用
+  global.gc(); global.gc(); global.gc()
+  return held
+}
+const heldTimer = timerLeak()
+global.gc(); global.gc(); global.gc()
+console.log(`定时器闭包: GC 后仍占 ${heldTimer}MB（setInterval 回调攥着 big，清不掉）`)
+assert.ok(heldTimer > base + 30, '被 setInterval 闭包捕获的对象不会被回收')
+assert.ok(mb() <= base + 5, 'clearInterval 后引用随作用域结束放开，可回收')
+
+// 场景四：未退订的监听器闭包 → 持有外部大对象（泄漏）
+function listenerLeak() {
+  const { EventEmitter } = require('node:events')
+  const bus = new EventEmitter()
+  const big4 = Array.from({ length: 1e6 }, (_, i) => ({ i }))
+  bus.on('tick', () => { void big4.length }) // big4 被监听器闭包捕获
+  global.gc(); global.gc(); global.gc()
+  const held = mb()
+  bus.off('tick', bus.listeners('tick')[0]) // 退订，放开引用
+  global.gc(); global.gc(); global.gc()
+  return held
+}
+const heldListener = listenerLeak()
+global.gc(); global.gc(); global.gc()
+console.log(`监听器闭包: GC 后仍占 ${heldListener}MB（add 后忘了 off，big4 收不掉）`)
+assert.ok(heldListener > base + 30, '被监听器闭包捕获的对象不会被回收')
+assert.ok(mb() <= base + 5, 'off 后引用放开，可回收')
+```
+
+实测：定时器闭包 `GC 后仍占 43MB（setInterval 回调攥着 big，清不掉）`，`clearInterval` 后随作用域结束回到基线；监听器闭包同样 `GC 后仍占 43MB`，`off` 后回到基线。**闭包是隐性持有的主通道**——回调函数捕获整个外层作用域，一个没清理的定时器/监听器就能拖住整棵它闭包里的大对象。
+
 工程上最常见的四种持有：
 
 | 模式 | 典型现场 | 解法 |
@@ -121,6 +162,7 @@ Node 侧的等价工具：`v8.getHeapStatistics()`（本次实验台所用）、
   - 分代：新生代 Scavenge（快、小），老生代 Mark-Compact（慢、大），增量 + 并发标记消停顿
   - 实测：200 万作用域垃圾 GC 后回基线（4MB → 4MB）
   - 泄漏实测：全局缓存让 GC 后仍占 88MB，放开引用回到 4MB
+  - 闭包是隐性持有主通道：定时器闭包 / 监听器闭包各实测 GC 后仍占 43MB，清掉定时器或退订后回到基线
   - 四大持有模式：全局缓存 / 定时器 / 监听器 / 分离 DOM
   - 定位套路：快照 A → 操作 N 次 → 快照 B → Comparison 找净增长 → Retainers 看谁攥着
 
@@ -128,7 +170,7 @@ Node 侧的等价工具：`v8.getHeapStatistics()`（本次实验台所用）、
 
 | 文件 | 作用 | 对应小节 |
 | --- | --- | --- |
-| `./code/v8-lab/gc.cjs` | 回收与泄漏双场景（需 `--expose-gc`） | 三、四 |
+| `./code/v8-lab/gc.cjs` | 回收 + 三类泄漏场景（全局缓存 / 定时器闭包 / 监听器闭包，需 `--expose-gc`） | 三、四 |
 | `./code/v8-lab/opt.cjs` | 优化探针（V8 篇已引） | — |
 | `./code/v8-lab/run.cjs` | 总入口（按 flag 分子进程） | 全篇 |
 
