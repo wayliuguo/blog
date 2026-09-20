@@ -511,46 +511,6 @@ BFC（Block Formatting Context）是页面上的**一块独立渲染区域**，�
 
 > 现代布局已优先用 Flex/Grid，但 BFC 的概念依然是理解布局机制、排查怪异问题的底层能力。
 
-## 小结
-
-- CSS 基础与选择器
-  - CSS 本质
-    - 描述文档呈现的样式表语言
-    - 层叠（Cascading）
-  - 引入方式
-    - 行内样式（内联，优先级最高）
-    - 内嵌 `<style>`
-    - 外链 `<link>`（推荐）
-    - `@import`（阻塞渲染，少用）
-  - 层叠与优先级
-    - `!important`
-    - 来源：用户 / 作者 / 浏览器默认
-    - 权重计算（specificity）：内联 > ID > 类/伪类/属性 > 标签/伪元素
-    - 源码顺序：后者覆盖前者
-  - 选择器
-    - 基本：标签 / 类 / ID / 通配 `*`
-    - 属性选择器：`[type="submit"]` / `[href^="http"]` / `[href$=".pdf"]` / `[href*="blog"]`
-    - 伪类 `:` vs 伪元素 `::`
-    - 组合：后代（空格）/ 子 `>` / 相邻兄弟 `+` / 通用兄弟 `~`
-  - 盒模型
-    - `content` / `padding` / `border` / `margin`
-    - `box-sizing`：`content-box` vs `border-box`
-    - 全局推荐 `border-box`
-  - margin 坑
-    - margin 合并（垂直方向取较大值）
-    - 父子 margin 塌陷（外边距溢出）
-    - 解决：`padding` / 触发 BFC / `display: flow-root`
-  - 单位
-    - 绝对：`px`
-    - 相对：`%` / `em`（累积）/ `rem`（根字体）/ `vw` / `vh`
-  - 继承
-    - 可继承：文字类属性（`color` / `font-*`）
-    - 不可继承：盒子类属性（`width` / `margin` 等）
-    - `inherit` / `initial` / `unset`
-  - BFC（块格式化上下文）
-    - 触发：`overflow` / `display: flow-root` / `flex` / `position` / `float`
-    - 作用：清除浮动 / 防 margin 塌陷 / 两栏布局
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/CSS/code/site/`。

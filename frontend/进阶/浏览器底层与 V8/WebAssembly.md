@@ -104,16 +104,6 @@ console.log('\n探针三通过 ✓')
 
 前端知名案例：Figma（C++ 渲染内核编译为 wasm）、Photoshop Web、Google Earth。工程路径上，绝大多数团队不手写字节码，而是：**Rust/C++ 源码 → wasm-pack / Emscripten 编译 → npm 包 → JS import**；本文手写字节码只为看清它的本质。
 
-## 小结
-
-- WebAssembly
-  - 定位：沙箱化的可移植字节码，接近原生速度；是「算数字的函数库」，不是更快的 JS
-  - 二进制结构：魔数 + 类型/函数/导出/代码四节；`WebAssembly.Module` → `Instance` → `exports` 即可调用
-  - 数字语义分界线（实测）：i32 超 2³¹ 回绕，JS double 精确——大数用 i64/BigInt 或分块
-  - 性能实测：1 亿次循环累加 wasm 39ms vs JS 145ms（约 3.7 倍）
-  - 边界成本：跨调用传参有转换开销，任务要「一次干足够多的活」
-  - 工程路径：Rust/C++ → wasm-pack / Emscripten → npm；手写字节码只为理解本质
-
 ## 配套代码
 
 | 文件 | 作用 | 对应小节 |

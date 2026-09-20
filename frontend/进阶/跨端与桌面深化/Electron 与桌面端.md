@@ -98,16 +98,6 @@ apply() {
 | 多窗口协调 | 主进程是唯一权威：窗口注册表、单实例锁（`requestSingleInstanceLock`）都在主进程维护 |
 | 原生体验 | 托盘、全局快捷键、协议注册、崩溃上报（主进程 + 渲染进程双端上报） |
 
-## 小结
-
-- Electron 与桌面端
-  - 进程模型：单主进程（Node，系统能力收拢）+ 多渲染进程（Chromium，不可信内容隔离）
-  - invoke/handle 实测：Promise 往返；未注册 channel 明确 reject，不静默
-  - contextBridge 实测：白名单外的能力在渲染层不存在；基线 = contextIsolation + 禁 nodeIntegration
-  - asar 是归档不是加密；体积来源是每平台捆绑的 Chromium + Node（80~100MB）
-  - 更新状态机实测：版本比对 → 下载 → hash 校验失败回滚不落盘 → 重启切换
-  - 桌面特有账：多窗口内存、单实例锁、离线可用、双端崩溃上报
-
 ## 配套代码
 
 | 文件 | 作用 | 对应小节 |

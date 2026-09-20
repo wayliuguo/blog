@@ -779,44 +779,6 @@ async function xhrCompare() {
 
 结论：**新代码一律用 `fetch`**；只有在需要**上传进度**、或维护老代码时才碰 XHR。（`axios` 浏览器端长期默认走 XHR，新版本才提供 fetch 适配器——所以浏览器 Network 面板里看到 XHR 类型，不代表业务代码直接调了 `XMLHttpRequest`。）
 
-## 小结
-
-- **DOM 查询**
-  - **两大家族**：`querySelector(All)` 走 CSS 选择器、返回静态快照；`getElementsByTagName/ClassName`、`children`、`form.elements` 返回活集合
-  - **活集合会跟着 DOM 变**：插入一个 `li` 后 `HTMLCollection` 的 `length` 从 2 变 3，`NodeList` 停在 2；`length` 是查询不是缓存字段
-  - **工程约定**：拿到集合先 `Array.from()` 展开再遍历；需要"跟随变化"用 `MutationObserver`，不用活集合
-- **改动节点**
-  - **批量插入三种写法实测同量级**：3000 个 `li` 下逐条 `appendChild` / `DocumentFragment` / `innerHTML` 都在 2～7 ms，因为逐条追加只标脏、布局攒到渲染时机统一做
-  - **`innerHTML` 的代价不在速度**：它重建整棵子树，丢掉输入值、焦点、监听器与动画；追加用 `insertAdjacentHTML` 或 `fragment`
-- **强制同步布局**
-  - **读写交替 = 每次读一次布局**：500 个元素实测 288～539 ms，先读后写 2.8～9.6 ms，差 40～115 倍
-  - **会强制布局的读取**：`offset*` / `client*` / `scroll*`、`getBoundingClientRect()`、`getComputedStyle()`；`style.x =` / `classList.add()` 只标脏
-  - **三条对策**：读写分离、读的结果缓存、写合批到下一帧（rAF 排 200 次只落 1 次）；动画只用 `transform` / `opacity`
-- **事件**
-  - **三个阶段**：捕获 → 目标 → 冒泡；`addEventListener` 默认冒泡，`{ capture: true }` 改捕获
-  - **`target` vs `currentTarget`**：前者是真实目标、全程不变，后者是当前绑定的元素；**回调结束后 `currentTarget` 变成 `null`**
-  - **不冒泡的事件不能委托**：`focus` / `blur` 用 `focusin` / `focusout`
-  - **合成事件 `isTrusted` 为 `false`**：`el.click()` 派发的事件与真实交互可区分
-  - **高频滚动监听声明 `{ passive: true }`**：否则浏览器要等回调执行完才敢滚动
-- **事件委托**
-  - **一个监听器管住所有子节点**：实测 `ul` 上 1 个监听器处理 4 次点击，动态插入的项不重绑也命中
-  - **配 `e.target.closest(sel)`**：把"点在子元素上"也覆盖到；数据从 `data-*` 读
-- **解绑监听器**
-  - **`removeEventListener` 按"类型 + 函数引用 + capture"匹配**：匿名函数、`.bind()` 结果、capture 不一致都解不掉且不报错
-  - **`{ once: true }`**：只处理一次的场景写在注册处；**`{ signal }`**：一个 controller 管一组监听器，`abort()` 一次全摘
-- **观察者**
-  - **`IntersectionObserver`**：`rootMargin` 是扩大判定边界——目标在折叠线下 50px，底部扩 100px 后 `isIntersecting` 从 `false` 翻成 `true`、`ratio` 到 `1.00`；懒加载提前量的原理
-  - **`ResizeObserver`**：盯元素自身内容盒，只改高度也会回调（200×40 → 320×40 → 320×60）；回调里再改尺寸会形成循环
-  - **`MutationObserver`**：回调走**微任务**、不依赖渲染帧（实测 5 条记录按类型是 childList 3 / attributes 1 / characterData 1）
-  - **环境差异**：IO / RO 依赖渲染帧，`--dump-dom` 抓不到；MO 任何环境都能收到
-- **fetch**
-  - **4xx / 5xx 不 reject**：`await fetch()` 正常返回，必须自己判 `res.ok` / `res.status`
-  - **响应体只能读一次**：第二次 `res.json()` / `res.text()` 抛 `TypeError`
-  - **超时与取消**：`AbortSignal.timeout(ms)` → `TimeoutError`；`controller.abort()` → `AbortError`；两者都是"被我方取消"，不能当网络故障上报；合并用 `AbortSignal.any([...])`
-  - **竞态三种守卫**：无守卫最终显示旧结果 `"a"`；序号守卫与取消守卫都得到 `"ab"`，后者顺带省掉一次无用响应
-  - **选型**：只防"旧覆盖新"用序号/标记位；关心带宽与后端压力用取消，且必须 catch 掉 `AbortError`
-  - **XHR 只在要上传进度或维护老代码时用**：`readyState = 4`、`status = 200` 是它的老接口；`fetch` 多了 Promise 语义、流式响应与 `keepalive`
-
 ## 配套代码
 
 四个 demo 都在仓库 `frontend/基础/JavaScript 核心/code/site/`，每个 `dom-*.js` 对应同名的 `dom-*.html` 页面，页面末尾的探针就是本文引用的那些输出。

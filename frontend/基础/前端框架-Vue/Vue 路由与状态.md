@@ -578,52 +578,6 @@ const cartStore = useCartStore()
 
 掌握这张对照表后，在 Vue 与 React 两个框架之间切换时，路由与状态管理的思路是高度相通的。
 
-## 小结
-
-- Vue 路由与状态
-  - 路由基础与 createRouter
-    - 路由表 `routes`、`createRouter`
-    - `app.use(router)`、`<router-link>`、`<router-view>`
-  - history 模式
-    - `createWebHistory`
-    - `createWebHashHistory`
-    - `createMemoryHistory`
-  - 路由匹配与动态路由
-    - 动态参数 `:id`、`route.params`
-    - 可选参数、通配匹配
-    - Query 查询参数（`route.query`）
-    - 组件复用与 watch route
-  - 嵌套路由
-    - `children` 子路由
-    - 子路径不带 `/`、空串 `''`
-    - 多级 `<router-view>` 出口
-  - 编程式导航
-    - `useRouter`、`push` / `replace` / `back` / `go`
-    - 路由对象（`{ name, params, query, hash }`）
-  - 路由守卫
-    - 全局守卫（`beforeEach`、`beforeResolve`、`afterEach`）
-    - 路由级守卫（`beforeEnter`）
-    - 组件内守卫（`onBeforeRouteUpdate`、`onBeforeRouteLeave`）
-    - 守卫执行时机
-  - 懒加载与代码分割
-    - 动态 `import()` 拆 chunk
-    - chunk 命名、`Suspense`
-  - Pinia 核心概念
-    - 安装与注册（`createPinia`）
-    - store：state / getters / actions
-    - `defineStore` setup 写法
-    - `storeToRefs` 解构
-  - 组合式 API 在路由状态中的实践
-    - Pinia 管理用户状态
-    - 路由守卫读取 store
-    - Option API 写法（`mapStores` 等）
-  - 模块化
-    - 按业务域拆分 store
-    - store 之间相互引用
-  - 与 React Router / Redux 的对应关系
-    - 路由 / 状态概念对照
-    - 关键差异（副作用来源、响应式 vs 不可变）
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-Vue/code/site/`。

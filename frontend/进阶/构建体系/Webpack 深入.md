@@ -324,36 +324,6 @@ chunk (runtime: main) main.40fb3e2b.js (main) 981 bytes (javascript) 6.37 KiB (r
 
 webpack 仍然无可替代的场景：需要 Module Federation 的微前端、依赖大量 webpack 专有 loader 的老项目、需要精确到模块级的产物控制。
 
-## 小结
-
-- Webpack 深入
-  - 五个对象
-    - Compiler（进程级）/ Compilation（一次编译）/ Module / Chunk / Asset
-    - 模块数 ≠ 文件数，中间隔着 Chunk 分组
-  - 配置全览
-    - 只有五类：入口 / 出口 / 转换 / 扩展 / 优化
-    - `mode` 是一组默认配置的开关，不是环境名
-  - loader
-    - 本质是"源码字符串 → 代码字符串"的函数
-    - 返回的是代码文本；链式从右往左；结果会被缓存
-  - plugin
-    - 有 `apply(compiler)` 的对象；靠钩子插手编译流程
-    - 产出文件用 `compilation.emitAsset`，不要 `fs.writeFileSync`
-    - `processAssets` 带 `stage` 控制顺序
-  - SplitChunks
-    - 三个条件同时满足才抽：minChunks / minSize（默认 20KB）/ 匹配规则
-    - 实测：同样代码 minSize 20KB → 不抽，0 → 抽出 common
-    - 抽出来不一定更快：vendor 与路由级值得切，小共享模块不值得
-  - 持久化缓存
-    - 实测小样本 1.11x、大样本 2.21x（按 webpack 自报时间）
-    - `require('webpack')` 本身要 2.8~3.3s，墙钟时间会淹没优化效果
-    - 缓存目录要进 CI 缓存；诡异问题先删缓存目录
-  - 运行时代价
-    - 实测业务 981 bytes / 运行时 6.37 KiB
-    - 库不该用 webpack 打包；`runtimeChunk: 'single'` 值得开
-  - 不该用 webpack 的场景
-    - 库用 Rollup、新应用用 Vite、纯转译用 esbuild、提速用 Rspack
-
 ## 配套代码
 
 本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。

@@ -219,30 +219,6 @@ const { value, toggle } = useToggle({ initial: true })
 - 事件对象、ref、DOM 元素的类型要在泛型中明确传入标签元素类型，以获得更精准的类型提示。
 - Props 的定义使用 `type` 或 `interface` 均可，选择一种保持一致即可。
 
-## 小结
-
-- React 使用 TypeScript
-  - 组件的写法与 props 类型
-    - 组件以函数组件为基准：输入 props、返回 JSX
-    - props 类型两种写法：直接标注参数，或 `FC<IProps>`
-    - `interface` 描述结构、`type` 做组合，团队内保持一致
-  - 泛型组件
-    - props 类型由调用方传入时，用 `function` 声明组件泛型
-    - `.tsx` 中箭头函数写 `<P>` 会被当成 JSX 标签，故用 `function`
-  - 事件与 ref 的类型
-    - 事件类型 = 场景名 + `Event<T>`，处理函数 = 场景名 + `EventHandler<T>`
-    - 泛型 `T` 填绑定事件的标签元素类型，决定 `event.target` 能取到什么
-    - `useRef<T>(null)` 的 `current` 可能为 `null`，取用前判空
-  - 标签元素与属性类型
-    - 命名规律：`HTML` + 标签名 + `Element` / `Attributes`
-    - 透传原生属性时，与自定义 props 交叉组合
-  - hooks 的类型
-    - `useState<T>` / `useRef<T>` / `useContext<T>` / `useReducer<R, S>` 均支持泛型
-    - 自定义 hook 要同时导出入参与返回值类型，把约束交给调用方
-  - TSX 注意
-    - 类型只存在于编译期，运行时仍是 JS
-    - 拿不准的类型用编辑器悬停看推断结果，不必记全表
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。

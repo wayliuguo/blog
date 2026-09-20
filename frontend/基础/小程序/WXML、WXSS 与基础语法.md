@@ -352,25 +352,6 @@ Page({
 
 `app.json` 里 `pages` 数组的**第一项就是启动页**，这项顺序错了会直接改启动路径；`subpackages` 与 `preloadRule` 是启动优化的抓手（见第 4 篇）。页面自己的 `.json` 只写本页配置（导航栏标题、是否允许下拉刷新、用到的自定义组件 `usingComponents`），不要重复全局项。
 
-## 小结
-
-- **WXML**
-  - **<code v-pre>{{ }}</code> 只求值不执行**：运算是表达式、`var`/`if`/分号都会被编译期拦下；判逻辑在逻辑层、展示加工在 WXS
-  - **`wx:for` + `wx:key` 是一对**：key 取稳定字段（对象数组用 `id`、基本类型数组用 `*this`）；不写会警告且重排时整段重建
-  - **`hidden` 与 `wx:if` 差在节点在不在**：产物里 `hidden` 变成 `style="display:none"`、`wx:if` / `wx:elif` 没命中的分支直接不产出节点
-  - **复用三层**：`template` 带参片段（要手传 `data`）、`import` 有作用域、`include` 是文本级拷贝（忽略 `template` / `wxs`）
-  - **指令不进产物**：`wx:*`、`bind*` / `catch*` 都不会出现在渲染结果里
-- **WXSS**
-  - **`rpx` 的基准是 750 = 屏宽**：`px = rpx × 屏宽 / 750`；690rpx 在 320/375/430 上分别是 294.4/345/395.6px
-  - **小数值要留意**：`28rpx` 在 320 屏宽上是 11.9467px；要精确一像素就别用 rpx 算
-  - **选择器清单很短**：`.class` / `#id` / `element` / `element, element` / `::after` / `::before`；通配符与属性选择器都不在内，状态用类名表达
-  - **作用域三层**：`app.wxss` 全局、页面 `.wxss` 作用于本页、组件样式默认隔离；跨文件用 `@import` 相对路径
-- **事件**
-  - **`bind` 冒泡 / `catch` 阻止冒泡**：名字靠 `bind*` 前缀，`bindtap` 等价 `bind:tap`
-  - **`dataset` 全是字符串**：<code v-pre>data-id="{{ 1001 }}"</code> 取出来是 `'1001'`，要数字自己转
-  - **用 `currentTarget`**：`target` 是真正被点的子节点
-  - **绑定粒度是性能话题**：回调在逻辑层跑、事件对象跨线程传，超长列表把监听器收到容器上用 `data-*` 区分更划算
-
 ## 配套代码
 
 配套代码是 `frontend/基础/小程序/code/` 下的一个零依赖迷你编译器：把 `demos/` 里的 WXML / WXSS 编译成可读的 HTML，打印产物、警告与编译期报错。

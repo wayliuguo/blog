@@ -140,16 +140,6 @@ postMessage(origin, module, method, params) {
 | Native 侧校验 origin 白名单 | 任意页面可过桥 = 攻击面（§六） |
 | 敏感 API 走原生二次确认 | WebView 内 JS 环境不可信（§六） |
 
-## 小结
-
-- JSBridge 设计与演进
-  - 三代机制：URL Scheme 拦截 → 原生注入 API → 注入 + 协议化；同步语法与异步执行的矛盾贯穿始终
-  - 协议：module/method 命名空间 + callbackId + encodeURIComponent，编解码严格对称
-  - 回调表：callbackId 关联异步回复，一次性用后即清，重复触发报错
-  - Promise 化 + 超时兜底实测：超时 reject 且回调表清空，防桥上泄漏
-  - 批量合并实测：同 tick 三次调用一条消息，空队列不发
-  - 安全：origin 白名单拒绝非授权调用，Native 侧重做参数校验，敏感 API 原生确认
-
 ## 配套代码
 
 | 文件 | 作用 | 对应小节 |

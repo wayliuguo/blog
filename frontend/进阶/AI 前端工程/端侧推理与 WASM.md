@@ -175,15 +175,6 @@ function block(budgetMs) {
 - 内存预算两条公式：参数量 × 每参数字节（int4 量化降到 1/4）、KV cache 随上下文线性增长。
 - 推理必须在 Worker 里跑，并对 SIMD / threads / WebGPU 做特性探测与降级链。
 
-## 小结
-
-- 端侧推理与 WASM
-  - 端侧 vs 云端：隐私/离线/零边际成本 换 体积/算力/兼容；落地形态是分层
-  - 分片加载实测：80MB 分 20 片，峰值缓冲区 4MB（整包需 80MB）
-  - WASM 反直觉实测：2e7 紧循环 WASM 46.6ms vs JS 16.0ms，慢约 3×；价值在可移植与无 deopt/GC 停顿
-  - 内存预算：1B 参数 fp16 2.0GB，int4 量化 0.50GB（1/4）；4k 上下文 KV cache 384MB 且线性增长
-  - 线程模型：单帧 20ms 推理 ×3 = 60ms 主线程零响应，必须 Worker + WebGPU/WASM/云端降级链
-
 ## 配套代码
 
 | 文件 | 作用 | 对应小节 |

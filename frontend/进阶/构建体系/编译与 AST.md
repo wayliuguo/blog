@@ -273,32 +273,6 @@ AST 替换不动字符串: const s = 'React.createElement("div")'; // 字符串�
 | 国际化提取 | 遍历所有字符串字面量，收集成 key |
 | 依赖分析 / 循环依赖检测 | 只看 ImportDeclaration 就能建出模块图 |
 
-## 小结
-
-- 编译与 AST
-  - 编译器三件事
-    - parse（文本→树）、transform（改树）、generate（树→文本）
-    - **AST 与源码是两份数据**，改树必须 generate
-  - AST 长什么样
-    - 顶层 Program，语句在 `program.body`
-    - `type` 决定字段；靠 astexplorer 查，不靠猜
-    - 朴素遍历只能"看"，增删改需要路径（Path）
-  - transform
-    - visitor 模式：按节点类型回调
-    - 类型判断用 `t.isXxx`、构造用 `t.xxx()`、容器操作传的是父节点字段名
-  - 写 Babel 插件
-    - 插件 = 返回 `{ name, visitor }` 的函数，`state.opts` 收参数
-    - 坑一：替换后会被重新遍历，可能递归
-    - 坑二：plugins 先于 presets；plugins 顺序、presets 逆序
-  - codemod
-    - 正则会误伤字符串与注释，AST 不会
-    - generate 会重写格式 → 先统一格式化基线再跑
-  - 工具选择
-    - 自定义转换用 Babel；只求快用 SWC / esbuild
-    - 类型检查永远交给 `tsc --noEmit`，转译器不做类型检查
-  - AST 的应用面
-    - ESLint 规则 / 按需引入 / 埋点注入 / 死代码检测 / i18n 提取 / 依赖分析
-
 ## 配套代码
 
 本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。

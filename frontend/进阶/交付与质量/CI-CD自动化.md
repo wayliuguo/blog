@@ -249,28 +249,6 @@ branches:
       required_reviews: true             # 必须有 reviewer
 ```
 
-## 小结
-
-- CI/CD 自动化流水线
-  - CI/CD 概念与流程
-    - CI / CD（交付）/ CD（部署）区别
-    - 典型发布时间线（push → lint → test → build → deploy）
-  - GitHub Actions 实战
-    - 核心概念（workflow / job / step / action / runner）
-    - 事件触发（`push` / `pull_request` / `workflow_dispatch`）
-    - 完整流水线示例（quality → build → deploy）
-  - 流水线设计
-    - lint → test → build → deploy 分阶段（尽早失败）
-    - 各阶段 gate 与产物缓存
-  - 环境管理
-    - dev / test / staging / pre-production / production
-    - `environment` 审批与 secrets
-    - 环境变量分层注入（构建期 / 部署期）
-  - 权限与安全
-    - 凭据管理（secrets / 最小权限 `permissions`）
-    - 安全审计清单（OIDC / fork 保护）
-    - 生产部署审批与分支保护
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `frontend/进阶/交付与质量/code/site/`。
