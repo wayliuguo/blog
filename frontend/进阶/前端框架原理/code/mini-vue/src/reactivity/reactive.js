@@ -88,9 +88,9 @@ function shallowReadonly(target) {
     return new Proxy(target, shallowReadonlyHandlers)
 }
 
-const isReactive = (value) => !!(value && value[ReactiveFlags.IS_REACTIVE])
-const isReadonly = (value) => !!(value && value[ReactiveFlags.IS_READONLY])
-const isProxy = (value) => isReactive(value) || isReadonly(value)
+const isReactive = value => !!(value && value[ReactiveFlags.IS_REACTIVE])
+const isReadonly = value => !!(value && value[ReactiveFlags.IS_READONLY])
+const isProxy = value => isReactive(value) || isReadonly(value)
 
 module.exports = {
     reactive,

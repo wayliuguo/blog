@@ -1,79 +1,95 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<title>内存：留引用 vs 可回收</title>
-<link rel="icon" href="data:,">
-<script src="./lab.js"></script>
-<style>
-    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
-    header { padding: 16px 24px; background: #eef2ff; }
-    header h1 { margin: 0; font-size: 22px; }
-    #out { padding: 12px 24px; font: 13px/1.7 monospace; white-space: pre; }
-</style>
-</head>
-<body>
-<header><h1>同样分配 60 轮：留引用（泄漏）vs 可回收（正常）</h1></header>
-<div id="out">采样中…</div>
-<script>
-    const mode = new URLSearchParams(location.search).get('mode') || 'clean'
-    const ROUNDS = 60
-    const KEEP = mode === 'leak' // leak = 每轮的数组都挂在 window 上，GC 收不走
-    const out = document.getElementById('out')
+    <head>
+        <meta charset="utf-8" />
+        <title>内存：留引用 vs 可回收</title>
+        <link rel="icon" href="data:," />
+        <script src="./lab.js"></script>
+        <style>
+            body {
+                margin: 0;
+                font:
+                    16px/1.6 system-ui,
+                    'Microsoft YaHei',
+                    sans-serif;
+            }
+            header {
+                padding: 16px 24px;
+                background: #eef2ff;
+            }
+            header h1 {
+                margin: 0;
+                font-size: 22px;
+            }
+            #out {
+                padding: 12px 24px;
+                font: 13px/1.7 monospace;
+                white-space: pre;
+            }
+        </style>
+    </head>
+    <body>
+        <header><h1>同样分配 60 轮：留引用（泄漏）vs 可回收（正常）</h1></header>
+        <div id="out">采样中…</div>
+        <script>
+            const mode = new URLSearchParams(location.search).get('mode') || 'clean'
+            const ROUNDS = 60
+            const KEEP = mode === 'leak' // leak = 每轮的数组都挂在 window 上，GC 收不走
+            const out = document.getElementById('out')
 
-    // 泄漏版本的"口袋"：挂在全局，生命周期与页面同长
-    window.__leakedBags = []
+            // 泄漏版本的"口袋"：挂在全局，生命周期与页面同长
+            window.__leakedBags = []
 
-    /** 分配 n 个对象，每个带 512 字节字符串，模拟真实业务里的数据缓存 */
-    function alloc(n) {
-        const arr = []
-        for (let i = 0; i < n; i++) arr.push({ id: i, payload: 'x'.repeat(512) })
-        return arr
-    }
+            /** 分配 n 个对象，每个带 512 字节字符串，模拟真实业务里的数据缓存 */
+            function alloc(n) {
+                const arr = []
+                for (let i = 0; i < n; i++) arr.push({ id: i, payload: 'x'.repeat(512) })
+                return arr
+            }
 
-    const heap = () => (performance.memory ? performance.memory.usedJSHeapSize : null)
-    const mb = (v) => (v == null ? 'n/a' : (v / 1024 / 1024).toFixed(1) + ' MB')
+            const heap = () => (performance.memory ? performance.memory.usedJSHeapSize : null)
+            const mb = v => (v == null ? 'n/a' : (v / 1024 / 1024).toFixed(1) + ' MB')
 
-    async function main() {
-        const samples = []
-        for (let r = 0; r < ROUNDS; r++) {
-            const chunk = alloc(2000)
-            if (KEEP) window.__leakedBags.push(chunk) // 留引用 → GC 收不走
-            // chunk 在 clean 模式下出了作用域就没人引用，下一次分配压力上来时会被回收
-            samples.push(heap())
-            await new Promise((resolve) => setTimeout(resolve, 0))
-        }
+            async function main() {
+                const samples = []
+                for (let r = 0; r < ROUNDS; r++) {
+                    const chunk = alloc(2000)
+                    if (KEEP) window.__leakedBags.push(chunk) // 留引用 → GC 收不走
+                    // chunk 在 clean 模式下出了作用域就没人引用，下一次分配压力上来时会被回收
+                    samples.push(heap())
+                    await new Promise(resolve => setTimeout(resolve, 0))
+                }
 
-        const first = samples[Math.floor(ROUNDS * 0.1)]
-        const last = samples[samples.length - 1]
-        const peak = Math.max(...samples.filter((v) => v != null))
-        const growth = first != null && last != null ? last - first : null
+                const first = samples[Math.floor(ROUNDS * 0.1)]
+                const last = samples[samples.length - 1]
+                const peak = Math.max(...samples.filter(v => v != null))
+                const growth = first != null && last != null ? last - first : null
 
-        out.textContent = [
-            `模式            : ${mode}`,
-            `轮次            : ${ROUNDS}（每轮 2000 个对象 × 512B）`,
-            `第 10% 处堆大小 : ${mb(first)}`,
-            `末轮堆大小      : ${mb(last)}`,
-            `峰值堆大小      : ${mb(peak)}`,
-            `增长量          : ${mb(growth)}`
-        ].join('\n')
+                out.textContent = [
+                    `模式            : ${mode}`,
+                    `轮次            : ${ROUNDS}（每轮 2000 个对象 × 512B）`,
+                    `第 10% 处堆大小 : ${mb(first)}`,
+                    `末轮堆大小      : ${mb(last)}`,
+                    `峰值堆大小      : ${mb(peak)}`,
+                    `增长量          : ${mb(growth)}`
+                ].join('\n')
 
-        Lab.finish(
-            {
-                mode,
-                rounds: ROUNDS,
-                precise: !!(performance.memory && performance.memory.jsHeapSizeLimit),
-                first: first == null ? null : Math.round(first / 1024),
-                last: last == null ? null : Math.round(last / 1024),
-                peak: peak == null ? null : Math.round(peak / 1024),
-                growth: growth == null ? null : Math.round(growth / 1024),
-                kept: KEEP ? window.__leakedBags.length : 0
-            },
-            200
-        )
-    }
+                Lab.finish(
+                    {
+                        mode,
+                        rounds: ROUNDS,
+                        precise: !!(performance.memory && performance.memory.jsHeapSizeLimit),
+                        first: first == null ? null : Math.round(first / 1024),
+                        last: last == null ? null : Math.round(last / 1024),
+                        peak: peak == null ? null : Math.round(peak / 1024),
+                        growth: growth == null ? null : Math.round(growth / 1024),
+                        kept: KEEP ? window.__leakedBags.length : 0
+                    },
+                    200
+                )
+            }
 
-    main()
-</script>
-</body>
+            main()
+        </script>
+    </body>
 </html>

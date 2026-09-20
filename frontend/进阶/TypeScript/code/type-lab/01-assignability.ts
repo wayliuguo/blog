@@ -18,7 +18,10 @@ interface Point2D {
 }
 
 class Vec2 {
-    constructor(public x: number, public y: number) {}
+    constructor(
+        public x: number,
+        public y: number
+    ) {}
 }
 
 const p: Point2D = new Vec2(1, 2) // OK：形状吻合即可，不要求显式 implements

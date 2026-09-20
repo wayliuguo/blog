@@ -4,7 +4,7 @@
  */
 import { sweep, title, section, table, ms, num, bytes } from '../harness/index.mjs'
 
-const kb = (v) => (v == null ? '—' : `${Math.round(v / 1024)} KB`)
+const kb = v => (v == null ? '—' : `${Math.round(v / 1024)} KB`)
 
 export default async function run() {
     const rows = await sweep('/virtual.html', [
@@ -37,6 +37,15 @@ export default async function run() {
     console.log(section('两者付出的代价不同'))
     console.log('- 全量渲染：DOM 节点上万，首屏渲染慢、内存高，但滚动时 JS 什么都不用做')
     console.log('- 虚拟滚动：DOM 只保留可视窗口 + 缓冲，首屏快、内存低，但每次滚动都要重算窗口并重建那几十行')
-    console.log(`\n虚拟滚动的窗口大小是 ${rows[1]?.report.extra.windowSize} 行（视口 480px / 行高 32px）+ 上下各 5 行缓冲。`)
-    console.log(`结论：DOM 节点数砍掉 ${num((1 - rows[1].report.extra.domNodes / rows[0].report.extra.domNodes) * 100, 1)}%，首屏渲染快 ${ms(rows[0].report.extra.buildMs - rows[1].report.extra.buildMs)}，一次大跨度滚动快 ${ms(rows[0].report.extra.scrollMs - rows[1].report.extra.scrollMs)}。`)
+    console.log(
+        `\n虚拟滚动的窗口大小是 ${rows[1]?.report.extra.windowSize} 行（视口 480px / 行高 32px）+ 上下各 5 行缓冲。`
+    )
+    console.log(
+        `结论：DOM 节点数砍掉 ${num(
+            (1 - rows[1].report.extra.domNodes / rows[0].report.extra.domNodes) * 100,
+            1
+        )}%，首屏渲染快 ${ms(rows[0].report.extra.buildMs - rows[1].report.extra.buildMs)}，一次大跨度滚动快 ${ms(
+            rows[0].report.extra.scrollMs - rows[1].report.extra.scrollMs
+        )}。`
+    )
 }

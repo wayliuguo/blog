@@ -10,7 +10,11 @@ const path = require('path')
 
 const PORT = 5187
 const ROOT = path.join(__dirname, 'pages')
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' }
+const MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8'
+}
 // SPA 实验页要一个真 Vue：把 node_modules 里的 ESM 浏览器版挂到 /vendor/vue.js
 const VENDOR = {
     '/vendor/vue.js': path.join(__dirname, 'node_modules/vue/dist/vue.esm-browser.prod.js')
@@ -35,7 +39,7 @@ function listen(port, tries = 0) {
         res.end(fs.readFileSync(file))
     })
     server.removeAllListeners('error')
-    server.on('error', (err) => {
+    server.on('error', err => {
         if (err.code !== 'EADDRINUSE' || tries >= 20) throw err
         console.log(`  端口 ${port} 被占用，自动改用 ${port + 1}`)
         listen(port + 1, tries + 1)

@@ -1,54 +1,76 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<title>主线程 vs Worker</title>
-<link rel="icon" href="data:,">
-<script src="./lab.js"></script>
-<script src="./heavy.js"></script>
-<style>
-    body { margin: 0; font: 16px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
-    header { padding: 16px 24px; background: #eef2ff; }
-    header h1 { margin: 0; font-size: 22px; }
-    #status { padding: 24px; font-size: 20px; font-weight: 700; }
-</style>
-</head>
-<body>
-<header><h1>同一段计算，放主线程和放 Worker 差在哪</h1></header>
-<div id="status">计算中…</div>
-<script>
-    const mode = new URLSearchParams(location.search).get('mode') || 'main'
-    const ROUNDS = 12000000
-    const status = document.getElementById('status')
+    <head>
+        <meta charset="utf-8" />
+        <title>主线程 vs Worker</title>
+        <link rel="icon" href="data:," />
+        <script src="./lab.js"></script>
+        <script src="./heavy.js"></script>
+        <style>
+            body {
+                margin: 0;
+                font:
+                    16px/1.6 system-ui,
+                    'Microsoft YaHei',
+                    sans-serif;
+            }
+            header {
+                padding: 16px 24px;
+                background: #eef2ff;
+            }
+            header h1 {
+                margin: 0;
+                font-size: 22px;
+            }
+            #status {
+                padding: 24px;
+                font-size: 20px;
+                font-weight: 700;
+            }
+        </style>
+    </head>
+    <body>
+        <header><h1>同一段计算，放主线程和放 Worker 差在哪</h1></header>
+        <div id="status">计算中…</div>
+        <script>
+            const mode = new URLSearchParams(location.search).get('mode') || 'main'
+            const ROUNDS = 12000000
+            const status = document.getElementById('status')
 
-    // 帧间隔监控：主线程被占住时下一帧会迟到，迟到多少就是「页面卡了多久」
-    let last = performance.now()
-    let maxGap = 0
-    let beats = 0
-    function beat(now) {
-        maxGap = Math.max(maxGap, now - last)
-        last = now
-        beats++
-        requestAnimationFrame(beat)
-    }
-    requestAnimationFrame(beat)
+            // 帧间隔监控：主线程被占住时下一帧会迟到，迟到多少就是「页面卡了多久」
+            let last = performance.now()
+            let maxGap = 0
+            let beats = 0
+            function beat(now) {
+                maxGap = Math.max(maxGap, now - last)
+                last = now
+                beats++
+                requestAnimationFrame(beat)
+            }
+            requestAnimationFrame(beat)
 
-    // maxGap 需要至少一帧之后才有意义，所以统一延后 300ms 再读并上报
-    const finish = (extra) => setTimeout(() => Lab.finish({ ...extra, maxGap: Math.round(maxGap), beats }, 0), 300)
+            // maxGap 需要至少一帧之后才有意义，所以统一延后 300ms 再读并上报
+            const finish = extra =>
+                setTimeout(() => Lab.finish({ ...extra, maxGap: Math.round(maxGap), beats }, 0), 300)
 
-    if (mode === 'main') {
-        const work = Lab.time(() => self.heavyTask(ROUNDS))
-        status.textContent = '计算完成（结果 ' + work.value + '）'
-        finish({ mode, rounds: ROUNDS, workMs: work.ms })
-    } else {
-        const worker = new Worker('./heavy-worker.js')
-        const t0 = performance.now()
-        worker.onmessage = (e) => {
-            status.textContent = '计算完成（结果 ' + e.data.result + '）'
-            finish({ mode, rounds: ROUNDS, workMs: Math.round(performance.now() - t0), workerMs: e.data.workerMs })
-        }
-        worker.postMessage(ROUNDS)
-    }
-</script>
-</body>
+            if (mode === 'main') {
+                const work = Lab.time(() => self.heavyTask(ROUNDS))
+                status.textContent = '计算完成（结果 ' + work.value + '）'
+                finish({ mode, rounds: ROUNDS, workMs: work.ms })
+            } else {
+                const worker = new Worker('./heavy-worker.js')
+                const t0 = performance.now()
+                worker.onmessage = e => {
+                    status.textContent = '计算完成（结果 ' + e.data.result + '）'
+                    finish({
+                        mode,
+                        rounds: ROUNDS,
+                        workMs: Math.round(performance.now() - t0),
+                        workerMs: e.data.workerMs
+                    })
+                }
+                worker.postMessage(ROUNDS)
+            }
+        </script>
+    </body>
 </html>

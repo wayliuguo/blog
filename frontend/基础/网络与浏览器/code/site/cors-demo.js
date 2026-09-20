@@ -14,7 +14,7 @@ const API_PORT = 5178
 let API = 'http://localhost:' + API_PORT // main() 开头会被 findApi() 的探测结果覆盖
 
 const lines = []
-const log = (line) => lines.push(line)
+const log = line => lines.push(line)
 
 const api = (path, init) => fetch(API + path, init)
 
@@ -51,7 +51,7 @@ async function main() {
         document.getElementById('probe').textContent = e.message
         return
     }
-    const json = (res) => res.json()
+    const json = res => res.json()
     await json(await fetch(API + '/__reset'))
 
     /* ------------------------------------------------ ① 同源：CORS 根本不参与 */
@@ -65,8 +65,12 @@ async function main() {
         const res = await api('/api/data?mode=star')
         const d = await json(res)
         return (
-            'status = ' + res.status + '，服务端看到的 origin = ' + d.origin +
-            '，自定义响应头 X-Api-Server = ' + JSON.stringify(res.headers.get('x-api-server'))
+            'status = ' +
+            res.status +
+            '，服务端看到的 origin = ' +
+            d.origin +
+            '，自定义响应头 X-Api-Server = ' +
+            JSON.stringify(res.headers.get('x-api-server'))
         )
     })
 
@@ -97,7 +101,7 @@ async function main() {
     })
 
     /* ------------------------------------------------ ⑦ 非简单请求先走预检 */
-    const postJson = (mode) =>
+    const postJson = mode =>
         api('/api/data?mode=' + mode, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

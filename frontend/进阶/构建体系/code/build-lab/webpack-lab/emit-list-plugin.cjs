@@ -9,7 +9,7 @@ class EmitListPlugin {
     }
     apply(compiler) {
         // emit：产物即将写盘，此时 compilation.assets 已经就绪
-        compiler.hooks.emit.tap(this.name, (compilation) => {
+        compiler.hooks.emit.tap(this.name, compilation => {
             const names = Object.keys(compilation.assets)
             console.log('\n---- 产物清单（emit 钩子）----')
             for (const n of names) {
@@ -20,7 +20,7 @@ class EmitListPlugin {
         })
 
         // done：整次构建结束，stats 可用
-        compiler.hooks.done.tap(this.name, (stats) => {
+        compiler.hooks.done.tap(this.name, stats => {
             const { errors, warnings } = stats.compilation
             console.log('  构建结束：error', errors.length, '/ warning', warnings.length)
         })
@@ -33,7 +33,7 @@ class WriteManifestPlugin {
     }
     apply(compiler) {
         // thisCompilation 比 compilation 更早、且只针对本次编译（不含子编译器）
-        compiler.hooks.thisCompilation.tap('WriteManifestPlugin', (compilation) => {
+        compiler.hooks.thisCompilation.tap('WriteManifestPlugin', compilation => {
             compilation.hooks.processAssets.tap(
                 {
                     name: 'WriteManifestPlugin',
@@ -47,10 +47,7 @@ class WriteManifestPlugin {
                     }
                     const json = JSON.stringify(manifest, null, 2)
                     // 用 emitAsset 而不是 fs.writeFileSync：产物要进 webpack 的输出流
-                    compilation.emitAsset(
-                        this.out,
-                        new (require('webpack').sources.RawSource)(json)
-                    )
+                    compilation.emitAsset(this.out, new (require('webpack').sources.RawSource)(json))
                 }
             )
         })

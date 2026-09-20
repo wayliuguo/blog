@@ -53,8 +53,8 @@ function emitDts(src, fileName = 'module.ts') {
         if (files[fn]) return ts.createSourceFile(fn, files[fn], lv, true)
         return baseGet(fn, lv, oe, sc)
     }
-    host.fileExists = (fn) => !!files[fn] || ts.sys.fileExists(fn)
-    host.readFile = (fn) => (files[fn] !== undefined ? files[fn] : ts.sys.readFile(fn))
+    host.fileExists = fn => !!files[fn] || ts.sys.fileExists(fn)
+    host.readFile = fn => (files[fn] !== undefined ? files[fn] : ts.sys.readFile(fn))
     let dts = ''
     host.writeFile = (fn, text) => {
         if (fn.endsWith('.d.ts')) dts = text

@@ -13,9 +13,9 @@ const ENTRY = path.join(DIR, 'entry.js')
 fs.mkdirSync(DIR, { recursive: true })
 fs.writeFileSync(
     VENDOR,
-    ["console.log('react 被求值')", 'export function createElement(tag) { return { tag } }'].concat(
-        Array.from({ length: 200 }, (_, i) => `export function helper${i}(x) { return x + ${i} }`)
-    ).join('\n') + '\n'
+    ["console.log('react 被求值')", 'export function createElement(tag) { return { tag } }']
+        .concat(Array.from({ length: 200 }, (_, i) => `export function helper${i}(x) { return x + ${i} }`))
+        .join('\n') + '\n'
 )
 // 整体 re-export：200 个导出一个都摇不掉（库顺手把依赖再导出去，就是这个下场）
 fs.writeFileSync(ENTRY, "export * from 'react'\n")
@@ -32,12 +32,19 @@ const resolver = {
 async function build(label, inputOptions, outputOptions) {
     const bundle = await rollup({ input: ENTRY, plugins: [resolver], ...inputOptions })
     const { output } = await bundle.generate(outputOptions)
-    const code = output.map((o) => (o.type === 'chunk' ? o.code : o.source)).join('\n')
+    const code = output.map(o => (o.type === 'chunk' ? o.code : o.source)).join('\n')
     console.log(
-        `  ${label.padEnd(26)} 文件 ${String(output.length).padStart(2)} 个 · ${String(code.length).padStart(6)} 字符 · 含 helper199:${String(code.includes('helper199')).padEnd(5)} 含 global.React:${code.includes('global.React')}`
+        `  ${label.padEnd(26)} 文件 ${String(output.length).padStart(2)} 个 · ${String(code.length).padStart(
+            6
+        )} 字符 · 含 helper199:${String(code.includes('helper199')).padEnd(5)} 含 global.React:${code.includes(
+            'global.React'
+        )}`
     )
     if (output.length > 1) {
-        console.log('     产物：', output.map((o) => `${o.fileName}(${o.type === 'chunk' ? o.code.length : o.source.length}B)`).join(' '))
+        console.log(
+            '     产物：',
+            output.map(o => `${o.fileName}(${o.type === 'chunk' ? o.code.length : o.source.length}B)`).join(' ')
+        )
     }
     await bundle.close()
     return code
@@ -47,8 +54,16 @@ async function build(label, inputOptions, outputOptions) {
     console.log('---- 同一份源码，改产物策略 ----')
     await build('① 全都打进来', {}, { format: 'es' })
     await build('② external 掉 react', { external: ['react'] }, { format: 'es' })
-    await build('③ external + UMD globals', { external: ['react'] }, { format: 'umd', name: 'App', globals: { react: 'React' } })
-    await build('④ manualChunks 拆 vendor', {}, { format: 'es', manualChunks: (id) => (id.includes('react.js') ? 'vendor' : null) })
+    await build(
+        '③ external + UMD globals',
+        { external: ['react'] },
+        { format: 'umd', name: 'App', globals: { react: 'React' } }
+    )
+    await build(
+        '④ manualChunks 拆 vendor',
+        {},
+        { format: 'es', manualChunks: id => (id.includes('react.js') ? 'vendor' : null) }
+    )
     await build('⑤ preserveModules', {}, { format: 'es', preserveModules: true })
 
     console.log('\n---- 结论 ----')

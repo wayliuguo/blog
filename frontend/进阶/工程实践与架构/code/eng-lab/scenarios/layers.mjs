@@ -42,8 +42,8 @@ function importsOf(file) {
     return out
 }
 
-const layerOf = (file) => file.split('/')[0]
-const domainOf = (file) => {
+const layerOf = file => file.split('/')[0]
+const domainOf = file => {
     const parts = file.split('/')
     return parts[0] === 'views' && parts.length > 2 ? parts[1] : null
 }
@@ -70,16 +70,16 @@ export default async function run() {
     console.log(
         table(
             ['from \\ to', ...LAYERS, '出度'],
-            LAYERS.map((a) => {
-                const row = LAYERS.map((b) => matrix[a]?.[b] ?? '')
+            LAYERS.map(a => {
+                const row = LAYERS.map(b => matrix[a]?.[b] ?? '')
                 const sum = LAYERS.reduce((n, b) => n + (matrix[a]?.[b] ?? 0), 0)
                 return [a, ...row, sum]
             })
         )
     )
-    const up = LAYERS.flatMap((a) =>
-        LAYERS.filter((b) => LAYERS.indexOf(b) > LAYERS.indexOf(a)).map((b) => [a, b, matrix[a]?.[b] ?? 0])
-    ).filter((r) => r[2] > 0)
+    const up = LAYERS.flatMap(a =>
+        LAYERS.filter(b => LAYERS.indexOf(b) > LAYERS.indexOf(a)).map(b => [a, b, matrix[a]?.[b] ?? 0])
+    ).filter(r => r[2] > 0)
     console.log(
         '\n右上角应当全空——那里是"下层引用上层"。实际非空的位置：' +
             (up.length ? up.map(([a, b, n]) => `${a}→${b}(${n})`).join('、') : '无')
@@ -151,7 +151,12 @@ export default async function run() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
     console.log(section('被依赖最多的文件（直接扇入）'))
-    console.log(table(['文件', '直接被引用', '所在层'], top.map(([f, n]) => [f, n, layerOf(f)])))
+    console.log(
+        table(
+            ['文件', '直接被引用', '所在层'],
+            top.map(([f, n]) => [f, n, layerOf(f)])
+        )
+    )
 
     /** 传递闭包：改了这个文件，哪些文件会受影响 */
     function affected(target) {
@@ -174,9 +179,14 @@ export default async function run() {
     console.log(
         table(
             ['改动的文件', '直接引用', '传递波及', '占全量'],
-            ['shared/constants.js', 'shared/format.js', 'utils/http.js', 'hooks/useToast.js'].map((f) => {
+            ['shared/constants.js', 'shared/format.js', 'utils/http.js', 'hooks/useToast.js'].map(f => {
                 const list = affected(f)
-                return [f, (fanIn[f] || new Set()).size, list.length, `${Math.round((list.length / files.length) * 100)}%`]
+                return [
+                    f,
+                    (fanIn[f] || new Set()).size,
+                    list.length,
+                    `${Math.round((list.length / files.length) * 100)}%`
+                ]
             })
         )
     )

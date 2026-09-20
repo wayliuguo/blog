@@ -16,7 +16,14 @@ export default async function run() {
             ['策略', '发出图片请求', '图片字节', '已解码', 'LCP', 'load'],
             rows.map(({ name, report }) => {
                 const e = report.extra
-                return [name, `${e.imageRequests} / ${e.totalImages}`, bytes(e.imageBytes), `${e.decoded} / ${e.totalImages}`, ms(report.metrics.lcp), ms(report.metrics.load)]
+                return [
+                    name,
+                    `${e.imageRequests} / ${e.totalImages}`,
+                    bytes(e.imageBytes),
+                    `${e.decoded} / ${e.totalImages}`,
+                    ms(report.metrics.lcp),
+                    ms(report.metrics.load)
+                ]
             })
         )
     )
@@ -27,6 +34,13 @@ export default async function run() {
 
     for (const { name, report } of rows) {
         console.log(`\n[${name}] 图片请求明细`)
-        console.log(table(['图片', '开始', '耗时'], report.resources.filter((r) => r.name.includes('/slow')).map((r) => [r.name.split('name=')[1], ms(r.start), ms(r.duration)])))
+        console.log(
+            table(
+                ['图片', '开始', '耗时'],
+                report.resources
+                    .filter(r => r.name.includes('/slow'))
+                    .map(r => [r.name.split('name=')[1], ms(r.start), ms(r.duration)])
+            )
+        )
     }
 }

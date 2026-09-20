@@ -5,5 +5,5 @@
 export function serializeData(data) {
     return JSON.stringify(data)
         .replace(/</g, '\\u003c') // 防 </script> 提前闭合
-        .replace(/\u2028|\u2029/g, (c) => (c === '\u2028' ? '\\u2028' : '\\u2029'))
+        .replace(/\u2028|\u2029/g, c => (c === '\u2028' ? '\\u2028' : '\\u2029'))
 }

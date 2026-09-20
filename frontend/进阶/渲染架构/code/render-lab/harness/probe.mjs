@@ -9,11 +9,11 @@ export function probe(base, path, { onChunk } = {}) {
     return new Promise((resolve, reject) => {
         const t0 = performance.now()
         const at = () => Math.round((performance.now() - t0) * 10) / 10
-        const req = http.request(base + path, (res) => {
+        const req = http.request(base + path, res => {
             const headAt = at()
             const chunks = []
             let body = ''
-            res.on('data', (buf) => {
+            res.on('data', buf => {
                 const text = Buffer.from(buf).toString('utf8')
                 body += text
                 const entry = { at: at(), bytes: Buffer.byteLength(text), text }
@@ -40,7 +40,7 @@ export function probe(base, path, { onChunk } = {}) {
 }
 
 /** 从响应文本里捞出各段的标记名：服务端每写一段都会带上它 */
-export const segmentNames = (text) => [...text.matchAll(/window\.__chunks\.push\(\{name:"([^"]+)"/g)].map((m) => m[1])
+export const segmentNames = text => [...text.matchAll(/window\.__chunks\.push\(\{name:"([^"]+)"/g)].map(m => m[1])
 
 /** 把一次流式响应的分段到达时刻整理成 [段名, 到达时刻, 该段字节] */
 export function segmentTimeline(result) {

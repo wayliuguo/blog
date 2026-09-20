@@ -29,9 +29,9 @@ export function LoginForm({ onSubmit }) {
         <form onSubmit={handleSubmit}>
             <h2>登录</h2>
             <label htmlFor="login-name">用户名</label>
-            <input id="login-name" value={name} onChange={(e) => setName(e.target.value)} />
+            <input id="login-name" value={name} onChange={e => setName(e.target.value)} />
             <label htmlFor="login-pwd">密码</label>
-            <input id="login-pwd" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+            <input id="login-pwd" type="password" value={pwd} onChange={e => setPwd(e.target.value)} />
             <button type="submit" disabled={status === 'loading'}>
                 {status === 'loading' ? '登录中…' : '登录'}
             </button>

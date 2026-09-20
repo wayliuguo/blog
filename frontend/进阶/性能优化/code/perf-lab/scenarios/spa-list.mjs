@@ -9,7 +9,12 @@ export default async function run() {
     const sortRows = await sweep('/spa/index.html', [
         { name: '全量渲染 + 同步计算', query: { act: 'sort', n: 2000 }, rounds: 3 },
         { name: '虚拟滚动 + 同步计算', query: { act: 'sort', n: 2000, virtual: '1' }, rounds: 3 },
-        { name: '虚拟滚动 + 分片计算', page: '/spa/optimized.html', query: { act: 'sort', n: 2000, opt: '1' }, rounds: 3 }
+        {
+            name: '虚拟滚动 + 分片计算',
+            page: '/spa/optimized.html',
+            query: { act: 'sort', n: 2000, opt: '1' },
+            rounds: 3
+        }
     ])
 
     console.log(
@@ -41,7 +46,12 @@ export default async function run() {
     console.log(
         table(
             ['滚动回调写法', '30 屏总耗时', '这段新增长任务', '最长的一个'],
-            scrollRows.map(({ name, report }) => [name, ms(report.extra.scrollMs), report.extra.newTasks, ms(report.extra.longestTask)])
+            scrollRows.map(({ name, report }) => [
+                name,
+                ms(report.extra.scrollMs),
+                report.extra.newTasks,
+                ms(report.extra.longestTask)
+            ])
         )
     )
     console.log(section('结论'))

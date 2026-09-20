@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url)
 const viaRequire = require('twin')
 const internalCjs = require('#internal-cjs')
 
-const short = (p) => p.replace(/\\/g, '/').replace(/^.*node_modules\//, 'node_modules/')
+const short = p => p.replace(/\\/g, '/').replace(/^.*node_modules\//, 'node_modules/')
 
 console.log('import  命中文件 =', short(import.meta.resolve('twin')))
 console.log('import  看到     =', viaImport)

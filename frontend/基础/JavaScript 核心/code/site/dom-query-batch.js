@@ -138,8 +138,15 @@ function run() {
         '   innerHTML 一次解析      -> ' + fmt(html),
         '',
         '③ 两种集合',
-        '   插入前：getElementsByTagName().length = ' + coll.before.live + '，querySelectorAll().length = ' + coll.before.stat,
-        '   插入一个 li 后：HTMLCollection = ' + coll.after.live + '（跟着变），NodeList = ' + coll.after.stat + '（不变）'
+        '   插入前：getElementsByTagName().length = ' +
+            coll.before.live +
+            '，querySelectorAll().length = ' +
+            coll.before.stat,
+        '   插入一个 li 后：HTMLCollection = ' +
+            coll.after.live +
+            '（跟着变），NodeList = ' +
+            coll.after.stat +
+            '（不变）'
     ]
     document.getElementById('probe').textContent = lines.join('\n')
 

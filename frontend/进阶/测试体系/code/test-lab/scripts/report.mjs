@@ -7,11 +7,11 @@ import path from 'node:path'
 const outFile = path.join('node_modules', '.cache', 'test-lab-report.json')
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
-const res = spawnSync(
-    npm,
-    ['exec', '--', 'vitest', 'run', '--reporter=json', `--outputFile.json=${outFile}`],
-    { encoding: 'utf8', shell: true, stdio: ['ignore', 'pipe', 'pipe'] }
-)
+const res = spawnSync(npm, ['exec', '--', 'vitest', 'run', '--reporter=json', `--outputFile.json=${outFile}`], {
+    encoding: 'utf8',
+    shell: true,
+    stdio: ['ignore', 'pipe', 'pipe']
+})
 
 if (!fs.existsSync(outFile)) {
     console.error('没能拿到 JSON 报告：', (res.stdout || '').slice(0, 400), (res.stderr || '').slice(0, 400))
@@ -30,7 +30,8 @@ for (const file of files) {
         if (t.status === 'passed') passed += 1
         else if (t.status === 'failed') failed += 1
         else skipped += 1
-        if (typeof t.duration === 'number') slow.push({ title: `${path.basename(file.name)} > ${t.title}`, duration: t.duration })
+        if (typeof t.duration === 'number')
+            slow.push({ title: `${path.basename(file.name)} > ${t.title}`, duration: t.duration })
     }
 }
 

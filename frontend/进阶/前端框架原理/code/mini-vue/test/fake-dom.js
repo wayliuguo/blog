@@ -81,7 +81,7 @@ class FakeElement extends FakeNode {
     }
 
     get textContent() {
-        return this.childNodes.map((c) => c.textContent).join('')
+        return this.childNodes.map(c => c.textContent).join('')
     }
     set textContent(value) {
         for (const child of this.childNodes) child.parentNode = null
@@ -116,9 +116,9 @@ function insertBefore(child, parent, anchor) {
 }
 
 const document = {
-    createElement: (tag) => new FakeElement(tag),
-    createTextNode: (text) => new FakeText(text),
-    createComment: (text) => new FakeNode('#comment', String(text))
+    createElement: tag => new FakeElement(tag),
+    createTextNode: text => new FakeText(text),
+    createComment: text => new FakeNode('#comment', String(text))
 }
 
 globalThis.document = document
@@ -135,14 +135,14 @@ function printDom(node, indent = 0) {
     const cls = node.className ? ` class="${node.className}"` : ''
     const head = `${pad}<${node.type}${attrs}${cls}>`
     if (!node.childNodes.length) return head
-    return [head, ...node.childNodes.map((c) => printDom(c, indent + 1)), `${pad}</${node.type}>`].join('\n')
+    return [head, ...node.childNodes.map(c => printDom(c, indent + 1)), `${pad}</${node.type}>`].join('\n')
 }
 
 // 数"这一轮到底改了多少次宿主节点"：断言 diff 效果最直接的办法
 // 传入完整的宿主操作集合（nodeOps + patchProp），返回一个会被持续写入的数组
 function recordNodeOps(options) {
     const sink = []
-    const push = (line) => sink.push(line)
+    const push = line => sink.push(line)
 
     const wrap = (name, format) => {
         const raw = options[name]
@@ -154,17 +154,21 @@ function recordNodeOps(options) {
         }
     }
 
-    wrap('createElement', (tag) => `createElement(<${tag}>)`)
-    wrap('createText', (text) => `createText("${text}")`)
+    wrap('createElement', tag => `createElement(<${tag}>)`)
+    wrap('createText', text => `createText("${text}")`)
     wrap('createComment', () => `createComment()`)
     wrap('setText', (node, text) => `setText(${label(node)}, "${text}")`)
     wrap('setElementText', (el, text) => `setElementText(${label(el)}, "${text}")`)
-    wrap('insert', (child, parent, anchor) =>
-        `insert(${label(child)}, ${anchor ? `before ${label(anchor)}` : `append → ${label(parent)}`})`
+    wrap(
+        'insert',
+        (child, parent, anchor) =>
+            `insert(${label(child)}, ${anchor ? `before ${label(anchor)}` : `append → ${label(parent)}`})`
     )
-    wrap('remove', (child) => `remove(${label(child)})`)
+    wrap('remove', child => `remove(${label(child)})`)
     wrap('patchProp', (el, key, prev, next) =>
-        next === null || next === undefined ? `removeProp(${label(el)}, ${key})` : `patchProp(${label(el)}, ${key} = ${JSON.stringify(next)})`
+        next === null || next === undefined
+            ? `removeProp(${label(el)}, ${key})`
+            : `patchProp(${label(el)}, ${key} = ${JSON.stringify(next)})`
     )
 
     return sink

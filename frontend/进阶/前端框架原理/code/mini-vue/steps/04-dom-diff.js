@@ -11,9 +11,18 @@ const { patchProp } = require('../src/runtime-dom/patchProp')
 const { document, printDom, recordNodeOps } = require('../test/fake-dom')
 
 // 每个 <li> 上挂一个 data-id：无 key 时"就地改写"会把它也一起改掉，看得见
-const noKey = (items) => h('ul', null, items.map((it) => h('li', { 'data-id': it.id }, it.name)))
-const withKey = (items) =>
-    h('ul', null, items.map((it) => h('li', { key: it.id, 'data-id': it.id }, it.name)))
+const noKey = items =>
+    h(
+        'ul',
+        null,
+        items.map(it => h('li', { 'data-id': it.id }, it.name))
+    )
+const withKey = items =>
+    h(
+        'ul',
+        null,
+        items.map(it => h('li', { key: it.id, 'data-id': it.id }, it.name))
+    )
 
 const fruits = [
     { id: 'a', name: '苹果' },
@@ -41,7 +50,7 @@ function run(title, scene) {
     console.log(
         printDom(container)
             .split('\n')
-            .map((l) => '    ' + l)
+            .map(l => '    ' + l)
             .join('\n')
     )
     return ops.length

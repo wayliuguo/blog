@@ -234,8 +234,7 @@ function createRenderer(options) {
         for (let j = s1; j <= e1; j++) {
             const prevChild = c1[j]
             // 没 key 的退化成按下标对应 —— 这正是"用 index 当 key"会出现的行为
-            const newIndex =
-                prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
+            const newIndex = prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
 
             if (newIndex === undefined || newIndex > e2) {
                 unmount(prevChild, true)

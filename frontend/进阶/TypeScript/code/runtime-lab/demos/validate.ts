@@ -1,10 +1,7 @@
 import assert from 'node:assert'
 
 // 手写一个极简"模式 → 校验器"：把 unknown 收敛成可信类型
-type Schema =
-    | { kind: 'string' }
-    | { kind: 'number' }
-    | { kind: 'object'; fields: Record<string, Schema> }
+type Schema = { kind: 'string' } | { kind: 'number' } | { kind: 'object'; fields: Record<string, Schema> }
 
 function validate(schema: Schema, input: unknown): unknown {
     if (schema.kind === 'string') {

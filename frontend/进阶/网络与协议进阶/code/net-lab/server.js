@@ -19,7 +19,7 @@ const server = http.createServer((req, res) => {
 })
 
 function listen(port, tries) {
-    server.once('error', (err) => {
+    server.once('error', err => {
         if (err.code === 'EADDRINUSE' && tries > 0) {
             console.log(`端口 ${port} 被占用，改试 ${port + 1}`)
             listen(port + 1, tries - 1)

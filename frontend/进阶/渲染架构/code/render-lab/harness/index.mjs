@@ -31,7 +31,7 @@ export async function bestOf(server, options, rounds = 2) {
     const list = []
     for (let i = 0; i < rounds; i++) list.push(await openPage(server, options))
     return list.reduce((best, item) => {
-        const score = (r) => r.metrics.load ?? Infinity
+        const score = r => r.metrics.load ?? Infinity
         return score(item) < score(best) ? item : best
     }, list[0])
 }

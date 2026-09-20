@@ -5,11 +5,11 @@
 window.Lab = (() => {
     const metrics = { fp: null, fcp: null, lcp: null, ttfb: null, domContentLoaded: null, load: null }
     const longtasks = []
-    const round = (v) => (typeof v === 'number' ? Math.round(v * 10) / 10 : v)
+    const round = v => (typeof v === 'number' ? Math.round(v * 10) / 10 : v)
 
     const observe = (type, cb) => {
         try {
-            new PerformanceObserver((list) => {
+            new PerformanceObserver(list => {
                 for (const entry of list.getEntries()) cb(entry)
             }).observe({ type, buffered: true })
         } catch (err) {
@@ -17,15 +17,15 @@ window.Lab = (() => {
         }
     }
 
-    observe('paint', (e) => (e.name === 'first-paint' ? (metrics.fp = e.startTime) : (metrics.fcp = e.startTime)))
-    observe('largest-contentful-paint', (e) => (metrics.lcp = e.startTime))
-    observe('longtask', (e) => longtasks.push({ start: e.startTime, duration: e.duration }))
+    observe('paint', e => (e.name === 'first-paint' ? (metrics.fp = e.startTime) : (metrics.fcp = e.startTime)))
+    observe('largest-contentful-paint', e => (metrics.lcp = e.startTime))
+    observe('longtask', e => longtasks.push({ start: e.startTime, duration: e.duration }))
 
     function resources(filter = '') {
         return performance
             .getEntriesByType('resource')
-            .filter((e) => !filter || e.name.includes(filter))
-            .map((e) => ({
+            .filter(e => !filter || e.name.includes(filter))
+            .map(e => ({
                 name: e.name.replace(location.origin, ''),
                 start: Math.round(e.startTime),
                 duration: Math.round(e.duration),
@@ -51,12 +51,12 @@ window.Lab = (() => {
         const target = document.querySelector(selector)
         if (!target) return { error: `找不到 ${selector}` }
         const records = []
-        const mo = new MutationObserver((list) => records.push(...list))
+        const mo = new MutationObserver(list => records.push(...list))
         mo.observe(target, { childList: true, subtree: true, attributes: true, characterData: true })
         const t0 = performance.now()
         const value = await fn()
         const ms = round(performance.now() - t0)
-        await new Promise((resolve) => setTimeout(resolve, 0)) // 让 MutationObserver 的回调跑完
+        await new Promise(resolve => setTimeout(resolve, 0)) // 让 MutationObserver 的回调跑完
         mo.disconnect()
         const count = { childList: 0, attributes: 0, characterData: 0 }
         for (const record of records) count[record.type]++
@@ -80,7 +80,7 @@ window.Lab = (() => {
         return out
     }
 
-    const settle = (wait = 200) => new Promise((resolve) => setTimeout(resolve, wait))
+    const settle = (wait = 200) => new Promise(resolve => setTimeout(resolve, wait))
 
     async function report(extra = {}, value) {
         const payload = {
@@ -89,12 +89,16 @@ window.Lab = (() => {
             metrics: snapshot(),
             marks: window.__marks || {},
             chunks: window.__chunks || [],
-            longtasks: longtasks.map((t) => ({ start: round(t.start), duration: round(t.duration) })),
+            longtasks: longtasks.map(t => ({ start: round(t.start), duration: round(t.duration) })),
             resources: resources(),
             value,
             extra
         }
-        await fetch('/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        await fetch('/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
         return payload
     }
 

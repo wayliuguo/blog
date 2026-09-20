@@ -5,9 +5,9 @@
 import http from 'node:http'
 
 export function startServer(handler) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         const server = http.createServer((req, res) => {
-            Promise.resolve(handler(req, res)).catch((err) => {
+            Promise.resolve(handler(req, res)).catch(err => {
                 res.writeHead(500).end(String(err && err.message))
             })
         })
@@ -16,16 +16,16 @@ export function startServer(handler) {
             resolve({
                 port,
                 base: `http://127.0.0.1:${port}`,
-                close: () => new Promise((done) => server.close(done))
+                close: () => new Promise(done => server.close(done))
             })
         })
     })
 }
 
 export function readBody(req) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         const chunks = []
-        req.on('data', (c) => chunks.push(c))
+        req.on('data', c => chunks.push(c))
         req.on('end', () => resolve(Buffer.concat(chunks)))
     })
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { signInStreak, markVisited, visitCount, isSameDay, isSameDayUtc } from './streak.js'
 
 function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
+    return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 describe('flaky 来源一：用 sleep 赌时间', () => {

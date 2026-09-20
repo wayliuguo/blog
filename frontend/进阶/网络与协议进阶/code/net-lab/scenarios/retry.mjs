@@ -25,12 +25,12 @@ const STRATEGIES = [
     {
         name: '指数退避 100ms×2ⁿ',
         max: 4,
-        backoff: (n) => 100 * 2 ** n
+        backoff: n => 100 * 2 ** n
     },
     {
         name: '指数退避 + 抖动',
         max: 4,
-        backoff: (n) => 100 * 2 ** n * (0.5 + Math.random())
+        backoff: n => 100 * 2 ** n * (0.5 + Math.random())
     }
 ]
 
@@ -78,7 +78,7 @@ async function storm(base, { jitter, clients = 20, rounds = 3 }) {
 export default async function run() {
     const h1 = await startHttp1()
     const base = `http://127.0.0.1:${h1.port}`
-    const reset = () => fetch(base + '/api/reset').then((r) => r.text())
+    const reset = () => fetch(base + '/api/reset').then(r => r.text())
 
     try {
         await reset()
@@ -108,7 +108,10 @@ export default async function run() {
 
         // —— 超时与取消
         const timeoutRows = []
-        for (const [name, limit] of [['不设超时', null], ['80ms 超时', 80]]) {
+        for (const [name, limit] of [
+            ['不设超时', null],
+            ['80ms 超时', 80]
+        ]) {
             const started = performance.now()
             let outcome
             try {

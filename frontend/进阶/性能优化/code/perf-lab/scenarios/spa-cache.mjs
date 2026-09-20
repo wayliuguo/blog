@@ -20,8 +20,8 @@ import { title, section, table, ms, bytes } from '../harness/index.mjs'
 
 const RUN = Date.now()
 const PORT = 5192
-const tmp = (tag) => path.join(os.tmpdir(), `perf-lab-${tag}-${RUN}`)
-const settle = (ms) => new Promise((r) => setTimeout(r, ms))
+const tmp = tag => path.join(os.tmpdir(), `perf-lab-${tag}-${RUN}`)
+const settle = ms => new Promise(r => setTimeout(r, ms))
 
 async function visit(srv, url, profileDir) {
     const wait = srv.nextReport(30000)
@@ -44,7 +44,7 @@ async function twoVisits({ tag, server, freshEachTime, query }) {
     return { first, second }
 }
 
-const cached = (report) => report.resources.filter((r) => r.size === 0).length
+const cached = report => report.resources.filter(r => r.size === 0).length
 
 export default async function run() {
     const arms = [

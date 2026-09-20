@@ -10,8 +10,14 @@ const DIR = path.join(__dirname, 'src-assets')
 // ① 造样本
 fs.mkdirSync(path.join(DIR, 'features'), { recursive: true })
 const rect = '<rect width="8" height="8"/>'
-fs.writeFileSync(path.join(DIR, 'small.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8">${rect.repeat(20)}</svg>`)
-fs.writeFileSync(path.join(DIR, 'big.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8">${rect.repeat(400)}</svg>`)
+fs.writeFileSync(
+    path.join(DIR, 'small.svg'),
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8">${rect.repeat(20)}</svg>`
+)
+fs.writeFileSync(
+    path.join(DIR, 'big.svg'),
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8">${rect.repeat(400)}</svg>`
+)
 fs.writeFileSync(
     path.join(DIR, 'index.html'),
     '<!doctype html>\n<html><body><script type="module" src="/main.js"></script></body></html>\n'
@@ -70,24 +76,25 @@ async function run(label, extra = {}, input = 'main.js') {
     return { label, output }
 }
 
-const isInline = (output) =>
-    output.some((o) => o.type === 'chunk' && o.isEntry && o.code.includes('data:image/svg+xml'))
-const hasAsset = (output) => output.some((o) => o.type === 'asset' && o.fileName.endsWith('.svg'))
-const chunks = (output) => output.filter((o) => o.type === 'chunk').length
+const isInline = output => output.some(o => o.type === 'chunk' && o.isEntry && o.code.includes('data:image/svg+xml'))
+const hasAsset = output => output.some(o => o.type === 'asset' && o.fileName.endsWith('.svg'))
+const chunks = output => output.filter(o => o.type === 'chunk').length
 
 ;(async () => {
     // ② 内联阈值：默认 4096 字节
     const a = await run('默认', { assetsInlineLimit: 4096 })
     console.log('---- ① assetsInlineLimit 决定"内联还是发文件" ----')
-    console.log(`  4096（默认）：small.svg(0.6KB) 内联=${isInline(a.output)} · big.svg(10.8KB) 独立文件=${hasAsset(a.output)}`)
+    console.log(
+        `  4096（默认）：small.svg(0.6KB) 内联=${isInline(a.output)} · big.svg(10.8KB) 独立文件=${hasAsset(a.output)}`
+    )
     const b = await run('收紧', { assetsInlineLimit: 512 })
     console.log(`  512（收紧） ：small.svg 内联=${isInline(b.output)} · big.svg 独立文件=${hasAsset(b.output)}`)
 
     // ③ 语法降级
     const t1 = await run('esnext', { target: 'esnext' })
     const t2 = await run('es2015', { target: 'es2015' })
-    const code1 = t1.output.find((o) => o.type === 'chunk' && o.isEntry).code
-    const code2 = t2.output.find((o) => o.type === 'chunk' && o.isEntry).code
+    const code1 = t1.output.find(o => o.type === 'chunk' && o.isEntry).code
+    const code2 = t2.output.find(o => o.type === 'chunk' && o.isEntry).code
     console.log('\n---- ② build.target 决定降级到哪一档语法 ----')
     console.log(`  target=esnext：产物里还有 "??"  = ${code1.includes('??')} · 还有 "?." = ${code1.includes('?.')}`)
     console.log(`  target=es2015：产物里还有 "??"  = ${code2.includes('??')} · 还有 "?." = ${code2.includes('?.')}`)

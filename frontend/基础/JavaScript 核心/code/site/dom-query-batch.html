@@ -73,8 +73,10 @@
 
         <h2>① 强制同步布局（layout thrashing）</h2>
         <p>
-            两段代码做的事完全一样——把每个盒子的宽度 +1px。差别只在读写的顺序：<strong>写一次就读一次</strong>，浏览器为了给出准确的
-            <code>offsetWidth</code> 必须立刻把刚写的样式落地成布局；<strong>先把要读的读完再统一写</strong>，循环里一次布局都不触发。
+            两段代码做的事完全一样——把每个盒子的宽度
+            +1px。差别只在读写的顺序：<strong>写一次就读一次</strong>，浏览器为了给出准确的
+            <code>offsetWidth</code>
+            必须立刻把刚写的样式落地成布局；<strong>先把要读的读完再统一写</strong>，循环里一次布局都不触发。
         </p>
         <button id="run-thrash">跑「读写交替」</button>
         <button id="run-batch">跑「先读后写」</button>
@@ -87,7 +89,10 @@
 
         <h2>③ 活集合与静态集合</h2>
         <p>
-            <code>getElementsByTagName()</code> 返回的是一个<strong>活</strong>集合，DOM 一变它就跟着变；<code>querySelectorAll()</code> 返回的是静态快照。
+            <code>getElementsByTagName()</code> 返回的是一个<strong>活</strong>集合，DOM 一变它就跟着变；<code
+                >querySelectorAll()</code
+            >
+            返回的是静态快照。
         </p>
         <ul id="live-list"></ul>
 

@@ -11,18 +11,18 @@ const traverse = createRequire(import.meta.url)('@babel/traverse').default
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const ENTRY = path.join(ROOT, 'src-ban/index.js')
-const rel = (id) => path.relative(ROOT, id).replace(/\\/g, '/')
+const rel = id => path.relative(ROOT, id).replace(/\\/g, '/')
 
 // 规则就是数据：命中条件 + 提示文案
 const RULES = [
     {
         id: 'no-direct-storage',
-        test: (callee) => callee.object?.name === 'localStorage',
+        test: callee => callee.object?.name === 'localStorage',
         msg: '禁止直连 localStorage：请用统一的 storage 封装（它有容量兜底与隐私模式降级）'
     },
     {
         id: 'no-console',
-        test: (callee) => callee.object?.name === 'console' && callee.property?.name === 'log',
+        test: callee => callee.object?.name === 'console' && callee.property?.name === 'log',
         msg: '生产构建不允许 console.log：请用 logger（线上可关）'
     }
 ]
@@ -52,7 +52,7 @@ function banApi({ rules = RULES, fail = false, sink = [] } = {}) {
             })
 
             // 先记账再报错：this.error 会直接抛出，写在它后面的代码不会执行
-            sink.push(...hits.map((h) => ({ ...h, file: rel(id) })))
+            sink.push(...hits.map(h => ({ ...h, file: rel(id) })))
             for (const h of hits) {
                 const at = `${rel(id)}:${h.line}:${h.column}`
                 // this.warn 只提示、this.error 直接中断：同一个插件换个开关就是"报告"或"门禁"
@@ -72,7 +72,7 @@ async function build(label, fail) {
         const bundle = await rollup({
             input: ENTRY,
             plugins: [banApi({ fail, sink: hits })],
-            onwarn: (w) => warnings.push(w.message)
+            onwarn: w => warnings.push(w.message)
         })
         await bundle.generate({ format: 'es' })
         await bundle.close()

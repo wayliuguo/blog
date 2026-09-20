@@ -18,11 +18,11 @@ function nodeName(node) {
     return node.text !== null ? `"${node.text}"` : `<${node.type}>`
 }
 
-host.createInstance = (type) => {
+host.createInstance = type => {
     poke(`create <${type}>`)
     return raw.createInstance(type)
 }
-host.createTextInstance = (text) => {
+host.createTextInstance = text => {
     poke(`createText "${text}"`)
     return raw.createTextInstance(text)
 }

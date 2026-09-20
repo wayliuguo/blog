@@ -11,7 +11,7 @@
 
 const { isObject } = require('../shared/index')
 
-const isOn = (key) => /^on[A-Z]/.test(key)
+const isOn = key => /^on[A-Z]/.test(key)
 
 // 应该写成 property 而不是 attribute 的几个
 const SHOULD_USE_PROPERTY = /^(value|checked|selected|disabled|muted)$/

@@ -101,7 +101,8 @@ async function main() {
     /* ------------------------------------------------ ② ResizeObserver */
     const box = observeResize()
     await sleep(100)
-    const sizeOf = () => Math.round(box.getBoundingClientRect().width) + '×' + Math.round(box.getBoundingClientRect().height)
+    const sizeOf = () =>
+        Math.round(box.getBoundingClientRect().width) + '×' + Math.round(box.getBoundingClientRect().height)
     log('② #resize-box 初始：' + sizeOf())
     box.style.width = '320px'
     await sleep(100)

@@ -7,8 +7,8 @@ const { createLoader } = require('./loader.cjs')
 console.log('场景一 · shared 版本协商（成功）')
 const scope = { react: ['17.0.2', '18.2.0'] }
 const consumers = [
-  { app: 'appA', deps: { react: '^18.0.0' } },
-  { app: 'appB', deps: { react: '^18.2.0' } },
+    { app: 'appA', deps: { react: '^18.0.0' } },
+    { app: 'appB', deps: { react: '^18.2.0' } }
 ]
 const r1 = negotiate(scope, null, consumers)
 console.log('react     :', JSON.stringify(r1.react))
@@ -19,8 +19,8 @@ console.log('  ✓ 两个消费方共用 18.2.0 一份\n')
 // ── 场景二：协商失败 —— 大版本 incompatible，退回各带各的 ─────────
 console.log('场景二 · shared 版本协商（失败 fallback）')
 const consumers2 = [
-  { app: 'legacy', deps: { react: '^17.0.0' } },
-  { app: 'modern', deps: { react: '^18.0.0' } },
+    { app: 'legacy', deps: { react: '^17.0.0' } },
+    { app: 'modern', deps: { react: '^18.0.0' } }
 ]
 const r2 = negotiate(scope, null, consumers2)
 console.log('react     :', JSON.stringify(r2.react))
@@ -42,7 +42,7 @@ const appB = loader.loadManifest('appB')
 loader.loadModule(appB.exposes['./Card'])
 const s = loader.stats()
 console.log('统计      :', JSON.stringify(s))
-assert.equal(s.cached, 2)     // appA-button + appB-card 各缓存一份
+assert.equal(s.cached, 2) // appA-button + appB-card 各缓存一份
 assert.equal(s.fetchCount, 4) // 2 次 manifest + 2 次模块首次加载
 console.log('  ✓ 同 url 只拉一次，缓存命中后 0 网络开销\n')
 

@@ -15,12 +15,12 @@ export function createPool(limit) {
             Promise.resolve()
                 .then(task)
                 .then(
-                    (value) => {
+                    value => {
                         active--
                         resolve(value)
                         pump()
                     },
-                    (err) => {
+                    err => {
                         active--
                         reject(err)
                         pump()
@@ -38,7 +38,7 @@ export function createPool(limit) {
             })
         },
         runAll(tasks) {
-            return Promise.all(tasks.map((t) => this.run(t)))
+            return Promise.all(tasks.map(t => this.run(t)))
         },
         get peak() {
             return peak
@@ -52,7 +52,7 @@ export function createPool(limit) {
 /** 简易信号量，用来在同一时刻只放行一个"写"操作 */
 export function createLock() {
     let tail = Promise.resolve()
-    return (task) => {
+    return task => {
         const result = tail.then(task, task)
         tail = result.catch(() => {})
         return result

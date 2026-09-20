@@ -70,7 +70,7 @@ npm run cache</code></pre>
                 ['HTML 文档', '/api/cache/html']
             ]
 
-            const size = (text) => (text.length < 1024 ? text.length + ' B' : (text.length / 1024).toFixed(1) + ' KB')
+            const size = text => (text.length < 1024 ? text.length + ' B' : (text.length / 1024).toFixed(1) + ' KB')
 
             async function twice(path) {
                 const first = await fetch(path)

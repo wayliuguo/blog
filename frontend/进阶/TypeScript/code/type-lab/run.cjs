@@ -19,9 +19,9 @@ const errorsMode = process.argv.includes('--errors')
 const dir = __dirname
 const fileNames = fs
     .readdirSync(dir)
-    .filter((f) => /^\d\d-.*\.ts$/.test(f))
+    .filter(f => /^\d\d-.*\.ts$/.test(f))
     .sort()
-    .map((f) => path.join(dir, f))
+    .map(f => path.join(dir, f))
 
 const options = {
     target: ts.ScriptTarget.ES2020,
@@ -41,7 +41,7 @@ host.getSourceFile = (fileName, langVersion, onError, shouldCreate) => {
         const patched = fs
             .readFileSync(fileName, 'utf8')
             .split('\n')
-            .map((line) => line.replace(/^(\s*)\/\/ERR /, '$1'))
+            .map(line => line.replace(/^(\s*)\/\/ERR /, '$1'))
             .join('\n')
         return ts.createSourceFile(fileName, patched, langVersion, true)
     }
@@ -61,7 +61,9 @@ function format(diagnostic) {
 const program = ts.createProgram(fileNames, options, host)
 const all = ts.getPreEmitDiagnostics(program)
 
-console.log(`typescript ${version} · ${fileNames.length} 个示例 · ${errorsMode ? 'errors 模式（已解封 //ERR 行）' : '默认模式'}`)
+console.log(
+    `typescript ${version} · ${fileNames.length} 个示例 · ${errorsMode ? 'errors 模式（已解封 //ERR 行）' : '默认模式'}`
+)
 
 const byFile = new Map()
 for (const d of all) {

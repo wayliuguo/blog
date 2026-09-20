@@ -30,11 +30,18 @@ export default async function run() {
 
     console.log(section('两次位移分别是什么'))
     for (const { name, report } of rows) {
-        console.log(`[${name}] ` + (report.extra.shifts.length ? report.extra.shifts.map((s) => `+${s.value} @${s.at}ms`).join('  ') : '没有位移'))
+        console.log(
+            `[${name}] ` +
+                (report.extra.shifts.length
+                    ? report.extra.shifts.map(s => `+${s.value} @${s.at}ms`).join('  ')
+                    : '没有位移')
+        )
     }
 
     console.log(section('两个版本差在哪'))
-    console.log('- 无预留：<img> 不给 width/height（按 0 高排，图回来后下移 240px）；240px 高的横幅 500ms 后直接插到 body 最前面，整页内容再被顶下去一次')
+    console.log(
+        '- 无预留：<img> 不给 width/height（按 0 高排，图回来后下移 240px）；240px 高的横幅 500ms 后直接插到 body 最前面，整页内容再被顶下去一次'
+    )
     console.log('- 有预留：<img> 写死 width="640" height="240"；横幅插进 min-height:240px 的占位容器里，插入不产生位移')
     console.log('\n注：规范口径的 CLS 会剔掉 hadRecentInput 为 true 的位移，无头环境里没有真实输入却是 true，')
     console.log('    所以这里读「位移合计」（所有位移之和）。真实用户环境两者一致。')

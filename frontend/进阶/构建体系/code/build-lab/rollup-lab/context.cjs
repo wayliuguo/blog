@@ -5,7 +5,7 @@ const path = require('node:path')
 const { rollup } = require('rollup')
 
 const ROOT = __dirname
-const short = (id) => path.relative(ROOT, id).replace(/\\/g, '/')
+const short = id => path.relative(ROOT, id).replace(/\\/g, '/')
 
 function depGraphPlugin({ failOnCycle = false } = {}) {
     return {
@@ -34,7 +34,7 @@ function depGraphPlugin({ failOnCycle = false } = {}) {
             const cycles = []
             const state = new Map()
             const stack = []
-            const dfs = (id) => {
+            const dfs = id => {
                 state.set(id, 1)
                 stack.push(id)
                 for (const dep of this.getModuleInfo(id).importedIds) {
@@ -79,7 +79,7 @@ async function build(label, options) {
             }
         })
         const { output } = await bundle.generate({ format: 'es' })
-        const asset = output.find((o) => o.type === 'asset' && o.fileName === 'module-graph.json')
+        const asset = output.find(o => o.type === 'asset' && o.fileName === 'module-graph.json')
         console.log('  构建通过；emitFile 产出的 module-graph.json：', asset ? asset.source.length + ' 字节' : '（无）')
         console.log('  警告条数：', warnings.length)
         await bundle.close()

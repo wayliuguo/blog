@@ -84,15 +84,9 @@ export default async function run() {
     console.log(
         table(
             ['scrollTop', '可见区间', '渲染条数', '内容容器高度', '列表位移 translateY'],
-            positions.map((top) => {
+            positions.map(top => {
                 const r = rangeOf(top, { total: TOTAL, rowH: ROW_H, viewport: VIEWPORT })
-                return [
-                    `${top} px`,
-                    `${r.start} ~ ${r.end - 1}`,
-                    r.count,
-                    `${TOTAL * ROW_H} px`,
-                    `${r.offset} px`
-                ]
+                return [`${top} px`, `${r.start} ~ ${r.end - 1}`, r.count, `${TOTAL * ROW_H} px`, `${r.offset} px`]
             })
         )
     )
@@ -119,13 +113,19 @@ export default async function run() {
     console.log(
         table(
             ['overscan', '渲染条数', '多渲染', '作用'],
-            [0, 5, 10, 20].map((o) => {
+            [0, 5, 10, 20].map(o => {
                 const r = rangeOf(44000, { total: TOTAL, rowH: ROW_H, viewport: VIEWPORT, overscan: o })
-                return                 [
+                return [
                     o,
                     r.count,
                     `+${r.count - r0.count}`,
-                    o === 0 ? '刚好一屏，快速滚动时容易看到空白' : o === 5 ? '上下各预渲染 5 条，覆盖惯性滚动' : o === 10 ? '覆盖更快的滚动速度' : 'DOM 偏多，收益递减'
+                    o === 0
+                        ? '刚好一屏，快速滚动时容易看到空白'
+                        : o === 5
+                        ? '上下各预渲染 5 条，覆盖惯性滚动'
+                        : o === 10
+                        ? '覆盖更快的滚动速度'
+                        : 'DOM 偏多，收益递减'
                 ]
             })
         )

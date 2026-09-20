@@ -12,10 +12,10 @@ function medianDeep(list) {
     if (Array.isArray(first)) return list[list.length - 1]
     if (first && typeof first === 'object') {
         const out = {}
-        for (const key of Object.keys(first)) out[key] = medianDeep(list.map((item) => item[key]))
+        for (const key of Object.keys(first)) out[key] = medianDeep(list.map(item => item[key]))
         return out
     }
-    if (typeof first === 'number') return median(list.map((item) => Number(item) || 0))
+    if (typeof first === 'number') return median(list.map(item => Number(item) || 0))
     return first
 }
 

@@ -10,7 +10,7 @@ export async function startServer(options = {}) {
     const received = []
     const handler = createHandler({
         ...options,
-        onReport: (payload) => {
+        onReport: payload => {
             received.push(payload)
             for (const waiter of pending) waiter(payload)
             pending.clear()
@@ -19,7 +19,7 @@ export async function startServer(options = {}) {
     await handler.warm() // SSG 的「构建时渲染」在接客之前完成
 
     const server = http.createServer(handler.handle)
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
 
     return {
         origin: `http://127.0.0.1:${server.address().port}`,
@@ -32,13 +32,13 @@ export async function startServer(options = {}) {
                     pending.delete(settle)
                     reject(new Error(`等页面上报超时（${timeout}ms）`))
                 }, timeout)
-                const settle = (payload) => {
+                const settle = payload => {
                     clearTimeout(timer)
                     resolve(payload)
                 }
                 pending.add(settle)
             })
         },
-        close: () => new Promise((resolve) => server.close(resolve))
+        close: () => new Promise(resolve => server.close(resolve))
     }
 }

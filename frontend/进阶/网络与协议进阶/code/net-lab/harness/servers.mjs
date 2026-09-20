@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url)
 const { handle } = require('../lib/endpoints.cjs')
 
 function listen(server) {
-    return new Promise((resolve) => server.listen(0, () => resolve(server.address().port)))
+    return new Promise(resolve => server.listen(0, () => resolve(server.address().port)))
 }
 
 /** HTTP/1.1 服务器 */
@@ -33,9 +33,9 @@ export async function startHttp2() {
 export function slowRequests(base, n, ms, agent) {
     return Array.from({ length: n }, (_, i) => {
         const url = new URL(`/api/slow?ms=${ms}`, base)
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             const started = process.hrtime.bigint()
-            const req = http.get(url, { agent }, (res) => {
+            const req = http.get(url, { agent }, res => {
                 res.resume()
                 res.on('end', () => resolve(Number(process.hrtime.bigint() - started) / 1e6))
             })

@@ -29,7 +29,13 @@ async function build(label, plugins) {
         const { output } = await bundle.generate({ format: 'es' })
         const code = output[0].code
         console.log('  构建通过；产物：')
-        console.log(code.split('\n').filter(Boolean).map((l) => '    ' + l).join('\n'))
+        console.log(
+            code
+                .split('\n')
+                .filter(Boolean)
+                .map(l => '    ' + l)
+                .join('\n')
+        )
         console.log('  含 module.exports：', code.includes('module.exports'))
         await bundle.close()
     } catch (err) {

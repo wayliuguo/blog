@@ -14,7 +14,7 @@ export function Recommend({ items }) {
         h(
             'ul',
             null,
-            items.map((item) => h('li', { class: 'rec-item' }, item.name))
+            items.map(item => h('li', { class: 'rec-item' }, item.name))
         )
     )
 }

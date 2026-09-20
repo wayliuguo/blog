@@ -40,7 +40,14 @@ async function probe(base, item) {
     })
     const secondBody = second.status === 304 ? '' : await second.text()
 
-    return { ...item, headers, firstBytes: body.length, secondStatus: second.status, secondBytes: secondBody.length, rfc: decide(first.headers, 30) }
+    return {
+        ...item,
+        headers,
+        firstBytes: body.length,
+        secondStatus: second.status,
+        secondBytes: secondBody.length,
+        rfc: decide(first.headers, 30)
+    }
 }
 
 export default async function run() {
@@ -55,7 +62,7 @@ export default async function run() {
         console.log(
             table(
                 ['资源', 'Cache-Control', '首次状态/字节', '二次状态/字节', '二次是否传正文'],
-                rows.map((r) => [
+                rows.map(r => [
                     r.name,
                     r.headers.cacheControl,
                     `200 / ${bytes(r.firstBytes)}`,
@@ -72,7 +79,7 @@ export default async function run() {
         console.log(
             table(
                 ['资源', '按 RFC 9111 判定的客户端行为'],
-                rows.map((r) => [r.name, r.rfc])
+                rows.map(r => [r.name, r.rfc])
             )
         )
         console.log('- 强缓存命中时请求根本不出浏览器，`Age: 30` 那一步的值是从上次响应算起的')
@@ -84,7 +91,9 @@ export default async function run() {
             headers: { 'If-None-Match': '"0000000000000000"' }
         })
         console.log(section('校验字段对不上时'))
-        console.log(`带一个过期的 ETag 再请求：服务端状态码 ${changed.status}，正文 ${bytes((await changed.text()).length)}`)
+        console.log(
+            `带一个过期的 ETag 再请求：服务端状态码 ${changed.status}，正文 ${bytes((await changed.text()).length)}`
+        )
         console.log('→ 也就是说，协商缓存的收益完全取决于 ETag / Last-Modified 是否稳定；内容一变就得整份重传')
 
         // stale-while-revalidate 的三个区间
@@ -92,7 +101,11 @@ export default async function run() {
         for (const age of [30, 300, 1200]) {
             const res = await fetch(`${base}/api/cache/swr/feed.json?age=${age}`)
             await res.text()
-            swrRows.push([`Age=${age}s`, age < 60 ? '新鲜' : age - 60 < 600 ? '过期但在 swr 窗口内' : '过期且超出 swr 窗口', decide(res.headers, age)])
+            swrRows.push([
+                `Age=${age}s`,
+                age < 60 ? '新鲜' : age - 60 < 600 ? '过期但在 swr 窗口内' : '过期且超出 swr 窗口',
+                decide(res.headers, age)
+            ])
         }
         console.log(title('stale-while-revalidate：max-age=60, stale-while-revalidate=600 的三种年龄'))
         console.log(table(['响应的 Age', '状态', '客户端行为'], swrRows))

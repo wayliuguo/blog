@@ -34,7 +34,7 @@ if (tool === 'esbuild') {
 } else if (tool === 'rollup') {
     const { rollup } = require('rollup')
     rollup({ input: entry })
-        .then((b) => b.write({ file: outFile, format: 'esm' }))
+        .then(b => b.write({ file: outFile, format: 'esm' }))
         .then(done)
 } else if (tool === 'webpack' || tool === 'webpack-min') {
     const webpack = require('webpack')
@@ -46,7 +46,7 @@ if (tool === 'esbuild') {
             optimization: { minimize: tool === 'webpack-min' },
             performance: { hints: false }
         },
-        (err) => {
+        err => {
             if (err) throw err
             done()
         }

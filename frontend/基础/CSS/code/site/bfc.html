@@ -53,16 +53,15 @@
 
         <h3>② 父触发 BFC（overflow:hidden）→ margin 被包在盒内</h3>
         <div class="note">
-            黄盒高度变成 100px（60 + 20 + 20），子元素的 20px 外边距在黄盒内部四周都能看到，
-            不再溢出。
+            黄盒高度变成 100px（60 + 20 + 20），子元素的 20px 外边距在黄盒内部四周都能看到， 不再溢出。
         </div>
         <div class="box bfc"><div class="child">父有 BFC → 子的 20px margin 被父元素包住</div></div>
 
         <p>
             结论：触发 BFC（如
             <code>overflow:hidden</code
-            >、<code>overflow:auto</code>、<code>display:flow-root</code>）让父形成独立渲染上下文，父子
-            margin 不再合并、子元素的外边距不会「顶出」父元素。
+            >、<code>overflow:auto</code>、<code>display:flow-root</code>）让父形成独立渲染上下文，父子 margin
+            不再合并、子元素的外边距不会「顶出」父元素。
         </p>
     </body>
 </html>

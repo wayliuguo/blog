@@ -11,7 +11,7 @@ export function LikeButton({ likes }) {
         {
             class: 'like',
             type: 'button',
-            onClick: (event) => {
+            onClick: event => {
                 count += 1
                 event.currentTarget.textContent = `👍 已赞 ${count}`
             }

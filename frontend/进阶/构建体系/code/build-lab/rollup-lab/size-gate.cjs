@@ -32,12 +32,16 @@ function bundleGuard({ limitKb = Infinity, manifest = 'bundle-manifest.json' } =
 
             console.log('    ---- 产物清单 ----')
             for (const r of rows) {
-                console.log(`      ${r.fileName.padEnd(24)} ${r.type.padEnd(6)} raw ${String(r.raw).padStart(6)}B  gzip ${String(r.gzip).padStart(6)}B`)
+                console.log(
+                    `      ${r.fileName.padEnd(24)} ${r.type.padEnd(6)} raw ${String(r.raw).padStart(
+                        6
+                    )}B  gzip ${String(r.gzip).padStart(6)}B`
+                )
             }
 
-            const over = rows.filter((r) => r.gzip > limitKb * 1024)
+            const over = rows.filter(r => r.gzip > limitKb * 1024)
             if (over.length) {
-                this.error(`产物超预算：${over.map((r) => `${r.fileName} gzip ${r.gzip}B > ${limitKb}KB`).join('；')}`)
+                this.error(`产物超预算：${over.map(r => `${r.fileName} gzip ${r.gzip}B > ${limitKb}KB`).join('；')}`)
             }
             console.log(`      合计 gzip ${rows.reduce((s, r) => s + r.gzip, 0)}B，预算 ${limitKb}KB —— 通过`)
         }
@@ -52,7 +56,7 @@ async function build(label, limitKb) {
             plugins: [bundleGuard({ limitKb })]
         })
         const { output } = await bundle.generate({ format: 'es' })
-        const manifest = output.find((o) => o.fileName === 'bundle-manifest.json')
+        const manifest = output.find(o => o.fileName === 'bundle-manifest.json')
         console.log('    清单落盘：', manifest ? manifest.fileName + ' ' + manifest.source.length + ' 字节' : '（无）')
         await bundle.close()
     } catch (err) {

@@ -59,5 +59,10 @@ function buildInfoPlugin(options = {}) {
     })
     const { output } = await bundle.generate({ format: 'es' })
     console.log('\n---- 产物里虚拟模块被内联了 ----')
-    console.log(output[0].code.split('\n').filter((l) => l.includes('BUILD_INFO') || l.includes('builtAt')).join('\n'))
+    console.log(
+        output[0].code
+            .split('\n')
+            .filter(l => l.includes('BUILD_INFO') || l.includes('builtAt'))
+            .join('\n')
+    )
 })()

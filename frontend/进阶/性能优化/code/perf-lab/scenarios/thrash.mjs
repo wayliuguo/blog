@@ -18,7 +18,7 @@ export default async function run() {
                 name,
                 ms(report.extra.loopMs),
                 report.extra.layouts,
-                i === 0 ? '1.00×' : num((rows[0].report.extra.loopMs / report.extra.loopMs) || 1, 2) + '×'
+                i === 0 ? '1.00×' : num(rows[0].report.extra.loopMs / report.extra.loopMs || 1, 2) + '×'
             ])
         )
     )
@@ -31,6 +31,10 @@ export default async function run() {
 
     const [a, b] = rows
     if (a && b && b.report.extra.loopMs > 0) {
-        console.log(`\n结论：同样 2000 次改动，交错版慢 ${num(a.report.extra.loopMs / b.report.extra.loopMs, 1)} 倍，多出 ${a.report.extra.layouts - b.report.extra.layouts} 次强制布局。`)
+        console.log(
+            `\n结论：同样 2000 次改动，交错版慢 ${num(a.report.extra.loopMs / b.report.extra.loopMs, 1)} 倍，多出 ${
+                a.report.extra.layouts - b.report.extra.layouts
+            } 次强制布局。`
+        )
     }
 }

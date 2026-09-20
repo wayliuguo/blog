@@ -40,7 +40,8 @@ export function hydrate(vnode, dom, stats) {
     if (typeof type === 'function') return hydrate(resolve(vnode), dom, stats)
 
     // 标签名不一样：这一段没有可复用的可能，整棵重建
-    if (!dom || dom.nodeType !== 1 || dom.tagName.toLowerCase() !== type) return replace(dom, createNode(vnode, stats), stats)
+    if (!dom || dom.nodeType !== 1 || dom.tagName.toLowerCase() !== type)
+        return replace(dom, createNode(vnode, stats), stats)
     stats.reused++
 
     applyProps(dom, props, stats)

@@ -65,7 +65,7 @@ async function main() {
         }
     })
     const out = Array.isArray(res) ? res[0].output : res.output
-    const vcode = out.find((o) => o.type === 'chunk').code
+    const vcode = out.find(o => o.type === 'chunk').code
     console.log('  含 BUILD_INFO:', vcode.includes('BUILD_INFO'), '|', snippetOf(vcode, 'builtAt'))
 
     console.log('\n---- 3. 同一份实现 → webpack ----')
@@ -97,7 +97,7 @@ async function main() {
     console.log('代价：只能用它抽象的那一层，deep 定制（webpack 内部工厂钩子、Vite 的 configureServer）仍要写原生插件')
 }
 
-main().catch((e) => {
+main().catch(e => {
     console.error(e.message || e)
     process.exit(1)
 })

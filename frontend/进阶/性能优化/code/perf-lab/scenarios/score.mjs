@@ -26,7 +26,7 @@ function rateCls(value) {
     return '差'
 }
 
-const mark = (r) => (r === '良好' ? '✓ 良好' : r === '待改进' ? '! 待改进' : r === '—' ? '—' : '✗ 差')
+const mark = r => (r === '良好' ? '✓ 良好' : r === '待改进' ? '! 待改进' : r === '—' ? '—' : '✗ 差')
 
 export default async function run() {
     const rows = await sweep('/metrics.html', [
@@ -43,8 +43,8 @@ export default async function run() {
             rows.map(({ name, report }) => {
                 const m = report.metrics
                 const rs = [rate('ttfb', m.ttfb), rate('fcp', m.fcp), rate('lcp', m.lcp), rateCls(m.clsRaw)]
-                const bad = rs.filter((r) => r === '差').length
-                const warn = rs.filter((r) => r === '待改进').length
+                const bad = rs.filter(r => r === '差').length
+                const warn = rs.filter(r => r === '待改进').length
                 const overall = bad ? '差' : warn ? '待改进' : '良好'
                 return [
                     name,

@@ -55,7 +55,7 @@ type _t11 = Expect<Equal<MyAwaited<Promise<Promise<number>>>, number>>
 
 // 题 12：提取 class 的实例类型（对应内置 InstanceType）
 declare class Foo {
-  value: number
+    value: number
 }
 type MyInstanceType<T> = TODO
 type _t12 = Expect<Equal<MyInstanceType<typeof Foo>, Foo>>
@@ -190,10 +190,10 @@ type _t41 = Expect<Equal<ApiResponse<number>, { code: number; data: number; msg:
 // 题 42：带加载态的异步数据（联合 + 判别）
 type LoadingState<T> = TODO
 type _t42 = Expect<
-  Equal<
-    LoadingState<number>,
-    { status: 'loading' } | { status: 'success'; data: number } | { status: 'error'; error: string }
-  >
+    Equal<
+        LoadingState<number>,
+        { status: 'loading' } | { status: 'success'; data: number } | { status: 'error'; error: string }
+    >
 >
 
 // 题 43：表单错误信息结构（每个字段一个可选错误串）

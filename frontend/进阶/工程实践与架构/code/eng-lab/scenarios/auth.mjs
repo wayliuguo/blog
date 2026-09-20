@@ -85,7 +85,7 @@ const SAMPLE = { id: 'A20260919', amount: 12800, phone: '13812345678', cost: 860
 /** 单个权限码是否被授予集合覆盖：支持 * 与 resource:* 两种通配 */
 export function can(granted, needed) {
     if (!needed) return true
-    return granted.some((g) => {
+    return granted.some(g => {
         if (g === '*') return true
         if (g.endsWith(':*')) return needed.startsWith(g.slice(0, -1))
         return g === needed
@@ -118,7 +118,7 @@ const leafPaths = (nodes, out = []) => {
 
 function renderTree(nodes, depth = 0) {
     return nodes
-        .map((n) => {
+        .map(n => {
             const line = '  '.repeat(depth) + (depth ? '└─ ' : '') + n.title + '  ' + n.path
             return n.children ? line + '\n' + renderTree(n.children, depth + 1) : line
         })
@@ -132,7 +132,7 @@ export default async function run() {
     console.log(
         table(
             ['角色', '持有权限码', '码数量'],
-            roles.map((r) => [r, GRANTS[r].join(', '), GRANTS[r].length])
+            roles.map(r => [r, GRANTS[r].join(', '), GRANTS[r].length])
         )
     )
 
@@ -167,13 +167,11 @@ export default async function run() {
     const operatorPaths = leafPaths(operatorTree)
     console.log('\n实测到的三点：')
     console.log(
-        `- operator 的「数据」组从 ${MENU.find((n) => n.title === '数据').children.length} 个子项掉到 ` +
-            `${operatorTree.find((n) => n.title === '数据').children.length} 个：有 report:read 的「经营报表」留下，` +
+        `- operator 的「数据」组从 ${MENU.find(n => n.title === '数据').children.length} 个子项掉到 ` +
+            `${operatorTree.find(n => n.title === '数据').children.length} 个：有 report:read 的「经营报表」留下，` +
             '需要 report:cost 的「成本分析」被剪掉，父节点因为还有可见子项而保留'
     )
-    console.log(
-        '- viewer 的「系统」「营销」两组整枝消失：父节点权限不足时直接剪掉，不在子项上再逐个判断'
-    )
+    console.log('- viewer 的「系统」「营销」两组整枝消失：父节点权限不足时直接剪掉，不在子项上再逐个判断')
     console.log(`- operator 可见路径：${operatorPaths.join('、')}`)
 
     console.log(section('按钮级判定：路由不可见时按钮必须一并不可见'))
@@ -186,7 +184,7 @@ export default async function run() {
                 route,
                 label,
                 code,
-                ...roles.map((role) => {
+                ...roles.map(role => {
                     if (!visible[role].has(route)) return '路由不可见'
                     return can(GRANTS[role], code) ? '显示' : '隐藏'
                 })
@@ -201,10 +199,10 @@ export default async function run() {
     console.log(
         table(
             ['字段', '要求权限', ...roles],
-            FIELDS.map((f) => [
+            FIELDS.map(f => [
                 f.label,
                 f.perm || '—',
-                ...roles.map((role) => {
+                ...roles.map(role => {
                     if (!can(GRANTS[role], f.perm)) return '不下发'
                     const raw = String(SAMPLE[f.key])
                     if (f.mask === 'phone') return raw.replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2')

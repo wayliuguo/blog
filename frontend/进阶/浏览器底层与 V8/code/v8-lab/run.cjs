@@ -3,13 +3,13 @@ const { spawnSync } = require('node:child_process')
 const exe = process.execPath
 
 function step(label, flags, file) {
-  console.log(`\n── ${label} ──`)
-  const r = spawnSync(exe, [...flags, file], { encoding: 'utf8' })
-  process.stdout.write(r.stdout || '')
-  if (r.status !== 0) {
-    console.error(r.stderr)
-    process.exit(1)
-  }
+    console.log(`\n── ${label} ──`)
+    const r = spawnSync(exe, [...flags, file], { encoding: 'utf8' })
+    process.stdout.write(r.stdout || '')
+    if (r.status !== 0) {
+        console.error(r.stderr)
+        process.exit(1)
+    }
 }
 
 step('探针一 · 分层编译 / 反优化 / 隐藏类（--allow-natives-syntax）', ['--allow-natives-syntax'], 'opt.cjs')

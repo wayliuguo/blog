@@ -12,10 +12,8 @@ function createElement(type, config, ...children) {
     const { key = null, ...props } = config || {}
     props.children = children
         .flat(Infinity) // <ul>{items.map(...)}</ul> 会传进来数组，先拍平
-        .filter((child) => child !== null && child !== undefined && child !== false)
-        .map((child) =>
-            typeof child === 'object' ? child : createTextElement(String(child))
-        )
+        .filter(child => child !== null && child !== undefined && child !== false)
+        .map(child => (typeof child === 'object' ? child : createTextElement(String(child))))
     return { type, key, props }
 }
 

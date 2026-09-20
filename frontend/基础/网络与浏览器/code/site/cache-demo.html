@@ -99,9 +99,17 @@
                 var msg = document.querySelector(msgSel)
                 box.innerHTML = ''
                 var before = await readHits()
-                out(boxSel, '① 读取服务端计数（前）: maxage=' +
-                    before.maxage + ' nocache=' + before.nocache +
-                    ' etag=' + before.etag + ' lastmod=' + before.lastmod)
+                out(
+                    boxSel,
+                    '① 读取服务端计数（前）: maxage=' +
+                        before.maxage +
+                        ' nocache=' +
+                        before.nocache +
+                        ' etag=' +
+                        before.etag +
+                        ' lastmod=' +
+                        before.lastmod
+                )
 
                 var t0 = performance.now()
                 var resp = await fetch('/api/resource?mode=' + mode)
@@ -109,19 +117,47 @@
                 var status = resp.status
                 var body = null
                 var d1 = null
-                try { body = await resp.clone().json() } catch (e) {}
+                try {
+                    body = await resp.clone().json()
+                } catch (e) {}
                 if (status === 304) {
-                    out(boxSel, '② 请求 /api/resource?mode=' + mode + ' → HTTP ' + status +
-                        ' （304 Not Modified：服务端确认资源没变，复用本地缓存）', 'warn')
+                    out(
+                        boxSel,
+                        '② 请求 /api/resource?mode=' +
+                            mode +
+                            ' → HTTP ' +
+                            status +
+                            ' （304 Not Modified：服务端确认资源没变，复用本地缓存）',
+                        'warn'
+                    )
                 } else {
-                    out(boxSel, '② 请求 /api/resource?mode=' + mode + ' → HTTP ' + status +
-                        '，times=' + (body ? body.times : '?') + '，耗时 ' + ms + 'ms', 'ok')
+                    out(
+                        boxSel,
+                        '② 请求 /api/resource?mode=' +
+                            mode +
+                            ' → HTTP ' +
+                            status +
+                            '，times=' +
+                            (body ? body.times : '?') +
+                            '，耗时 ' +
+                            ms +
+                            'ms',
+                        'ok'
+                    )
                 }
 
                 var after = await readHits()
-                out(boxSel, '③ 读取服务端计数（后）: maxage=' +
-                    after.maxage + ' nocache=' + after.nocache +
-                    ' etag=' + after.etag + ' lastmod=' + after.lastmod)
+                out(
+                    boxSel,
+                    '③ 读取服务端计数（后）: maxage=' +
+                        after.maxage +
+                        ' nocache=' +
+                        after.nocache +
+                        ' etag=' +
+                        after.etag +
+                        ' lastmod=' +
+                        after.lastmod
+                )
 
                 var key = { maxage: 'maxage', nocache: 'nocache', etag: 'etag', lastmod: 'lastmod' }[mode]
                 var inc = (after[key] || 0) - (before[key] || 0)
@@ -129,22 +165,29 @@
                 if (mode === 'maxage') {
                     var maxageInc = after.maxage - before.maxage
                     if (maxageInc === 0 && hitsMap.maxage > 0) {
-                        msg.textContent = '✅ 强缓存命中：这次点击服务端计数没增加，说明浏览器直接用了本地副本，没发请求。'
+                        msg.textContent =
+                            '✅ 强缓存命中：这次点击服务端计数没增加，说明浏览器直接用了本地副本，没发请求。'
                         msg.className = 'summary ' + (after.maxage > 0 ? 'ok' : 'warn')
                     } else {
-                        msg.textContent = '⚠️ 尚在观察：服务端已收到 ' + after.maxage +
+                        msg.textContent =
+                            '⚠️ 尚在观察：服务端已收到 ' +
+                            after.maxage +
                             ' 次请求。再次点击若计数不再增加，即为强缓存命中。'
                         msg.className = 'summary warn'
                     }
                 } else if (mode === 'nocache') {
-                    msg.textContent = inc > 0
-                        ? '✅ no-cache：每次都真正发请求去服务器协商（计数增加），等它确认后由本地缓存决定是否复用。'
-                        : 'ℹ️ 计数未变？可再次点击以确认每次都发请求。'
+                    msg.textContent =
+                        inc > 0
+                            ? '✅ no-cache：每次都真正发请求去服务器协商（计数增加），等它确认后由本地缓存决定是否复用。'
+                            : 'ℹ️ 计数未变？可再次点击以确认每次都发请求。'
                     msg.className = 'summary ' + (inc > 0 ? 'ok' : 'warn')
                 } else if (mode === 'etag' || mode === 'lastmod') {
-                    msg.textContent = status === 304
-                        ? '✅ ' + label + ' 命中 304：服务端返回 Not Modified，浏览器复用本地缓存（计数仍增加=请求确实发出去了）。'
-                        : '🕐 第一次拿到 200。请再次点击，观察第二次是否变 304。'
+                    msg.textContent =
+                        status === 304
+                            ? '✅ ' +
+                              label +
+                              ' 命中 304：服务端返回 Not Modified，浏览器复用本地缓存（计数仍增加=请求确实发出去了）。'
+                            : '🕐 第一次拿到 200。请再次点击，观察第二次是否变 304。'
                     msg.className = 'summary ' + (status === 304 ? 'ok' : 'warn')
                 }
                 msg.textContent += '  [服务端该 mode 累计=' + hitsMap[key] + ']'

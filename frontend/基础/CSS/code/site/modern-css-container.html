@@ -43,7 +43,9 @@
     </head>
     <body>
         <h1>@container：让组件按「自己被放多宽」变形</h1>
-        <p>下面是<strong>同一个组件</strong>（<code>.card</code>）被塞进两个宽度不同的容器。页面视口全程没变——这正是媒体查询做不到的地方。</p>
+        <p>
+            下面是<strong>同一个组件</strong>（<code>.card</code>）被塞进两个宽度不同的容器。页面视口全程没变——这正是媒体查询做不到的地方。
+        </p>
 
         <h2>① 280px 的容器：卡片竖排</h2>
         <div class="panel panel--narrow" id="panel-narrow">
@@ -88,13 +90,20 @@
             const lines = []
 
             const report = (label, panelSel, cardSel, mqSel) => {
-                lines.push(label + '容器宽度 = ' + widthOf(panelSel) + 'px  |  .card display = ' + cs(cardSel, 'display'))
+                lines.push(
+                    label + '容器宽度 = ' + widthOf(panelSel) + 'px  |  .card display = ' + cs(cardSel, 'display')
+                )
                 lines.push('    └─ @media 给出的 --mq = ' + mqOf(mqSel) + '（同一视口下两个容器完全一样）')
             }
 
             report('① 窄容器 280px ', '#panel-narrow', '#card-narrow', '#mq-narrow')
             report('② 宽容器 520px ', '#panel-wide', '#card-wide', '#mq-wide')
-            lines.push('③ 可拖容器：容器宽度 = ' + widthOf('#panel-resizable') + 'px  |  .card display = ' + cs('#card-resizable', 'display'))
+            lines.push(
+                '③ 可拖容器：容器宽度 = ' +
+                    widthOf('#panel-resizable') +
+                    'px  |  .card display = ' +
+                    cs('#card-resizable', 'display')
+            )
             lines.push('视口宽度 = ' + window.innerWidth + 'px（两个容器始终处在同一个视口里）')
 
             document.getElementById('probe').textContent = lines.join('\n')

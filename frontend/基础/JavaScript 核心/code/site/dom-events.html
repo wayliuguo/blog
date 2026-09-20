@@ -70,13 +70,13 @@
     <body>
         <h1>DOM 事件：委托、解绑与自定义事件</h1>
         <p>
-            页面里所有交互都在加载时用 <code>dispatchEvent</code> 程序化触发了一遍，所以页尾探针里的输出是<strong>真实的事件对象内容</strong>——这也是自动化测试触发交互的标准手段。
+            页面里所有交互都在加载时用
+            <code>dispatchEvent</code>
+            程序化触发了一遍，所以页尾探针里的输出是<strong>真实的事件对象内容</strong>——这也是自动化测试触发交互的标准手段。
         </p>
 
         <h2>① target 与 currentTarget</h2>
-        <div class="card" id="evt-card">
-            我挂着 click 监听器，里面还有一个 <span class="chip">.chip</span>
-        </div>
+        <div class="card" id="evt-card">我挂着 click 监听器，里面还有一个 <span class="chip">.chip</span></div>
 
         <h2>② 事件委托</h2>
         <p>监听器只挂在 <code>ul</code> 上，三个已有项与一个插入 DOM 后才出现的项都走同一个回调。</p>
@@ -88,14 +88,16 @@
 
         <h2>③ 解绑的三个手段</h2>
         <p>
-            <code>{ once: true }</code> 让回调只执行一次；<code>AbortController.signal</code> 可以在组件卸载时一次性解绑挂在它名下的所有监听器，不必逐个记住函数引用。
+            <code>{ once: true }</code> 让回调只执行一次；<code>AbortController.signal</code>
+            可以在组件卸载时一次性解绑挂在它名下的所有监听器，不必逐个记住函数引用。
         </p>
         <button id="once-btn">once 按钮</button>
         <button id="signal-btn">signal 按钮</button>
 
         <h2>④ 自定义事件：不依赖框架的组件通信</h2>
         <p>
-            子元素派发 <code>CustomEvent</code>、祖先监听，<code>detail</code> 携带数据、<code>bubbles: true</code> 让它能冒泡上去——Web Components 与原生组件的通信就建立在这套机制上。
+            子元素派发 <code>CustomEvent</code>、祖先监听，<code>detail</code> 携带数据、<code>bubbles: true</code>
+            让它能冒泡上去——Web Components 与原生组件的通信就建立在这套机制上。
         </p>
         <div id="toolbar" class="card">
             我是祖先 #toolbar
@@ -104,7 +106,8 @@
 
         <h2>⑤ 程序化触发事件</h2>
         <p>
-            <code>el.click()</code> 与 <code>el.dispatchEvent(new KeyboardEvent(...))</code> 可以造出任意交互；差别是后者能带 <code>key</code>、
+            <code>el.click()</code> 与
+            <code>el.dispatchEvent(new KeyboardEvent(...))</code> 可以造出任意交互；差别是后者能带 <code>key</code>、
             <code>metaKey</code>、<code>clientX</code> 这些真实属性。
         </p>
         <div class="card">

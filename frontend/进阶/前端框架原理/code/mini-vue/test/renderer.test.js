@@ -86,8 +86,8 @@ test('render 返回数组：用一个 Fragment 包起来，没有多余的包裹
     render([h('a', null, '1'), h('b', null, '2')], container)
     assert.equal(
         container.childNodes
-            .filter((c) => c.type !== '#text') // Fragment 用两个空文本当锚点
-            .map((c) => c.type)
+            .filter(c => c.type !== '#text') // Fragment 用两个空文本当锚点
+            .map(c => c.type)
             .join(','),
         'a,b'
     )

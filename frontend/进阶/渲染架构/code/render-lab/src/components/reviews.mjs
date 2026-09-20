@@ -14,7 +14,7 @@ export function Reviews({ reviews }) {
         h(
             'ul',
             null,
-            reviews.map((review) => h('li', { class: 'rv' }, `${review.user}：${review.text}（${review.stars} 星）`))
+            reviews.map(review => h('li', { class: 'rv' }, `${review.user}：${review.text}（${review.stars} 星）`))
         )
     )
 }

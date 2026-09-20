@@ -198,7 +198,7 @@ function listen(port, tries = 0) {
         res.end(fs.readFileSync(file))
     })
     server.removeAllListeners('error')
-    server.on('error', (err) => {
+    server.on('error', err => {
         if (err.code !== 'EADDRINUSE' || tries >= 20) throw err
         console.log(`  端口 ${port} 被占用，自动改用 ${port + 1}`)
         listen(port + 1, tries + 1)

@@ -6,9 +6,9 @@
  */
 
 const nodeOps = {
-    createElement: (tag) => document.createElement(tag),
-    createText: (text) => document.createTextNode(text),
-    createComment: (text) => document.createComment(text),
+    createElement: tag => document.createElement(tag),
+    createText: text => document.createTextNode(text),
+    createComment: text => document.createComment(text),
     setText: (node, text) => {
         node.nodeValue = text
     },
@@ -18,11 +18,11 @@ const nodeOps = {
     insert: (child, parent, anchor) => {
         parent.insertBefore(child, anchor || null)
     },
-    remove: (child) => {
+    remove: child => {
         const parent = child.parentNode
         if (parent) parent.removeChild(child)
     },
-    nextSibling: (node) => node.nextSibling
+    nextSibling: node => node.nextSibling
 }
 
 module.exports = { nodeOps }

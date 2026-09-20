@@ -48,9 +48,11 @@
         <p class="probe-a">A：:is(#ghost-a, .probe-a) 与 .probe-a 竞争</p>
         <p class="probe-b">B：:where(#ghost-b, .probe-b) 与 .probe-b 竞争</p>
         <p>
-            两条规则的写法只差 <code>:is</code> / <code>:where</code>：<code>:is()</code> 会把括号里 <code>#ghost-a</code> 的 ID 权重带进来（<code
-                >1,0,0</code
-            >），所以压过 <code>.probe-a</code>；<code>:where()</code> 权重恒为 <code>0,0,0</code>，于是 <code>.probe-b</code> 反超。
+            两条规则的写法只差 <code>:is</code> / <code>:where</code>：<code>:is()</code> 会把括号里
+            <code>#ghost-a</code> 的 ID 权重带进来（<code>1,0,0</code>），所以压过 <code>.probe-a</code>；<code
+                >:where()</code
+            >
+            权重恒为 <code>0,0,0</code>，于是 <code>.probe-b</code> 反超。
         </p>
 
         <h2>② clamp()：一个值兼顾三档</h2>
@@ -98,11 +100,19 @@
 
             const fields = document.querySelectorAll('#demo-form .field')
             const borderOf = i => getComputedStyle(fields[i]).borderTopColor
-            lines.push('④ 第 1 行（必填）空着   border-color = ' + borderOf(0) + '（:has(input:required:invalid) 命中）')
+            lines.push(
+                '④ 第 1 行（必填）空着   border-color = ' + borderOf(0) + '（:has(input:required:invalid) 命中）'
+            )
             lines.push('④ 第 2 行（非必填）空着 border-color = ' + borderOf(1) + '（默认灰）')
             fields[0].querySelector('input').value = 'well'
             fields[1].querySelector('input').value = 'hello'
-            lines.push('④ 两行都填上内容后 border-color = ' + borderOf(0) + ' / ' + borderOf(1) + '（:has(input:not(:placeholder-shown)) 命中）')
+            lines.push(
+                '④ 两行都填上内容后 border-color = ' +
+                    borderOf(0) +
+                    ' / ' +
+                    borderOf(1) +
+                    '（:has(input:not(:placeholder-shown)) 命中）'
+            )
 
             lines.push(
                 '⑤ prefers-reduced-motion: reduce = ' +

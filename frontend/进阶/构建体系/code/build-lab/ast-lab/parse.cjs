@@ -13,7 +13,7 @@ export default add
 const ast = parse(code, { sourceType: 'module' })
 
 console.log('---- 程序结构 ----')
-console.log('根节点类型:', ast.program.body.length ? ast.program.body.map((n) => n.type).join(', ') : '(空)')
+console.log('根节点类型:', ast.program.body.length ? ast.program.body.map(n => n.type).join(', ') : '(空)')
 
 console.log('\n---- 第一个语句的节点（去掉 loc 后）----')
 const first = ast.program.body[0]
@@ -21,7 +21,7 @@ console.log(JSON.stringify(first, (k, v) => (k === 'loc' || k === 'start' || k =
 
 console.log('\n---- 遍历：收集所有 Identifier ----')
 const names = []
-const walk = (node) => {
+const walk = node => {
     if (!node || typeof node !== 'object') return
     if (Array.isArray(node)) return node.forEach(walk)
     if (node.type === 'Identifier' && !names.includes(node.name)) names.push(node.name)

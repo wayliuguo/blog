@@ -150,7 +150,9 @@
             </div>
             <div class="row">
                 <img src="logo.svg" width="20" height="20" alt="" />
-                <span class="note">纯装饰的图：<code>alt=""</code> 明确表示"跳过我"（注意它与"没写 alt"完全是两件事）</span>
+                <span class="note"
+                    >纯装饰的图：<code>alt=""</code> 明确表示"跳过我"（注意它与"没写 alt"完全是两件事）</span
+                >
             </div>
             <div class="row">
                 <button class="btn" type="button" id="good-real-btn">提交</button>
@@ -183,9 +185,9 @@
         <h2>实测结果</h2>
         <p>
             页面内探针跑的是"在页面里自己实现的简化检查"（对比度按 WCAG 公式算、是精确值；"可访问名"只按文本 /
-            <code>aria-label</code> / <code>title</code> / 内部 <code>img</code> 的 <code>alt</code> 拼，是简化版）。<strong
-                >浏览器自己算出来的 role 与 name</strong
-            >要用 CDP 的 <code>Accessibility</code> 域读，命令见本篇《配套代码》。
+            <code>aria-label</code> / <code>title</code> / 内部 <code>img</code> 的
+            <code>alt</code> 拼，是简化版）。<strong>浏览器自己算出来的 role 与 name</strong>要用 CDP 的
+            <code>Accessibility</code> 域读，命令见本篇《配套代码》。
         </p>
         <pre id="probe">…</pre>
 

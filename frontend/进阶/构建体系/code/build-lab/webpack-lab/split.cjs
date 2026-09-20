@@ -15,7 +15,7 @@ function build(minSize) {
         encoding: 'utf8',
         env: { ...process.env, WP_MIN_SIZE: String(minSize), WP_CACHE: '0' }
     })
-    const files = fs.existsSync(DIST) ? fs.readdirSync(DIST).filter((f) => f.endsWith('.js')) : []
+    const files = fs.existsSync(DIST) ? fs.readdirSync(DIST).filter(f => f.endsWith('.js')) : []
     return { files, out: p.stdout || '' }
 }
 
@@ -25,7 +25,10 @@ for (const minSize of [20000, 0]) {
     for (const f of files.sort()) {
         console.log('  ', f, (fs.statSync(path.join(DIST, f)).size / 1024).toFixed(1), 'KB')
     }
-    console.log('   抽出了独立 common chunk：', files.some((f) => f.startsWith('common')))
+    console.log(
+        '   抽出了独立 common chunk：',
+        files.some(f => f.startsWith('common'))
+    )
 }
 
 console.log('\n---- 结论 ----')

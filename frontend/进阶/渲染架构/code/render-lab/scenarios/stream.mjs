@@ -7,7 +7,7 @@ import { probe, segmentTimeline } from '../harness/probe.mjs'
 
 export default async function run() {
     console.log(title('流式渲染：能发的先发'))
-    await withServer({}, async (server) => {
+    await withServer({}, async server => {
         // —— 一、分段到达（跑两轮取更快的一轮）
         let best = null
         for (let i = 0; i < 2; i++) {
@@ -36,11 +36,15 @@ export default async function run() {
                 ]
             )
         )
-        console.log(`流式的第一个字节早了 ${ms(ssr.firstAt - stream.firstAt)}，代价是 HTML 多了 ${bytes(stream.size - ssr.size)}：`)
+        console.log(
+            `流式的第一个字节早了 ${ms(ssr.firstAt - stream.firstAt)}，代价是 HTML 多了 ${bytes(
+                stream.size - ssr.size
+            )}：`
+        )
         console.log('占位 div、装真内容的 template、补位脚本、以及 head 里那段运行时，都是流式的开销。')
 
         // —— 三、乱序补位
-        const order = segmentTimeline(best).map((row) => row[0])
+        const order = segmentTimeline(best).map(row => row[0])
         console.log(section('三、补位顺序由「谁先好」决定，不是由「谁在前面」决定'))
         console.log(`实际顺序：${order.join(' → ')}`)
         console.log('推荐位在页面里排在评价之后，但它 130ms 就好了、评价要 260ms，所以它先补位。')
@@ -54,8 +58,20 @@ export default async function run() {
             table(
                 ['交付方式', 'FCP', '商品列表出现', '评价出现', '入口模块开始执行'],
                 [
-                    ['非流式 SSR', ms(browserSsr.metrics.fcp), ms(browserSsr.marks.products), ms(browserSsr.marks.reviews), ms(browserSsr.extra.entryAt)],
-                    ['流式渲染', ms(browserStream.metrics.fcp), ms(browserStream.marks.products), ms(browserStream.marks.reviews), ms(browserStream.extra.entryAt)]
+                    [
+                        '非流式 SSR',
+                        ms(browserSsr.metrics.fcp),
+                        ms(browserSsr.marks.products),
+                        ms(browserSsr.marks.reviews),
+                        ms(browserSsr.extra.entryAt)
+                    ],
+                    [
+                        '流式渲染',
+                        ms(browserStream.metrics.fcp),
+                        ms(browserStream.marks.products),
+                        ms(browserStream.marks.reviews),
+                        ms(browserStream.extra.entryAt)
+                    ]
                 ]
             )
         )

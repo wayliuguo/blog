@@ -25,7 +25,7 @@ export default async function run() {
                     ms(m.domContentLoaded),
                     ms(m.load),
                     report.longtasks.length,
-                    ms(Math.max(0, ...report.longtasks.map((t) => t.duration)))
+                    ms(Math.max(0, ...report.longtasks.map(t => t.duration)))
                 ]
             })
         )
@@ -38,7 +38,7 @@ export default async function run() {
         console.log(
             table(
                 ['资源', '类型', '开始', '耗时', '体积'],
-                report.resources.map((r) => [r.name, r.type, ms(r.start), ms(r.duration), bytes(r.size)])
+                report.resources.map(r => [r.name, r.type, ms(r.start), ms(r.duration), bytes(r.size)])
             )
         )
     }

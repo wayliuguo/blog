@@ -47,7 +47,7 @@ function sampleChanges(seed) {
 function evaluate(changes, blocked) {
     let hit = 0
     let goodHit = 0
-    const badTotal = changes.filter((c) => c.bad).length
+    const badTotal = changes.filter(c => c.bad).length
     const goodTotal = N - badTotal
     let caught = 0
     for (const c of changes) {
@@ -68,9 +68,9 @@ function evaluate(changes, blocked) {
 
 const changes = sampleChanges(20260920)
 
-const rows = (blocked) =>
-    [60, 70, 80, 90].map((t) => {
-        const r = evaluate(changes, (c) => blocked(c, t / 100))
+const rows = blocked =>
+    [60, 70, 80, 90].map(t => {
+        const r = evaluate(changes, c => blocked(c, t / 100))
         return [`${t}%`, pct(r.blockedRate), pct(r.recall), pct(r.fpr), pct(r.precision)]
     })
 
@@ -102,9 +102,16 @@ export default async function run() {
     console.log('  没有「正确的阈值」，只有「你愿意用多少误杀换多少召回」。')
 
     console.log(section('C：对照——靠测试失败来拦'))
-    const t = evaluate(changes, (c) => c.testFails)
-    console.log(table(['信号', '拦截率', '召回', '误杀', '精确率'], [['测试失败', pct(t.blockedRate), pct(t.recall), pct(t.fpr), pct(t.precision)]]))
-    console.log(`- 测试失败这一条：召回 ${pct(t.recall)}、误杀 ${pct(t.fpr)}（flaky 造成的），精确率 ${pct(t.precision)}`)
+    const t = evaluate(changes, c => c.testFails)
+    console.log(
+        table(
+            ['信号', '拦截率', '召回', '误杀', '精确率'],
+            [['测试失败', pct(t.blockedRate), pct(t.recall), pct(t.fpr), pct(t.precision)]]
+        )
+    )
+    console.log(
+        `- 测试失败这一条：召回 ${pct(t.recall)}、误杀 ${pct(t.fpr)}（flaky 造成的），精确率 ${pct(t.precision)}`
+    )
     console.log('- 它比任何覆盖率阈值都准，因为它是**行为信号**（代码跑起来不对），')
     console.log('  覆盖率只是**存在性信号**（有没有测试碰过这行）。')
     console.log('- 覆盖率拦不住最危险的一类：测试跑过这行、断言写得太弱（只测了不抛错），')

@@ -11,10 +11,25 @@
 import { escapeHtml, renderToString, attrsToString } from './render-string.mjs'
 import { resolve } from './vdom.mjs'
 
-const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'])
+const VOID = new Set([
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr'
+])
 
 const AWAIT = { name: 'Await' } // 特殊节点的 type 标记，不参与普通组件求值
-export const Await = (props) => ({ type: AWAIT, props, children: [] })
+export const Await = props => ({ type: AWAIT, props, children: [] })
 
 /** 页面 head 里必须带上的运行时代码：把 template 里的内容原位填回去 */
 export const STREAM_RUNTIME = `<script>
@@ -30,10 +45,13 @@ window.__fill = function (id) {
 </script>`
 
 /** 每段前面插一个自删脚本：它同时是浏览器侧的到达时间戳、Node 侧的切分标记 */
-export const marker = (name) =>
-    `<script>(function(){window.__chunks=window.__chunks||[];window.__chunks.push({name:${JSON.stringify(name)},at:Math.round(performance.now()*10)/10});document.currentScript.remove()})()</script>`
+export const marker = name =>
+    `<script>(function(){window.__chunks=window.__chunks||[];window.__chunks.push({name:${JSON.stringify(
+        name
+    )},at:Math.round(performance.now()*10)/10});document.currentScript.remove()})()</script>`
 
-const fill = (id, html) => `<template id="t-${id}">${html}</template><script>window.__fill(${JSON.stringify(id)})</script>`
+const fill = (id, html) =>
+    `<template id="t-${id}">${html}</template><script>window.__fill(${JSON.stringify(id)})</script>`
 
 /** 同步走一遍树，遇到边界就登记一个 task 并继续往下走（不阻塞后面的内容） */
 function walk(vnode, write, tasks) {
@@ -51,7 +69,7 @@ function walk(vnode, write, tasks) {
         write(`<div id="s-${props.id}">${renderToString(props.fallback)}</div>`)
         const task = { id: props.id, render: props.render }
         // 立刻发起，promise 带上 task 身份，下面按「谁先完成」排序时不会认错
-        task.promise = props.data().then((value) => ({ task, value }))
+        task.promise = props.data().then(value => ({ task, value }))
         tasks.push(task)
         return
     }
@@ -72,14 +90,14 @@ function walk(vnode, write, tasks) {
 export async function* renderSections(root) {
     let buffer = ''
     const tasks = []
-    walk(root, (s) => (buffer += s), tasks)
+    walk(root, s => (buffer += s), tasks)
     yield { name: 'shell', html: buffer }
 
     let remaining = tasks.slice()
     while (remaining.length) {
-        const done = await Promise.race(remaining.map((t) => t.promise))
+        const done = await Promise.race(remaining.map(t => t.promise))
         const task = done.task
-        remaining = remaining.filter((t) => t !== task)
+        remaining = remaining.filter(t => t !== task)
         yield { name: `${task.id}:fill`, html: fill(task.id, renderToString(task.render(done.value))) }
     }
 }

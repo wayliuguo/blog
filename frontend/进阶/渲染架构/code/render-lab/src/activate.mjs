@@ -5,7 +5,16 @@
 import { hydrate, newStats } from './hydrate.mjs'
 
 export function activate(registry, root) {
-    const stats = { islands: 0, missing: 0, reused: 0, created: 0, patched: 0, mismatches: 0, discarded: 0, activated: 0 }
+    const stats = {
+        islands: 0,
+        missing: 0,
+        reused: 0,
+        created: 0,
+        patched: 0,
+        mismatches: 0,
+        discarded: 0,
+        activated: 0
+    }
     for (const el of root.querySelectorAll('[data-island]')) {
         const name = el.getAttribute('data-island')
         const factory = registry[name]
@@ -16,7 +25,8 @@ export function activate(registry, root) {
         const props = JSON.parse(el.getAttribute('data-props') || '{}')
         const sub = hydrate(factory(props), el, newStats())
         stats.islands++
-        for (const key of ['reused', 'created', 'patched', 'mismatches', 'discarded', 'activated']) stats[key] += sub[key]
+        for (const key of ['reused', 'created', 'patched', 'mismatches', 'discarded', 'activated'])
+            stats[key] += sub[key]
     }
     return stats
 }

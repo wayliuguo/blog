@@ -1,66 +1,99 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8" />
-<title>性能采集实验页</title>
-<style>
-  body { font: 14px/1.6 system-ui, "Microsoft YaHei", sans-serif; margin: 0; color: #1f2328; }
-  .pad { padding: 20px 24px; }
-  #hero { height: 320px; background: linear-gradient(135deg, #dbeafe, #bfdbfe); display: flex; align-items: center; justify-content: center; font-size: 28px; }
-  #banner { background: #fde68a; padding: 12px; text-align: center; }
-</style>
-</head>
-<body>
-<div class="pad">
-  <h1>性能采集实验页</h1>
-  <p>本页故意制造「晚到的大图」+「无预留的横幅」+「一个长任务」，用来演示 RUM 侧怎么采 LCP / CLS / 长任务。</p>
-</div>
-<div id="slot"></div>
+    <head>
+        <meta charset="utf-8" />
+        <title>性能采集实验页</title>
+        <style>
+            body {
+                font:
+                    14px/1.6 system-ui,
+                    'Microsoft YaHei',
+                    sans-serif;
+                margin: 0;
+                color: #1f2328;
+            }
+            .pad {
+                padding: 20px 24px;
+            }
+            #hero {
+                height: 320px;
+                background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+            }
+            #banner {
+                background: #fde68a;
+                padding: 12px;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="pad">
+            <h1>性能采集实验页</h1>
+            <p>
+                本页故意制造「晚到的大图」+「无预留的横幅」+「一个长任务」，用来演示 RUM 侧怎么采 LCP / CLS / 长任务。
+            </p>
+        </div>
+        <div id="slot"></div>
 
-<script type="module">
-import { init } from '/sdk/index.mjs'
+        <script type="module">
+            import { init } from '/sdk/index.mjs'
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const sm = init({ appId: 'perf-lab', url: '/collect' })
+            const sleep = ms => new Promise(r => setTimeout(r, ms))
+            const sm = init({ appId: 'perf-lab', url: '/collect' })
 
-// 一次吃满主线程的同步循环，制造 longtask（TBT 只统计超出 50ms 的部分）
-function jam(ms) {
-  const end = performance.now() + ms
-  while (performance.now() < end) { /* busy */ }
-}
+            // 一次吃满主线程的同步循环，制造 longtask（TBT 只统计超出 50ms 的部分）
+            function jam(ms) {
+                const end = performance.now() + ms
+                while (performance.now() < end) {
+                    /* busy */
+                }
+            }
 
-async function run() {
-  await sleep(200)
+            async function run() {
+                await sleep(200)
 
-  // 1. 长任务：阻塞主线程 140ms
-  jam(140)
+                // 1. 长任务：阻塞主线程 140ms
+                jam(140)
 
-  // 2. 无预留的横幅：插在最前面把已有内容整体推下去 → layout-shift
-  await sleep(120)
-  const banner = document.createElement('div')
-  banner.id = 'banner'
-  banner.textContent = '活动横幅（没有预留高度，插入时把下面内容整体推下去）'
-  document.body.insertBefore(banner, document.body.firstChild)
+                // 2. 无预留的横幅：插在最前面把已有内容整体推下去 → layout-shift
+                await sleep(120)
+                const banner = document.createElement('div')
+                banner.id = 'banner'
+                banner.textContent = '活动横幅（没有预留高度，插入时把下面内容整体推下去）'
+                document.body.insertBefore(banner, document.body.firstChild)
 
-  // 3. 晚到的大元素：最后出现、面积最大 → 成为 LCP
-  await sleep(300)
-  const hero = document.createElement('div')
-  hero.id = 'hero'
-  hero.textContent = '这是最后出现、面积最大的元素'
-  document.getElementById('slot').appendChild(hero)
+                // 3. 晚到的大元素：最后出现、面积最大 → 成为 LCP
+                await sleep(300)
+                const hero = document.createElement('div')
+                hero.id = 'hero'
+                hero.textContent = '这是最后出现、面积最大的元素'
+                document.getElementById('slot').appendChild(hero)
 
-  await sleep(300)
+                await sleep(300)
 
-  // 4. 生成一份资源体积清单，一起上报（真实系统会按需采集，不必全量）
-  const resources = performance.getEntriesByType('resource').map((r) => ({ name: r.name, size: r.transferSize || 0 }))
-  sm.emit({ kind: 'resource-summary', count: resources.length, bytes: resources.reduce((a, r) => a + r.size, 0) })
+                // 4. 生成一份资源体积清单，一起上报（真实系统会按需采集，不必全量）
+                const resources = performance
+                    .getEntriesByType('resource')
+                    .map(r => ({ name: r.name, size: r.transferSize || 0 }))
+                sm.emit({
+                    kind: 'resource-summary',
+                    count: resources.length,
+                    bytes: resources.reduce((a, r) => a + r.size, 0)
+                })
 
-  // 5. 生命周期收口：LCP / CLS 只有在页面离开时才是终值
-  await sm.flushAll('test')
-  await fetch('/collect', { method: 'POST', body: JSON.stringify({ events: [{ kind: 'lab-done', ts: Date.now() }] }) })
-}
+                // 5. 生命周期收口：LCP / CLS 只有在页面离开时才是终值
+                await sm.flushAll('test')
+                await fetch('/collect', {
+                    method: 'POST',
+                    body: JSON.stringify({ events: [{ kind: 'lab-done', ts: Date.now() }] })
+                })
+            }
 
-run()
-</script>
-</body>
+            run()
+        </script>
+    </body>
 </html>

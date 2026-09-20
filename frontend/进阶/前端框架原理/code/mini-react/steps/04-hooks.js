@@ -32,7 +32,7 @@ function textOf(node) {
     return ''
 }
 
-const tick = () => new Promise((resolve) => setTimeout(resolve, 10))
+const tick = () => new Promise(resolve => setTimeout(resolve, 10))
 
 async function main() {
     // ---------- 1 ----------
@@ -46,7 +46,7 @@ async function main() {
     console.log('\n==== 2. 同步模式：连续两次 setState ====')
     log.length = 0
     bump(5) // 直接设为 5
-    bump((c) => c + 1) // 函数式更新：基于队列里的上一个结果继续算
+    bump(c => c + 1) // 函数式更新：基于队列里的上一个结果继续算
     console.log('结果：', textOf(container))
     console.log('effect 日志：', JSON.stringify(log))
     console.log('→ 函数式更新读到的是队列里的前一个结果（5 → 6），不是渲染时的旧值；')
@@ -59,8 +59,8 @@ async function main() {
     render(h(Counter, { step: 1 }), box) // 不传 sync：交给 requestIdleCallback 切片
     await tick()
     log.length = 0
-    bump((c) => c + 1)
-    bump((c) => c + 1)
+    bump(c => c + 1)
+    bump(c => c + 1)
     await tick()
     console.log('结果：', textOf(box))
     console.log('effect 日志：', JSON.stringify(log))

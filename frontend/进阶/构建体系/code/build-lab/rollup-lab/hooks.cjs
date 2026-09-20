@@ -19,11 +19,11 @@ function trace() {
     return { plugin, log }
 }
 
-const phaseOf = (hook) => (BUILD_HOOKS.includes(hook) ? 'build ' : 'output')
+const phaseOf = hook => (BUILD_HOOKS.includes(hook) ? 'build ' : 'output')
 
 function firstSeen(log) {
     const seen = new Set()
-    return log.filter((h) => (seen.has(h) ? false : (seen.add(h), true)))
+    return log.filter(h => (seen.has(h) ? false : (seen.add(h), true)))
 }
 
 function count(log) {

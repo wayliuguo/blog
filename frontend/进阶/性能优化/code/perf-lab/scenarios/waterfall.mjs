@@ -20,7 +20,11 @@ export default async function run() {
 
     for (const { name, report } of rows) {
         const total = Math.max(report.metrics.load, 100)
-        const items = report.resources.map((r) => ({ label: label(r.name).slice(0, 23), start: r.start, duration: r.duration }))
+        const items = report.resources.map(r => ({
+            label: label(r.name).slice(0, 23),
+            start: r.start,
+            duration: r.duration
+        }))
 
         console.log(title(`资源瀑布 · ${name}（横轴 0 → ${ms(total)}）`))
         console.log(items.length ? timeline(items, total) : '（没有资源）')
@@ -31,7 +35,7 @@ export default async function run() {
                 ['资源', '发起方', '开始', '耗时', '传输字节'],
                 [...report.resources]
                     .sort((a, b) => a.start - b.start)
-                    .map((r) => [label(r.name), r.type, ms(r.start), ms(r.duration), bytes(r.size)])
+                    .map(r => [label(r.name), r.type, ms(r.start), ms(r.duration), bytes(r.size)])
             )
         )
     }

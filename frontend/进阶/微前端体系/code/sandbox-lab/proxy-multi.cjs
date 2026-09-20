@@ -3,19 +3,19 @@
 const sharedGlobal = Object.create(globalThis)
 
 function createSandbox(name) {
-  const fakeWindow = Object.create(sharedGlobal)
-  fakeWindow.__MICRO_APP_NAME__ = name
-  return new Proxy(fakeWindow, {
-    get(target, key) {
-      // 读：优先读自己的，读不到沿原型链回落到共享全局
-      return target[key]
-    },
-    set(target, key, value) {
-      // 写：永远只写进自己的 fakeWindow，共享全局不动
-      target[key] = value
-      return true
-    },
-  })
+    const fakeWindow = Object.create(sharedGlobal)
+    fakeWindow.__MICRO_APP_NAME__ = name
+    return new Proxy(fakeWindow, {
+        get(target, key) {
+            // 读：优先读自己的，读不到沿原型链回落到共享全局
+            return target[key]
+        },
+        set(target, key, value) {
+            // 写：永远只写进自己的 fakeWindow，共享全局不动
+            target[key] = value
+            return true
+        }
+    })
 }
 
 module.exports = { createSandbox }

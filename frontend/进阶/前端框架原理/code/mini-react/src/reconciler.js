@@ -14,8 +14,7 @@ const { runEffects, runCleanups } = require('./hooks')
 const { TEXT_ELEMENT, Fragment } = require('./element')
 
 // 浏览器里用 requestIdleCallback 拿到"剩余时间"，Node 里退化成 setTimeout
-const requestIdleCallback =
-    globalThis.requestIdleCallback || ((cb) => setTimeout(() => cb(deadline()), 0))
+const requestIdleCallback = globalThis.requestIdleCallback || (cb => setTimeout(() => cb(deadline()), 0))
 
 function deadline() {
     const start = Date.now()
