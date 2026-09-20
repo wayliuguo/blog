@@ -9,3 +9,8 @@ analyze-lab/src/
 # bench 的样本源码由 bench/gen.cjs 生成、bench/run.cjs 每次运行先清空再重建
 bench/src/
 bench/src-noside/
+
+# 同样是脚本自生成的样本（rollup-lab/external.cjs、vite-lab/assets.cjs、plugins.cjs）
+rollup-lab/src-ext/
+vite-lab/src-assets/
+vite-lab/src-plugins/

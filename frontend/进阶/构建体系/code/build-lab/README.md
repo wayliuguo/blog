@@ -24,8 +24,16 @@
 | `npm run webpack:cache` | 持久化缓存：小样本 vs 大样本，独立子进程采样 | Webpack 深入 | 小样本 1.11x、大样本 2.21x；`require('webpack')` 本身要 2.8~3.3s |
 | `npm run vite` | dev server 按需转换 vs build 全量，环境变量静态替换，依赖预构建产物 | Vite | dev 只转 1 个模块、build 转 3 个；`import.meta.env` 在产物里已消失 |
 | `npm run vite:optimize` | 单独触发依赖预构建 | Vite | 产物落在 `node_modules/.vite`；诡异问题先删缓存 |
+| `npm run vite:assets` | 静态资源内联阈值 / `import.meta.glob` / `build.target` 降级 | Vite | 0.6KB svg 在默认 4096 下内联、阈值 512 时变独立文件；glob 懒加载 4 chunk vs eager 1 chunk |
+| `npm run vite:plugins` | 插件顺序（enforce/apply）+ 真实插件：HTML 注入 modulepreload 与 CSP nonce | Vite | 同一模块上 pre → normal → post；不查重会注入 2 条 modulepreload（Vite 默认 1 条 + 插件 1 条） |
 | `npm run rollup:shake` | tree-shaking 边界：未用导出 vs 顶层副作用 | Rollup | 未用导出被删（false），顶层副作用保留（true） |
 | `npm run rollup:formats` | esm / cjs / iife / umd / system 五种格式体积对比 | Rollup | esm 0.45 KB → cjs 0.50 → iife 0.64 → system 0.86 → umd 0.91 KB |
+| `npm run rollup:side-effects` | PURE 注解（表达式级）vs moduleSideEffects（模块级）三档对照 | Rollup | 带注解的 `make("pure")` 被删，紧邻不带的保留；`moduleSideEffects:false` 不等于"模块内副作用可删" |
+| `npm run rollup:external` | external / UMD globals / manualChunks / preserveModules 五种产物策略 | Rollup | 忘记 external：10170 字符；external 后 23 字符（440 倍） |
+| `npm run rollup:hooks` | 钩子全景：执行顺序 + 每个钩子调用次数 + 第二次 generate 的增量 | Rollup | build 钩子 12 个里前 7 个只跑一次；output 钩子每个 output 各跑一次 |
+| `npm run rollup:context` | PluginContext：构建期拿模块图、检测循环依赖、emitFile 出清单 | Rollup | 3 模块 / 3 边 / 1 环；`failOnCycle` 一开就从"报告"变"门禁" |
+| `npm run rollup:gate` | 真实场景插件：产物体积门禁（gzip）+ bundle-manifest.json | Rollup | gzip 358B，预算 0.15KB 时构建被中断 |
+| `npm run rollup:cjs` | CJS 互操作：不加插件的报错 + 手写 20 行 commonjs 替身 | Rollup | 不加插件：`"default" is not exported by dep.cjs` |
 | `npm run rollup:plugin` | 虚拟模块插件：resolveId / load / transform / generateBundle | Rollup | 虚拟 id 用 `\0` 前缀；不处理就返回 `null` |
 | `npm run esbuild` | transform vs build、target 降级代价、metafile 分析 | esbuild 与 Rust 工具链 | transform 第二次 3ms（首次约 700ms）；`??` 降级 es2015 685 字符 vs esnext 82 |
 | `npm run swc` | esbuild / SWC / Babel 同跑 50 次转换 | esbuild 与 Rust 工具链 | SWC 0.13ms / esbuild 1.50ms / Babel 20.10ms（167x） |
@@ -43,8 +51,8 @@
 | `bench/` | 构建耗时与 tree-shaking 对照（`gen.cjs` 生成样本、`one.cjs` 单工具、`run.cjs` 汇总） |
 | `ast-lab/` | Babel 解析 / 遍历 / transform / 插件 / codemod |
 | `webpack-lab/` | loader、plugin、splitChunks、持久化缓存（含 `one-cache.cjs` 子进程采样） |
-| `vite-lab/` | dev vs build 双引擎、环境变量、预构建、`counter-plugin.mjs` |
-| `rollup-lab/` | tree-shaking 边界、五种输出格式、虚拟模块插件 |
+| `vite-lab/` | dev vs build 双引擎、环境变量、预构建、`counter-plugin.mjs`、静态资源（内联阈值 / glob / target）、插件顺序与 HTML 注入（样本 `src-*` 由脚本生成） |
+| `rollup-lab/` | tree-shaking 边界、五种输出格式、副作用两档控制、external 四开关、钩子全景、PluginContext、体积门禁、CJS 互操作（样本 `src-*` 由脚本生成） |
 | `esbuild-lab/` | transform / build / target / metafile / minify |
 | `swc-lab/` | esbuild / SWC / Babel 三工具转换速度对比 |
 | `plugin-lab/` | 三套钩子对照 + unplugin 一次编写多处运行 |
