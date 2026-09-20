@@ -19,9 +19,14 @@ function medianDeep(list) {
     return first
 }
 
+/**
+ * options.server 会原样传给 startServer()：
+ *   { port: 5192 } 固定端口（缓存实验要靠它命中上一次访问留下的磁盘缓存）
+ *   { spaCache: true } 给 /spa/ 下的静态资源发强缓存头
+ */
 export async function measure(page, options = {}) {
     const { query = {}, rounds = 1, timeout = 30000, flags = [] } = options
-    const srv = await startServer()
+    const srv = await startServer(options.server)
     try {
         const collected = []
         for (let round = 0; round < rounds; round++) {

@@ -1,6 +1,6 @@
 # perf-lab · 性能优化配套实验台
 
-零依赖（Node 内置模块 + 本机 Chrome），每个场景都是**真跑真测**：起一个本地 HTTP 服务，用无头 Chrome 打开实验页，页面把浏览器真实采集到的指标 POST 回来，Node 侧汇总成表。
+零依赖（Node 内置模块 + 本机 Chrome）——唯一的例外是 Vue SPA 闭环实验，它需要一个真的 Vue 3，所以 `vue` 是唯一的运行时依赖。每个场景都是**真跑真测**：起一个本地 HTTP 服务，用无头 Chrome 打开实验页，页面把浏览器真实采集到的指标 POST 回来，Node 侧汇总成表。
 
 ```bash
 npm start          # 手动浏览：把 pages/ 挂在 http://localhost:5187/
@@ -29,6 +29,10 @@ npm run all        # 依次跑完全部场景（耗时较长）
 | `memory` | `memory.html` | 60 轮分配：留引用 vs 可回收 | 堆净增长、峰值堆 |
 | `score` | `metrics.html` + `cls.html` | 把实测值套上 Core Web Vitals 区间 | 每个指标的评级与整体结论 |
 | `budget` | `metrics.html` | 性能预算卡口 | PASS / FAIL，超线时**退出码 1** |
+| `spa` | `spa/index.html` vs `spa/optimized.html` | Vue SPA 首屏：全量打包 + 空壳 vs 分割 + 骨架屏 | FCP / LCP / 首屏有内容 / 关键路径 JS 数 |
+| `spa:nav` | 同上 | 切路由：全量打包 vs 分割不预取 vs 分割 + 空闲预取 | 切路由耗时、切换时才下的 chunk 数 |
+| `spa:list` | 同上 | 2000 行：全量渲染 + 同步计算 vs 虚拟滚动 + 分片；滚动回调两种写法 | 交互到下一帧、新增长任务、30 屏总耗时 |
+| `spa:cache` | `spa/optimized.html` | 二次访问：无缓存 vs HTTP 强缓存 vs Service Worker | 二次的传输字节、命中缓存的资源数 |
 
 ## 二、篇目对照表
 
@@ -41,6 +45,7 @@ npm run all        # 依次跑完全部场景（耗时较长）
 | 运行时性能 | `thrash` `longtask` `virtual` `worker` `memory` | 强制同步布局、长任务与切片、虚拟滚动、Worker 边界、泄漏 |
 | 性能优化闭环 | `budget` `score` `metrics` | 预算怎么定、CI 卡口、优化前后指标 |
 | 优化手段速查 | 全部 | 每条手段后面挂本节实测的数字 |
+| Vue SPA 性能实战 | `spa` `spa:nav` `spa:list` `spa:cache` | 一个页面把加载 / 构建 / 运行时 / 缓存 / 闭环五段串起来 |
 
 ## 三、结构
 
@@ -55,18 +60,35 @@ perf-lab/
 │  └─ table.mjs            中英混排对齐的表格、时间线、单位换算
 ├─ pages/
 │  ├─ lab.js               页面侧：订阅性能条目 + 统一 POST 回实验台
+│  ├─ sw.js                SPA 实验用的 Service Worker（缓存 /spa/ 与 /vendor/）
+│  ├─ spa/                 Vue SPA 闭环实验：见下方说明
 │  └─ *.html               各实验页（每个都以 Lab.finish({...}) 收尾）
 └─ scenarios/
    └─ *.mjs                每个场景一个文件，默认导出 run()
 ```
 
+### `pages/spa/` 是什么
+
+一个真的 Vue 3 单页应用（hash 路由 + 三个路由模块 + 2000 条订单），两版外壳对应两种工程决策：
+
+| 文件 | 角色 |
+|---|---|
+| `index.html` + `app.js` | 未优化外壳：CSS 外链阻塞、`#app` 空壳、三个路由静态全量引入 |
+| `optimized.html` + `app-opt.js` | 优化外壳：关键 CSS 内联 + 骨架屏、全量 CSS 异步加载、路由动态 import |
+| `boot.js` | 两版共用：hash 路由、组件懒加载、空闲预取、实验驱动（?act=） |
+| `options.js` | 开关：`opt=1` 全开，单个开关（split / virtual / slice / prefetch / throttle / imgopt / sw）可单独覆盖 |
+| `routes/list.js` `detail.js` `about.js` | 三个路由组件 |
+| `routes-all.js` | 未优化版用：把三个路由静态打进同一张依赖图 |
+
+浏览器里直接跑 ESM，没有构建步骤——服务端把 `node_modules/vue/dist/vue.esm-browser.prod.js` 挂在 `/vendor/vue.js`。真实项目里这一步由 Vite 做（`() => import('./views/List.vue')`），写法和收益一致。
+
 ## 四、为什么这么设计（已知取舍）
 
 - **不用 puppeteer**。实验只需要「打开页面 → 页面把数据送回来」这一条链路，用 `spawn` 拉起本机 Chrome + 页面 `fetch('/report')` 就够了，换来的是零依赖。代价是拿不到 CDP 的能力（比如强制 GC、CPU 节流、网络面板录屏），这些留给人开 DevTools 手动做。
-- **端口用 0 让系统分配**。`npm run <场景>` 起的服务不写死端口，避免和 `npm start` 的 5187 撞车，也允许几个场景同时跑。
+- **端口用 0 让系统分配**。`npm run <场景>` 起的服务不写死端口，避免和 `npm start` 的 5187 撞车，也允许几个场景同时跑。唯一的例外是 `spa:cache`：HTTP 缓存按 origin 存，端口每次都变的话上一次访问写进磁盘的缓存根本不会被查到，所以它固定用 5192。
 - **限速是必须的**。本机 localhost 传 500KB 只要几毫秒，`lazy` / `metrics` 这类对比在无限速下两个版本读数完全一样。服务器支持 `&kbps=2000`，按带宽分片慢发，把网络差异放大到可比。这是实验台的模拟，不是真实网络测量。
 - **多轮取中位数**。每套对照默认跑 3 轮（抖动的场景跑 5 轮），数值逐项取中位，数组类的取最后一轮。单轮结果受机器负载影响很大。
 - **共享 Chrome profile**。`harness/chrome.mjs` 复用同一个 `--user-data-dir`，省掉每次启动的初始化开销；副作用是如果上一个 Chrome 没退干净，新的启动可能被转发到旧实例，出现读数串台——所以 `measure()` 每轮结束都会 `kill()` 再进下一轮。
 - **`CLS` 读的是「全量位移」不是规范 CLS**。规范口径会剔掉 `hadRecentInput` 为 true 的位移，而无头环境里没有真实输入事件、这个字段却仍是 true，导致规范 CLS 恒为 0。所以上报里 `cls` 是规范口径（真实用户环境用这个）、`clsRaw` 是所有位移之和（无头对照实验用这个）。
 - **`memory` 需要 `--enable-precise-memory-info`**。不加这个 flag 时 `performance.memory` 的粒度是 100KB 级，量不出逐轮趋势。
-- **`longtask` 不用帧间隔当判据**。无头环境下 `requestAnimationFrame` 的回调节奏不可靠，所以改成量「最长同步块」：在计时块里读一次 `offsetHeight` 强制结算布局，得到的就是主线程真正被独占的时长。这个数比帧间隔稳定得多，也更贴近「用户点了多久没反应」。
+- **INP 在无头环境里测不到真的**。真实 INP 要用户实际输入才会产生 `event` 条目，而脚本 `click()` 派发的是不可信事件，不产生条目。所以 `spa:list` 里的「交互到下一帧」用的是「派发事件 → 第二个 `requestAnimationFrame` 回调」的耗时，口径和 INP 一致，但不是浏览器上报的那个值。无头环境下 `requestAnimationFrame` 的回调节奏不可靠，所以改成量「最长同步块」：在计时块里读一次 `offsetHeight` 强制结算布局，得到的就是主线程真正被独占的时长。这个数比帧间隔稳定得多，也更贴近「用户点了多久没反应」。

@@ -2,7 +2,7 @@
   "name": "perf-lab",
   "version": "1.0.0",
   "private": true,
-  "description": "性能优化模块配套实验台：零依赖，用 Node + 本机无头 Chrome 实测 FCP/LCP/CLS/长任务/布局抖动/虚拟滚动/内存/懒加载",
+  "description": "性能优化模块配套实验台：Node + 本机无头 Chrome 实测 FCP/LCP/CLS/长任务/布局抖动/虚拟滚动/内存/懒加载；Vue SPA 闭环实验需要 vue 依赖（其余场景零依赖）",
   "scripts": {
     "start": "node server.js",
     "list": "node cli.mjs list",
@@ -20,6 +20,10 @@
     "coverage": "node cli.mjs coverage",
     "score": "node cli.mjs score",
     "budget": "node cli.mjs budget",
+    "spa": "node cli.mjs spa",
+    "spa:nav": "node cli.mjs spa-nav",
+    "spa:list": "node cli.mjs spa-list",
+    "spa:cache": "node cli.mjs spa-cache",
     "all": "node cli.mjs all"
   },
   "dependencies": {

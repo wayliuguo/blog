@@ -287,6 +287,7 @@ export default [
                     { text: '运行时性能', link: '/frontend/进阶/性能优化/运行时性能' },
                     { text: '性能优化闭环', link: '/frontend/进阶/性能优化/性能优化闭环' },
                     { text: '优化手段速查', link: '/frontend/进阶/性能优化/优化手段速查' },
+                    { text: 'Vue SPA 性能实战', link: '/frontend/进阶/性能优化/Vue%20SPA%20性能实战' },
                     { text: '模块总结（性能优化）', link: '/frontend/进阶/性能优化/总结' },
                     { text: '模块面试题（性能优化）', link: '/frontend/进阶/性能优化/面试题' }
                 ]
