@@ -28,6 +28,8 @@
         "bench": "node bench/run.cjs",
         "plugin": "node plugin-lab/three-ways.mjs",
         "plugin:unplugin": "node plugin-lab/unplugin-demo.mjs",
+        "plugin:ondemand": "node plugin-lab/import-on-demand.mjs",
+        "plugin:ban": "node plugin-lab/ban-api.mjs",
         "analyze": "node analyze-lab/optimize.cjs",
         "mini": "node mini-bundler/bundle.cjs",
         "mini:cycle": "node mini-bundler/bundle.cjs src/cycle/entry.js",
