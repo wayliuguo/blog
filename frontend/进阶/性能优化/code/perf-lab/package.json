@@ -21,5 +21,8 @@
     "score": "node cli.mjs score",
     "budget": "node cli.mjs budget",
     "all": "node cli.mjs all"
+  },
+  "dependencies": {
+    "vue": "^3.3.4"
   }
 }
