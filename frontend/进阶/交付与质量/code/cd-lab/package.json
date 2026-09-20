@@ -1,0 +1,12 @@
+{
+  "name": "cd-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "交付与质量模块配套实验台：Node 内置模块 + 仓库根已有的 ESLint 8，实测增量 lint 耗时、覆盖率阈值拦截率、灰度回滚演练",
+  "scripts": {
+    "list": "node cli.mjs list",
+    "lint": "node cli.mjs lint",
+    "coverage": "node cli.mjs coverage",
+    "release": "node cli.mjs release"
+  }
+}
