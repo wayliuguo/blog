@@ -16,7 +16,6 @@ export default [
                         link: '/frontend/基础/HTML%20基础/表单与标签'
                     },
                     { text: '无障碍与可访问性', link: '/frontend/基础/HTML%20基础/无障碍与可访问性' },
-                    { text: '模块总结-核心（HTML 基础）', link: '/frontend/基础/HTML%20基础/模块总结-核心（HTML%20基础）' },
                     { text: '模块总结（HTML 基础）', link: '/frontend/基础/HTML%20基础/总结' },
                     { text: '模块面试题（HTML 基础）', link: '/frontend/基础/HTML%20基础/面试题' }
                 ]
@@ -38,7 +37,6 @@ export default [
                     },
                     { text: '现代 CSS', link: '/frontend/基础/CSS/现代%20CSS' },
                     { text: '综合实战', link: '/frontend/基础/CSS/综合实战' },
-                    { text: '模块总结-核心（CSS）', link: '/frontend/基础/CSS/模块总结-核心（CSS）' },
                     { text: '模块总结（CSS）', link: '/frontend/基础/CSS/总结' },
                     { text: '模块面试题（CSS）', link: '/frontend/基础/CSS/面试题' }
                 ]
@@ -66,7 +64,6 @@ export default [
                         text: '手写实现与源码',
                         link: '/frontend/基础/JavaScript%20核心/手写实现与源码'
                     },
-                    { text: '模块总结-核心（JavaScript 核心）', link: '/frontend/基础/JavaScript%20核心/模块总结-核心（JavaScript%20核心）' },
                     { text: '模块总结（JavaScript 核心）', link: '/frontend/基础/JavaScript%20核心/总结' },
                     { text: '模块面试题（JavaScript 核心）', link: '/frontend/基础/JavaScript%20核心/面试题' }
                 ]
@@ -85,7 +82,6 @@ export default [
                         link: '/frontend/基础/网络与浏览器/浏览器存储与本地缓存'
                     },
                     { text: '前端安全', link: '/frontend/基础/网络与浏览器/前端安全' },
-                    { text: '模块总结-核心（网络与浏览器）', link: '/frontend/基础/网络与浏览器/模块总结-核心（网络与浏览器）' },
                     { text: '模块总结（网络与浏览器）', link: '/frontend/基础/网络与浏览器/总结' },
                     { text: '模块面试题（网络与浏览器）', link: '/frontend/基础/网络与浏览器/面试题' }
                 ]
@@ -112,7 +108,6 @@ export default [
                         text: 'React 使用 CSS',
                         link: '/frontend/基础/前端框架-React/React%20使用%20CSS'
                     },
-                    { text: '模块总结-核心（React）', link: '/frontend/基础/前端框架-React/模块总结-核心（前端框架-React）' },
                     { text: '模块总结（React）', link: '/frontend/基础/前端框架-React/总结' },
                     { text: '模块面试题（React）', link: '/frontend/基础/前端框架-React/面试题' }
                 ]
@@ -130,7 +125,6 @@ export default [
                         text: 'Vue 路由与状态',
                         link: '/frontend/基础/前端框架-Vue/Vue%20路由与状态'
                     },
-                    { text: '模块总结-核心（Vue）', link: '/frontend/基础/前端框架-Vue/模块总结-核心（前端框架-Vue）' },
                     { text: '模块总结（Vue）', link: '/frontend/基础/前端框架-Vue/总结' },
                     { text: '模块面试题（Vue）', link: '/frontend/基础/前端框架-Vue/面试题' }
                 ]
@@ -159,7 +153,6 @@ export default [
                         text: '原生与跨端框架差异',
                         link: '/frontend/基础/小程序/原生与跨端框架差异'
                     },
-                    { text: '模块总结-核心（小程序）', link: '/frontend/基础/小程序/模块总结-核心（小程序）' },
                     { text: '模块总结（小程序）', link: '/frontend/基础/小程序/总结' },
                     { text: '模块面试题（小程序）', link: '/frontend/基础/小程序/面试题' }
                 ]
@@ -169,7 +162,6 @@ export default [
                 collapsed: false,
                 items: [
                     { text: 'Git 与协作', link: '/frontend/基础/工程协作/工程协作' },
-                    { text: '模块总结-核心（工程协作）', link: '/frontend/基础/工程协作/模块总结-核心（工程协作）' },
                     { text: '模块总结（工程协作）', link: '/frontend/基础/工程协作/总结' },
                     { text: '模块面试题（工程协作）', link: '/frontend/基础/工程协作/面试题' }
                 ]
@@ -194,7 +186,6 @@ export default [
                     },
                     { text: 'TypeScript 类型体操', link: '/frontend/进阶/TypeScript/TypeScript%20类型体操' },
                     { text: 'TypeScript 类型与运行时', link: '/frontend/进阶/TypeScript/TypeScript%20类型与运行时' },
-                    { text: '模块总结-核心（TypeScript）', link: '/frontend/进阶/TypeScript/模块总结-核心（TypeScript）' },
                     { text: '模块总结（TypeScript）', link: '/frontend/进阶/TypeScript/总结' },
                     { text: '模块面试题（TypeScript）', link: '/frontend/进阶/TypeScript/面试题' }
                 ]
@@ -208,7 +199,6 @@ export default [
                     { text: '脚手架的诞生', link: '/frontend/进阶/前端工程化/脚手架的诞生' },
                     { text: 'Monorepo 工程化', link: '/frontend/进阶/前端工程化/Monorepo工程化' },
                     { text: '基建实战总串联', link: '/frontend/进阶/前端工程化/基建实战总串联' },
-                    { text: '模块总结-核心（前端工程化）', link: '/frontend/进阶/前端工程化/模块总结-核心（前端工程化）' },
                     { text: '模块总结（前端工程化）', link: '/frontend/进阶/前端工程化/总结' },
                     { text: '模块面试题（前端工程化）', link: '/frontend/进阶/前端工程化/面试题' }
                 ]
@@ -229,7 +219,6 @@ export default [
                     { text: '构建插件开发', link: '/frontend/进阶/构建体系/构建插件开发' },
                     { text: '产物分析与体积优化', link: '/frontend/进阶/构建体系/产物分析与体积优化' },
                     { text: '手写 mini-bundler', link: '/frontend/进阶/构建体系/手写%20mini-bundler' },
-                    { text: '模块总结-核心（构建体系）', link: '/frontend/进阶/构建体系/模块总结-核心（构建体系）' },
                     { text: '模块总结（构建体系）', link: '/frontend/进阶/构建体系/总结' },
                     { text: '模块面试题（构建体系）', link: '/frontend/进阶/构建体系/面试题' }
                 ]
@@ -243,7 +232,6 @@ export default [
                     { text: 'CI/CD 自动化', link: '/frontend/进阶/交付与质量/CI-CD自动化' },
                     { text: '质量体系与测试', link: '/frontend/进阶/交付与质量/质量体系与测试' },
                     { text: '发布、灰度与回滚', link: '/frontend/进阶/交付与质量/发布、灰度与回滚' },
-                    { text: '模块总结-核心（交付与质量）', link: '/frontend/进阶/交付与质量/模块总结-核心（交付与质量）' },
                     { text: '模块总结（交付与质量）', link: '/frontend/进阶/交付与质量/总结' },
                     { text: '模块面试题（交付与质量）', link: '/frontend/进阶/交付与质量/面试题' }
                 ]
@@ -257,7 +245,6 @@ export default [
                     { text: '组件测试', link: '/frontend/进阶/测试体系/组件测试' },
                     { text: 'E2E 与稳定性', link: '/frontend/进阶/测试体系/E2E%20与稳定性' },
                     { text: '测试基建与门禁', link: '/frontend/进阶/测试体系/测试基建与门禁' },
-                    { text: '模块总结-核心（测试体系）', link: '/frontend/进阶/测试体系/模块总结-核心（测试体系）' },
                     { text: '模块总结（测试体系）', link: '/frontend/进阶/测试体系/总结' },
                     { text: '模块面试题（测试体系）', link: '/frontend/进阶/测试体系/面试题' }
                 ]
@@ -277,7 +264,6 @@ export default [
                         text: '状态管理原理与实现',
                         link: '/frontend/进阶/前端框架原理/状态管理原理与实现'
                     },
-                    { text: '模块总结-核心（前端框架原理）', link: '/frontend/进阶/前端框架原理/模块总结-核心（前端框架原理）' },
                     { text: '模块总结（前端框架原理）', link: '/frontend/进阶/前端框架原理/总结' },
                     { text: '模块面试题（前端框架原理）', link: '/frontend/进阶/前端框架原理/面试题' }
                 ]
@@ -294,7 +280,6 @@ export default [
                     { text: '性能优化闭环', link: '/frontend/进阶/性能优化/性能优化闭环' },
                     { text: '优化手段速查', link: '/frontend/进阶/性能优化/优化手段速查' },
                     { text: 'Vue SPA 性能实战', link: '/frontend/进阶/性能优化/Vue%20SPA%20性能实战' },
-                    { text: '模块总结-核心（性能优化）', link: '/frontend/进阶/性能优化/模块总结-核心（性能优化）' },
                     { text: '模块总结（性能优化）', link: '/frontend/进阶/性能优化/总结' },
                     { text: '模块面试题（性能优化）', link: '/frontend/进阶/性能优化/面试题' }
                 ]
@@ -313,7 +298,6 @@ export default [
                         text: '企业级性能与监控工程实践',
                         link: '/frontend/进阶/监控与稳定性/企业级性能与监控工程实践'
                     },
-                    { text: '模块总结-核心（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/模块总结-核心（监控与稳定性）' },
                     { text: '模块总结（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/总结' },
                     { text: '模块面试题（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/面试题' }
                 ]
@@ -326,7 +310,6 @@ export default [
                     { text: 'CDN 与缓存体系', link: '/frontend/进阶/网络与协议进阶/CDN%20与缓存体系' },
                     { text: '网络可靠性与弱网', link: '/frontend/进阶/网络与协议进阶/网络可靠性与弱网' },
                     { text: '前端安全进阶', link: '/frontend/进阶/网络与协议进阶/前端安全进阶' },
-                    { text: '模块总结-核心（网络与协议进阶）', link: '/frontend/进阶/网络与协议进阶/模块总结-核心（网络与协议进阶）' },
                     { text: '模块总结（网络与协议进阶）', link: '/frontend/进阶/网络与协议进阶/总结' },
                     { text: '模块面试题（网络与协议进阶）', link: '/frontend/进阶/网络与协议进阶/面试题' }
                 ]
@@ -342,7 +325,6 @@ export default [
                     { text: '请求层与缓存设计', link: '/frontend/进阶/工程实践与架构/请求层与缓存设计' },
                     { text: '大文件上传与断点续传', link: '/frontend/进阶/工程实践与架构/大文件上传与断点续传' },
                     { text: '虚拟滚动与大数据渲染', link: '/frontend/进阶/工程实践与架构/虚拟滚动与大数据渲染' },
-                    { text: '模块总结-核心（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/模块总结-核心（工程实践与架构）' },
                     { text: '模块总结（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/总结' },
                     { text: '模块面试题（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/面试题' }
                 ]
@@ -354,7 +336,6 @@ export default [
                     { text: '渲染方案全景', link: '/frontend/进阶/渲染架构/渲染方案全景' },
                     { text: 'SSR 与同构实现', link: '/frontend/进阶/渲染架构/SSR%20与同构实现' },
                     { text: '新兴渲染范式', link: '/frontend/进阶/渲染架构/新兴渲染范式' },
-                    { text: '模块总结-核心（渲染架构）', link: '/frontend/进阶/渲染架构/模块总结-核心（渲染架构）' },
                     { text: '模块总结（渲染架构）', link: '/frontend/进阶/渲染架构/总结' },
                     { text: '模块面试题（渲染架构）', link: '/frontend/进阶/渲染架构/面试题' }
                 ]
@@ -368,7 +349,6 @@ export default [
                     { text: '应用通信与状态共享', link: '/frontend/进阶/微前端体系/应用通信与状态共享' },
                     { text: '资源加载与依赖共享', link: '/frontend/进阶/微前端体系/资源加载与依赖共享' },
                     { text: '手写 mini 微前端框架', link: '/frontend/进阶/微前端体系/手写%20mini%20微前端框架' },
-                    { text: '模块总结-核心（微前端体系）', link: '/frontend/进阶/微前端体系/模块总结-核心（微前端体系）' },
                     { text: '模块总结（微前端体系）', link: '/frontend/进阶/微前端体系/总结' },
                     { text: '模块面试题（微前端体系）', link: '/frontend/进阶/微前端体系/面试题' }
                 ]
@@ -379,10 +359,12 @@ export default [
                 items: [
                     { text: 'Canvas 2D 基础与性能', link: '/frontend/进阶/可视化与图形/Canvas%202D%20基础与性能' },
                     { text: 'SVG 与声明式图形', link: '/frontend/进阶/可视化与图形/SVG%20与声明式图形' },
-                    { text: 'WebGL 与 Three.js 入门', link: '/frontend/进阶/可视化与图形/WebGL%20与%20Three.js%20入门' },
+                    {
+                        text: 'WebGL 与 Three.js 入门',
+                        link: '/frontend/进阶/可视化与图形/WebGL%20与%20Three.js%20入门'
+                    },
                     { text: '图表引擎原理', link: '/frontend/进阶/可视化与图形/图表引擎原理' },
                     { text: '大屏与可视化工程', link: '/frontend/进阶/可视化与图形/大屏与可视化工程' },
-                    { text: '模块总结-核心（可视化与图形）', link: '/frontend/进阶/可视化与图形/模块总结-核心（可视化与图形）' },
                     { text: '模块总结（可视化与图形）', link: '/frontend/进阶/可视化与图形/总结' },
                     { text: '模块面试题（可视化与图形）', link: '/frontend/进阶/可视化与图形/面试题' }
                 ]
@@ -391,11 +373,13 @@ export default [
                 text: '浏览器底层与 V8',
                 collapsed: true,
                 items: [
-                    { text: 'Chrome 多进程与渲染管线', link: '/frontend/进阶/浏览器底层与%20V8/Chrome%20多进程与渲染管线' },
+                    {
+                        text: 'Chrome 多进程与渲染管线',
+                        link: '/frontend/进阶/浏览器底层与%20V8/Chrome%20多进程与渲染管线'
+                    },
                     { text: 'V8 执行与优化', link: '/frontend/进阶/浏览器底层与%20V8/V8%20执行与优化' },
                     { text: '内存模型与 GC', link: '/frontend/进阶/浏览器底层与%20V8/内存模型与%20GC' },
                     { text: 'WebAssembly', link: '/frontend/进阶/浏览器底层与%20V8/WebAssembly' },
-                    { text: '模块总结-核心（浏览器底层与 V8）', link: '/frontend/进阶/浏览器底层与%20V8/模块总结-核心（浏览器底层与%20V8）' },
                     { text: '模块总结（浏览器底层与 V8）', link: '/frontend/进阶/浏览器底层与%20V8/总结' },
                     { text: '模块面试题（浏览器底层与 V8）', link: '/frontend/进阶/浏览器底层与%20V8/面试题' }
                 ]
@@ -405,10 +389,12 @@ export default [
                 collapsed: true,
                 items: [
                     { text: '跨端框架原理', link: '/frontend/进阶/跨端与桌面深化/跨端框架原理' },
-                    { text: 'Hybrid 与 WebView 深度优化', link: '/frontend/进阶/跨端与桌面深化/Hybrid%20与%20WebView%20深度优化' },
+                    {
+                        text: 'Hybrid 与 WebView 深度优化',
+                        link: '/frontend/进阶/跨端与桌面深化/Hybrid%20与%20WebView%20深度优化'
+                    },
                     { text: 'JSBridge 设计与演进', link: '/frontend/进阶/跨端与桌面深化/JSBridge%20设计与演进' },
                     { text: 'Electron 与桌面端', link: '/frontend/进阶/跨端与桌面深化/Electron%20与桌面端' },
-                    { text: '模块总结-核心（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/模块总结-核心（跨端与桌面深化）' },
                     { text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' },
                     { text: '模块面试题（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/面试题' }
                 ]
@@ -421,7 +407,6 @@ export default [
                     { text: 'AI 与前端工程结合', link: '/frontend/进阶/AI%20前端工程/AI%20与前端工程结合' },
                     { text: '端侧推理与 WASM', link: '/frontend/进阶/AI%20前端工程/端侧推理与%20WASM' },
                     { text: 'AI 应用的性能与体验', link: '/frontend/进阶/AI%20前端工程/AI%20应用的性能与体验' },
-                    { text: '模块总结-核心（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/模块总结-核心（AI%20前端工程）' },
                     { text: '模块总结（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/总结' },
                     { text: '模块面试题（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/面试题' }
                 ]
@@ -434,7 +419,6 @@ export default [
                     { text: '渲染引擎', link: '/frontend/进阶/低代码与搭建体系/渲染引擎' },
                     { text: '编辑器与出码', link: '/frontend/进阶/低代码与搭建体系/编辑器与出码' },
                     { text: '低代码的边界', link: '/frontend/进阶/低代码与搭建体系/低代码的边界' },
-                    { text: '模块总结-核心（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/模块总结-核心（低代码与搭建体系）' },
                     { text: '模块总结（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/总结' },
                     { text: '模块面试题（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/面试题' }
                 ]
@@ -447,7 +431,6 @@ export default [
                     { text: '协同编辑', link: '/frontend/进阶/复杂交互与编辑器/协同编辑' },
                     { text: '复杂表单引擎', link: '/frontend/进阶/复杂交互与编辑器/复杂表单引擎' },
                     { text: '状态机与流程编排', link: '/frontend/进阶/复杂交互与编辑器/状态机与流程编排' },
-                    { text: '模块总结-核心（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/模块总结-核心（复杂交互与编辑器）' },
                     { text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' },
                     { text: '模块面试题（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/面试题' }
                 ]
@@ -459,7 +442,6 @@ export default [
                     { text: '构建平台与产物治理', link: '/frontend/进阶/研发平台与效能工程/构建平台与产物治理' },
                     { text: '实验与增长平台', link: '/frontend/进阶/研发平台与效能工程/实验与增长平台' },
                     { text: '研发效能度量', link: '/frontend/进阶/研发平台与效能工程/研发效能度量' },
-                    { text: '模块总结-核心（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/模块总结-核心（研发平台与效能工程）' },
                     { text: '模块总结（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/总结' },
                     { text: '模块面试题（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/面试题' }
                 ]
@@ -471,19 +453,10 @@ export default [
                     { text: '技术方案写作与架构评审', link: '/frontend/进阶/工程素养/技术方案写作与架构评审' },
                     { text: '代码评审与技术债治理', link: '/frontend/进阶/工程素养/代码评审与技术债治理' },
                     { text: '线上事故复盘与应急响应', link: '/frontend/进阶/工程素养/线上事故复盘与应急响应' },
-                    { text: '模块总结-核心（工程素养）', link: '/frontend/进阶/工程素养/模块总结-核心（工程素养）' },
                     { text: '模块总结（工程素养）', link: '/frontend/进阶/工程素养/总结' },
                     { text: '模块面试题（工程素养）', link: '/frontend/进阶/工程素养/面试题' }
                 ]
             }
-        ]
-    },
-    {
-        text: '面试方法论',
-        collapsed: true,
-        items: [
-            { text: '面试方法论', link: '/frontend/进阶/面试方法论/面试方法论' },
-            { text: '反问面试官', link: '/frontend/进阶/面试方法论/反问面试官' }
         ]
     }
 ]

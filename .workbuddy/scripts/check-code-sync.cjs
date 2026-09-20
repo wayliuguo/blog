@@ -26,19 +26,7 @@ const STRICT = ARGS.includes('--strict')
 
 // 参与「出处标注 + 逐字溯源」检查的语言。前端板块的主力语言是 css / html / jsx / vue，
 // 只盯 js/ts 会让绝大多数代码块处于无人看管的状态。
-const LANG_OK = new Set([
-    'javascript',
-    'js',
-    'typescript',
-    'ts',
-    'css',
-    'scss',
-    'html',
-    'jsx',
-    'tsx',
-    'vue',
-    'json'
-])
+const LANG_OK = new Set(['javascript', 'js', 'typescript', 'ts', 'css', 'scss', 'html', 'jsx', 'tsx', 'vue', 'json'])
 const ELLIPSIS = /^\s*\/\/\s*(…|\.\.\.)/
 
 // 去掉注释与所有空白，只留代码骨架
@@ -252,8 +240,7 @@ for (const board of pickedBoards) {
                 // 总结.md / 面试题.md 是元页面（汇总页），不参与代码对齐检查
                 if (e.name === '总结.md' || e.name === '面试题.md') continue
                 const relDir = path.relative(boardDir, path.dirname(p)).replace(/\\/g, '/')
-                if (MODULE_FILTER && relDir !== MODULE_FILTER && !relDir.startsWith(MODULE_FILTER + '/'))
-                    continue
+                if (MODULE_FILTER && relDir !== MODULE_FILTER && !relDir.startsWith(MODULE_FILTER + '/')) continue
                 checkDoc(p, fs.readFileSync(p, 'utf8'))
             }
         }

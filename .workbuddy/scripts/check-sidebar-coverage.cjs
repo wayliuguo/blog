@@ -28,9 +28,7 @@ for (const board of picked) {
     const cfg = fs.readFileSync(cfgPath, 'utf8')
     const side = new Set([...cfg.matchAll(/link:\s*'([^']+)'/g)].map(m => decodeURIComponent(m[1])))
 
-    const files = boards
-        .walkMd(path.join(ROOT, board))
-        .map(p => path.relative(ROOT, p).replace(/\\/g, '/'))
+    const files = boards.walkMd(path.join(ROOT, board)).map(p => path.relative(ROOT, p).replace(/\\/g, '/'))
 
     const missing = files.filter(f => !side.has('/' + f.replace(/\.md$/, '')))
     totalMissing += missing.length
