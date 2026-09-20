@@ -460,6 +460,10 @@ export default [
     },
     {
         text: '面试方法论',
-        link: '/frontend/进阶/面试方法论'
+        collapsed: true,
+        items: [
+            { text: '面试方法论', link: '/frontend/进阶/面试方法论/面试方法论' },
+            { text: '反问面试官', link: '/frontend/进阶/面试方法论/反问面试官' }
+        ]
     }
 ]
