@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<title>viz-bench</title>
+<style>html,body{margin:0;background:#111}canvas,svg{display:block}</style>
+</head>
+<body>
+<div id="stage" style="width:800px;height:600px"></div>
+<script>
+// 1 万点渲染：Canvas 2D / SVG / WebGL 三路对照，测真实帧率
+// 用法：?mode=canvas|svg|webgl&n=10000&ms=3000
+const params = new URLSearchParams(location.search)
+const MODE = params.get('mode') || 'canvas'
+const N = parseInt(params.get('n') || '10000', 10)
+const DURATION = parseInt(params.get('ms') || '3000', 10)
+const W = 800, H = 600
+const stage = document.getElementById('stage')
+
+// 随机生成 N 个点的位置（归一化 0..1），每帧整体平移一点点，模拟数据在动
+function makePoints(n) {
+  const xs = new Float32Array(n), ys = new Float32Array(n)
+  for (let i = 0; i < n; i++) { xs[i] = Math.random(); ys[i] = Math.random() }
+  return { xs, ys }
+}
+const pts = makePoints(N)
+
+let cleanup = null
+function setup() {
+  if (MODE === 'canvas') return setupCanvas()
+  if (MODE === 'svg') return setupSvg()
+  if (MODE === 'webgl') return setupWebGL()
+}
+function teardown() { if (cleanup) cleanup() }
+
+// ---- Canvas 2D：每帧 clearRect + 逐点 fillRect ----
+let cv, ctx
+function setupCanvas() {
+  cv = document.createElement('canvas'); cv.width = W; cv.height = H
+  stage.appendChild(cv); ctx = cv.getContext('2d')
+}
+function drawCanvas(t) {
+  const dx = (Math.sin(t / 1000) * 0.1), dy = (Math.cos(t / 1300) * 0.1)
+  ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H)
+  ctx.fillStyle = '#4ec9b0'
+  for (let i = 0; i < N; i++) {
+    const x = ((pts.xs[i] + dx) % 1) * W
+    const y = ((pts.ys[i] + dy) % 1) * H
+    ctx.fillRect(x, y, 2, 2)
+  }
+}
+
+// ---- SVG：N 个 <circle>，每帧逐个改 cx/cy ----
+let svg, circles
+function setupSvg() {
+  svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('width', W); svg.setAttribute('height', H)
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
+  svg.style.background = '#111'
+  circles = []
+  const frag = document.createDocumentFragment()
+  for (let i = 0; i < N; i++) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    c.setAttribute('r', '1.2'); c.setAttribute('fill', '#4ec9b0')
+    frag.appendChild(c); circles.push(c)
+  }
+  svg.appendChild(frag); stage.appendChild(svg)
+}
+function drawSvg(t) {
+  const dx = (Math.sin(t / 1000) * 0.1), dy = (Math.cos(t / 1300) * 0.1)
+  for (let i = 0; i < N; i++) {
+    const x = ((pts.xs[i] + dx) % 1) * W
+    const y = ((pts.ys[i] + dy) % 1) * H
+    circles[i].setAttribute('cx', x.toFixed(1))
+    circles[i].setAttribute('cy', y.toFixed(1))
+  }
+}
+
+// ---- WebGL：N 个 POINTS，每帧更新一个平移 uniform 重绘 ----
+let gl, prog, buf, uTrans
+function setupWebGL() {
+  cv = document.createElement('canvas'); cv.width = W; cv.height = H
+  stage.appendChild(cv)
+  gl = cv.getContext('webgl') || cv.getContext('experimental-webgl')
+  if (!gl) { report({ error: 'no-webgl' }); return }
+  const vs = `attribute vec2 a_pos; uniform vec2 u_trans; void main(){ gl_Position = vec4(a_pos + u_trans, 0.0, 1.0); gl_PointSize = 2.0; }`
+  const fs = `precision mediump float; void main(){ gl_FragColor = vec4(0.31,0.79,0.69,1.0); }`
+  const compile = (type, src) => {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s)
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s))
+    return s
+  }
+  prog = gl.createProgram()
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, vs))
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs))
+  gl.linkProgram(prog); gl.useProgram(prog)
+  buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf)
+  const arr = new Float32Array(N * 2)
+  for (let i = 0; i < N; i++) { arr[i * 2] = pts.xs[i] * 2 - 1; arr[i * 2 + 1] = pts.ys[i] * 2 - 1 }
+  gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW)
+  const loc = gl.getAttribLocation(prog, 'a_pos')
+  gl.enableVertexAttribArray(loc)
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
+  uTrans = gl.getUniformLocation(prog, 'u_trans')
+}
+function drawWebGL(t) {
+  const dx = (Math.sin(t / 1000) * 0.1), dy = (Math.cos(t / 1300) * 0.1)
+  gl.viewport(0, 0, W, H); gl.clearColor(0.067, 0.067, 0.067, 1); gl.clear(gl.COLOR_BUFFER_BIT)
+  // 归一化坐标平移用较小幅度，避免点飞出画面
+  gl.uniform2f(uTrans, dx * 0.2 - 0.1, dy * 0.2 - 0.1)
+  gl.drawArrays(gl.POINTS, 0, N)
+}
+
+const draw = MODE === 'canvas' ? drawCanvas : MODE === 'svg' ? drawSvg : drawWebGL
+setup()
+
+const deltas = []
+let last = performance.now()
+const start = last
+let firstDone = false
+function frame(now) {
+  const dt = now - last; last = now
+  if (firstDone) deltas.push(dt) // 第一帧的间隔含初始化，跳过
+  else firstDone = true
+  draw(now - start)
+  if (now - start >= DURATION) {
+    const elapsed = (now - start) / 1000
+    const sorted = [...deltas].sort((a, b) => a - b)
+    const p95 = sorted[Math.floor(sorted.length * 0.95)] || 0
+    const longest = sorted[sorted.length - 1] || 0
+    const frames = deltas.length
+    report({
+      mode: MODE, n: N, durationMs: Math.round(elapsed * 1000),
+      frames, avgFps: +(frames / elapsed).toFixed(1),
+      p95FrameMs: +p95.toFixed(1), longestFrameMs: +longest.toFixed(1)
+    })
+    return
+  }
+  requestAnimationFrame(frame)
+}
+function report(payload) {
+  fetch('/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(() => {})
+  // 同时落到标题，方便无头环境下兜底读取
+  document.title = 'DONE:' + JSON.stringify(payload)
+}
+requestAnimationFrame(frame)
+</script>
+</body>
+</html>
