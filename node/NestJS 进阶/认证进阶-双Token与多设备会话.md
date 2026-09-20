@@ -321,21 +321,6 @@ model AuthSession {
 | Refresh Token 明文入库 | 拖库即失陷 | 永远只存 SHA-256 哈希 |
 | 轮换后旧 Token 还能用 | 没置位 `revoked` | 每次刷新先把旧记录 `revoked = true` |
 
-## 小结
-
-- **双 Token 分工**：单 Token 长则泄露危害大、短则体验差且无法主动吊销；Access 短(15m)放内存/`Authorization` 头管接口，Refresh 长(7d)放 HttpOnly Cookie 只管换发；Refresh 必须可服务端作废否则退化成长效 JWT
-- **HttpOnly Cookie 四选项**：`httpOnly` 降 XSS 窃取(不解决 XSS)、`secure` 仅 HTTPS、`sameSite` 缓解 CSRF(跨站权衡 `lax`)、`path` 缩暴露面
-- **Refresh 存储用 SHA-256 而非 bcrypt**：单向哈希入库、明文只给一次、拖库也拿不到可用 Token；bcrypt 只处理前 72 字节会截断长 Token 致哈希误判
-- **AuthSession 表支持多设备**：User 1:N，每设备一条记录互不顶号；字段 `userId`/`refreshTokenHash`/`deviceId`/`userAgent`/`expiresAt`/`revoked`(软删)
-- **轮换与登出**：刷新先 `revoked=true` 旧记录再签新对（偷来的旧 Token 一用即 401）；登出按 `refreshTokenHash`(单设备)或 `userId`(全设备)批量软删；Access 的 15m 窗口要么查库失无状态、要么接受高敏加黑名单
-- **常见坑**
-  - `verifyAsync` 记得 `await`：否则异常被吞变 500 而非 401
-  - 跨域 Cookie 带不上：后端 `sameSite=lax/none`+`secure`、前端 `fetch` 带 `credentials:'include'`
-  - 刷新缺过期校验：同时判断 `expiresAt>now()` 与 `revoked`
-- **ORM 同层**：Prisma 仅图类型推导，`findUnique({ where: { tokenHash } })` 对应 `sessionRepo.findOne({ where: { tokenHash } })`，设计思路一致
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/NestJS 进阶/code/advanced-lab2`：用一张内存表顶替 Prisma Client，把双 Token 的登录 / 刷新轮换 / 多设备 / 登出全部真跑一遍。

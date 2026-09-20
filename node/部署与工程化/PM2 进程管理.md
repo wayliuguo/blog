@@ -180,36 +180,6 @@ pm2 flush
 
 > 注意：PM2 日志是内存缓冲、不持久化，容器重启后丢失。**要查历史日志请看文件日志**（`logs/app.*.log`），见 [日志体系](./日志体系)。
 
-## 小结
-
-- **裸跑的四个致命问题**：终端绑定、崩溃即停、单线程浪费、无日志管理——PM2 的守护进程化、自动重启、集群模式、日志收集正对应解决
-  1. 终端绑定：关闭终端或 SSH 断开，进程即死
-  2. 崩溃即停：未捕获异常直接退出，无人拉起
-  3. 单线程浪费：现代 CPU 多核，Node 默认只用一核
-  4. 无日志管理：输出散落终端，重启即丢
-- **常用命令与开机自启**
-  - 日常操作：`pm2 start` / `list` / `logs` / `restart` / `stop` / `delete` / `monit` / `describe` / `flush`
-  - 开机自启：`pm2 startup` 生成自启脚本 + `pm2 save` 保存进程列表，系统重启自动拉起全部应用
-- **`ecosystem.config.js`**：把命令行参数变成可版本化、可复用的声明式配置
-  - `autorestart`：进程崩溃自动重启
-  - `max_memory_restart`：内存超限自动重启（命令行 `--max-memory-restart 500M`，配置 `'1G'`），防内存泄漏拖垮机器
-  - `watch`：文件变化自动重启，仅开发用；`env` 注入变量，`env_production` 区分环境
-- **fork 与 cluster 的取舍**
-  1. fork：单进程、父子模式，适合 Windows、Docker 容器、不需要负载均衡
-  2. cluster：多进程 + Node 原生 cluster 轮询负载均衡，适合 Linux/macOS 裸机、无编排平台；`-i max` 让进程数 = CPU 核数
-- **`pm2 reload` 与 cluster**：靠逐个重启 worker 实现零停机；fork 是单进程无 worker 可换，故无 reload 必要
-- **Docker 内用 fork**：水平扩展交给编排平台（Compose 多副本 / K8s），容器内再 cluster 只会造成资源浪费与信号混乱；PM2 在容器里保留 fork，只为日志管理、进程监控、内存限制重启
-- **三层部署架构的演进**
-  1. 裸机：用户 → Nginx(80/443) → PM2 cluster（多 worker）→ DB
-  2. Docker：用户 → Nginx → Docker 容器（PM2 fork 单进程）× N 副本 → DB
-  3. K8s：用户 → Ingress → Pod（容器内 fork）→ DB
-  - 主线：裸机自己管进程 → 容器编排管副本 → 平台管一切；PM2 从"负载均衡器"退化为"容器内进程管家"
-- **与日志体系的衔接**
-  - PM2 捕获应用 stdout，正是"控制台 → PM2 → `docker logs`"链路中段（`pm2 logs --lines 100 --nostream`、`pm2 flush`）
-  - PM2 日志是内存缓冲、不持久化，容器重启即丢；历史日志必须看文件 `logs/app.*.log`
-
----
-
 ## 参考
 
 - 本模块总结：[总结](./总结.md)

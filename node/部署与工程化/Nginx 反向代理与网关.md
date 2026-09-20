@@ -185,35 +185,6 @@ Nginx (80/443)  ← 宿主机，唯一公网入口
 | [Docker Compose 编排](./Docker%20Compose%20编排) | compose 里端口绑定 `127.0.0.1`，正是为了只让 Nginx 访问 |
 | [生产部署实战](./生产部署实战) | 完整架构如何落地 |
 
-## 小结
-
-- **入口网关的必要性**：直接暴露 `3000` 有四个问题——无域名路由、无法共享 80/443、无 SSL、无负载均衡；用户只跟 Nginx 打交道，Nginx 分发请求并隐藏内部网络
-- **正向代理 vs 反向代理**
-  - 正向代理代理客户端访问外部（翻墙、公司出口）；反向代理代理服务端收请求（网关、负载均衡）——后端语境的“加一层”基本是后者
-- **基本转发与真实 IP**
-  - 转发三件套：`proxy_pass` 指后端 + `Host $host`（保留域名，后端正确生成链接）+ `X-Real-IP`（真实客户端 IP）+ `X-Forwarded-For`（转发链全 IP，供日志/风控）
-  - 真实 IP 的坑：装代理后应用日志与限流看到的是代理 IP，必须在应用层解析 `X-Forwarded-For`
-- **WebSocket 代理**：`Upgrade $http_upgrade` + `Connection "upgrade"` + `proxy_http_version 1.1` + `proxy_read_timeout 300s`（及 `proxy_send_timeout 300s`），缺一条前端握手失败
-- **静态资源与 Gzip**
-  - History 模式回退：`try_files $uri $uri/ /index.html` 让前端路由刷新命中 `index.html`
-  - Gzip：`gzip on` + `gzip_http_version 1.1` + `gzip_types` 指定文本 MIME + `gzip_min_length 1000` + `gzip_comp_level 9`，减小传输体积
-- **负载均衡策略**：`upstream` 组 + `proxy_pass http://backend/` 转发给整组
-  1. 默认轮询：依次分发，权重相同
-  2. `least_conn`：分给当前连接最少的实例
-  3. `ip_hash`：同 IP 固定到同实例（需 Session 的场景）
-- **各组件职责**
-  - Nginx：接收请求、SSL 终结、静态文件、反向代理、负载均衡
-  - PM2：Node 进程管理、故障恢复、内存管理
-  - Docker：环境隔离、一致性部署、服务编排
-  - MySQL / Redis：数据持久化 / 缓存
-- **三种部署架构**
-  1. 纯 Docker（现代默认）：Nginx、Server、Redis、MySQL 同在一套 Compose 网络
-  2. PM2 + Nginx 传统：Nginx(80/443) 反代与负载均衡 → 多个 PM2 cluster → MySQL/Redis
-  3. Docker + 容器内 PM2：Nginx 在宿主机做唯一公网入口 → Docker 容器（PM2 fork 单进程）× N 副本 → 宿主机或云 MySQL/Redis
-  - 演进主线：Nginx 始终“唯一入口”；变化的只是背后 Node 进程由谁管（裸机 PM2 → 容器 → 编排平台）
-
----
-
 ## 参考
 
 - 本模块总结：[总结](./总结.md)

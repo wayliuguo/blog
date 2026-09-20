@@ -371,23 +371,6 @@ dispatch(0)  ← 启动递归
 | 文件上传 | 不支持 | 通过 `koa-body` 中间件 |
 | 路由 | 手动 if/else | 需 `@koa/router`，支持 RESTful 参数 |
 
-## 小结
-
-- **Koa 的核心抽象**
-  - 只有两件事：洋葱模型中间件链（`compose`）与 Context 封装（`createContext`），比 Express 更精简
-  - `app.use` 链式：`middlewares.push(fn)` 后 `return app`，可连续 `app.use(...).use(...)`
-- **洋葱模型：compose 与 dispatch**
-  - `compose` 返回 `function(ctx)`，从 `dispatch(0)` 启动；`middlewareList[i]` 为空时 `Promise.resolve()` 是递归终点
-  - `dispatch` 把下个自己当 `next`：`Promise.resolve(fn(ctx, () => dispatch(i+1)))`——`await next()` 能等下游完成全靠这句
-  - `index` 防重入：同一中间件写两个 `await next()` 会因 `i <= index` 直接 reject，而非重跑下游
-  - `await next()` 决定回程：A、B 的返回段只能在内层 C 结束后才开始
-- **Context 封装（`createContext`）**：挂 method/url/path(`?`前)/query/headers/status/body 与 `ctx.set()`；`ctx.body` setter 赋值时标记 `_respond`
-- **响应自动生成（`respond`）**：string→text/html；对象→application/json+JSON.stringify；Buffer→原样 end；null/undefined→状态码改 **204** 且不发 body
-- **错误传播**：统一靠 `fn(ctx).then(respond).catch(...)`，任意中间件 reject 都落同一 catch 返回 500
-- **能力边界 vs Koa 源码**：真源码用 `koa-compose`、ctx 双层属性委托、`ctx.onerror` 与 `app.on('error')`、支持 stream 作 `ctx.body` 与文件上传，路由交 `@koa/router`
-
----
-
 ## 配套代码
 
 本篇的代码块逐字摘自仓库 `node/Express 与 Koa/code/koa-mini/index.js`（全文 183 行，零第三方依赖，纯 `node:http` 实现）。

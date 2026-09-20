@@ -259,26 +259,6 @@ Potential solutions:
 
 > 口诀：**要被用，先注册；要跨模块，先导出；要用别人，先导入**。三步走完还报错，再检查 `emitDecoratorMetadata` 是否开启、构造参数类型是否可解析（比如用了接口而非具体类却没给 Token）。
 
-## 小结
-
-- **IoC 与 DI 的两层**：手动 new 整条依赖网，改动牵一发动全身；IoC 是"为何交控制权给容器"的思想，DI 是"怎么交出去"的实现
-- **容器看得见依赖的前提**：装饰器 emit `design:paramtypes` → `reflect-metadata` 挂类 → 启动扫描 → 容器解析注入；`@Injectable()` 与 `emitDecoratorMetadata` 缺一不可，否则 `Nest can't resolve dependencies`
-- **Provider 四种声明**
-  1. **`useClass`**：Token 即类，最常用
-  2. **`useValue`**：注入常量/配置对象
-  3. **`useFactory`**：需运行时逻辑/异步/依赖其他 Provider
-  4. **`useExisting`**：给同一实例起别名
-  - 非类 Token(字符串/`Symbol`)须 `@Inject` 指名才能对上
-- **作用域 Scope**
-  1. **`DEFAULT`(Singleton)**：全应用一实例，无状态服务默认
-  2. **`REQUEST`**：每请求新建，绑请求上下文(如租户隔离)
-  3. **`TRANSIENT`**：每次注入新建，有状态不可共享工具类
-  - 代价：绕过复用增创建开销，且不可被 Singleton 依赖
-- **启动流程与循环依赖**：`NestFactory.create` 扫 Module 树→建依赖图→建容器→按序实例化注入→绑路由/Guard/Pipe→起 HTTP Server；依赖图成环启动直接失败，用 `forwardRef()` 打破
-- **DI 报错三步法**：①该 Provider 是否注册 ②跨模块是否 `exports` 导出 ③使用方是否 `imports`；仍报错查 `emitDecoratorMetadata` 与构造参数类型是否可解析(接口没给 Token)
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/NestJS 入门/code/nestjs-mini`。

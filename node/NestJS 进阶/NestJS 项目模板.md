@@ -1141,19 +1141,6 @@ npm run start:prod
 6. **统一响应格式**：通过拦截器统一包装返回，前后端交互更清晰
 7. **全局异常处理**：统一捕获异常，日志记录，友好返回
 
-## 小结
-
-- **目录结构**：src 五大块 `common`/`config`/`constants`/`modules`/`shared`；业务模块自带 `dto`/`entities`/`guards`/`services`/`strategies` + 三件套
-- **配置管理**：`config/` 集中读 `.env` 给默认值，`database.config.ts` 派生 `TypeOrmModuleOptions`（`synchronize`/`logging` 仅 development 开）；`.env` 按 DB/Redis/JWT 三组给变量（`JWT_EXPIRES` 默认 2h）
-- **根模块与入口**：`APP_FILTER`/`APP_INTERCEPTOR` 以 Provider 注册（可注入依赖），`main.ts` 挂 `ValidationPipe`(`whitelist`/`transform`/`forbidNonWhitelisted`)+`enableCors`+`setGlobalPrefix('api')`+Swagger
-- **数据层与公共设施**
-  - 实体演示主键/唯一列/`select:false` 隐藏密码/`ManyToOne` 级联删除；业务模块组合 dto/module/controller/service
-  - 统一响应 `ResponseModel`+`TransformInterceptor`、统一异常 `@Catch()` 过滤器（堆栈仅 development）；`@Global()` `RedisModule` 用 `useFactory`+Token `'REDIS_CLIENT'` 全局可用
-  - 健康检查查两头：`dataSource.query('SELECT 1')` 与 `redis.ping()`，任一失败置 degraded
-- **上手与最佳实践**：CLI 建项目 → 装依赖 → `cp .env.example .env` → 起 MySQL/Redis → `start:dev`/`build`+`start:prod`；按功能划模块、共享下沉、基础设施进 common、全局校验/响应/异常、依赖注入
-
----
-
 ## 配套代码
 
 本篇的可运行示例分两处：`node/NestJS 进阶/code/nestjs-template`（完整项目模板，需要 MySQL + Redis）与 `node/NestJS 进阶/code/advanced-lab2`（把不依赖数据库的部分抽出来真跑）。

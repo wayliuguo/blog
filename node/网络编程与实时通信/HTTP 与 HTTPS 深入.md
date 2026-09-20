@@ -464,40 +464,6 @@ TLS 安全能力 （加密与身份认证内建）
 
 两个最容易混的：`502` 通常是**网关根本没连上上游**（上游挂了、端口没监听）；`504` 通常是**网关连上了，但上游迟迟不回**（处理超时、数据库慢查询、下游卡住）。这一节与模块二第 04 篇的排障链呼应——遇到网络类报错，先定位"断在哪一跳"，再去看对应的超时与配置。
 
-## 小结
-
-- **HTTP 是 TCP 之上的应用层协议**
-  - 约定 `Method`/`URL`/`Header`/`Body`/`Status Code`，头与体靠空行分界，体的结束靠 `Content-Length` 或 `Transfer-Encoding: chunked`
-  - 抽象层级：`node:http` → Express/Fastify → NestJS，框架已按 HTTP 规则把字节流解析好（所以能直接拿到 `@Body()`）
-  - 手写 `node:http` 会撞上的问题：路由分发、查询参数解析、Body 读取、统一兜底、横切鉴权、分层组织——Express/Fastify 就是来收这些的
-- **`req` 与 `res` 本质上也是流**
-  - `req` 是 Readable（请求体分多次到达，`chunk` 是 Buffer，靠 `data`+`end`+`Buffer.concat` 拼回字符串）
-  - `res` 是 Writable（可多次 `write`，最后 `end` 收尾）
-  - 收益：大文件下载可直接 `readableStream.pipe(res)`，边读边发，不必先读进内存
-- **流式响应的边界：Content-Length 与 chunked**
-  - 一次性算出的响应体可在 `writeHead` 带 `Content-Length`，但必须用 `Buffer.byteLength()`（字节长度，非字符长度——`'你好'` 字符长 2、字节长 6）
-  - 流式响应算不出总长度，改用 `Transfer-Encoding: chunked` 分块传输，实现"边产生边发送边结束"
-- **Keep-Alive 与三个超时**
-  - 价值：多个 HTTP 请求复用同一条 TCP 连接，省掉每次的握手/挥手成本
-  - 分工：`keepAliveTimeout` 管空闲多久关连接；`headersTimeout` 管收齐请求头时限；`requestTimeout` 管单请求总时限
-  - 硬约束：`headersTimeout` 必须 > `keepAliveTimeout`，否则空闲连接被关时后续请求被丢，客户端见 `ECONNRESET`/`socket hang up`
-- **HTTPS 与 TLS 解决的问题**
-  - TLS 解决三件事：加密（防中间人窃听明文）、身份认证（证书防伪造钓鱼）、数据完整性（防响应被篡改注入）
-  - HTTPS 不是新协议，而是 HTTP over TLS（握手+加密+完整性校验）；生产里 TLS 通常在网关卸载，Node 跑内部明文 HTTP
-- **HTTP 版本演进：队头阻塞与多路复用**
-  - HTTP/1.1：同一条连接上请求/响应串行（应用层队头阻塞），靠开多条 TCP 连接绕过
-  - HTTP/2：单条 TCP 连接上多 Stream 交错（多路复用），加二进制分帧与 HPACK 头压缩；但仍共享一条 TCP，丢包会触发 TCP 层队头阻塞
-  - HTTP/3：传输层换成基于 UDP 的 QUIC，各 Stream 更独立，丢包只影响自身
-- **报错码与排障方向**
-  - `ECONNRESET`：对端突然重置（keep-alive 连接被服务端先关，或读写时对方已断）
-  - `socket hang up`：客户端视角连接被对方提前关闭
-  - `ECONNREFUSED`：目标地址/端口无进程监听
-  - `431`：请求头过大（Cookie/鉴权头累积）
-  - `502` vs `504`：前者网关根本没连上上游，后者连上了但上游迟迟不回（慢查询/下游阻塞）
-  - 方法论：遇网络报错先定位"断在哪一跳"，再看对应超时与配置
-
----
-
 ## 配套代码
 
 | 文件 | 演示什么 |

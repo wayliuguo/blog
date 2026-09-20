@@ -184,22 +184,6 @@ koa-basics · 04-stack 运行在 http://localhost:3000
 
 `koa-body` 从 v7 起改成了具名导出，CommonJS 里要写 `const { koaBody } = require('koa-body')`（老教程里的 `const koaBody = require('koa-body')` 在 v8 会报 `koaBody is not a function`）。
 
-## 小结
-
-- **Koa 的定位与最小写法**
-  - 极简内核：Express 原班人马打造的继任者，只给 `ctx` 封装，路由/模板/静态/body 解析全外置
-  - Hello World：`app.use(async ctx => { ctx.body = 'Hello World' })`，给 `ctx.body` 赋值即完成响应，不写 `res.end`
-  - 原生 `async/await`：中间件都是 async 函数，`await` 到数组直接赋 `ctx.body`，自动序列化成 JSON
-- **洋葱模型**
-  - 顺序：进入按注册顺序、返回按逆序（「1 进入 → 2 进入 → 处理 → 2 返回 → 1 返回」）
-  - 成立前提：`await next()` 等待下游整条链 resolve；写成 `next()` 不 await 则洋葱被拉平成线性
-  - 价值：请求前后都能介入，天然适合耗时统计、事务管理、统一响应包装
-- **Express 与 Koa 的对比**
-  - 七项差异：中间件模型（线性/洋葱）、异步（回调/async）、体积、路由、body 解析、静态文件、社区生态
-  - 需额外安装：`@koa/router`（路由）、`koa-body`（body）、`koa-static`（静态），用 `app.use(router.routes())` 挂载
-
----
-
 ## 配套代码
 
 本篇每个代码块都逐字摘自仓库 `node/Express 与 Koa/code/koa-basics`（真实 `koa`，不是重实现），每个脚本跑完会自己打请求并打印真实结果。可落地的工程骨架在 `code/koa-template`。

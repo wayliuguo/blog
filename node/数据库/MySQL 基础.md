@@ -138,30 +138,6 @@ LEFT JOIN orders ON users.id = orders.user_id;
 
 > 实际项目中，**大多数情况下适当反范式是可接受的**，以查询性能换取数据一致性。
 
-## 小结
-
-- **关系型数据库构成**
-  - 表 / 外键 / 行列：数据存表里、表间靠外键关联，行是记录、列是字段，可类比 Excel 工作表
-- **SQL 基础**
-  1. `SELECT`：`WHERE` 过滤、`ORDER BY` 排序、`LIMIT` 限制数量
-  2. `INSERT` / `UPDATE` / `DELETE`：写操作漏写 `WHERE` 会作用于全表，务必带上
-  3. 分页：`LIMIT 10 OFFSET 20` 取第 21-30 条，OFFSET 越大扫描越多，深度分页改用游标
-- **建表与约束**
-  - 自增主键：`INT PRIMARY KEY AUTO_INCREMENT`
-  - 库层拦截：`NOT NULL` / `DEFAULT` / `UNIQUE` 在数据库层挡住脏数据
-- **表关系形态**
-  1. 1:1：直接加外键字段
-  2. 1:N：外键字段指向主表，如 `orders.user_id` → `users.id`
-  3. N:N：必须建中间表
-- **连接查询**
-  1. `INNER JOIN`：只保留两表都匹配的行
-  2. `LEFT JOIN`：保留左表全部，右表缺失列补 `NULL`
-- **范式与反范式**
-  - 三大范式：1NF 每列不可再分、2NF 非主键列完全依赖主键、3NF 非主键列不依赖其他非主键列
-  - 实际取舍：多数项目接受适度反范式，用数据冗余换查询性能
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/数据库/code/mysql-demo`。

@@ -297,29 +297,6 @@ Node.js 是一个基于 Chrome V8 的运行时
 
 把前面所有层串起来看，你已经掌握了 HTTP 短连接、TCP 长连接、以及这两条"连接不再断开"的形态。下一篇把这几层纵向穿起来，看一次真实请求从浏览器到服务端到底完整经历了什么。
 
-## 小结
-
-- **WebSocket：实时双向通信的应用层协议**
-  - 定位：HTTP 一问一答不匹配"服务端随时主动推"，WebSocket 为这类双向实时场景而生
-  - 不替代 TCP：分层 `WebSocket → TCP → IP`；裸 TCP 要自己定消息格式/分包/心跳，WebSocket 已标准化 Handshake/Frame/Message/Ping-Pong/Close/Text-Binary
-- **建立连接：先 HTTP 升级，不新建连接**
-  - 客户端带 `Upgrade: websocket` + `Sec-WebSocket-Key`，服务端回 `101 Switching Protocols` 后接管同一条 TCP 连接
-  - `Sec-WebSocket-Accept` 不是加密：把 `Key` 拼固定串做 SHA-1+Base64 回传，仅用于证明对方真懂握手、防代理误判
-- **长连接的心跳与生产必备件**
-  - 为什么心跳：客户端断网/进程被杀/NAT 超时后服务端不能立刻感知，连接"假死"会吃光内存与 fd；`Ping/Pong` 多次无响应即判失效释放
-  - 生产必备：心跳、断线感知、客户端重连、超时关闭、健康度维护、消息确认、扩容分布
-  - 多实例：连接散落不同进程，全房间广播需 Redis 发布订阅/消息总线或集中式连接管理——成熟项目直接用带集群能力的库
-- **SSE：单向推送**
-  - 方向固定 `Client ← Server`，用普通 HTTP 长连接；报文纯文本、空行分隔事件，`event`/`data`/`id`/`retry` 四个字段
-  - 断线续传：浏览器 `EventSource` 自动重连并带 `Last-Event-ID`，服务端从断点续推
-  - Node 侧三步：`Content-Type: text/event-stream` → 关默认缓冲（`Cache-Control: no-cache`、`Connection: keep-alive`）→ 往 `res` 流持续 `write`，并监听 `req.on('close')` 清定时器
-- **流式输出场景适合 SSE**
-  - 对照：20 秒任务若等算完再返回，用户干等像卡死；边产生边推则立即显示
-  - 典型：日志回放、任务进度、大文件生成、实时监控——共同点是数据分段来且不需客户端高频回传
-- **SSE 与 WebSocket 的选型准则**
-  - SSE 单向、仅文本、普通 HTTP、浏览器内置重连、网关易配；WebSocket 双向全双工、原生 Text/Binary、需配 `Upgrade`、重连自实现
-  - 判断：业务本质是 `Server → Client` 持续推送（通知/行情/日志/进度）→ SSE 足够；需 `Client ⇄ Server` 高频双向（聊天/协作/游戏）→ WebSocket
-
 ## 配套代码
 
 | 文件 | 演示什么 |

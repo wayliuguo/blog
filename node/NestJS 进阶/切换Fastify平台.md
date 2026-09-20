@@ -207,17 +207,6 @@ const result = await autocannon({
 - 差距主要来自序列化：Fastify 默认用 `fast-json-stringify` 按 Schema 拼字符串，比 `JSON.stringify` 少一次中间对象；Express 侧只能走 `res.json`。
 - `/ping` 这种没有业务逻辑的接口最能拉开框架开销的差距；一旦真实业务里加了数据库查询，两者的相对差距会被摊薄。
 
-## 小结
-
-- **收益**：性能约 2~3 倍（压测 ~40000 vs Express 15000 req/s），快在 JSON Schema 序列化替代 `JSON.stringify`
-- **切换三处改动**
-  1. **入口**：装 `@nestjs/platform-fastify` 后换 `NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())`
-  2. **静态/视图**：`useStaticAssets({ root, prefix })`、`setViewEngine({ engine, templates })`（写法与 Express 不同）
-  3. **文件上传**：需 `app.register(contentParser)`（来自 `fastify-multer`）才能收 multipart 请求
-- **中间件不兼容**：Fastify 不兼容 Express 的 `req`/`res`，`cookie-parser`/`helmet` 换 `@fastify/cookie`/`@fastify/helmet`，用 `app.register()` 注册
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/NestJS 进阶/code/advanced-lab2`。

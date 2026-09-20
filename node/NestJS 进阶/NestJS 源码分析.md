@@ -991,16 +991,6 @@ NestJS 利用 TypeScript 的 `emitDecoratorMetadata` 和 `reflect-metadata` 库�
 
 **Guard → Interceptor(前) → Pipe → Handler → Interceptor(后)**。Guard 最先执行决定请求是否放行，Interceptor 可以包裹 Handler 实现 AOP（前/后处理），Pipe 在 Handler 之前做参数转换校验。
 
-## 小结
-
-- **前置三件套**：TS 装饰器、`reflect-metadata`、`design:paramtypes`——缺一个读不懂 DI；`reflect-metadata` 隔离存元数据不污染原型；`emitDecoratorMetadata` 只对至少带一个装饰器的类生成 `paramtypes`
-- **四类装饰器签名**：类 `(target)`、方法 `(target, key, descriptor)`、属性 `(target, key)`、参数 `(target, key, parameterIndex)`
-- **启动链**：`new Container` → 收集 controller/provider → 读 `design:paramtypes` 递归注入 → 扫路由 → `http.createServer`；装饰器在类定义时即写元数据（`@Module`/`@Controller`/`@Get`/`@Param` 各存各自信息）
-- **请求链**：路由匹配 `:param` → Guard → 参数装饰器 → Pipe → Interceptor → Handler → `res.json`；各环节按有无 `canActivate`/`transform`/`intercept` 可选执行；出口为 403/404/500
-- **与真实源码差距**：最小实现手动遍历 `paramtypes`，NestJS 用 `InstanceLoader`/`ModuleScanner`/`RoutesResolver` 并额外支持作用域与循环依赖
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/NestJS 入门/code/nestjs-mini`。

@@ -154,10 +154,5 @@ export default [
             { text: '模块总结（工程化与拓展）', link: '/node/部署与工程化/总结' },
             { text: '模块面试题（工程化与拓展）', link: '/node/部署与工程化/面试题' }
         ]
-    },
-    {
-        text: '面试方法论',
-        collapsed: true,
-        items: [{ text: '面试方法论', link: '/node/面试方法论/面试方法论' }]
     }
 ]

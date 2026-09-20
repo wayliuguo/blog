@@ -215,25 +215,6 @@ EXEC
 
 **注意**：Redis 事务不保证原子性——语法错误时全部不执行，运行时错误只影响错误命令。
 
-## 小结
-
-- **三种持久化方式（RDB / AOF / 混合）**
-  1. RDB 快照：靠 `save 900 1` 规则或 `BGSAVE` 定期落盘；文件紧凑、恢复快，但可能丢最后一次快照之后的数据
-  2. AOF 日志：每个写命令追加落盘，`appendfsync everysec` 是默认推荐的折中，最多丢 1 秒数据，代价是文件更大、恢复更慢
-  3. AOF 重写：`auto-aof-rewrite-percentage 100` + `auto-aof-rewrite-min-size 64mb` 触发，或手动 `BGREWRITEAOF`，去掉冗余命令压小文件
-  4. 混合持久化：`aof-use-rdb-preamble yes` 让 RDB 快照充当 AOF 前缀，同时拿到 RDB 恢复速度与 AOF 高安全性
-- **过期策略与内存淘汰**
-  - 惰性 + 定期删除：访问时才判断过期并删除；另每 100ms 随机抽一批带 TTL 的 key 检查，`hz` 控制每秒检查次数（默认 10）
-  - 八种淘汰策略：默认 `noeviction` 写操作直接报错；纯缓存用 `allkeys-lru`，只想淘汰带 TTL 的 key 用 `volatile-*`；`maxmemory` 划定内存上限
-- **生产场景：内存监控与热点排查**
-  - 内存监控指标：`used_memory` / `maxmemory` 看水位、碎片率超 1.5 告警、`evicted_keys` 持续增长说明容量不足
-  - Big Key：String 超 10KB 或集合类超 5000 元素即判定；会阻塞 Redis、造成集群数据倾斜与网络开销；拆子 Hash、压缩大 JSON、用 `UNLINK` 异步删（List 用 `LTRIM` 分批清）
-  - Hot Key：单 key QPS 过万、某节点 CPU 明显偏高即热点；用本地缓存、读写分离、副本分片、限流四种手段分散
-- **Redis 事务**
-  - 打包执行但不回滚：`MULTI` / `EXEC` 只保证命令打包执行、不支持回滚，`WATCH` 做乐观锁；语法错误整批不执行，运行时错误只影响出错那条
-
----
-
 ## 配套代码
 
 本篇的可运行示例在仓库 `node/Redis/code/redis-demo`。
