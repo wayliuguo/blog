@@ -8,6 +8,10 @@ export default [
                     {
                         text: 'claude code',
                         link: '/ai/claudeCode'
+                    },
+                    {
+                        text: '模拟面试题',
+                        link: '/ai/面试题'
                     }
                 ]
             },
