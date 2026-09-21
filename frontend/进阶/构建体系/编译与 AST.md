@@ -71,7 +71,7 @@ x, add, a, b
 
 ```js
 const names = []
-const walk = (node) => {
+const walk = node => {
     if (!node || typeof node !== 'object') return
     if (Array.isArray(node)) return node.forEach(walk)
     if (node.type === 'Identifier' && !names.includes(node.name)) names.push(node.name)
@@ -219,7 +219,7 @@ var a = [1, 2].map(function (x) {
 > 摘自 `./code/build-lab/ast-lab/codemod.cjs`（运行：`npm run ast:codemod`）
 
 ```js
-const tricky = "const s = 'React.createElement(\"div\")'  // 字符串里长得一模一样"
+const tricky = 'const s = \'React.createElement("div")\'  // 字符串里长得一模一样'
 const re = /React\.createElement/g
 console.log('正则替换会误伤字符串:', tricky.replace(re, 'h'))
 const { output: safe } = transform(tricky)
@@ -272,6 +272,136 @@ AST 替换不动字符串: const s = 'React.createElement("div")'; // 字符串�
 | 死代码检测 | 分析引用关系，找出从未被引用的导出 |
 | 国际化提取 | 遍历所有字符串字面量，收集成 key |
 | 依赖分析 / 循环依赖检测 | 只看 ImportDeclaration 就能建出模块图 |
+
+## 九、Babel API 全景：函数与产物对照
+
+前面八节把三个阶段逐个拆开讲了，这一节收口成四张图，用来定位「某个 API 属于哪一层、产出什么、什么时候该用它」。图中字段与数字均基于 Babel 7.29.x 实测（core 7.29.7、parser 7.29.9、traverse / types / generator 7.29.8），不是抄文档。
+
+**图 1 · 我调用的那些函数，各属于哪一层？**
+
+```
+   ┌───────────────────────────────────────────────────────────────────────┐
+   │ 入口 A：@babel/core 一步到位（内部依次跑完 ①②③）                      │
+   │    transformSync(code, opts)                                          │
+   │      → { code, map, ast, metadata, sourceType, options }              │
+   │    transformFromAstSync(ast, code, opts)   复用已有 AST，跳过 ①       │
+   │    parseSync(code, opts) → File           只解析，不转换              │
+   │    transformFileSync(path)                直接从文件读取              │
+   │    以上每个都有 Async 版本（transformAsync / parseAsync …）           │
+   └───────────────────────────────────────────────────────────────────────┘
+   A 内部就是依次跑完下面三步；想自己控制每一步，就用入口 B：
+
+   ┌───────────────────────────────────────────────────────────────────────┐
+   │ ① @babel/parser                       文本 → 树（只读，不改代码）     │
+   │    parse(code, opts)          → File                                  │  → File
+   │    parseExpression(code)      → 单个 Expression（无 Program 层）      │
+   │    常用 opts：sourceType:"module" | "script"                          │
+   │               plugins:["jsx"|"typescript"|"decorators"]               │
+   │               tokens / ranges / includeComments                       │
+   └───────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+   ┌───────────────────────────────────────────────────────────────────────┐
+   │ ② @babel/traverse                     遍历 + 改树（原地修改）         │
+   │    traverse(ast, { 节点类型(path, state) {} })                        │  → 改过的 File
+   │    → 无返回值，直接改 ast；要变回文本还得走 ③                         │
+   │    path：replaceWith / remove / insertBefore / insertAfter            │
+   │          unshiftContainer("父节点字段名", node) / skip / stop         │
+   │    scope：hasBinding / rename / generateUidIdentifier                 │
+   │    只读替代：types.traverseFast(ast, fn)（无 Path，更快）             │
+   └───────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+   ┌───────────────────────────────────────────────────────────────────────┐
+   │ ③ @babel/generator                    树 → 文本                       │
+   │    generate(ast, opts, code)  → { code, map, rawMappings }            │  → 源码文本
+   │    opts：sourceMaps / compact / retainLines / comments                │
+   └───────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼  输出：code 字符串（+ 可选 sourcemap）
+
+   ┌───────────────────────────────────────────────────────────────────────┐
+   │ 工具层（不占主链，被 ② 调用）                                         │
+   │    @babel/types     t.isXxx(node, opts) 判定 / t.assertXxx 断言       │
+   │                     t.xxx(...) 构造 / t.cloneNode / t.traverseFast    │
+   │                     实测：253 种节点类型 · 321 个 isXxx               │
+   │    @babel/template  template(`CODE`)({ ID: node }) → 节点或节点数组   │
+   └───────────────────────────────────────────────────────────────────────┘
+```
+
+这张图最该记住的一句：**`transformSync` 不是第四个阶段**，它内部就是把 ①②③ 串起来跑一遍。另外 `parse` → `traverse` → `generate` 三件套和 `@babel/core` 是两条并行的入口，不是上下游——你要的是"跑通流程"还是"逐步控制"，决定了走哪条。
+
+**图 2 · parse 出来的到底是什么结构？**
+
+```
+File                                ← parse() 的返回值，代表「一个文件」
+├─ type: "File"
+├─ program: Program ────────────┐
+├─ comments[]                   │   注释单独存，不在 body 里
+├─ tokens[]                     │   仅 opts.tokens:true 时才有
+├─ range                        │   仅 opts.ranges:true 时才有
+├─ start / end / loc            │   位置信息，generate 靠它出 sourcemap
+└─ errors[]                     │   宽松解析时收集的错误
+                                │
+                                └─► Program      ← 内容都在这一层
+                                    ├─ body[]        顶层语句数组，一条语句一个元素
+                                    ├─ directives[]  "use strict" 这类指令
+                                    ├─ sourceType    "module" | "script"
+                                    ├─ interpreter   #!/usr/bin/env node
+                                    └─ start / end / loc
+
+   body[i] 的字段由 type 决定（共 253 种，查 astexplorer.net）
+   ├─ VariableDeclaration  { kind: "const", declarations[] }
+   ├─ FunctionDeclaration  { id, params[], body, generator, async }
+   ├─ ExpressionStatement  { expression }
+   └─ … 「Expression」这一个别名下就覆盖 52 种具体类型
+```
+
+两个容易踩的点：`parse()` 返回的是 **File 而不是 Program**，真正的语句在 `File.program.body`；`tokens` 与 `range` **默认根本不存在**，必须显式传 `opts.tokens: true` / `opts.ranges: true`（第二节那段示例代码实测会拿到 25 个 token）。
+
+**图 3 · 这个需求该用哪个 API？**
+
+```
+你要做什么？
+  │
+  ├─ 只看结构 / 收集信息，不改动 ────────► parser.parse
+                                            + types.traverseFast（只读，最快）
+                                            别用 traverse：它会建 Path/Scope，白花钱
+  │
+  ├─ 要改节点（替换 / 插入 / 删除） ─────► parse → traverse → generate
+                                            改了 AST 不会自动变回文本，必须 generate
+  │
+  ├─ 要跑 preset-env / babel.config ─────► core.transformSync
+                                            一条龙：解析 + 插件排序 + 生成
+  │
+  ├─ 手上已有 AST，只想再转一次 ─────────► core.transformFromAstSync
+                                            跳过 ①，直接进 ②
+  │
+  ├─ 只解析不转换（依赖分析等） ─────────► core.parseSync 或 parser.parse
+                                            两者产物字段完全一致，都是 File
+  │
+  └─ 想写一个可复用的转换 ───────────────► 插件函数 ({ types }) => ({ name, visitor })
+                                            塞进 transformSync 的 plugins 数组
+```
+
+**图 4 · 拿到 path 之后怎么改？**
+
+```
+   ┌────────────────────────────────────────────────────────────────────────────────┐
+   │ 替换        path.replaceWith(node) / replaceWithMultiple([a, b])               │
+   │ 删除        path.remove()                                                      │
+   │ 插入        path.insertBefore / insertAfter                                    │
+   │ 插进容器    path.unshiftContainer("body", node)   ← 参数是父节点字段名         │
+   │ 用源码替换  path.replaceWithSourceString("a + b")                              │
+   │ 控制遍历    path.skip() 跳过子树 / path.stop() 全停 / path.requeue() 重入队    │
+   │ 向上查找    path.findParent(fn) / path.getFunctionParent()                     │
+   │ 取值        path.get("body") / path.getSibling(0) / path.getSource()           │
+   │ 作用域      path.scope.hasBinding() / .rename() / .generateUidIdentifier()     │
+   │ 判断与求值  path.isXxx() / path.evaluate() / path.matchesPattern("a.b")        │
+   └────────────────────────────────────────────────────────────────────────────────┘
+```
+
+图 4 是第四、五节那几个动作的完整清单。其中 `unshiftContainer` 的第一个参数仍是**父节点上的字段名**，不是节点类型——这行最容易写错；`requeue` 则是第五节"坑一"（替换后被重新遍历）的直接来源。
 
 ## 配套代码
 

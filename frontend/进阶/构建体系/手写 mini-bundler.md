@@ -180,13 +180,13 @@ function renderImport(node, id) {
     const specs = node.specifiers
     if (specs.length === 0) return `__require(${id})` // 只为副作用
 
-    const ns = specs.find((s) => s.type === 'ImportNamespaceSpecifier')
+    const ns = specs.find(s => s.type === 'ImportNamespaceSpecifier')
     if (ns) return `const ${ns.local.name} = __require(${id})`
 
-    const def = specs.find((s) => s.type === 'ImportDefaultSpecifier')
+    const def = specs.find(s => s.type === 'ImportDefaultSpecifier')
     const named = specs
-        .filter((s) => s.type === 'ImportSpecifier')
-        .map((s) => (s.imported.name === s.local.name ? s.local.name : `${s.imported.name}: ${s.local.name}`))
+        .filter(s => s.type === 'ImportSpecifier')
+        .map(s => (s.imported.name === s.local.name ? s.local.name : `${s.imported.name}: ${s.local.name}`))
 
     if (!def) return `const { ${named.join(', ')} } = __require(${id})`
 
