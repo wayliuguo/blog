@@ -11,7 +11,8 @@ VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ 
 - **行内代码双花括号**：写法非法 → build 报错；写法合法 → build 通过但页面渲染成空、静默丢内容。一律写 `<code v-pre>双花括号</code>`。
 - **链接含空格的文件名必须写 `%20`**（如 `./前端监控%20SDK%20实现.md`），否则 check-links 报「裸空格」。最易看错的三个：`编译与 AST.md`、`esbuild 与 Rust 工具链.md`、`Webpack 深入.md`（写前用 `os.listdir`+`repr()` 确认）。
 - **`check-code-sync.cjs` 的 `--module` 值相对板块根**（如 `进阶/性能优化`）且必须与 `--board` 同传，否则扫 0 篇静默「全部通过」；其 `skeleton()` 剔除字符串内容与全部空白（缩进/空行不影响），比对是去空白后 `includes` 连续子串——**引用块中间漏行必挂**。演示源码必须是真实文件、由 `readFileSync` 读入。
-- **两级一致性靠反向落回**：只改篇小结，再用 `C:\Users\10855\.workbuddy\tmp\rebuild_module.py`（node）或 **`rebuild_module_fe.py`**（frontend，只差 ROOT=`frontend/进阶`）重建 总结.md 的 `## 分篇知识点`（幂等），不要手工分别维护两级。**默认只跑 dry-run 看 `MISS` 是否为 0**（脚本已加「去空格/连字符/斜杠」归一化兜底，实测 frontend 进阶 59 篇 MISS 0）；**别整仓 `--apply`**——多数模块的两级是"内容等价、排版不同"，apply 会把 总结.md 的 `**标签**` 风格重写成篇小结风格。查 `FROM-篇` 是否认对篇即可。
+- **两级一致性（结构已变，脚本已失效）**：`frontend/进阶/*/总结.md` 现为「`## 大纲`（`- **N. 章**` + `  - N.N 知识域`）+ 同号正文 `## N` / `### N.N`」结构（规约见 `文档组织规范/reference/模块总结.md`），**大纲与正文标题必须一一对应，两级都手工改**。`C:\Users\10855\.workbuddy\tmp\rebuild_module*.py` 是给旧版「`## 分篇知识点`」写的，对 `frontend/进阶/` 全部 19 个模块（无该标题）直接报「无 ## 分篇知识点」并跳过——**别再用**（`frontend/基础/`、`node/` 未验证）。
+- **新增知识域要同时动三处**：篇正文 → 总结.md 的 `## 大纲` 加一行 → 同号正文加 `### N.N`（插在中间就要顺移后面所有编号）。面试题.md 可不跟进（Webpack 3.5 就无对应题；中途插题会让其后的 Q 号全部重编）。
 - **相邻两段同源代码块必须各写一次 `> 摘自`**：check-code-sync 只看围栏上方 4 行，第二个块拿不到第一个块的标注 → 报「缺出处标注」（同文件重复标注允许）。
 
 ## 配套代码与端口
@@ -28,7 +29,8 @@ VitePress（`base:'/blog/'`，构建 ~55s），板块 `ai/ frontend/ interview/ 
 全局替换 `NN-篇名` 会误伤 总结.md 分篇标题 → 替换后 diff 检查。safe-delete：≥50 删除触发 `SAFE_DELETE_BULK_CONFIRM_REQUIRED`（阈值 50，按 turn 累计）→ 分块（<50）+ 自底向上 `os.rmdir`；watcher 占用目录 rename/rmdir 必失败（WinError 32）；最省事是清空注入变量让进程不加载 shim（`NODE_OPTIONS=` / `PYTHONPATH=`）。
 
 ## Git / 本机执行
-提交一律 `--no-verify`（lint-staged 的 `prettier --write .` 会格式化整仓）；`origin`=`https://gitee.com/wayliuhaha/blog`、`master`、无 TTY 可直推；大批量提交按顶层路径分桶列表，信息写 `.git/COMMIT_MSG_TMP.txt` 再 `git commit -F`。bash 工具 PATH 坏 → 用 Python 全路径或 PowerShell；PowerShell 不回显中文 stdout → `Out-File` 落文件再 Read；git 用 `"E:\Program Files\Git\cmd\git.EXE"`；临时脚本放 `C:\Users\10855\.workbuddy\tmp\`；`Delete` 工具不存在 → 用 Python `os.remove`/`shutil`。
+提交一律 `--no-verify`（lint-staged 的 `prettier --write .` 会格式化整仓）；`origin`=`https://gitee.com/wayliuhaha/blog`、`master`、无 TTY 可直推；大批量提交按顶层路径分桶列表，信息写 `.git/COMMIT_MSG_TMP.txt` 再 `git commit -F`。bash 工具 PATH 坏 → 用 Python 全路径或 PowerShell；PowerShell 不回显中文 stdout → `Out-File` 落文件再 Read；git 用 `"E:\Program Files\Git\cmd\git.EXE"`；临时脚本放 `C:\Users\10855\.workbuddy\tmp\`；`Delete` 工具不存在 → 用 Python `os.remove`/`shutil`。`NODE_OPTIONS=''` + `PYTHONPATH` 清空可绕 safe-delete shim。
+- **`vitepress build` 要给足超时**：实测约 267s（沙箱内，远高于早先记的 55s），用 python `subprocess` 前台跑会被宿主 SIGTERM 截断（dist 只写一半，却仍返回输出）。**跑完必须另存新日志文件名**——复读上一次的日志会把旧的 `build complete` 当成本次成功（已踩）；确认方式：`dist/.../X.html` 的 mtime 要晚于对应 `.md`。
 
 ## 遗留
 旧 `frontend/进阶/性能优化与监控/` 已拆为「性能优化」「监控与稳定性」；`node/01-运行环境` 空壳被 watcher 锁住待删。
