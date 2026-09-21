@@ -46,10 +46,10 @@ class WebViewPool {
     this.reuse = 0
   }
   acquire() {
-    if (this.idle.length > 0) { this.reuse++; return this.idle.pop() } // 0 创建成本
+    if (this.idle.length > 0) { this.reuse++ return this.idle.pop() } // 0 创建成本
     return createWebView() // 池被用光 → 冷启动兜底
   }
-  release(wv) { wv.url = null; this.idle.push(wv) }
+  release(wv) { wv.url = null this.idle.push(wv) }
 }
 ```
 

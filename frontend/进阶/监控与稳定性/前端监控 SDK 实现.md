@@ -16,7 +16,7 @@ export const DEFAULTS = {
   throttleMs: 3000,   // 同一条错误 3 秒内只报一次
   autoErrors: true,
   autoPerf: true,
-  autoTrack: true,
+  autoTrack: true
 }
 ```
 
@@ -37,7 +37,7 @@ export function init(options = {}) {
   const win = cfg.win || (typeof window !== 'undefined' ? window : globalThis)
 
   const transport = createTransport({ url: cfg.url, sampleRate: cfg.sampleRate, env: win, ...(cfg.transport || {}) })
-  const emit = (event) => transport.enqueue({ appId: cfg.appId, ts: event.ts ?? Date.now(), ...event })
+  const emit = event => transport.enqueue({ appId: cfg.appId, ts: event.ts ?? Date.now(), ...event })
 
   const errors = cfg.autoErrors ? installErrorCapture({ win, emit, throttleMs: cfg.throttleMs }) : null
   const perf = cfg.autoPerf ? createPerfCollector({ win }) : null
@@ -119,10 +119,10 @@ export const DEFAULT_TRANSPORT = {
 ```js
   function enqueue(event) {
     // 采样放在入队口，避免不可控的采集量把网络打满
-    if (Math.random() >= cfg.sampleRate) { stats.sampled++; return false }
+    if (Math.random() >= cfg.sampleRate) { stats.sampled++ return false }
     queue.push(event)
     stats.accepted++
-    if (queue.length > cfg.maxQueue) { queue.shift(); stats.dropped++ }
+    if (queue.length > cfg.maxQueue) { queue.shift() stats.dropped++ }
     if (queue.length >= cfg.batchSize) flush('batch-full')
     else schedule()
     return true
@@ -179,7 +179,7 @@ export const DEFAULT_TRANSPORT = {
       try {
         const res = await env.fetch(cfg.url, {
           method: 'POST', body, keepalive: true,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json' }
         })
         return !res || res.ok !== false
       } catch {

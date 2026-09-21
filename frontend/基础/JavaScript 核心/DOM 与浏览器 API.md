@@ -682,8 +682,8 @@ async function race() {
     let noGuard = null
     const searchNoGuard = (q, delay) =>
         fetch(api('/api/search?q=' + q + '&delay=' + delay))
-            .then((r) => r.json())
-            .then((d) => {
+            .then(r => r.json())
+            .then(d => {
                 noGuard = d.q
             })
     await Promise.all([searchNoGuard('a', 400), searchNoGuard('ab', 80)])

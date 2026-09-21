@@ -129,10 +129,10 @@ mount({
     const prefetchOn = split && flag('prefetch', true)
     window.__spa.prefetchOn = prefetchOn
     if (prefetchOn) {
-        const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200))
+        const idle = window.requestIdleCallback || (fn => setTimeout(fn, 200))
         idle(async () => {
             for (const name of ROUTES) if (!cache[name]) await load(name)
-            window.__spa.prefetched = ROUTES.filter((n) => timings[n] !== undefined)
+            window.__spa.prefetched = ROUTES.filter(n => timings[n] !== undefined)
         })
     }
 ```
@@ -163,7 +163,7 @@ mount({
  * 为什么不用 setTimeout(0)：它有 4ms  clamping，片数一多（2000/200=10 片）就白等 40ms
  */
 export function sliceAggregate(items, chunk = 200) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         let i = 0
         let sum = 0
         let max = 0
@@ -180,7 +180,7 @@ export function sliceAggregate(items, chunk = 200) {
             if (i < items.length) return channel.port2.postMessage(0)
             channel.port2.close()
             const sorted = [...items].sort((a, b) => b.score - a.score)
-            resolve({ sum: Math.round(sum), max, buckets, top: sorted.slice(0, 5).map((it) => it.name) })
+            resolve({ sum: Math.round(sum), max, buckets, top: sorted.slice(0, 5).map(it => it.name) })
         }
         channel.port1.onmessage = step
         step()
@@ -244,17 +244,17 @@ export function sliceAggregate(items, chunk = 200) {
 > 摘自 `./code/perf-lab/pages/sw.js`（运行：`npm run spa:cache`）
 
 ```js
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
     const req = event.request
     const url = new URL(req.url)
     if (req.method !== 'GET' || url.origin !== self.location.origin) return
     if (!SCOPE.test(url.pathname)) return
     event.respondWith(
-        caches.match(req).then((hit) => {
+        caches.match(req).then(hit => {
             if (hit) return hit
-            return fetch(req).then((res) => {
+            return fetch(req).then(res => {
                 const copy = res.clone()
-                caches.open(CACHE).then((c) => c.put(req, copy))
+                caches.open(CACHE).then(c => c.put(req, copy))
                 return res
             })
         })

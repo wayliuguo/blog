@@ -76,7 +76,7 @@ export async function loadAll(latency = REVIEWS_LATENCY) {
 > 摘自 `./code/render-lab/harness/routes.mjs`（运行：`npm run ssr`）
 
 ```js
-const scriptTag = (data) => `<script>window.__DATA__ = ${serializeData(data)}</script>`
+const scriptTag = data => `<script>window.__DATA__ = ${serializeData(data)}</script>`
 ```
 
 > 摘自 `./code/render-lab/harness/routes.mjs`（运行：`npm run ssr`）
@@ -226,7 +226,7 @@ const treeOf = () => {
         write(`<div id="s-${props.id}">${renderToString(props.fallback)}</div>`)
         const task = { id: props.id, render: props.render }
         // 立刻发起，promise 带上 task 身份，下面按「谁先完成」排序时不会认错
-        task.promise = props.data().then((value) => ({ task, value }))
+        task.promise = props.data().then(value => ({ task, value }))
         tasks.push(task)
         return
     }
@@ -238,14 +238,14 @@ const treeOf = () => {
 export async function* renderSections(root) {
     let buffer = ''
     const tasks = []
-    walk(root, (s) => (buffer += s), tasks)
+    walk(root, s => (buffer += s), tasks)
     yield { name: 'shell', html: buffer }
 
     let remaining = tasks.slice()
     while (remaining.length) {
-        const done = await Promise.race(remaining.map((t) => t.promise))
+        const done = await Promise.race(remaining.map(t => t.promise))
         const task = done.task
-        remaining = remaining.filter((t) => t !== task)
+        remaining = remaining.filter(t => t !== task)
         yield { name: `${task.id}:fill`, html: fill(task.id, renderToString(task.render(done.value))) }
     }
 }

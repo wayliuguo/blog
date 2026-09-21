@@ -77,7 +77,7 @@ return function invoke(module, method, params) {
       nb.callbacks.delete(id) // 超时清理，防回调表泄漏
       reject(new Error('bridge timeout'))
     }, timeoutMs)
-    nb.register(id, (result) => {
+    nb.register(id, result => {
       clearTimeout(timer)
       resolve(result)
     })

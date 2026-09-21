@@ -53,15 +53,15 @@ function http2Batch(base, specs) {
     const t0 = performance.now()
     return Promise.all(
         specs.map(
-            (spec) =>
-                new Promise((resolve) => {
+            spec =>
+                new Promise(resolve => {
                     const req = client.request({ ':path': `/api/slow?ms=${spec.ms}` })
                     req.resume()
                     req.on('end', () => resolve({ label: spec.label, done: performance.now() - t0, sockets: 1 }))
                     req.on('error', () => resolve({ label: spec.label, done: NaN, sockets: 1 }))
                 })
         )
-    ).then((rows) => {
+    ).then(rows => {
         client.close()
         return rows
     })
@@ -81,9 +81,9 @@ function http1Batch(base, specs, maxSockets) {
     const t0 = performance.now()
     return Promise.all(
         specs.map(
-            (spec) =>
-                new Promise((resolve) => {
-                    const req = http.get(new URL(`/api/slow?ms=${spec.ms}`, base), { agent }, (res) => {
+            spec =>
+                new Promise(resolve => {
+                    const req = http.get(new URL(`/api/slow?ms=${spec.ms}`, base), { agent }, res => {
                         res.resume()
                         res.on('end', () =>
                             resolve({ label: spec.label, done: performance.now() - t0, sockets: maxSockets })
