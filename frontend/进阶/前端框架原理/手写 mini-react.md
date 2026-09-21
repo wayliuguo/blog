@@ -27,8 +27,8 @@ function createElement(type, config, ...children) {
     const { key = null, ...props } = config || {}
     props.children = children
         .flat(Infinity) // <ul>{items.map(...)}</ul> 会传进来数组，先拍平
-        .filter((child) => child !== null && child !== undefined && child !== false)
-        .map((child) =>
+        .filter(child => child !== null && child !== undefined && child !== false)
+        .map(child =>
             typeof child === 'object' ? child : createTextElement(String(child))
         )
     return { type, key, props }
@@ -95,8 +95,8 @@ children[2].type: Symbol(Fragment)
 ```js
 function browserHost() {
     return {
-        createInstance: (type) => document.createElement(type),
-        createTextInstance: (text) => document.createTextNode(text),
+        createInstance: type => document.createElement(type),
+        createTextInstance: text => document.createTextNode(text),
         appendChild: (parent, child) => parent.appendChild(child),
         insertBefore: (parent, child, before) => parent.insertBefore(child, before),
         removeChild: (parent, child) => parent.removeChild(child),
@@ -369,9 +369,9 @@ function identityOf(key, index) {
 
 ```js
 // 无 key：只能按下标对号入座
-const noKey = (items) => h('ul', null, ...items.map((it) => h('li', null, it.name)))
+const noKey = items => h('ul', null, ...items.map(it => h('li', null, it.name)))
 // 有 key：身份跟着数据走
-const withKey = (items) => h('ul', null, ...items.map((it) => h('li', { key: it.id }, it.name)))
+const withKey = items => h('ul', null, ...items.map(it => h('li', { key: it.id }, it.name)))
 ```
 
 实测输出（场景：删掉列表第一项「苹果」）：
@@ -484,7 +484,7 @@ function useState(initial) {
         hook.state = typeof action === 'function' ? action(hook.state) : action
     }
 
-    const setState = (action) => {
+    const setState = action => {
         hook.queue.push(action)
         scheduleRerender(state.wipFiber) // 重渲染"这个组件所属的那棵树"
     }

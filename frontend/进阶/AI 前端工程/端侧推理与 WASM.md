@@ -24,32 +24,32 @@
 ```js
 // 端侧模型动辄几十上百 MB：整包下载既占内存又无法续传。分片把峰值压到 1 个分片。
 function createShardLoader(totalBytes, shardBytes) {
-  let downloaded = 0;
-  let peak = 0;
-  let count = 0;
+  let downloaded = 0
+  let peak = 0
+  let count = 0
   return {
-    get downloaded() { return downloaded; },
-    get peak() { return peak; },
-    get count() { return count; },
+    get downloaded() { return downloaded},
+    get peak() { return peak},
+    get count() { return count},
     pull() {
-      const size = Math.min(shardBytes, totalBytes - downloaded);
-      if (size <= 0) return 0;
-      peak = Math.max(peak, size);
-      downloaded += size;
-      count++;
-      return size;
+      const size = Math.min(shardBytes, totalBytes - downloaded)
+      if (size <= 0) return 0
+      peak = Math.max(peak, size)
+      downloaded += size
+      count++
+      return size
     },
-  };
+  }
 }
 
 {
-  const total = 80 * 1024 * 1024;
-  const shard = 4 * 1024 * 1024;
-  const loader = createShardLoader(total, shard);
+  const total = 80 * 1024 * 1024
+  const shard = 4 * 1024 * 1024
+  const loader = createShardLoader(total, shard)
   while (loader.pull() > 0) { /* 逐片拉取 */ }
-  assert.equal(loader.downloaded, total);
-  assert.equal(loader.peak, shard);
-  assert.equal(loader.count, 20);
+  assert.equal(loader.downloaded, total)
+  assert.equal(loader.peak, shard)
+  assert.equal(loader.count, 20)
   console.log(`[1] 分片加载：80MB 模型分 ${loader.count} 片，峰值缓冲区 ${loader.peak / 1024 / 1024}MB（整包加载需 ${total / 1024 / 1024}MB）`);
 }
 ```
@@ -81,7 +81,7 @@ const bytes = [
   0x0b, 0x0b, // end loop; end block
   0x20, 0x02, // local.get acc
   0x0b, // end
-];
+]
 ```
 
 模块可用、结果正确之后，把同一个循环分别用 WASM 和 JS 跑 2000 万次：
@@ -89,18 +89,18 @@ const bytes = [
 > 摘自 `./code/ai-lab/wasm.cjs`
 
 ```js
-  const mod = new WebAssembly.Module(new Uint8Array(bytes));
-  const { sum } = new WebAssembly.Instance(mod).exports;
+  const mod = new WebAssembly.Module(new Uint8Array(bytes))
+  const { sum } = new WebAssembly.Instance(mod).exports
 
   function sumJs(n) {
-    let acc = 0;
-    for (let i = 0; i < n; i++) acc = (acc + i) | 0; // |0 对齐 i32 的回绕语义
-    return acc | 0;
+    let acc = 0
+    for (let i = 0; i < n; i++) acc = (acc + i) | 0 // |0 对齐 i32 的回绕语义
+    return acc | 0
   }
 
-  assert.equal(sum(10), 45);
-  assert.equal(sum(100000), sumJs(100000)); // i32 回绕后两边必须一致
-  console.log('[2] WASM 内核：手工字节码模块可用，sum(10)=45，10 万次循环与 JS 结果完全一致（含 i32 回绕）');
+  assert.equal(sum(10), 45)
+  assert.equal(sum(100000), sumJs(100000)) // i32 回绕后两边必须一致
+  console.log('[2] WASM 内核：手工字节码模块可用，sum(10)=45，10 万次循环与 JS 结果完全一致（含 i32 回绕）')
 ```
 
 本机某次实测：`WASM 46.6ms vs JS 16.0ms`——**WASM 比 JS 慢了近 3 倍**。这不是 bug，而是这条结论：
@@ -120,19 +120,19 @@ const bytes = [
 ```js
 // fp16 = 2B/参数，int8 = 1B，int4 = 0.5B；KV cache 随上下文长度线性增长。
 function modelMemory(params, bytesPerParam) {
-  return params * bytesPerParam;
+  return params * bytesPerParam
 }
 
 function kvCache(layers, heads, headDim, ctx, bytesPerParam) {
-  return 2 * layers * heads * headDim * ctx * bytesPerParam; // K 与 V 各一份
+  return 2 * layers * heads * headDim * ctx * bytesPerParam // K 与 V 各一份
 }
 
 {
-  const params = 1e9; // 1B 参数
-  const fp16 = modelMemory(params, 2);
-  const int4 = modelMemory(params, 0.5);
-  assert.equal(int4 / fp16, 0.25);
-  const kv = kvCache(24, 16, 64, 4096, 2);
+  const params = 1e9 // 1B 参数
+  const fp16 = modelMemory(params, 2)
+  const int4 = modelMemory(params, 0.5)
+  assert.equal(int4 / fp16, 0.25)
+  const kv = kvCache(24, 16, 64, 4096, 2)
   console.log(`[3] 内存预算：1B 参数 fp16 = ${(fp16 / 1e9).toFixed(1)}GB，int4 量化降到 ${(int4 / 1e9).toFixed(2)}GB（1/4）；4k 上下文 KV cache ${(kv / 1024 / 1024).toFixed(0)}MB`);
 }
 ```
@@ -148,16 +148,16 @@ function kvCache(layers, heads, headDim, ctx, bytesPerParam) {
 ```js
 // 推理是同步长任务：放在主线程跑，每帧都会超过 16.7ms 的预算。
 function block(budgetMs) {
-  const t0 = process.hrtime.bigint();
+  const t0 = process.hrtime.bigint()
   while (Number(process.hrtime.bigint() - t0) / 1e6 < budgetMs) { /* 模拟同步推理占用 */ }
-  return Number(process.hrtime.bigint() - t0) / 1e6;
+  return Number(process.hrtime.bigint() - t0) / 1e6
 }
 
 {
-  const frames = [0, 1, 2].map(() => block(20));
-  assert.ok(frames.every(f => f >= 20));
-  const total = frames.reduce((a, b) => a + b, 0);
-  console.log(`[4] 主线程阻塞：单帧 20ms 的推理 ×3 = ${total.toFixed(0)}ms，期间页面无法响应任何输入（应放进 Worker）`);
+  const frames = [0, 1, 2].map(() => block(20))
+  assert.ok(frames.every(f => f >= 20))
+  const total = frames.reduce((a, b) => a + b, 0)
+  console.log(`[4] 主线程阻塞：单帧 20ms 的推理 ×3 = ${total.toFixed(0)}ms，期间页面无法响应任何输入（应放进 Worker）`)
 }
 ```
 

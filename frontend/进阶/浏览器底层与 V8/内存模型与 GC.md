@@ -92,14 +92,14 @@ function timerLeak() {
   let leak3 = 0
   const big = Array.from({ length: 1e6 }, (_, i) => ({ i }))
   const timer = setInterval(() => { leak3 += big.length }, 50) // big 被回调闭包捕获
-  global.gc(); global.gc(); global.gc()
+  global.gc() global.gc() global.gc()
   const held = mb()
   clearInterval(timer) // 清掉定时器，闭包随之失引用
-  global.gc(); global.gc(); global.gc()
+  global.gc() global.gc() global.gc()
   return held
 }
 const heldTimer = timerLeak()
-global.gc(); global.gc(); global.gc()
+global.gc() global.gc() global.gc()
 console.log(`定时器闭包: GC 后仍占 ${heldTimer}MB（setInterval 回调攥着 big，清不掉）`)
 assert.ok(heldTimer > base + 30, '被 setInterval 闭包捕获的对象不会被回收')
 assert.ok(mb() <= base + 5, 'clearInterval 后引用随作用域结束放开，可回收')
@@ -110,14 +110,14 @@ function listenerLeak() {
   const bus = new EventEmitter()
   const big4 = Array.from({ length: 1e6 }, (_, i) => ({ i }))
   bus.on('tick', () => { void big4.length }) // big4 被监听器闭包捕获
-  global.gc(); global.gc(); global.gc()
+  global.gc() global.gc() global.gc()
   const held = mb()
   bus.off('tick', bus.listeners('tick')[0]) // 退订，放开引用
-  global.gc(); global.gc(); global.gc()
+  global.gc() global.gc() global.gc()
   return held
 }
 const heldListener = listenerLeak()
-global.gc(); global.gc(); global.gc()
+global.gc() global.gc() global.gc()
 console.log(`监听器闭包: GC 后仍占 ${heldListener}MB（add 后忘了 off，big4 收不掉）`)
 assert.ok(heldListener > base + 30, '被监听器闭包捕获的对象不会被回收')
 assert.ok(mb() <= base + 5, 'off 后引用放开，可回收')

@@ -331,7 +331,7 @@ function createRenderer(options) {
     insert: (child, parent, anchor) => {
         parent.insertBefore(child, anchor || null)
     },
-    remove: (child) => {
+    remove: child => {
         const parent = child.parentNode
         if (parent) parent.removeChild(child)
     },
@@ -358,9 +358,9 @@ module.exports = { createApp, render, h, createVNode, nextTick, nodeOps, patchPr
 // ---------- 宿主 B：不建节点，直接拼字符串 ----------
 function stringHost() {
     return {
-        createElement: (tag) => ({ tag, attrs: {}, children: [], text: null }),
-        createText: (text) => ({ tag: null, text }),
-        createComment: (text) => ({ tag: null, text, comment: true }),
+        createElement: tag => ({ tag, attrs: {}, children: [], text: null }),
+        createText: text => ({ tag: null, text }),
+        createComment: text => ({ tag: null, text, comment: true }),
         setText: (node, text) => {
             node.text = text
         },
@@ -548,7 +548,7 @@ Vue3 的列表 diff 是**先对齐头尾、再处理中间乱序**，也就是�
 > 摘自 `./code/mini-vue/src/runtime-dom/patchProp.js`
 
 ```js
-const isOn = (key) => /^on[A-Z]/.test(key)
+const isOn = key => /^on[A-Z]/.test(key)
 
 // 应该写成 property 而不是 attribute 的几个
 const SHOULD_USE_PROPERTY = /^(value|checked|selected|disabled|muted)$/
@@ -570,9 +570,9 @@ function patchProp(el, key, prevValue, nextValue) {
 
 ```js
 // 每个 <li> 上挂一个 data-id：无 key 时"就地改写"会把它也一起改掉，看得见
-const noKey = (items) => h('ul', null, items.map((it) => h('li', { 'data-id': it.id }, it.name)))
-const withKey = (items) =>
-    h('ul', null, items.map((it) => h('li', { key: it.id, 'data-id': it.id }, it.name)))
+const noKey = items => h('ul', null, items.map(it => h('li', { 'data-id': it.id }, it.name)))
+const withKey = items =>
+    h('ul', null, items.map(it => h('li', { key: it.id, 'data-id': it.id }, it.name)))
 ```
 
 实测输出：
@@ -628,9 +628,9 @@ test('有 key：纯重排只搬移节点，不改内容', () => {
     const reordered = [fruits[2], fruits[0], fruits[1]]
     const { ops, container } = opsOfUpdate(withKey(fruits), withKey(reordered))
     assert.equal(ops.length, 3, '三次搬移')
-    assert.equal(ops.every((line) => line.startsWith('insert')), true)
+    assert.equal(ops.every(line => line.startsWith('insert')), true)
     assert.equal(
-        container.childNodes[0].childNodes.map((li) => li.getAttribute('data-id')).join(','),
+        container.childNodes[0].childNodes.map(li => li.getAttribute('data-id')).join(','),
         'c,a,b'
     )
 })

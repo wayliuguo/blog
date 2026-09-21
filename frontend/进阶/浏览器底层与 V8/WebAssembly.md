@@ -52,7 +52,7 @@ wasm 里没有「JS 的 number」，只有固定宽度的整数与浮点。实�
 // 正确性：wasm 是 i32 语义——50000*60001/2=18 亿内不回绕
 function jsSum(n) {
   let s = 0
-  while (n > 0) { s += n; n-- }
+  while (n > 0) { s += n n-- }
   return s
 }
 assert.equal(sum(10), 55)

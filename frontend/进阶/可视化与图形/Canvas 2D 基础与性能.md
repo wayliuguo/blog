@@ -50,7 +50,7 @@ class MiniCanvas {
     this.clears = 0
     this.executed = 0 // 最近一次重绘真正执行的指令数
   }
-  add(op) { this.ops.push(op); return this }
+  add(op) { this.ops.push(op) return this }
   // 策略 A · 全量重绘：清屏后重放整个显示列表（改 1 根柱子也要付 100 根的代价）
   repaintFull() {
     this.clears++
@@ -134,7 +134,7 @@ console.log('场景五 · 帧合并')
 const cv = new MiniCanvas()
 buildBars(cv, 100)
 const sched = new FrameScheduler(() => cv.repaintFull())
-sched.setData(); sched.setData(); sched.setData() // 一帧内 3 次数据变更
+sched.setData() sched.setData() sched.setData() // 一帧内 3 次数据变更
 sched.flushFrame()
 sched.flushFrame()
 assert.equal(sched.frames, 1) // 只重绘 1 次
