@@ -119,9 +119,11 @@ async function build(label, treeshake) {
     const bundle = await rollup({ input: INPUT, treeshake })
     const { output } = await bundle.generate({ format: 'es' })
     const code = output[0].code
-    const hit = (s) => String(code.includes(s)).padEnd(5)
+    const hit = s => String(code.includes(s)).padEnd(5)
     console.log(
-        `  ${label.padEnd(26)} lib求值:${hit('lib 被求值')} pure求值:${hit('pure 被求值')} make('pure'):${hit("'pure'")} make('nopure'):${hit("'nopure'")} ${String(code.length).padStart(4)} 字符`
+        `  ${label.padEnd(26)} lib求值:${hit('lib 被求值')} pure求值:${hit('pure 被求值')} make('pure'):${hit(
+            "'pure'"
+        )} make('nopure'):${hit("'nopure'")} ${String(code.length).padStart(4)} 字符`
     )
     await bundle.close()
 }
@@ -451,9 +453,9 @@ function bundleGuard({ limitKb = Infinity, manifest = 'bundle-manifest.json' } =
 > 摘自 `./code/build-lab/rollup-lab/size-gate.cjs`（运行：`npm run rollup:gate`）
 
 ```js
-            const over = rows.filter((r) => r.gzip > limitKb * 1024)
+            const over = rows.filter(r => r.gzip > limitKb * 1024)
             if (over.length) {
-                this.error(`产物超预算：${over.map((r) => `${r.fileName} gzip ${r.gzip}B > ${limitKb}KB`).join('；')}`)
+                this.error(`产物超预算：${over.map(r => `${r.fileName} gzip ${r.gzip}B > ${limitKb}KB`).join('；')}`)
             }
 ```
 

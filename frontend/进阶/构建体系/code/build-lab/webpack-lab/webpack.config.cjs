@@ -17,7 +17,13 @@ module.exports = {
             chunks: 'all',
             // 默认有体积下限（20KB），小模块不会被抽出来；用环境变量做对照
             minSize: Number(process.env.WP_MIN_SIZE ?? 20000),
-            // 把 node_modules 里被引用两次以上的模块抽成 vendors
+            // cacheGroups：按规则拆包分 chunk。vendors / common 的差异主要看三处：
+            // 1. test（命中范围）：vendors 只处理 node_modules，common 面向业务代码
+            //    ——“被引用两次以上”是 common 用 minChunks:2 管的；vendors 不设 minChunks
+            //    （默认 1），只要命中 node_modules 且体积过 minSize(默认20KB) 就抽进 vendors。
+            // 2. priority（优先级，越大越先被选中）：vendors=10 > common=5，
+            //    node_modules 模块永远优先归 vendors，不会被业务 common 抢走。
+            // 3. reuseExistingChunk：模块若已在某个命中的 chunk 中，直接复用而非再拆一次。
             cacheGroups: {
                 vendor: {
                     test: /node_modules/,
