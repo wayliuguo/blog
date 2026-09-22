@@ -14,13 +14,12 @@ const SRC = path.join(__dirname, 'mini-src')
 
 // ---- 造一份样本：helper 被入口引用、lazy 存在但从不被请求 ----
 fs.mkdirSync(SRC, { recursive: true })
-fs.writeFileSync(
-    path.join(SRC, 'index.html'),
-    '<!doctype html><script type="module" src="/src/main.js"></script>\n'
-)
+fs.writeFileSync(path.join(SRC, 'index.html'), '<!doctype html><script type="module" src="/src/main.js"></script>\n')
 fs.writeFileSync(
     path.join(SRC, 'main.js'),
-    ["import { hi } from './helper.js'", "import { greet } from 'tiny-lib'", "console.log('main', hi, greet)"].join('\n') + '\n'
+    ["import { hi } from './helper.js'", "import { greet } from 'tiny-lib'", "console.log('main', hi, greet)"].join(
+        '\n'
+    ) + '\n'
 )
 fs.writeFileSync(path.join(SRC, 'helper.js'), "export const hi = 'helper'\n")
 fs.writeFileSync(path.join(SRC, 'lazy.js'), "export const lazy = 'never-requested'\n")

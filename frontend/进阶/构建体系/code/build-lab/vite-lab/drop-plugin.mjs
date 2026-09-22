@@ -13,10 +13,7 @@ import { build } from 'vite'
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const DIR = path.join(__dirname, 'src-drop')
 fs.mkdirSync(path.join(DIR, 'src'), { recursive: true })
-fs.writeFileSync(
-    path.join(DIR, 'index.html'),
-    '<!doctype html><script type="module" src="/src/main.js"></script>\n'
-)
+fs.writeFileSync(path.join(DIR, 'index.html'), '<!doctype html><script type="module" src="/src/main.js"></script>\n')
 fs.writeFileSync(
     path.join(DIR, 'src', 'main.js'),
     [

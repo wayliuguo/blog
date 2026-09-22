@@ -92,7 +92,10 @@ class EmitListPlugin {
 function transpile(code, importPathToId) {
     // import { a, b } from './x'
     code = code.replace(/^\s*import\s+\{([^}]+)\}\s+from\s+'([^']+)';?\s*$/gm, (_, names, from) => {
-        return `var { ${names.split(',').map(s => s.trim()).join(', ')} } = require(${importPathToId(from)});`
+        return `var { ${names
+            .split(',')
+            .map(s => s.trim())
+            .join(', ')} } = require(${importPathToId(from)});`
     })
     // import def from './x'
     code = code.replace(/^\s*import\s+(\w+)\s+from\s+'([^']+)';?\s*$/gm, (_, name, from) => {
@@ -115,9 +118,7 @@ function renderRuntime(compilation) {
     for (const [id, m] of compilation.modules) {
         const depsMap = m.deps.map(d => `"${path.basename(d)}":${idByName[d]}`).join(',')
         const body = transpile(m.code, from => idByName[path.join(path.dirname(m.filename), from)])
-        modulesCode.push(
-            `${id}: function (module, exports, require) {\n${body}\n  // deps: { ${depsMap} }\n}`
-        )
+        modulesCode.push(`${id}: function (module, exports, require) {\n${body}\n  // deps: { ${depsMap} }\n}`)
     }
     const runtime = `(function () {
   var modules = { ${modulesCode.join(',\n')} }
@@ -140,9 +141,9 @@ function build(options) {
     compiler.hooks.make.tap('MiniBundler', compilation => {
         const resolve = createResolver(options.context)
         // context + 入口字符串（context 是目录，入口相对它解析，不要 dirname）
-        const entry = [options.entry, options.entry + '.js']
-            .map(p => path.join(options.context, p))
-            .find(fs.existsSync) || path.join(options.context, options.entry)
+        const entry =
+            [options.entry, options.entry + '.js'].map(p => path.join(options.context, p)).find(fs.existsSync) ||
+            path.join(options.context, options.entry)
         // 自顶向下解析入口，得到模块图
         const dfs = fileName => {
             const code = fs.readFileSync(fileName, 'utf8')
