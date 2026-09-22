@@ -1,0 +1,13 @@
+{
+  "name": "pnpm-workspace-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "pnpm workspace 最小可运行示例：shared → sdk → ui 依赖链，演示 workspace:* / filter / 拓扑序递归",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "build:ui": "pnpm --filter @scope/ui run build",
+    "build:pkgs": "pnpm --filter \"./packages/**\" run build",
+    "demo": "node packages/ui/dist/index.js"
+  }
+}

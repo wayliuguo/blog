@@ -1,0 +1,3 @@
+# 声明哪些目录是 workspace 的包（支持 glob 通配）
+packages:
+    - 'packages/*'
