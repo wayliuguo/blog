@@ -200,6 +200,11 @@ const m1: 'GET' = routes.home.method
 
 ```ts
 const Direction = { Up: 'UP', Down: 'DOWN' } as const
+// 逐步解析：
+// ① as const 让对象变只读：{ readonly Up: 'UP'; readonly Down: 'DOWN' }
+// ② typeof Direction（类型位置）取得这个对象类型
+// ③ keyof typeof Direction => 'Up' | 'Down'
+// ④ 整体是索引访问类型，等价于上面的对象类型再取 ['Up' | 'Down'] => 'UP' | 'DOWN'
 type Direction = (typeof Direction)[keyof typeof Direction] // 'UP' | 'DOWN'
 
 declare function go(dir: Direction): void
@@ -680,7 +685,14 @@ type UserStringKeys = StringKeys<User> // 'name' | 'email'
 
 ### 条件类型与 infer
 
-`infer` 用来在匹配过程中"捕获"某个位置的类型，是提取类工具类型的核心。
+`infer` 是"匹配时捕获"的占位符：在 `T extends U ? X : Y` 里，当 TS 去判断「T 能不能匹配 U」时，U 中标记为 `infer R` 的位置会被 `R` 捕获，命中后 `R` 就是那个位置的**真实类型**，供真分支 `X` 里使用。
+
+它的三个关键点：
+- **只能在条件类型 `extends` 的真分支里用**：`infer` 本身只是"问位置"，脱离条件类型没有意义。
+- **捕获的是"匹配瞬间"的类型**：类似把左侧真实类型"解开一层"塞进 `R`。
+- **一个模板可有多个 `infer`**：可以同时捕获函数返回值和参数（见下）。
+
+拿一个函数类型当"模板"来理解：`(...args: never[]) => infer R` 的意思是「任何函数都能匹配这个形状，并把它的返回类型记到 `R`」。
 
 > 摘自 `./code/type-lab/07-type-ops.ts`（运行：`npm run check`）
 
