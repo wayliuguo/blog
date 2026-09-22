@@ -135,27 +135,90 @@ Babel (JS)     总计   1005 ms  单次   20.10 ms  167.5x  产物 1990 字符
 
 一句话总结：**批量转换用 SWC，整包构建用 esbuild**。
 
-## 五、Rust 工具链全景
+> Rust/Go 工具链的选型全景（Rspack / Rolldown / Turbopack / Biome / Oxlint 等按职责替换谁、成熟度分级）已并入[构建全景与选型](./构建全景与选型.md)第七节。
 
-"Rust 工具链"不是单一工具，是按职责替换的：
+## 四、插件机制：只有三个钩子，够用吗
 
-| 工具 | 语言 | 替换谁 | 成熟度 | 落地建议 |
-| ---- | ---- | ---- | ---- | ---- |
-| SWC | Rust | Babel | 高（Next.js 默认） | 新项目直接用；老项目先做产物对比 |
-| esbuild | Go | 转换 + 打包 | 高（Vite 预构建） | 工具链、预构建、内部工具 |
-| Rspack | Rust | webpack | 中高 | webpack 项目提速，配置基本兼容 |
-| Rolldown | Rust | Rollup | 中（Vite 8 起默认生产打包器） | 跟着 Vite 走即可 |
-| Turbopack | Rust | webpack（Next.js 场景） | 中 | Next.js 项目可用，独立使用慎重 |
-| Biome | Rust | ESLint + Prettier | 中 | 新项目可试；存量规则迁移成本高 |
-| Oxlint | Rust | ESLint | 中 | 作为 CI 的"快速第一道检查"很好用 |
+和 webpack 的几十上百个钩子不同，esbuild 的插件整套就三个钩子——**解析、内容、收尾**，再加两个生命周期。少，但每个都是构建流程上不可绕过的点：
 
-选型时最该问的不是"谁更快"，而是**替换成本**：
+```
+解析    onResolve    一个 import / 入口该由谁来回答、用什么 loader          （返回 namespace）
+内容    onLoad       给上一步划过来的模块喂内容（可现造，不必在磁盘上）     （返回 contents）
+收尾    onEnd        所有产物生成之后：读体积、改产物、写清单、报错         （可 throw 中断）
+生命周期 onStart 构建开始 · onDispose 插件被移除
+```
 
-- **配置兼容性**：Rspack 兼容大部分 webpack 配置，但专有 loader/plugin 要逐个验证。
-- **行为一致性**：Rust 版工具与 JS 版在边界行为上可能有差异（比如对某些提案语法的处理）。迁移前必须做产物对比（同一份源码两边产物 diff + 跑测试）。
-- **生态插件**：Babel 插件生态是十年积累，SWC 的插件需要用 Rust 写或走 `swc-plugin` ——这是最大的迁移阻力。
+触发顺序固定：`onStart → onResolve → onLoad → （……递归到所有模块……）→ onEnd`。中间两步可能交替、重复运行多次，onStart/onEnd 各一次。跟 webpack 对比（见[webpack](./webpack.md)第十二节），esbuild 没有"改配置"、"挂载外部资源"这类私货钩子——**能做的只有三件事，反过来也让插件的思考被压缩成一句：这个能力发生在解析、内容、还是收尾。**
 
-## 六、什么时候不该换
+写两个生产里真会用的插件，把三个钩子走一遍（虚拟模块 + 体积门禁），见[配套代码](#配套代码)：
+
+> 摘自 `./code/build-lab/esbuild-lab/plugins.cjs`（运行：`npm run esbuild:plugins`）
+
+```js
+// 一、虚拟模块：磁盘上根本没有 build-info 文件，靠 onResolve + onLoad 凭空提供
+const versionInfo = {
+    name: 'version-info',
+    setup(build) {
+        // ① onResolve：import 'build-info' 划到我们的 namespace
+        build.onResolve({ filter: /^build-info$/ }, () => ({
+            namespace: 'virtual',
+            path: 'build-info'
+        }))
+        // ② onLoad：对 namespace 为 virtual 的模块，返回现造的内容
+        build.onLoad({ filter: /.*/, namespace: 'virtual' }, () => ({
+            loader: 'js',
+            contents: `export const commit = 'a1b2c3d'
+export const branch = 'main'`
+        }))
+    }
+}
+```
+
+```js
+// 二、体积门禁：构建结束称一次重，超预算就 fail（体积回退不会让测试变红）
+function sizeGate(limitBytes) {
+    return {
+        name: 'size-gate',
+        setup(build) {
+            build.onEnd(result => {
+                const files = result.outputFiles.map(f => ({ name: path.basename(f.path), raw: f.contents.length }))
+                const total = files.reduce((s, f) => s + f.raw, 0)
+                if (total > limitBytes) throw new Error(`[size-gate] 产物超预算：${total}B > ${limitBytes}B`)
+            })
+        }
+    }
+}
+```
+
+跑一遍（三组插件不同，只看钩子行为是否被正确地"包"住）：
+
+```
+---- ① 虚拟模块注入构建信息 ----
+  含 commit 常量（来自不存在的虚拟模块）： true
+  产物字符数： 170
+
+---- ② 体积门禁 · 预算宽松（不超） ----
+  预算 2000 字节
+    <stdout>              170 字节
+  onEnd 合计 170 字节 —— 在预算内，通过
+
+---- ③ 体积门禁 · 预算压紧（必超） ----
+  预算 30 字节
+    <stdout>              170 字节
+  构建被中断： Build failed with 1 error:
+  ...plugins.cjs:47:26: ERROR: [plugin: size-gate] [size-gate] 产物超预算：170B > 30B
+```
+
+几个要点：
+
+1. **虚拟模块靠" namespace"而不是"路径"划隔**。onResolve 返回 `{ namespace, path }`，namespace 是插件间互不干扰的原子边界；onLoad 用 `filter: /.*/, namespace` 限定"只接管我们划过来的模块"。这在 webpack/Rollup 是 `resolveId` + `load` 的活，esbuild 拆得更直白。
+2. **onLoad 能"凭空造内容"**，所以构建期注入版本号、git 分支、特性开关都很便宜——一次都不用引磁盘上真实存在的文件。
+3. **onEnd 的 `throw` = 构建失败**。它和 onStart 一样只在一次 build 里跑一次，是体积门槛、产物清单这类"收尾"逻辑的唯一落脚点。
+4. **esbuild 插件是纯 JS、无副作用**——`setup(build)` 是唯一的入口，props 和 hooks 都挂在 `build` 对象上。代价是没有 webpack loader / Vite transform 那种"按文件类型重编译"的深度定制能力；esbuild 的定位就是**快 + 覆盖常规需求**，深度定制交给更重的工具。
+
+顺带回答开头的问题：**esbuild 官方插件极其精简，`esbuild/plugins` 就像 `@esbuild-plugins/*` 里那些千行小工具一样，都是围绕这三个钩子打转**。想看完整 API 表，[esbuild 插件文档](https://esbuild.github.io/plugins/)是唯一准出处——这里只讲心智模型和它与其他工具的分工。
+
+## 五、什么时候不该换
 
 | 情况 | 建议 |
 | ---- | ---- |
@@ -175,16 +238,18 @@ Babel (JS)     总计   1005 ms  单次   20.10 ms  167.5x  产物 1990 字符
 | `./code/build-lab/esbuild-lab/build.cjs` | transform vs build、target 对比、metafile 分析、minify | 一、两个 API · 二、target · 三、metafile |
 | `./code/build-lab/esbuild-lab/src/main.ts` | 打包入口（引用 util.ts） | 三、metafile |
 | `./code/build-lab/esbuild-lab/src/util.ts` | 含未被引用导出的模块，验证 tree-shaking | 三、metafile |
-| `./code/build-lab/swc-lab/compare.cjs` | esbuild / SWC / Babel 转换速度对比 | 四、三个工具对比 |
+| `./code/build-lab/esbuild-lab/plugins.cjs` | 插件机制：onResolve/onLoad/onEnd + 虚拟模块 + 体积门禁 | 四、插件机制 |
+| `./code/build-lab/esbuild-lab/src-plugins/index.js` | 引用"不存在的" build-info 的入口 | 四、插件机制 |
+| `./code/build-lab/swc-lab/compare.cjs` | esbuild / SWC / Babel 转换速度对比 | 五、三个工具对比 |
 
-运行：`cd code/build-lab && npm install`，然后 `npm run esbuild`、`npm run swc`。
+运行：`cd code/build-lab && npm install`，然后 `npm run esbuild`、`npm run esbuild:plugins`、`npm run swc`。
 
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[Rollup](./Rollup.md)
-- 下一篇：[构建插件开发](./构建插件开发.md)
+- 上一篇：[webpack](./webpack.md)
+- 下一篇：[Rollup](./Rollup.md)
 - [esbuild 文档](https://esbuild.github.io/)
 - [SWC 文档](https://swc.rs/)
 - [Rspack 文档](https://rspack.dev/)

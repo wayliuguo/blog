@@ -19,9 +19,14 @@
 | `npm run ast` | parse 出 AST 结构，再手工遍历、transform 改写并 generate | 编译与 AST | AST 与源码是两份数据，改树必须 generate |
 | `npm run ast:plugin` | 手写 Babel 插件：`__DEV__` 编译期替换 | 编译与 AST | plugins 先于 presets；plugins 顺序、presets 逆序 |
 | `npm run ast:codemod` | 批量改写 + 正则误伤对照 | 编译与 AST | 正则会误伤字符串与注释，AST 不会 |
-| `npm run webpack` | 多入口 + 自定义 loader + 自定义 plugin + splitChunks | Webpack 深入 | loader 是「源码字符串 → 代码字符串」；产出文件用 `emitAsset` |
-| `npm run webpack:split` | `minSize` 20000 vs 0 的对照 | Webpack 深入 | 默认 20KB 下限是「抽不出来」的常见原因；改成 0 才抽出 common |
-| `npm run webpack:cache` | 持久化缓存：小样本 vs 大样本，独立子进程采样 | Webpack 深入 | 小样本 1.11x、大样本 2.21x；`require('webpack')` 本身要 2.8~3.3s |
+| `npm run webpack` | 多入口 + 自定义 loader + 自定义 plugin + splitChunks | webpack | loader 是「源码字符串 → 代码字符串」；产出文件用 `emitAsset` |
+| `npm run webpack:split` | `minSize` 20000 vs 0 的对照 | webpack | 默认 20KB 下限是「抽不出来」的常见原因；改成 0 才抽出 common |
+| `npm run webpack:cache` | 持久化缓存：小样本 vs 大样本，独立子进程采样 | webpack | 小样本 1.23x、大样本 2.54x；`require('webpack')` 本身约 0.7s 固定成本 |
+| `npm run webpack:prod` | 常见生产插件组（Html / MiniCss / Terser / Copy），同一份主配置 `--env prod`，走 `prod-app` | webpack | 官方插件在 processAssets 各 stage 插手；CSS 抽独立文件 |
+| `npm run webpack:drop` | 自定义插件：剔除 test/mock 模块 + 剔除指定产物 + `DefinePlugin` 剔除 `__DEV__` | webpack | mock/test 在解析阶段被跳过，连打包都省了；产物对象 delete 比删磁盘干净 |
+| `npm run webpack:minihtml` | 模仿 HtmlWebpackPlugin 的迷你实现：注入带 hash 的 script/link | webpack | index.html 从 assets 现读现拼，hash 变了自动跟着变 |
+| `npm run webpack:debug` | 挂 DebugProbePlugin，主干各阶段写 `debugger`；`node --inspect-brk` + chrome://inspect | webpack | 断点落在 beforeRun→compile→make→…→done |
+| `npm run mini:webpack` | 约百行最小 webpack：五对象流水线 + 能跑的产物 | webpack | 产物可运行（`entry 用到: hello min-webpack`）；运行时就是 `require(0)` + `module.exports` 接力 |
 | `npm run vite` | dev server 按需转换 vs build 全量，环境变量静态替换，依赖预构建产物 | Vite | dev 只转 1 个模块、build 转 3 个；`import.meta.env` 在产物里已消失 |
 | `npm run vite:optimize` | 单独触发依赖预构建 | Vite | 产物落在 `node_modules/.vite`；诡异问题先删缓存 |
 | `npm run vite:assets` | 静态资源内联阈值 / `import.meta.glob` / `build.target` 降级 | Vite | 0.6KB svg 在默认 4096 下内联、阈值 512 时变独立文件；glob 懒加载 4 chunk vs eager 1 chunk |
@@ -37,9 +42,9 @@
 | `npm run rollup:plugin` | 虚拟模块插件：resolveId / load / transform / generateBundle | Rollup | 虚拟 id 用 `\0` 前缀；不处理就返回 `null` |
 | `npm run esbuild` | transform vs build、target 降级代价、metafile 分析 | esbuild 与 Rust 工具链 | transform 第二次 3ms（首次约 700ms）；`??` 降级 es2015 685 字符 vs esnext 82 |
 | `npm run swc` | esbuild / SWC / Babel 同跑 50 次转换 | esbuild 与 Rust 工具链 | SWC 0.13ms / esbuild 1.50ms / Babel 20.10ms（167x） |
-| `npm run plugin` | 同一需求（虚拟模块）的 Rollup / webpack / Vite 三套实现 | 构建插件开发 | 三套产物都含 BUILD_INFO；webpack 要占位文件 + loader |
-| `npm run plugin:unplugin` | unplugin：一份实现跑三处 | 构建插件开发 | API 是 `unplugin.rollup(options)`；虚拟 id 别用冒号 |
-| `npm run analyze` | 四种打包姿势的体积对照、tree-shaking 验证、代码分割、压缩对照 | 产物分析与体积优化 | 全量 2509 vs 按需 165 字节（15 倍）；首屏 2946 → 175 |
+| `npm run plugin` | 同一需求（虚拟模块）的 Rollup / webpack / Vite 三套实现 | Rollup / Vite | 三套产物都含 BUILD_INFO；webpack 要占位文件 + loader |
+| `npm run plugin:unplugin` | unplugin：一份实现跑三处 | Vite | API 是 `unplugin.rollup(options)`；虚拟 id 别用冒号 |
+| `npm run analyze` | 四种打包姿势的体积对照、tree-shaking 验证、代码分割、压缩对照 | esbuild / Rollup / webpack（各篇产物分析子节点） | 全量 2509 vs 按需 165 字节（15 倍）；首屏 2946 → 175 |
 | `npm run mini` | 手写打包器：模块图 / ESM→CJS 转换 / 运行时，并与原生 ESM 对照执行 | 手写 mini-bundler | 5 模块 878 字节 → 产物 2035 字节；两边输出逐行相同 |
 | `npm run mini:cycle` | 循环依赖（函数导出） | 手写 mini-bundler | 原生 ESM 读到 `function`，产物读到 `undefined` |
 | `npm run mini:tdz` | 循环依赖（const 导出） | 手写 mini-bundler | 原生 ESM 抛 `ReferenceError` 并中止，产物静默 `undefined` 且跑完 |

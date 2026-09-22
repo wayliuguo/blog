@@ -10,13 +10,13 @@ const { execFileSync, spawnSync } = require('node:child_process')
 // 导致 rmdir 报 EPERM/EBUSY。先用 rmSync 尝试；失败则改名丢弃（rename 通常仍可用），不阻断流程。
 // 被改名的 .trash-<时间戳> 目录由 .gitignore 忽略，残留无害。
 function safeRemove(target) {
-  try {
-    fs.rmSync(target, { recursive: true, force: true })
-  } catch {
     try {
-      fs.renameSync(target, `${target}.trash-${Date.now()}`)
-    } catch {}
-  }
+        fs.rmSync(target, { recursive: true, force: true })
+    } catch {
+        try {
+            fs.renameSync(target, `${target}.trash-${Date.now()}`)
+        } catch {}
+    }
 }
 
 const ROOT = __dirname

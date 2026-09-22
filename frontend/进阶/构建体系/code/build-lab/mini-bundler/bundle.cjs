@@ -13,10 +13,23 @@ const OUT_FILE = path.join(ROOT, 'dist', 'bundle.js')
 const rel = file => path.relative(ROOT, file).split(path.sep).join('/')
 
 // ---------- 1. 依赖解析：把 import 里的相对路径变成磁盘上的真实文件 ----------
+
+/**
+ * 把 import 语句里的裸字符串，解析成磁盘上真实存在的文件绝对路径。
+ *
+ * 是打包器的「寻址」步骤：拿到字符串 './greet.js'，算出它到底是谁。
+ *
+ * @param {string} specifier - import 里的模块标识，如 './greet.js' 或 'react'
+ * @param {string} importer   - 引用者（当前模块）的绝对路径，作为相对路径的基准目录
+ * @returns {string} 命中磁盘文件的绝对路径
+ * @throws {Error} 裸模块（不以 . 开头）或三个候选文件都不存在时抛错
+ */
 function resolveId(specifier, importer) {
+    // 只支持相对路径依赖；裸模块（node_modules 包）一律报错，第 5 篇的 @rollup/plugin-node-resolve 才处理
     if (!specifier.startsWith('.')) {
         throw new Error(`只支持相对路径依赖，遇到裸模块 ${specifier}（来自 ${rel(importer)}）`)
     }
+    // 相对路径的基准是「引用者所在目录」，不是入口目录——这是必须带 importer 的原因
     const abs = path.resolve(path.dirname(importer), specifier)
     // 浏览器要求写全后缀，真实打包器会替我们补：./x → ./x.js → ./x/index.js
     for (const candidate of [abs, abs + '.js', path.join(abs, 'index.js')]) {
@@ -26,15 +39,25 @@ function resolveId(specifier, importer) {
 }
 
 // ---------- 2. 建图：DFS 收集模块，id 按发现顺序分配，入口是 0 ----------
-const modules = new Map() // 绝对路径 → 模块记录
+/** @type {Map<string, {id:number, file:string, code:string, ast:object, deps:Array<{spec:string,id:number}>}>} 绝对路径 → 模块记录 */
+const modules = new Map()
 
+/**
+ * 深度优先收集模块：从一个入口开始，递归读文件、解析 AST、收集 import/export。
+ *
+ * 兼做去重与防环（见内部 modules.has 的注释），是理解整个打包器的核心。
+ *
+ * @param {string} file - 模块绝对路径
+ * @returns {{id:number, file:string, code:string, ast:object, deps:Array}} 该模块的记录（已登记进 modules）
+ */
 function collect(file) {
     if (modules.has(file)) return modules.get(file)
 
     const code = fs.readFileSync(file, 'utf8')
     const ast = acorn.parse(code, { ecmaVersion: 'latest', sourceType: 'module' })
+    // id = modules.size：发现顺序即编号；入口最先 collect，所以 id 是 0
     const record = { id: modules.size, file, code, ast, deps: [] }
-    // 先登记再递归：循环依赖（a → b → a）靠这一步终止
+    // 先登记再递归：循环依赖（a → b → a）靠这一步终止（否则无限递归栈溢出）
     modules.set(file, record)
 
     for (const node of ast.body) {
@@ -46,12 +69,24 @@ function collect(file) {
 }
 
 // ---------- 3. 转换：ESM 语法 → CJS 的 require / exports ----------
+
+/**
+ * 把单个模块里所有顶层 ESM 语句（import/export）改写成 CJS。
+ *
+ * 用 magic-string 原地改写：import 改成 __require、export 就地删关键字并在末尾统一补 exports 赋值。
+ * 其余代码一行不动、行号尽量不变（便于产物对照源码）。
+ *
+ * @param {{id:number, file:string, code:string, ast:object, deps:Array}} record - 某个模块的记录（collect 产物）
+ * @returns {string} 转换后的模块代码文本
+ * @throws {Error} 遇到 export ... from / export * from 时抛错（本迷你实现不支持）
+ */
 function transform(record) {
     const s = new MagicString(record.code)
     const tail = [] // 需要追加到模块末尾的 exports 赋值
 
     for (const node of record.ast.body) {
         if (node.type === 'ImportDeclaration') {
+            // 用依赖图里登记好的 id 替代字符串，拼出最短的 __require(id)
             const id = record.deps.find(d => d.spec === node.source.value).id
             s.overwrite(node.start, node.end, renderImport(node, id))
         } else if (node.type === 'ExportDefaultDeclaration') {
@@ -74,7 +109,13 @@ function transform(record) {
     return s.toString()
 }
 
-// import 的四种形式 → require 表达式
+/**
+ * 把一条 import 语句映射成一段 __require 表达式，覆盖四种形式。
+ *
+ * @param {object} node - 对应的 ImportDeclaration AST 节点
+ * @param {number} id   - 该依赖在依赖图中的编号（transform 已解析好的最短数字）
+ * @returns {string} 拼好的 CJS 代码片段
+ */
 function renderImport(node, id) {
     const specs = node.specifiers
     if (specs.length === 0) return `__require(${id})` // 只为副作用
@@ -89,19 +130,31 @@ function renderImport(node, id) {
 
     if (!def) return `const { ${named.join(', ')} } = __require(${id})`
 
-    // default 与具名混用：先拿一份命名空间，再分别解构
+    // default 与具名混用：先拿一份命名空间，再分别解构（__m3 是临时变量）
     const tmp = `__m${id}`
     const parts = [`const ${tmp} = __require(${id})`, `const ${def.local.name} = ${tmp}.default`]
     if (named.length) parts.push(`const { ${named.join(', ')} } = ${tmp}`)
     return parts.join('; ')
 }
 
-// export const { a, b } = x 这种解构声明，要把每个名字都取出来
+/**
+ * 取出一条声明/导出语句里被导出的所有名字。
+ * 处理 export const { a, b } = x 这种解构声明，要把每个名字都取出来。
+ *
+ * @param {object} decl - 声明节点（VariableDeclaration 或函数/类声明）
+ * @returns {string[]} 被导出的标识符名字数组
+ */
 function declaredNames(decl) {
     if (decl.type === 'VariableDeclaration') return decl.declarations.flatMap(d => patternNames(d.id))
     return [decl.id.name]
 }
 
+/**
+ * 从解构模式里递归取出所有绑定的标识符名字。
+ *
+ * @param {object} node - Identifier / ObjectPattern / ArrayPattern
+ * @returns {string[]} 命中的标识符名
+ */
 function patternNames(node) {
     if (node.type === 'Identifier') return [node.name]
     if (node.type === 'ObjectPattern') return node.properties.flatMap(p => patternNames(p.value))
@@ -110,11 +163,21 @@ function patternNames(node) {
 }
 
 // ---------- 4. 生成：模块表 + 一个几十行的运行时 ----------
+
+/**
+ * 把全部模块拼装成一个自执行函数：一个模块表 + 一个精简的 __require 运行时。
+ *
+ * 每个模块被包进 `function (module, exports, __require)`，天然获得独立作用域；
+ * 运行时最关键的几行是 cache 的写入时机（见下方生成代码里的注释）。
+ *
+ * @param {Array<{id:number, file:string, output:string}>} list - 全部模块，按 id 顺序排列
+ * @returns {string} 最终产物代码文本（可直接用 node 运行）
+ */
 function generate(list) {
     const out = [
         '// 由 mini-bundler 生成（手写打包器，仅供理解原理，勿用于生产）',
         '(function (modules) {',
-        '    const cache = {}',
+        '    const cache = {}                 // 已执行模块的导出缓存（保证每个模块只跑一次）',
         '    function __require(id) {',
         '        if (cache[id]) return cache[id].exports',
         '        const module = { exports: {} }',
@@ -123,7 +186,7 @@ function generate(list) {
         '        modules[id](module, module.exports, __require)',
         '        return module.exports',
         '    }',
-        '    __require(0)',
+        '    __require(0)                     // 从入口（id 0，第一个被 collect 的模块）开始执行',
         '})({'
     ]
     for (const r of list) {
@@ -173,6 +236,13 @@ console.log(`  写出 ${rel(OUT_FILE)}：${outBytes} 字节`)
 console.log(`  源码合计 ${srcBytes} 字节 → 产物是源码的 ${(outBytes / srcBytes).toFixed(2)} 倍（差额是运行时 + 包装）`)
 
 // ---------- 5. 跑一遍：原生 ESM vs 打包产物 ----------
+
+/**
+ * 用子进程运行一段 JS 文件，返回退出码与输出的关键文本（用于原生 ESM 与产物的对照）。
+ *
+ * @param {string} file - 要运行的 JS 文件路径
+ * @returns {{status:number, text:string}} 退出码（0 表示成功）与合并后的 stdout/stderr
+ */
 function run(file) {
     const r = spawnSync(process.execPath, [file], { encoding: 'utf8' })
     return { status: r.status, text: ((r.stdout || '') + (r.stderr || '')).trim() }

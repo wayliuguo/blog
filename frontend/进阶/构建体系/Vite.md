@@ -592,7 +592,7 @@ webpack 的 HMR 需要把变更模块及其"依赖链上的父模块"重新生�
 
 库场景要特别说明：Vite 的 lib 模式一次只能输出配置里指定的格式，要出 esm + cjs 双产物通常跑两次配置，而 Rollup 一次 `output` 数组就能出五种格式（见[Rollup](./Rollup.md)篇实测）。
 
-**与 Rollup 的分工**要说清楚：Vite 不是"Rollup 的替代品"，而是"dev server + 一套构建封装"。生产构建的能力来自 Rolldown/Rollup，所以 `build.rollupOptions` 是透传的，`manualChunks`、`external`、`output` 这些知识两边通用；反过来，`config` / `configResolved` / `configureServer` / `transformIndexHtml` / `hotUpdate` 是 Vite 独有，用了它们插件就不能给纯 Rollup 用——这正是 unplugin 存在的理由（见[构建插件开发](./构建插件开发.md)）。
+**与 Rollup 的分工**要说清楚：Vite 不是"Rollup 的替代品"，而是"dev server + 一套构建封装"。生产构建的能力来自 Rolldown/Rollup，所以 `build.rollupOptions` 是透传的，`manualChunks`、`external`、`output` 这些知识两边通用；反过来，`config` / `configResolved` / `configureServer` / `transformIndexHtml` / `hotUpdate` 是 Vite 独有，用了它们插件就不能给纯 Rollup 用——这正是 unplugin 存在的理由（跨工具写法见第十二节）。
 
 ## 九、怎么调试插件
 
@@ -705,6 +705,154 @@ VS Code 的话，把 `vite-lab/debug-launch.json` 的内容复制到 `code/build
 
 最后：`debug-entry.mjs` 里的 `timingPlugin` 会打印各里程碑耗时（实测一次构建：`buildStart` 201ms → `buildEnd` 285ms → `generateBundle` 314ms → `writeBundle` 360ms）。构建慢的时候先看这一段读数，能直接分出"慢在模块构建"还是"慢在产物生成"。
 
+## 十、机制全景图：dev 维护的不是"打包"，是"模块图"
+
+前面说了 dev 不打包，那 dev 脑子里装的是什么？一张**模块图**（module graph）。这是理解 Vite 所有行为（冷启动、HMR 边界、依赖预构建、为什么"改包不生效"）的关键概念，它和 webpack 的"chunk 图"是两套东西：
+
+```
+webpack：模块 →（合并）→ chunk →（写盘）→ 一张"产物文件图"
+Vite dev：模块（一个 URL ↔ 一个文件）→ 用 import 边连起来 → 一张"模块依赖图"
+```
+
+Vite 的 dev 世界里只有一个实体——**模块**，一个 URL 对应一个模块节点，节点上挂着四个字段：`id`（真实文件路径）、`file`、`importers`（谁 import 我）、`importedModules`（我 import 谁）。这张图在 dev server 启动后随"浏览器请求"逐步生长，而不是一次全量构建出来：
+
+```
+请求 /src/main.js ──> 生成节点 main ──> 解析它的 import：
+                          ├─ './helper.js' ──> 记录边 main → helper（另起一个 ESM 请求去取）
+                          └─ '<pkg>'       ──> 改写为 /@deps/...（指向预构建产物）
+```
+
+所以"模块图"说到底是**按 URL 求值**的：图上每个节点只在被请求时才生成、才经过 `resolveId → load → transform`。这解释了几个反直觉现象：
+
+1. **冷启动快**——图的初始化只走到你首屏请求的那几条边，图上其余节点全是"待定"。
+2. **HMR 快**——`hotUpdate` 拿到 `ctx.modules` 是"受影响的模块节点"，返回空数组就不更新；改一个文件，逆着 `importers` 边找 accept 边界即可，不用碰打包（见第七节）。
+3. **`optimizeDeps.exclude` 的坑**——本地 workspace 包被预构建成一个文件后，图上这个节点对你的编辑不再敏感，改了不触发更新；`exclude` 让它回归"源码节点"才走正常链路（见第二节）。
+4. **`moduleParsed` 只在 build 侧触发**——它拿到的 `info.ast` 是完整 AST，dev 侧每请求才解析一次，没有"全图解析"这个动作，所以没有全量 `moduleParsed`。
+
+而 build 侧做的是同一张图的一次**快照**：`vite build` 从入口出发全量走完 `resolveId → load → transform`，把图固化成 chunk，这在第六节图 1 那条主干链里看得一清二楚。**同一个插件、同一套钩子，右侧是"按需取"，左侧是"全量快照"**——这就是双引擎的最本质差别。
+
+## 十一、常见自定义插件：剔除与产物门槛
+
+生产里四种高频诉求（剔测试/mock 文件、剔注释与调试日志、删指定产物、体积门槛），一个插件全演示。样本入口同时 import 了 `helper`（正常代码）、`mock.js` 与 `main.spec.js`（不该上线的），并主动引了一个 fake 依赖制造 vendor chunk：
+
+> 摘自 `./code/build-lab/vite-lab/drop-plugin.mjs`（运行：`npm run vite:drop`）
+
+```js
+const dropPlugin = () => ({
+    name: 'lab-drop',
+    enforce: 'pre', // 抢在内置转换之前处理源码
+    transform(code, id) {
+        if (!id.includes('/src-drop/')) return null
+        // (a) 测试 / mock 文件：直接清空，让 tree-shaking 把整个模块摇掉
+        if (/\.spec\.js$|mock\.js$/.test(id)) {
+            removed.push(path.basename(id))
+            return { code: 'export {}' }
+        }
+        // (b) 剔除注释行与 console.log 调试行
+        const cleaned = code
+            .split('\n')
+            .map(l => (l.trim().startsWith('//') || /^\s*console\.log\(/.test(l) ? '' : l))
+            .join('\n')
+        return cleaned === code ? null : { code: cleaned }
+    },
+    // (c) 生成完删掉不想发布的 chunk
+    generateBundle(_options, bundle) {
+        for (const [fileName, chunk] of Object.entries(bundle)) {
+            if (chunk.type !== 'chunk') continue
+            sizes.push({ file: fileName, bytes: chunk.code.length })
+            if (fileName.startsWith('vendor')) {
+                delete bundle[fileName] // 直接删产物，写盘时就没有它了
+                removed.push(fileName)
+            }
+        }
+        sizes.sort((a, b) => b.bytes - a.bytes)
+        const total = sizes.reduce((s, x) => s + x.bytes, 0)
+        // (d) 体积门槛：超过 20 KB 即失败
+        if (total > 20 * 1024) {
+            throw new Error(`体积门槛未过：${(total / 1024).toFixed(1)} KB > 20 KB`)
+        }
+    }
+})
+```
+
+实测（真实产物，只留一个有意义的文件做门槛演示）：
+
+```
+---- ①②③ 剔除与清空 ----
+  源码里注释行数： 1
+  明显被剔除的调试位： main.spec.js, mock.js
+  mock.js 是否还在依赖里： 已剔除
+  依赖 react 是否仍被解析为外部： external（不进产物）
+
+---- ④ 产物分析与体积门槛 ----
+    assets/main-D6NTFdfe.js        0.16 KB
+    assets/vendor-lab-BzzafWM-.js  0.09 KB
+    产物总字节: 259
+```
+
+四种写法的分工，是猜"这段逻辑值多少钱"时最实用的框架：
+
+| 诉求 | 钩子 | 为什么是它 | 注意 |
+| ---- | ---- | ---- | ---- |
+| 剔测试/mock 文件 | `transform` 返回空模块 | 让该文件进图、再被 tree-shake 摇掉；若用 `generateBundle` 删已生成的 chunk，它的 import 边会报孤儿 | 只对本项目文件判断（`id.includes`），别误伤 node_modules |
+| 剔注释/调试日志 | `transform` 改写源码 | 在"这行代码进图"之前就净化 | 生产用精确 logger 判断，别用一刀切的正则去删所有 `console.log` |
+| 删指定产物 | `generateBundle` 改 `bundle` | 这是"已生成、未写盘"的唯一安全窗口 | 删一个 chunk 要同时留意它的引用边，否则别的 chunk 还指它 |
+| 体积门槛 | `generateBundle` 读字节 + `throw` | 让"超标的 CI"在构建期就失败，而不是发上线才后悔 | 阈值按"未压缩/压缩后"分开定，别混用 |
+
+顺带印证[webpack](./webpack.md)里那个坑：**改产物的唯一安全窗口是 `generateBundle`**，不是 `renderChunk`——后者改的是 chunk 代码，删文件、改文件名、动产物结构都要在 `generateBundle`。这条对 webpack 和 Vite 通用。
+
+## 十二、官方插件的实现思想
+
+Vite 官方插件的本质，是**把"框架专属的东西"翻译成 Vite 的通用钩子**。它们不用任何私货 API，全靠第一节、第六节讲过的那些钩子组合起来。三个最代表性的下手点：
+
+| 插件 | 它干的事 | 挂的钩子 | 实现思想 |
+| ---- | ---- | ---- | ---- |
+| `@vitejs/plugin-vue` | 把 `.vue` 的 template/script/style 拆成三段编译 | `transform` | 自己做一次"按语言分块"的解析（对应 Vue SFC 编译器的 `parse`），再分别交给编译器；用它自己的 loader 链替代 Vite 对 `.js` 的默认处理 |
+| `@vitejs/plugin-react` | 注入 React HMR 边界 + 编译 JSX | `transform` + `config` | 在 transform 里把 `.jsx/.tsx` 交给 Babel 跑 preset-react；靠 `config` 往产物注入 React 的运行时/HMR 客户端，保证"开发态能热更、生产态能跑" |
+| `@vitejs/plugin-legacy` | 给现代产物配套喂老浏览器的降级包 | `config` + `transformIndexHtml` | 用 terser 打一份 ES5 产物；`transformIndexHtml` 在 HTML 里生成 `<script type="module">` + `<script nomodule>` 双轨，由浏览器自己挑能吃的那份 |
+
+读三个插件会收获同一个道理：**多数"官方插件"其实没发明新机制，只是把一件事做对——在哪一步、对哪些文件、做什么转换**。你手上的业务预处理（加密、加关键头、合规开关）都能用同一个思路落到 `transform` 或 `generateBundle`。想跨工具复用，`unplugin` 提供 webpack/Rollup/Vite 三端一致的外壳——官方插件如 `plugin-vue` 平级迁移时也常是"底层换壳、钩子逻辑不动"。
+
+## 十三、mini-vite：一个"冷启动快"的最小内核
+
+> 摘自 `./code/build-lab/vite-lab/mini-vite.mjs`（运行：`npm run mini:vite`）
+
+写一个几十行的 dev server，只复刻 Vite 内核最关键的三件事——**按 URL 返回、import 原样保留、只转被请求的**：
+
+```js
+// 极简"转换"：把裸导入改写成预构建前缀 /@deps/，并记录命中
+function transform(id, code) {
+    transformed.add('/src/' + path.basename(id))
+    const lines = code.split('\n')
+        // 相对导入 ./x 原样保留，让浏览器发第二个 ESM 请求
+        .map(l => (/(^|[^'.])from '\.\/?/.test(l) ? l : l))
+        // 裸导入（不是相对路径）指向 /@deps/，对应真实 Vite 的依赖预构建产物
+        .map(l => {
+            const m = /from '([^']+)'/.exec(l)
+            return m && !m[1].startsWith('.') ? l.replace(m[1], `/@deps/${m[1]}.js`) : l
+        })
+    return { code: lines.join('\n') }
+}
+
+const server = createServer((req, res) => {
+    // ... 命中 /src/ 下的文件才走 transform，命中 /@deps/ 只返回"依赖已就绪"
+})
+```
+
+跑一遍（样本里 `helper.js` 被入口引用、`lazy.js` 存在但从不被任何 import 指向）：
+
+```
+---- mini-vite：按需转换、不打包 ----
+  请求 /src/main.js → 200
+  main.js 里 import 是否保留（不打包）： true
+  main.js 里裸导入被改写： true
+  helper.js 被请求 → 转换
+  lazy.js 没被任何 import 指向，/src/lazy.js 没人请求
+  本轮实际转换的模块： /src/main.js, /src/helper.js
+```
+
+对照真实 Vite，这几十行已经是"骨架齐全"的雏形：相对导入保留（浏览器发第二个请求）、裸导入改写（指向依赖预构建产物）、有模块才转换（`lazy.js` 从不被转换）。Vite 真身在此基础上叠加的，是第六节那 20 多个钩子、第七节的 HMR 边界、以及 esbuild/Rolldown 两个引擎——**机制没变，只是把每一步做重、做对、做成可插拔**。
+
 ## 配套代码
 
 本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。
@@ -722,14 +870,16 @@ VS Code 的话，把 `vite-lab/debug-launch.json` 的内容复制到 `code/build
 | `./code/build-lab/vite-lab/hooks-probe.mjs` | 钩子探针：调用顺序 / 回调参数 / 两侧归属 / 插件链与 enforce 排序 | 六·四、钩子全景 |
 | `./code/build-lab/vite-lab/debug-entry.mjs` | 插件调试入口（四个预设断点 + 各里程碑耗时） | 九、怎么调试插件 |
 | `./code/build-lab/vite-lab/debug-launch.json` | VS Code 调试配置（launch / attach） | 九、怎么调试插件 |
+| `./code/build-lab/vite-lab/drop-plugin.mjs` | 自定义插件：剔文件/剔调试/删产物/体积门槛 | 十一、常见自定义插件 |
+| `./code/build-lab/vite-lab/mini-vite.mjs` | 几行的 dev server 最小内核（按需转换） | 十三、mini-vite |
 
-运行：`cd code/build-lab && npm install`，然后 `npm run vite`、`npm run vite:assets`、`npm run vite:plugins`、`npm run vite:hooks`、`npm run vite:debug`。
+运行：`cd code/build-lab && npm install`，然后 `npm run vite`、`npm run vite:assets`、`npm run vite:plugins`、`npm run vite:hooks`、`npm run vite:debug`、`npm run vite:drop`、`npm run mini:vite`。
 
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[Webpack 深入](./Webpack%20深入.md)
-- 下一篇：[Rollup](./Rollup.md)
+- 上一篇：[Rollup](./Rollup.md)
+
 - [Vite 官方文档](https://vite.dev/)
 - [Vite 插件 API](https://vite.dev/guide/api-plugin.html)

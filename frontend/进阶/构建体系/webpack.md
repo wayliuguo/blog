@@ -1,4 +1,4 @@
-# Webpack 深入
+# webpack
 
 webpack 仍然是大厂存量项目的主力：微前端的 Module Federation、复杂资源处理、老浏览器兼容，目前都还是它最稳。但它的配置项多到让人望而生畏，多数人停留在"改改现成配置"的阶段。
 
@@ -25,43 +25,54 @@ Compiler     一次 webpack 进程的入口，持有配置与钩子（只创建�
 > 摘自 `./code/build-lab/webpack-lab/webpack.config.cjs`（运行：`npm run webpack`）
 
 ```js
-module.exports = {
-    mode: 'production',
-    // 关掉压缩，方便观察 tree-shaking 之外的产物结构
-    optimization: {
-        minimize: false,
-        splitChunks: {
-            chunks: 'all',
-            // 默认有体积下限（20KB），小模块不会被抽出来；用环境变量做对照
-            minSize: Number(process.env.WP_MIN_SIZE ?? 20000),
-            // cacheGroups：按规则拆包分 chunk。vendors / common 的差异主要看三处：
-            // 1. test（命中范围）：vendors 只处理 node_modules，common 面向业务代码
-            //    ——“被引用两次以上”是 common 用 minChunks:2 管的；vendors 不设 minChunks
-            //    （默认 1），只要命中 node_modules 且体积过 minSize(默认20KB) 就抽进 vendors。
-            // 2. priority（优先级，越大越先被选中）：vendors=10 > common=5，
-            //    node_modules 模块永远优先归 vendors，不会被业务 common 抢走。
-            // 3. reuseExistingChunk：模块若已在某个命中的 chunk 中，直接复用而非再拆一次。
-            cacheGroups: {
-                vendor: {
-                    test: /node_modules/,
-                    name: 'vendors',
-                    priority: 10,
-                    reuseExistingChunk: true
-                },
-                common: {
-                    minChunks: 2,
-                    name: 'common',
-                    priority: 5,
-                    reuseExistingChunk: true
+module.exports = (env = {}) => {
+    // 场景开关：--env 或 process.env 决定"观测哪个场景"，一份配置跑所有演示
+    const flag = k => env[k] === true || env[k] === '1' || process.env[k] === '1'
+    const isProd = flag('prod')   // --env prod：官方插件组 Html/MiniCss/Terser/Copy
+    const isDrop = flag('drop')   // --env drop：Drop 插件剔除 test/mock
+    const isMiniHtml = flag('minihtml') // --env minihtml：用迷你 Html 替代官方
+    const isDebug = flag('debug') // --env debug：挂 DebugProbePlugin 打断点
+
+    return {
+        mode: 'production',
+        // 关掉压缩，方便观察 tree-shaking 之外的产物结构（--env prod 才开压缩）
+        optimization: {
+            minimize: isProd,
+            runtimeChunk: 'single', // 运行时单独一个文件（长缓存）
+            splitChunks: {
+                chunks: 'all',
+                // 默认有体积下限（20KB），小模块不会被抽出来；用环境变量做对照
+                minSize: Number(process.env.WP_MIN_SIZE ?? 20000),
+                // cacheGroups：按规则拆包分 chunk。vendors / common 的差异主要看三处：
+                // 1. test（命中范围）：vendors 只处理 node_modules，common 面向业务代码
+                //    ——"被引用两次以上"是 common 用 minChunks:2 管的；vendors 不设 minChunks
+                //    （默认 1），只要命中 node_modules 且体积过 minSize(默认20KB) 就抽进 vendors。
+                // 2. priority（优先级，越大越先被选中）：vendors=10 > common=5，
+                //    node_modules 模块永远优先归 vendors，不会被业务 common 抢走。
+                // 3. reuseExistingChunk：模块若已在某个命中的 chunk 中，直接复用而非再拆一次。
+                cacheGroups: {
+                    vendor: {
+                        test: /node_modules/,
+                        name: 'vendors',
+                        priority: 10,
+                        reuseExistingChunk: true
+                    },
+                    common: {
+                        minChunks: 2,
+                        name: 'common',
+                        priority: 5,
+                        reuseExistingChunk: true
+                    }
                 }
             }
-        }
-    },
-    entry: {
-        main: path.join(ROOT, 'src/index.js'),
-        // 两个入口共享 shared / heavy，用来演示 common chunk 的抽取条件
-        pageB: path.join(ROOT, 'src/pageB.js')
-    },
+        },
+        // 功能入口：构建期动态返回「多入口」，main 与 pageB 共享
+        // shared / heavy，这是演示 common chunk 抽取的典型条件
+        entry: () =>
+        Promise.resolve({
+            main: path.join(ROOT, 'src/index.js'),
+            pageB: path.join(ROOT, 'src/pageB.js')
+        }),
     output: {
         path: path.join(ROOT, 'dist'),
         filename: '[name].[contenthash:8].js',
@@ -154,22 +165,25 @@ class EmitListPlugin {
 
 ```
 ---- 产物清单（emit 钩子）----
-  main.40fb3e2b.js             11.4 KB
-  pageB.4591e024.js            0.6 KB
+  main.1a4c3706.js             2.0 KB
+  pageB.fec65efc.js            1.6 KB
+  runtime.dd01471d.js          9.6 KB
   894.b5b3ab40.chunk.js        0.6 KB
-  build-manifest.json          0.1 KB
-  chunk 数: 3
+  build-manifest.json          0.2 KB
+  chunk 数: 4
   构建结束：error 0 / warning 0
 ```
 
+同一份配置默认开了 `runtimeChunk: 'single'`（第三节开始统一多入口主配置后新增），所以产物比旧版多一个 `runtime.dd01471d.js`，chunk 数从 3 变 4。
+
 ### 4.1 钩子全景：一次构建到底发生了什么
 
-只知道"有个 emit 钩子"是不够的。把 compiler / compilation 上的钩子全部 tap 一遍跑一次构建，实测结果如下（webpack 5.111.1，本篇这份 demo：**237 次触发、96 个不同钩子**）：
+只知道"有个 emit 钩子"是不够的。把 compiler / compilation 上的钩子全部 tap 一遍跑一次构建，实测结果如下（webpack 5.111.1，本篇这份 demo：**245 次触发、96 个不同钩子**）：
 
 运行 `npm run webpack:hooks` 可复现，源码见 `./code/build-lab/webpack-lab/hooks-probe.cjs`。
 
 ```
-【图 1】webpack 一次构建的主干全景（实测 237 次钩子触发 / 96 个不同钩子，webpack 5.111.1）
+【图 1】webpack 一次构建的主干全景（实测 245 次钩子触发 / 96 个不同钩子，webpack 5.111.1）
 
 阶段          │ 钩子（按实测触发顺序）
 ─────────────┼──────────────────────────────────────────────────────────────────────────
@@ -218,16 +232,16 @@ class EmitListPlugin {
   ──────────────────────────────────────────────────────────────────────────────────────
   compiler.make                 0       0        0       Compilation 刚创建，什么都没有
   compiler.finishMake           0       6        0       模块解析完，还没有 chunk
-  compilation.afterChunks       0       6        3       SplitChunks 已切完
-  compilation.runtimeModule     0       7→14     3       runtime 模块并入（实测 8 个）
-  compilation.renderManifest    0       14       3       开始按 chunk 渲染
-  compilation.chunkAsset        1→3     14       3       产物逐个落地
-  compilation.processAssets     3       14       3       全部就绪，增删改最后窗口
-  compiler.emit                 4       14       3       manifest 已被自定义插件加入
-  compiler.done                 4       14       3       Stats 可用，能读 errors/warnings
+  compilation.afterChunks       0       6        4       SplitChunks 已切完
+  compilation.renderManifest    0       14       4       开始按 chunk 渲染（modules 已并入 8 个运行时模块，共 14）
+  compilation.chunkAsset        1       14       4       第一个产物已落地
+  compilation.processAssets     4       14       4       全部就绪，增删改最后窗口
+  compiler.emit                 5       14       4       manifest 已被自定义插件加入
+  compiler.done                 5       14       4       Stats 可用，能读 errors/warnings
 
   同一份编译里 modules 从 6 涨到 14：多出的 8 个是 runtimeModule 钩子现场合成的运行时模块，
-  不是你的源码。哈希阶段之后 assets 从 3 到 4，是自定义插件用 emitAsset 补的产物。
+  不是你的源码。产物从 processAssets 的 4 个到 emit 的 5 个，是自定义插件用 emitAsset 补的 manifest。
+  chunks 从旧 demo 的 3 变 4，是因为开了 runtimeChunk:'single' 多分出一个 runtime chunk。
 ```
 
 这张图能直接回答两类问题："我在这儿能不能拿到压缩后的体积"（要到 ⑩ 之后）、"我在这儿能不能拿到模块依赖信息"（⑤ 之前最全，之后模块图就冻结了）。
@@ -244,14 +258,14 @@ class EmitListPlugin {
 | `compilation.hooks.normalModuleLoader` | ④ | `(Object, JavascriptModule)` | — | loader 真正执行（5.x 已迁到 `NormalModule.getCompilationHooks`） |
 | `compilation.hooks.finishMake` | ④末 | `(Compilation)` | modules 6 | 模块图完成 |
 | `compilation.hooks.seal` | ⑤ | 无参 | modules 6 | 冻结模块图 |
-| `compilation.hooks.optimizeChunks` | ⑥ | `(Set(3), Array(3))` | chunks 3 | `SplitChunksPlugin` |
-| `compilation.hooks.runtimeModule` | ⑧ | `(RuntimeModule, Chunk)` | 7→14 | 现场合成运行时模块 |
-| `compilation.hooks.contentHash` | ⑨ | `(Chunk)` | chunks 3 | 每个 chunk 各触发一次 |
+| `compilation.hooks.optimizeChunks` | ⑥ | `(Set(4), Array(4))` | chunks 4 | `SplitChunksPlugin` |
+| `compilation.hooks.runtimeModule` | ⑧ | `(RuntimeModule, Chunk)` | 6→14 | 现场合成运行时模块 |
+| `compilation.hooks.contentHash` | ⑨ | `(Chunk)` | chunks 4 | 每个 chunk 各触发一次 |
 | `compilation.hooks.renderManifest` | ⑩ | `(Array(0), Object)` | modules 14 | `JavascriptModulesPlugin`、`mini-css-extract-plugin` |
-| `compilation.hooks.chunkAsset` | ⑩ | `(Chunk, String)` | assets 1→3 | 产物逐个落地 |
-| `compilation.hooks.processAssets` | ⑩ | `(assets 对象)` | assets 3 | `TerserPlugin`、`HtmlWebpackPlugin`、`CopyPlugin` |
-| `compiler.hooks.emit` | ⑪ | `(Compilation)` | assets 4 | `CleanPlugin`、统计校验 |
-| `compiler.hooks.afterEmit` | ⑪ | `(Compilation)` | assets 4 | `SizeLimitsPlugin`（体积门禁在这报） |
+| `compilation.hooks.chunkAsset` | ⑩ | `(Chunk, String)` | assets 1 | 产物逐个落地 |
+| `compilation.hooks.processAssets` | ⑩ | `(assets 对象)` | assets 4 | `TerserPlugin`、`HtmlWebpackPlugin`、`CopyPlugin` |
+| `compiler.hooks.emit` | ⑪ | `(Compilation)` | assets 5 | `CleanPlugin`、统计校验 |
+| `compiler.hooks.afterEmit` | ⑪ | `(Compilation)` | assets 5 | `SizeLimitsPlugin`（体积门禁在这报） |
 | `compiler.hooks.done` | ⑪末 | `(Stats)` | 全部结论 | 报告、通知类插件 |
 
 最后一列的插件名是实测出来的：探针会把每个钩子上挂的 tap 全列出来（`npm run webpack:hooks` 的第 4 段），换成常见生产插件配置后（`npm run webpack:hooks -- --prod`）还能看到 `HtmlWebpackPlugin`、`mini-css-extract-plugin`、`TerserPlugin`、`CopyPlugin` 各自挂在哪。顺带一个实测结论：`additionalChunkAssets`、`optimizeChunkAssets`、`afterOptimizeChunkAssets`、`normalModuleLoader` 这四个在 5.x 已经废弃（运行会打 DeprecationWarning），统一改用 `processAssets` + `stage`。
@@ -344,15 +358,17 @@ for (const minSize of [20000, 0]) {
 ```
 ---- splitChunks.minSize = 20000 ----
    480.10bd4ed9.chunk.js 0.6 KB
-   main.5def85e8.js 11.3 KB
-   pageB.195146c2.js 0.6 KB
+   main.0598ddfe.js 2.0 KB
+   pageB.f3e60585.js 1.6 KB
+   runtime.58e089c3.js 9.5 KB
    抽出了独立 common chunk： false
 
 ---- splitChunks.minSize = 0 ----
    480.10bd4ed9.chunk.js 0.6 KB
    common.7883b39e.js 0.8 KB
-   main.0523ae85.js 12.2 KB
-   pageB.9edd52e2.js 5.8 KB
+   main.c8b2d134.js 1.3 KB
+   pageB.d6c2e94b.js 0.9 KB
+   runtime.58e089c3.js 9.5 KB
    抽出了独立 common chunk： true
 ```
 
@@ -364,7 +380,7 @@ for (const minSize of [20000, 0]) {
 - **`common`**：才管"被引用次数"——`minChunks: 2` 表示业务模块要被两个以上 chunk 复用才会被抽。
 - **`priority`**：`vendor=10 > common=5`，数值大优先；node_modules 模块因此永远先归 vendors，不会被业务 common 抢走。
 
-但要注意反直觉的一点：**抽出来不一定更快**。上面 `minSize=0` 的结果里，两个入口各自变大（main 11.3 → 12.2 KB，pageB 0.6 → 5.8 KB），因为公共块被拆走后，入口里多了跨 chunk 的引用代码；同时浏览器多了一个请求。切分的目标不是"抽得越多越好"，而是：
+注意拆分不是免费的：这次 `minSize=0` 虽然抽出了 `common.7883b39e.js`，但入口产物实际变小（main 2.0 → 1.3 KB、pageB 1.6 → 0.9 KB）——公共块被拆走后入口只剩自身代码，代价是浏览器多了一个请求（外加独立 runtime 也占一个请求）。切分的目标不是"抽得越多越好"，而是：
 
 - **vendor 与业务分离**：vendor 变更频率低，长缓存收益大 → 值得切
 - **路由级懒加载**：首屏用不到的代码不加载 → 值得切
@@ -432,11 +448,11 @@ webpack(config, (err, stats) => {
 观察实测产物：
 
 ```
-chunk (runtime: main) main.40fb3e2b.js (main) 981 bytes (javascript) 6.37 KiB (runtime) [entry] [rendered]
-  runtime modules 6.37 KiB 8 modules
+chunk (runtime: runtime) runtime.dd01471d.js (runtime) 5.84 KiB [entry] [rendered]
+  runtime modules 5.84 KiB 8 modules
 ```
 
-业务代码只有 981 bytes，**webpack 运行时却有 6.37 KiB**——它是模块加载、chunk 加载、hash 映射那一套胶水代码。这解释了两个现象：
+这段就来自 `runtimeChunk: 'single'` 抽出的独立 `runtime.dd01471d.js`。业务代码只有 977 bytes（`main.1a4c3706.js`），**webpack 运行时却有 5.84 KiB**——它是模块加载、chunk 加载、hash 映射那一套胶水代码。这解释了两个现象：
 
 1. **小项目用 webpack 打包，产物反而变大**。这也是库（npm 包）不该用 webpack 打包的原因：用户引你的库会多背一份运行时。
 2. **`optimization.runtimeChunk: 'single'` 值得开**。把运行时单独抽成一个小文件，业务 chunk 的 hash 就不会因为运行时变化而全部失效——长缓存命中率显著提升。
@@ -460,43 +476,36 @@ webpack 仍然无可替代的场景：需要 Module Federation 的微前端、�
 
 ### 9.1 入口：别从 `npm run webpack` 开始
 
-调试的第一道坎是入口。`npm run webpack` 的链路是 `npm.cmd → node → … → webpack-cli`，中间隔了一层，Windows 下 `--inspect-brk` 根本传不到 node 上。正确做法是把"跑构建"变成一段普通 JS 文件：
+调试的第一道坎是入口。`npm run webpack` 的链路是 `npm.cmd → node → … → webpack-cli`，中间隔了一层，Windows 下 `--inspect-brk` 根本传不到 node 上。第二道坎是"断点写哪"——以前要单独维护一个 debug 入口文件，现在直接写进主配置：主配置里有一个 `DebugProbePlugin`，只在 `--env debug` 时才挂上去，在主干各阶段钩子写 `debugger`；调试用 `node --inspect-brk` 起 webpack-cli，命中这个插件即可：
 
-> 摘自 `./code/build-lab/webpack-lab/debug-entry.cjs`（VS Code 里 F5 直接跑这个文件）
+> 摘自 `./code/build-lab/webpack-lab/webpack.config.cjs`（运行：`npm run webpack:debug`）
 
 ```js
-class DebugTargetPlugin {
+class DebugProbePlugin {
     apply(compiler) {
-        // 断点 1：compilation 刚诞生，assets / modules / chunks 此刻都是空的
-        compiler.hooks.compilation.tap('DebugTarget', compilation => {
-            const snap = () => ({
-                assets: compilation.getAssets().length,
-                modules: compilation.modules.size,
-                chunks: compilation.chunks.size
+        compiler.hooks.beforeRun.tap('DebugProbe', () => { debugger })    // ① 编译开始前
+        compiler.hooks.compile.tap('DebugProbe', params => { debugger })  // ② 即将编译，entry 已由函数解析出来
+        compiler.hooks.make.tapAsync('DebugProbe', (compilation, callback) => {
+            debugger // ④ 从一个 entry 递归建图
+            callback()
+        })
+        compiler.hooks.finishMake.tapAsync('DebugProbe', (compilation, callback) => {
+            debugger // ⑤ 模块图已成、还没分 chunk
+            callback()
+        })
+        compiler.hooks.thisCompilation.tap('DebugProbe', compilation => {
+            compilation.hooks.seal.tap('DebugProbe', () => {
+                debugger // ⑥ seal：按 splitChunks 分 chunk
             })
-
-            // 断点 2：seal 之后不能再往里加模块，这里能看到完整的模块图
-            compilation.hooks.seal.tap('DebugTarget', () => {
-                debugger
-            })
-
-            // 断点 3：产物已就绪，增删改 assets 的最后窗口（stage 决定你在哪一层）
             compilation.hooks.processAssets.tap(
-                {
-                    name: 'DebugTarget',
-                    stage: webpack.Compilation.PROCESS_ASSETS_STAGE_REPORT
-                },
+                { name: 'DebugProbe', stage: webpack.Compilation.PROCESS_ASSETS_STAGE_REPORT },
                 assets => {
-                    // 在这里可以观察：Object.keys(assets) 就是最终产物清单
-                    debugger
+                    debugger // ⑦ Object.keys(assets) 就是最终产物清单
                 }
             )
         })
-
-        // 断点 4：everything 结束，stats 里是本次构建的全部结论
-        compiler.hooks.done.tap('DebugTarget', stats => {
-            debugger
-        })
+        compiler.hooks.emit.tap('DebugProbe', compilation => { debugger }) // ⑧ 写盘前最后窗口
+        compiler.hooks.done.tap('DebugProbe', stats => { debugger })       // ⑨ stats 总结本次构建
     }
 }
 ```
@@ -505,10 +514,10 @@ class DebugTargetPlugin {
 
 | 方式 | 怎么做 | 适合 |
 | ---- | ---- | ---- |
-| VS Code | 在上面文件里点红点 → F5 → 选「调试 webpack 插件」 | 日常开发，改完直接重跑 |
-| 纯命令行 | `node --inspect-brk=9229 webpack-lab/debug-entry.cjs`，再打开 `chrome://inspect` | 不想配 IDE，或在服务器上排查 |
+| VS Code | 在主配置 `DebugProbePlugin` 的 `debugger` 行点红点 → F5 → 选「调试 webpack 插件」 | 日常开发，改完直接重跑 |
+| 纯命令行 | `npm run webpack:debug`（即 `node --inspect-brk=9229 node_modules/webpack-cli/bin/cli.js --config webpack-lab/webpack.config.cjs --env debug`），再打开 `chrome://inspect` | 不想配 IDE，或在服务器上排查 |
 
-VS Code 的 `.vscode/launch.json`（也可直接复制仓库里的这份）：
+VS Code 的 `.vscode/launch.json`（也可直接复制仓库里的这份，`program` 指向 webpack-cli，`args` 里带 `--env debug`）：
 
 > 摘自 `./code/build-lab/webpack-lab/debug-launch.json`
 
@@ -520,7 +529,8 @@ VS Code 的 `.vscode/launch.json`（也可直接复制仓库里的这份）：
             "type": "node",
             "request": "launch",
             "name": "调试 webpack 插件",
-            "program": "${workspaceFolder}/webpack-lab/debug-entry.cjs",
+            "program": "${workspaceFolder}/node_modules/webpack-cli/bin/cli.js",
+            "args": ["--config", "${workspaceFolder}/webpack-lab/webpack.config.cjs", "--env", "debug"],
             "cwd": "${workspaceFolder}",
             "skipFiles": ["<node_internals>/**"],
             "console": "integratedTerminal"
@@ -529,7 +539,7 @@ VS Code 的 `.vscode/launch.json`（也可直接复制仓库里的这份）：
 }
 ```
 
-`program` 指向 `webpack-lab/debug-entry.cjs`，`cwd` 用 build-lab 目录——webpack 是按 cwd 解析 loader 的，指错目录会报"找不到 loader"。
+`program` 指向 `webpack-cli/bin/cli.js`（不指向 npm.cmd 那层包装），`args` 手工加上 `--config` 与 `--env debug`；`cwd` 用 build-lab 目录——webpack 是按 cwd 解析 loader 的，指错目录会报"找不到 loader"。
 
 ### 9.2 断点该打在哪
 
@@ -549,11 +559,221 @@ VS Code 的 `.vscode/launch.json`（也可直接复制仓库里的这份）：
 第二次（命中缓存）  {"buildModule":0,"normalModuleLoader":0,"succeedModule":0,"seal":1,"processAssets":1}
 ```
 
-第二次 `buildModule` 系列直接归零——模块从缓存恢复，压根没重新构建。调试时务必 `cache: false` 或先删掉缓存目录，否则会得出"这个钩子根本不执行"的错误结论。`debug-entry.cjs` 里已经强制关掉了。
+第二次 `buildModule` 系列直接归零——模块从缓存恢复，压根没重新构建。调试时务必 `cache: false` 或先删掉缓存目录，否则会得出"这个钩子根本不执行"的错误结论。主配置在 `--env debug` 时已自动 `cache: false`（见 `webpack.config.cjs`），调试场景不用再手动关。
 
 **坑二：watch 模式进程不退出。** `compiler.watch()` 下 `done` 之后进程会继续等待文件变化，第二轮还会叠加坑一的缓存行为。调试一律用单次 `run`。
 
 **坑三：断点掉进 node_modules 出不来。** webpack 内部调用链很深，一路单步会陷进 `node_modules`。用 `skipFiles` 跳过 node 内部，只在自己写的文件和明确想看的 tapable 源码上停。
+
+## 十、多入口生产模板：一份能直接落地的配置
+
+前面拆了配置（二）、loader（三）、plugin（四）、拆包（五），但要真搭一个能上线的应用，还差三样：**HTML 入口**、**资源规则**、**开发服务器**。第二节那份多入口主配置就是贴近生产的模板——第二节看的是「怎么读」，这里看「怎么用」：哪些配置块是上线标配、切出不同场景要动哪些 `--env`。
+
+先看一个常被忽略的点——**入口可以是函数**。`entry` 支持对象、数组，也支持返回对象/Promise 的函数，webpack 在构建期调用它拿结果。这比写死数组灵活得多：多页应用可以在这里遍历页面清单生成入口，CI 里也能按需注入页面。主配置用函数返回**两个入口**（`main`＋`pageB`），这正是演示 common chunk 的多入口形态：
+
+> 摘自 `./code/build-lab/webpack-lab/webpack.config.cjs`（运行：`npm run webpack`）
+
+```js
+// 功能入口：构建期动态返回多入口；--env/APP 还能切到 spa-app / pit-app / prod-app
+entry: () => {
+    if (srcDir === 'src') {
+        return Promise.resolve({
+            main: path.join(ROOT, 'src/index.js'),
+            pageB: path.join(ROOT, 'src/pageB.js')
+        })
+    }
+    return Promise.resolve({ app: path.join(ROOT, srcDir, 'src/index.js') })
+}
+```
+
+模板里其余几处生产标配，逐一说明它们解决什么问题：
+
+| 配置块 | 做法 | 解决什么 |
+| ---- | ---- | ---- |
+| `output.filename: '[name].[contenthash:8].js'` | 内容变化才改文件名 | 长缓存：内容没变 CDN 就一直命中 |
+| `optimization.runtimeChunk: 'single'` | 运行时单独一个文件 | 业务 chunk 的 hash 不因运行时变动全部失效 |
+| `splitChunks` 的 vendors / common | node_modules 与公共模块分类拆包 | vendor 变更频率低，长缓存收益最大 |
+| `--env prod`（官方插件组） | HtmlWebpackPlugin / MiniCssExtractPlugin / TerserPlugin / CopyPlugin | 生成 index.html、CSS 抽独立文件、压缩、静态资源拷贝 |
+
+用主配置默认场景（`npm run webpack`）跑一次实测产物：
+
+```
+assets by path *.js 13.2 KiB
+  asset runtime.dd01471d.js 9.58 KiB [emitted] [immutable] (name: runtime)
+  asset main.1a4c3706.js 2.03 KiB [emitted] [immutable] (name: main)
+  asset pageB.fec65efc.js 1.6 KiB [emitted] [immutable] (name: pageB)
+asset build-manifest.json 194 bytes [emitted]
+Entrypoint main 11.6 KiB = runtime.dd01471d.js 9.58 KiB main.1a4c3706.js 2.03 KiB
+Entrypoint pageB 11.2 KiB = runtime.dd01471d.js 9.58 KiB pageB.fec65efc.js 1.6 KiB
+```
+
+三个产出点层层咬合：`runtime.dd01471d.js` 是七节说过的独立运行时代码；`main`/`pageB` 是 `src/index.js` 与 `src/pageB.js` 各自渲染的结果（同一套 `runtime` 共享）；`894` 开头的懒加载 chunk 是 `index.js` 里动态 `import('./lazy.js')` 切出来的（首屏不加载）。想加官方插件组就 `npm run webpack:prod`（切到 `prod-app`，产出 index.html + 独立 css + 压缩后的 js）。
+
+**想把这套模板从头到尾断点走一遍**，不用再单独写入口——九节的 `DebugProbePlugin` 就挂在主配置里，`npm run webpack:debug`（或 `--env debug`）即可在 `beforeRun → compile → make → finishMake → seal → processAssets → emit → done` 各阶段停住。每停一处就对照 4.1 的钩子全景：这一步能拿到 modules/chunks 还是 assets，自己亲手确认一遍，"钩子能拿什么"就再也不会忘——真正轮到的钩子顺序固定，参数随阶段递进。
+
+## 十一、官方插件实现思想：看一眼它们怎么写的
+
+看懂两个最常见的官方插件，就能举一反三。核心就一句话：**官方插件和我们手写的差别只有两点——挂在更合适的阶段、做得更周全**。
+
+| 插件 | 挂在哪个阶段 | 它到底做什么 | 实现思想 |
+| ---- | ---- | ---- | ---- |
+| `HtmlWebpackPlugin` | `processAssets`（官方在 `OPTIMIZE_INLINE` 附近） | 读产物清单，把带 hash 的 `<script>`/`<link>` 注入模板，`emitAsset` 输出 `index.html` | 不要写死文件名：**从 `compilation.assets` 现读现拼** |
+| `MiniCssExtractPlugin` | loader + `processAssets` 各干一半 | CSS 由它的 loader 标记并收集，插件再把 CSS 抽成独立 `.css` 文件 | **loader 负责单模块，plugin 负责汇总成产物**，一个插件可以同时注册两者 |
+
+第一个思想用一段迷你实现来验证——`MiniHtmlWebpackPlugin`（约 40 行，`HtmlWebpackPlugin` 的灵魂就是这个）。它作为零件被主配置加载：主配置里 `--env minihtml` 会用这个迷你版顶替官方 `HtmlWebpackPlugin`（源码仍见 `mini-html-plugin.cjs`），跑 `npm run webpack:minihtml` 即可复现：
+
+> 摘自 `./code/build-lab/webpack-lab/mini-html-plugin.cjs`（运行：`npm run webpack:minihtml`）
+
+```js
+compilation.hooks.processAssets.tap(
+    {
+        name: this.name,
+        // HtmlWebpackPlugin 官方也挂这边；这里用 SUMMARIZE 阶段在压缩前后都成立
+        stage: webpack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE
+    },
+    assets => {
+        const jsTags = []
+        const cssTags = []
+        for (const name of Object.keys(assets)) {
+            if (name.endsWith('.js')) jsTags.push(`<script src="/${name}"></script>`)
+            else if (name.endsWith('.css')) cssTags.push(`<link rel="stylesheet" href="/${name}" />`)
+        }
+        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">${cssTags.join('\n')}</head>
+<body><div id="root"></div>${jsTags.join('\n')}</body></html>`
+        // 用 emitAsset（不要 fs.writeFileSync），产物才进 stats、跟随 clean/watch
+        compilation.emitAsset(this.filename, new webpack.sources.RawSource(html))
+    }
+)
+```
+
+实测主配置 `--env minihtml` 生成的 `index.html`：
+
+```
+<!DOCTYPE html><html><head><meta charset="UTF-8"><link rel="stylesheet" href="/css/app.8c8937b8.css" /></head>
+<body><div id="root"></div><script src="/app.d2e1e8bc.js"></script>
+<script src="/runtime.a69afb56.js"></script>
+<script src="/675.db3e2815.chunk.js"></script></body></html>
+```
+
+注意 `<script>` 引用的是**从 assets 里读出来的最终文件名**（`app.d2e1e8bc.js`、`runtime.a69afb56.js`、`675.db3e2815.chunk.js`）。这就是 HtmlWebpackPlugin 不让你手写 `<script src="app.js">` 的原因——hash 变了它自动跟着变（这里比官方版多出的 `runtime` script 正是第四/七节说的独立运行时代码）。真实实现还额外管 favicon、模板引擎、多页、minify，架构不变。
+
+`MiniCssExtractPlugin` 是"loader + plugin 两段式"的典型：它的 `loader` 把 CSS 转成"这段样式要提取"的标记并收集文本，插件在 `processAssets` 里把收集到的文本合并、写成一个 `<name>.css` 文件并注册为 asset。**想加哪种"特殊资源"，就照它这样拆两半：loader 做单文件转换，plugin 做跨文件汇总。**
+
+## 十二、常见自定义插件场景
+
+"我要怎么把这些想法变成代码"是最常问的。建表先给答案，再给一个完整可跑的 demo：
+
+| 需求 | 实现思路 | 关键钩子 / 机制 |
+| ---- | ---- | ---- |
+| 剔除测试 / mock / spec 文件（不进产物） | 依赖解析时对命中路径 `return false` 跳过该模块 | `normalModuleFactory.hooks.beforeResolve` |
+| 打包后删除指定产物文件（LICENSE、sourcemap、多余 chunk） | 从 `assets` 对象里 `delete` 目标文件 | `processAssets`（stage ≥ OPTIMIZE） |
+| 剔除注释、`__DEV__` 调试块、console | 编译期常量替换用 `DefinePlugin`；代码删减交给压缩器 | 不必手写插件：`DefinePlugin` + `TerserPlugin({ terserOptions:{ format:{ comments:false } } })` |
+| 产物体积门禁 / 构建信息注入 | 在 `done`/`processAssets` 读 stats 或写 manifest | `compiler.hooks.done`、`emitAsset` |
+
+头两行是"真会写进项目"的自定义插件，配套一个 demo 一次演示两个：`DropTestAndMockPlugin` 去掉 mock/test，`DropAssetsPlugin` 去掉指定产物。
+
+> 摘自 `./code/build-lab/webpack-lab/drop-test-mock-plugin.cjs`（运行：`npm run webpack:drop`）
+
+```js
+class DropTestAndMockPlugin {
+    apply(compiler) {
+        // NormalModuleFactory 管「依赖→模块」的解析；beforeResolve 返回 false 等价于 webpack.IgnorePlugin
+        compiler.hooks.normalModuleFactory.tap(this.name, factory => {
+            factory.hooks.beforeResolve.tap(this.name, resolveData => {
+                if (resolveData.request && /\.(test|spec|mock)\.js$/.test(resolveData.request)) {
+                    return false // 命中 test/spec/mock → 跳过这个模块
+                }
+                return undefined
+            })
+        })
+    }
+}
+```
+
+> 摘自 `./code/build-lab/webpack-lab/drop-assets-plugin.cjs`（运行：`npm run webpack:drop`）
+
+```js
+compilation.hooks.processAssets.tap(
+    {
+        name: this.name,
+        stage: require('webpack').Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE + 1
+    },
+    assets => {
+        const matched = Object.keys(assets).filter(name =>
+            this.ignore.some(rule => (typeof rule === 'string' ? name === rule : rule.test(name)))
+        )
+        for (const name of matched) {
+            delete assets[name] // 直接删「产物对象」，比删磁盘文件更干净
+            console.log('  [DropAssetsPlugin] 剔除:', name)
+        }
+    }
+)
+```
+
+主配置用 `--env drop` 同时挂载这两者（`npm run webpack:drop`，入口走 `pit-app`，还配了 `DefinePlugin({ __DEV__: JSON.stringify(false) })` 演示编译期常量），构建后看 `stats.modules`：
+
+```
+---- stats.modules（剔除后实际参与打包的模块）----
+   ./webpack-lab/pit-app/src/index.js + 1 modules
+   ./webpack-lab/pit-app/src/api.js
+```
+
+`config.mock.js`、`feature.test.js` 两个源文件都 import 了，却没出现在模块清单——它们在解析阶段就被跳过，**连打包的功夫都省了**。这比"产物里再删一遍"更彻底。
+
+## 十三、min-webpack：约百行看懂源码执行流程
+
+前文的钩子全景是"纸上顺序"，`min-webpack` 把它变成能跑的代码。它复刻 webpack 的 **Compiler → Compilation → Module → Chunk → Asset** 五对象流水线：极简的 Hook（就是 tapable 的原理）、make 建图、seal 冻结、emit 写盘，入口注入 `require(0)`。
+
+> 摘自 `./code/build-lab/webpack-lab/min-webpack/bundle.cjs`（运行：`npm run mini:webpack`）
+
+```js
+// —— Hook：tapable 的极简版。webpack 的 hook 就是这个原理：注册一批 fn，触发时按序调用 ——
+class Hook {
+    constructor() { this.taps = [] }
+    tap(name, fn) { this.taps.push({ name, fn }) }
+    call(...args) { for (const t of this.taps) t.fn(...args) }
+}
+
+class Compiler {
+    constructor(options) {
+        this.options = options
+        this.hooks = { make: new Hook(), seal: new Hook(), emit: new Hook(), done: new Hook() }
+    }
+    run() {
+        const compilation = new Compilation(this)
+        this.hooks.make.call(compilation)  // ① 建图
+        this.hooks.seal.call(compilation)  // ② 冻结、分 chunk
+        this.hooks.emit.call(compilation)  // ③ 渲染成 asset
+        this.hooks.done.call(compilation, compilation.assets)
+    }
+}
+```
+
+`seal` 里只有一个动作——所有模块进一个 chunk，注释明说了真实 webpack 在这儿按 splitChunks 切多个 chunk。`emit` 里做最关键的**运行时生成**：把每个模块包成 `function(module, exports, require)`，再加一个缓存版 `require`，最后 `require(0)` 启动入口。webpack 产物里那坨多行压缩代码，拆开看就是这个：
+
+> 摘自 `./code/build-lab/webpack-lab/min-webpack/bundle.cjs`
+
+```js
+(function () {
+  var modules = { /* id: function(module, exports, require){...} */ }
+  var cache = {}
+  function require(id) {
+    if (cache[id]) return cache[id].exports
+    var module = (cache[id] = { exports: {} })
+    modules[id](module, module.exports, require)
+    return module.exports
+  }
+  require(0)
+})();
+```
+
+产物**真的能跑**——入口 `var greet = require(1)`，`greet.js` 的 `export default` 转成 `module.exports =`：
+
+```
+entry 用到: hello min-webpack
+```
+
+对照本节和第 4.1 节能看到同一套骨架：真正执行的是运行时 `require(0)` → 逐个拉模块、`module.exports` 接力；webpack 5 的差别只是把这张模块表拆进多个 chunk、加了代码分割与懒加载的 `__webpack_require__.e`，架构没变。**先看懂这个约百行的版本，再去读 webpack 源码就不会迷路。**
 
 ## 配套代码
 
@@ -561,25 +781,30 @@ VS Code 的 `.vscode/launch.json`（也可直接复制仓库里的这份）：
 
 | 文件 | 作用 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/build-lab/webpack-lab/webpack.config.cjs` | 配置全览：多入口 / loader / plugin / splitChunks / cache | 二、配置全览 · 五、代码分割 |
+| `./code/build-lab/webpack-lab/webpack.config.cjs` | **多入口主配置**：函数入口 / loader / 官方+自定义插件 / splitChunks / runtimeChunk / cache / 断点探针，`--env` 切换场景 | 二、四、五、九、十、十一、十二 |
 | `./code/build-lab/webpack-lab/txt-loader.cjs` | 手写 loader：把 .txt 变成 JS 模块 | 三、loader |
 | `./code/build-lab/webpack-lab/emit-list-plugin.cjs` | 手写 plugin：产物清单 + emitAsset 产出 manifest | 四、plugin |
-| `./code/build-lab/webpack-lab/src/index.js` | 动态 import 产生异步 chunk | 五、代码分割 |
+| `./code/build-lab/webpack-lab/src/` | 多入口 demo 源码（index/pageB/shared/heavy/lazy） | 二、五、十 |
+| `./code/build-lab/webpack-lab/spa-app/`、`prod-app/`、`pit-app/` | 演示入口目录（`--env spa/prod/drop` 切换） | 十、十一、十二 |
 | `./code/build-lab/webpack-lab/split.cjs` | `minSize` 20000 vs 0 的对照实验 | 五、代码分割 |
 | `./code/build-lab/webpack-lab/cache.cjs` | 持久化缓存：小样本 vs 大样本 | 六、构建加速 |
 | `./code/build-lab/webpack-lab/one-cache.cjs` | 单次构建采样（独立子进程，避免互相影响） | 六、构建加速 |
 | `./code/build-lab/webpack-lab/hooks-probe.cjs` | 钩子探针：触发顺序 / 各阶段产物 / stage / 谁挂在哪 | 四、plugin |
-| `./code/build-lab/webpack-lab/webpack.prod.config.cjs` | 常见生产插件配置（Html / MiniCss / Terser / Copy） | 四、plugin |
-| `./code/build-lab/webpack-lab/debug-entry.cjs` | Node API 调试入口，四个预设断点 | 九、断点调试 |
-| `./code/build-lab/webpack-lab/debug-launch.json` | VS Code 调试配置样例 | 九、断点调试 |
+| `./code/build-lab/webpack-lab/debug-launch.json` | VS Code 调试配置样例（指向主配置 `--env debug`） | 九、断点调试 |
+| `./code/build-lab/webpack-lab/mini-html-plugin.cjs` | 模仿 HtmlWebpackPlugin 的迷你实现（注入带 hash 的资源） | 十一、官方插件思想 |
+| `./code/build-lab/webpack-lab/drop-test-mock-plugin.cjs` | 剔除 test/mock 模块（normalModuleFactory.beforeResolve） | 十二、自定义插件 |
+| `./code/build-lab/webpack-lab/drop-assets-plugin.cjs` | 剔除指定产物文件（processAssets.delete） | 十二、自定义插件 |
+| `./code/build-lab/webpack-lab/min-webpack/bundle.cjs` | 约百行最小 webpack：五对象流水线 + 可运行产物 | 十三、min-webpack |
 
-运行：`cd code/build-lab && npm install`，然后 `npm run webpack`、`npm run webpack:split`、`npm run webpack:cache`、`npm run webpack:hooks`。
+除 `webpack.config.cjs`（一份多入口主配置）与上述插件/探针零件外，webpack 篇不再有其它独立配置文件——所有场景（官方插件 / drop / minihtml / 断点）都是同一份主配置用 `--env` 切出来的。
+
+运行：`cd code/build-lab && npm install`，然后依次 `npm run webpack`（多入口主构建）、`npm run webpack:split`、`npm run webpack:cache`、`npm run webpack:hooks`、`npm run webpack:hooks -- --prod`、`npm run webpack:prod`、`npm run webpack:drop`、`npm run webpack:minihtml`、`npm run webpack:debug`、`npm run mini:webpack`。
 
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[编译与 AST](./编译与%20AST.md)
-- 下一篇：[Vite](./Vite.md)
+- 上一篇：[手写 mini-bundler](./手写%20mini-bundler.md)
+- 下一篇：[esbuild 与 Rust 工具链](./esbuild%20与%20Rust%20工具链.md)
 - [webpack 官方文档](https://webpack.js.org/concepts/)
 - [webpack 钩子列表](https://webpack.js.org/api/compiler-hooks/)

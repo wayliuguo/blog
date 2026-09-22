@@ -6,6 +6,7 @@
     "description": "测试体系配套实验：测试分层、Vitest 单测与替身、组件测试（RTL）、flaky 复现、覆盖率与门禁",
     "scripts": {
         "test": "vitest run",
+        "test:hello": "vitest run src/hello",
         "test:strategy": "vitest run src/strategy",
         "test:unit": "vitest run src/unit",
         "test:component": "vitest run src/component",

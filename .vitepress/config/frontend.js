@@ -209,16 +209,11 @@ export default [
                 items: [
                     { text: '构建全景与选型', link: '/frontend/进阶/构建体系/构建全景与选型' },
                     { text: '编译与 AST', link: '/frontend/进阶/构建体系/编译与%20AST' },
-                    { text: 'Webpack 深入', link: '/frontend/进阶/构建体系/Webpack%20深入' },
-                    { text: 'Vite', link: '/frontend/进阶/构建体系/Vite' },
-                    { text: 'Rollup', link: '/frontend/进阶/构建体系/Rollup' },
-                    {
-                        text: 'esbuild 与 Rust 工具链',
-                        link: '/frontend/进阶/构建体系/esbuild%20与%20Rust%20工具链'
-                    },
-                    { text: '构建插件开发', link: '/frontend/进阶/构建体系/构建插件开发' },
-                    { text: '产物分析与体积优化', link: '/frontend/进阶/构建体系/产物分析与体积优化' },
                     { text: '手写 mini-bundler', link: '/frontend/进阶/构建体系/手写%20mini-bundler' },
+                    { text: 'webpack', link: '/frontend/进阶/构建体系/webpack' },
+                    { text: 'esbuild', link: '/frontend/进阶/构建体系/esbuild%20与%20Rust%20工具链' },
+                    { text: 'Rollup', link: '/frontend/进阶/构建体系/Rollup' },
+                    { text: 'Vite', link: '/frontend/进阶/构建体系/Vite' },
                     { text: '模块总结（构建体系）', link: '/frontend/进阶/构建体系/总结' },
                     { text: '模块面试题（构建体系）', link: '/frontend/进阶/构建体系/面试题' }
                 ]
@@ -240,6 +235,7 @@ export default [
                 text: '测试体系',
                 collapsed: false,
                 items: [
+                    { text: '测试工具上手', link: '/frontend/进阶/测试体系/测试工具上手' },
                     { text: '测试策略与分层', link: '/frontend/进阶/测试体系/测试策略与分层' },
                     { text: '单元测试深入', link: '/frontend/进阶/测试体系/单元测试深入' },
                     { text: '组件测试', link: '/frontend/进阶/测试体系/组件测试' },
