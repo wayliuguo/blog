@@ -118,10 +118,22 @@ const OUT_FILE = path.join(ROOT, 'dist', 'bundle.js')
 > 摘自 `./code/build-lab/mini-bundler/bundle.cjs`
 
 ```js
+/**
+ * 把 import 语句里的裸字符串，解析成磁盘上真实存在的文件绝对路径。
+ *
+ * 是打包器的「寻址」步骤：拿到字符串 './greet.js'，算出它到底是谁。
+ *
+ * @param {string} specifier - import 里的模块标识，如 './greet.js' 或 'react'
+ * @param {string} importer   - 引用者（当前模块）的绝对路径，作为相对路径的基准目录
+ * @returns {string} 命中磁盘文件的绝对路径
+ * @throws {Error} 裸模块（不以 . 开头）或三个候选文件都不存在时抛错
+ */
 function resolveId(specifier, importer) {
+    // 只支持相对路径依赖；裸模块（node_modules 包）一律报错，第 5 篇的 @rollup/plugin-node-resolve 才处理
     if (!specifier.startsWith('.')) {
         throw new Error(`只支持相对路径依赖，遇到裸模块 ${specifier}（来自 ${rel(importer)}）`)
     }
+    // 相对路径的基准是「引用者所在目录」，不是入口目录——这是必须带 importer 的原因
     const abs = path.resolve(path.dirname(importer), specifier)
     // 浏览器要求写全后缀，真实打包器会替我们补：./x → ./x.js → ./x/index.js
     for (const candidate of [abs, abs + '.js', path.join(abs, 'index.js')]) {
@@ -142,15 +154,25 @@ function resolveId(specifier, importer) {
 > 摘自 `./code/build-lab/mini-bundler/bundle.cjs`（运行：`npm run mini`）
 
 ```js
-const modules = new Map() // 绝对路径 → 模块记录
+/** @type {Map<string, {id:number, file:string, code:string, ast:object, deps:Array<{spec:string,id:number}>}>} 绝对路径 → 模块记录 */
+const modules = new Map()
 
+/**
+ * 深度优先收集模块：从一个入口开始，递归读文件、解析 AST、收集 import/export。
+ *
+ * 兼做去重与防环（见内部 modules.has 的注释），是理解整个打包器的核心。
+ *
+ * @param {string} file - 模块绝对路径
+ * @returns {{id:number, file:string, code:string, ast:object, deps:Array}} 该模块的记录（已登记进 modules）
+ */
 function collect(file) {
     if (modules.has(file)) return modules.get(file)
 
     const code = fs.readFileSync(file, 'utf8')
     const ast = acorn.parse(code, { ecmaVersion: 'latest', sourceType: 'module' })
+    // id = modules.size：发现顺序即编号；入口最先 collect，所以 id 是 0
     const record = { id: modules.size, file, code, ast, deps: [] }
-    // 先登记再递归：循环依赖（a → b → a）靠这一步终止
+    // 先登记再递归：循环依赖（a → b → a）靠这一步终止（否则无限递归栈溢出）
     modules.set(file, record)
 
     for (const node of ast.body) {
@@ -176,6 +198,13 @@ AST 拿到手，剩下的就是把 ESM 语法映射成 CJS 语义。因为要**�
 > 摘自 `./code/build-lab/mini-bundler/bundle.cjs`
 
 ```js
+/**
+ * 把一条 import 语句映射成一段 __require 表达式，覆盖四种形式。
+ *
+ * @param {object} node - 对应的 ImportDeclaration AST 节点
+ * @param {number} id   - 该依赖在依赖图中的编号（transform 已解析好的最短数字）
+ * @returns {string} 拼好的 CJS 代码片段
+ */
 function renderImport(node, id) {
     const specs = node.specifiers
     if (specs.length === 0) return `__require(${id})` // 只为副作用
@@ -190,7 +219,7 @@ function renderImport(node, id) {
 
     if (!def) return `const { ${named.join(', ')} } = __require(${id})`
 
-    // default 与具名混用：先拿一份命名空间，再分别解构
+    // default 与具名混用：先拿一份命名空间，再分别解构（__m3 是临时变量）
     const tmp = `__m${id}`
     const parts = [`const ${tmp} = __require(${id})`, `const ${def.local.name} = ${tmp}.default`]
     if (named.length) parts.push(`const { ${named.join(', ')} } = ${tmp}`)
@@ -269,11 +298,20 @@ export 侧的处理策略是「**就地删关键字 + 末尾统一赋值**」：
 > 摘自 `./code/build-lab/mini-bundler/bundle.cjs`
 
 ```js
+/**
+ * 把全部模块拼装成一个自执行函数：一个模块表 + 一个精简的 __require 运行时。
+ *
+ * 每个模块被包进 `function (module, exports, __require)`，天然获得独立作用域；
+ * 运行时最关键的几行是 cache 的写入时机（见下方生成代码里的注释）。
+ *
+ * @param {Array<{id:number, file:string, output:string}>} list - 全部模块，按 id 顺序排列
+ * @returns {string} 最终产物代码文本（可直接用 node 运行）
+ */
 function generate(list) {
     const out = [
         '// 由 mini-bundler 生成（手写打包器，仅供理解原理，勿用于生产）',
         '(function (modules) {',
-        '    const cache = {}',
+        '    const cache = {}                 // 已执行模块的导出缓存（保证每个模块只跑一次）',
         '    function __require(id) {',
         '        if (cache[id]) return cache[id].exports',
         '        const module = { exports: {} }',
@@ -282,7 +320,7 @@ function generate(list) {
         '        modules[id](module, module.exports, __require)',
         '        return module.exports',
         '    }',
-        '    __require(0)',
+        '    __require(0)                     // 从入口（id 0，第一个被 collect 的模块）开始执行',
         '})({'
     ]
 ```
@@ -420,7 +458,8 @@ export function b() {
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[产物分析与体积优化](./产物分析与体积优化.md)
+- 上一篇：[编译与 AST](./编译与%20AST.md)
+- 下一篇：[webpack](./webpack.md)
 - [acorn 文档](https://github.com/acornjs/acorn)
 - [magic-string 文档](https://github.com/Rich-Harris/magic-string)
 - [webpack 运行时代码解析](https://webpack.js.org/concepts/modules/)

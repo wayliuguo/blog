@@ -19,7 +19,7 @@ ESM：  import a from 'x'                          ← 构建期静态可见
 2. **把模块"展平"到同一个作用域**（scope hoisting），产物里没有模块加载运行时。
 3. **按引用关系重命名**，避免命名冲突，同时让压缩器有更大的优化空间。
 
-对比 webpack：webpack 为了兼容 CJS 与动态依赖，产物里必须带一套模块运行时（实测见[Webpack 深入](./Webpack%20深入.md)：业务 981 bytes、运行时 6.37 KiB）。Rollup 打同样的代码，产物就是"模块体拼在一起"。
+对比 webpack：webpack 为了兼容 CJS 与动态依赖，产物里必须带一套模块运行时（实测见[webpack](./webpack.md)：业务 981 bytes、运行时 6.37 KiB）。Rollup 打同样的代码，产物就是"模块体拼在一起"。
 
 代价也很直接：**Rollup 对 CJS 的支持依赖插件**（`@rollup/plugin-commonjs`），遇到动态 `require` 就无能为力——第八节专门讲这件事。
 
@@ -487,6 +487,42 @@ function bundleGuard({ limitKb = Infinity, manifest = 'bundle-manifest.json' } =
 
 > 虚拟模块（`resolveId` 返回一个 `\0` 开头的 id，再由 `load` 提供内容）也是真实技术，Vite 的 `virtual:` 前缀模块就靠它。但它是"手段"不是"场景"——真要写插件，先想清楚要解决什么问题，再挑钩子。
 
+### 七·一、另一个真实场景：禁用 API 门禁（走 AST）
+
+体积之外，插件另一个高频用途是把**团队约定**变成构建期报错：不许直连 `localStorage`、`console.log` 不许进生产。靠 CR 人肉盯必漏，做成 `fail` 开关的检查就永远漏不了。
+
+规则写成数据、遍历用 `transform` + AST（正则扫得到关键字，扫不到"这是调用还是字符串字面量"）：
+
+> 摘自 `./code/build-lab/plugin-lab/ban-api.mjs`（运行：`npm run plugin:ban`）
+
+```js
+const RULES = [
+    { id: 'no-direct-storage', test: c => c.object?.name === 'localStorage',
+      msg: '禁止直连 localStorage：请用统一的 storage 封装' },
+    { id: 'no-console', test: c => c.object?.name === 'console' && c.property?.name === 'log',
+      msg: '生产构建不允许 console.log：请用 logger（线上可关）' }
+]
+// ...在 transform 里 traverse AST，命中的 CallExpression 收集起来
+sink.push(...hits.map(h => ({ ...h, file: rel(id) })))
+for (const h of hits) {
+    // this.warn 只提示、this.error 直接中断：同一个插件换个开关就是「报告」或「门禁」
+    if (fail) this.error(`[${h.rule}] ${rel(id)}:${h.line}:${h.column} ${h.msg}`)
+    this.warn(`[${h.rule}] ${rel(id)}:${h.line}:${h.column} ${h.msg}`)
+}
+```
+
+```
+
+---- ① 只警告（fail: false） ----
+  构建通过；命中 2 处（警告 2 条）：
+    src-ban/order.js:2:4  [no-console] 生产构建不允许 console.log：请用 logger（线上可关）
+
+---- ② 当门禁（fail: true） ----
+  构建被中断： [plugin ban-api] ...: [no-console] src-ban/order.js:2:4 生产构建不允许 console.log：请用 logger（线上可关）
+```
+
+两个踩点直接复用第七节的结论：`this.error` 抛出的那一刻构建就停，所以**门禁模式只报出第一处**；想一次报全所有违规，正确的做法是 `transform` 里只收集、到 `buildEnd` 再统一 `this.error` 一次（和 `sizeGate` 在 `generateBundle` 收尾是一个道理）。这套 `warn`/`error` 双档、数据化规则、AST 判定，是组件库按需引入之外的另一个跨三工具通用模板——想让 webpack/Vite 也跑，用 unplugin 包一层即可（见 [webpack](./webpack.md) 第十二节、[Vite](./Vite.md) 第十二节）。
+
 ## 八、CJS 互操作：为什么离不开 plugin-commonjs
 
 Rollup 只认 ESM。一个 CommonJS 文件在它眼里就是"给一个叫 `module` 的变量赋值"：
@@ -581,7 +617,7 @@ Vite 的生产构建用的就是 Rollup（新版本逐步换成 Rolldown，配�
 | Vite 的 `transformIndexHtml` | **Vite 独有** | Rollup 不产出 HTML |
 | `optimizeDeps` | **Vite 独有** | 依赖预构建是 dev 阶段的概念，见 [Vite](./Vite.md) |
 
-反过来说，一个为 Vite 写的插件如果用了 `configureServer` 或 `transformIndexHtml`，它就不能给纯 Rollup 用——这也是 unplugin 存在的理由（见[构建插件开发](./构建插件开发.md)）。
+反过来说，一个为 Vite 写的插件如果用了 `configureServer` 或 `transformIndexHtml`，它就不能给纯 Rollup 用——unplugin 存在的理由就是给 Rollup/Vite/webpack 三端一致的外壳，跨工具的自定义插件写法见 [Vite](./Vite.md) 第十二节。
 
 ## 十一、Rollup 不适合什么
 
@@ -611,6 +647,7 @@ Vite 的生产构建用的就是 Rollup（新版本逐步换成 Rolldown，配�
 | `./code/build-lab/rollup-lab/context.cjs` | PluginContext：模块图 + 环检测 + emitFile | 六、PluginContext |
 | `./code/build-lab/rollup-lab/src-cycle/a.js` | 循环依赖样本（a ↔ b） | 六、PluginContext |
 | `./code/build-lab/rollup-lab/size-gate.cjs` | 真实插件：产物体积门禁 + 清单 | 七、真实场景插件 |
+| `./code/build-lab/plugin-lab/ban-api.mjs` | 真实插件：禁用 API 门禁（AST + warn/error） | 七·一、禁用 API 门禁 |
 | `./code/build-lab/rollup-lab/cjs.cjs` | CJS 互操作：不加插件的报错 + 手写 commonjs 替身 | 八、CJS 互操作 |
 | `./code/build-lab/rollup-lab/src-cjs/dep.cjs` | CommonJS 样本 | 八、CJS 互操作 |
 
@@ -620,7 +657,7 @@ Vite 的生产构建用的就是 Rollup（新版本逐步换成 Rolldown，配�
 
 - 本模块总结：[总结](./总结.md)
 - 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[Vite](./Vite.md)
-- 下一篇：[esbuild 与 Rust 工具链](./esbuild%20与%20Rust%20工具链.md)
+- 上一篇：[esbuild 与 Rust 工具链](./esbuild%20与%20Rust%20工具链.md)
+- 下一篇：[Vite](./Vite.md)
 - [Rollup 官方文档](https://rollupjs.org/)
 - [Rollup 插件钩子](https://rollupjs.org/plugin-development/)

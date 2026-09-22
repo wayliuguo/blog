@@ -5,7 +5,8 @@
             "type": "node",
             "request": "launch",
             "name": "调试 webpack 插件",
-            "program": "${workspaceFolder}/webpack-lab/debug-entry.cjs",
+            "program": "${workspaceFolder}/node_modules/webpack-cli/bin/cli.js",
+            "args": ["--config", "${workspaceFolder}/webpack-lab/webpack.config.cjs", "--env", "debug"],
             "cwd": "${workspaceFolder}",
             "skipFiles": ["<node_internals>/**"],
             "console": "integratedTerminal"

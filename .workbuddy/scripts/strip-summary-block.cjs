@@ -30,7 +30,7 @@ function walk(dir, acc = []) {
 const changed = []
 for (const file of walk(target)) {
     const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/)
-    let i = lines.findIndex((l) => /^##\s+小结\s*$/.test(l))
+    let i = lines.findIndex(l => /^##\s+小结\s*$/.test(l))
     if (i === -1) continue
 
     // 找到小结块结束：下一个 `## ` 标题
@@ -54,4 +54,4 @@ for (const file of walk(target)) {
 }
 
 console.log(`共处理 ${changed.length} 个文件的小结块:`)
-changed.forEach((f) => console.log('  - ' + f))
+changed.forEach(f => console.log('  - ' + f))
