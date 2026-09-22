@@ -40,6 +40,11 @@ const first: string = tuple[0]
 
 // ---- 枚举的替代品：字面量联合 + as const（不额外生成运行时对象） ----
 const Direction = { Up: 'UP', Down: 'DOWN' } as const
+// 逐步解析：
+// ① as const 让对象变只读：{ readonly Up: 'UP'; readonly Down: 'DOWN' }
+// ② typeof Direction（类型位置）取得这个对象类型
+// ③ keyof typeof Direction => 'Up' | 'Down'
+// ④ 整体是索引访问类型，等价于上面的对象类型再取 ['Up' | 'Down'] => 'UP' | 'DOWN'
 type Direction = (typeof Direction)[keyof typeof Direction] // 'UP' | 'DOWN'
 
 declare function go(dir: Direction): void
