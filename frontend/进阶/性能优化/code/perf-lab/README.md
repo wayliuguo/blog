@@ -38,11 +38,10 @@ npm run all        # 依次跑完全部场景（耗时较长）
 
 | 篇 | 用到的场景 | 对应小节 |
 |---|---|---|
-| 性能指标与评估 | `metrics` `score` `cls` | 指标定义与区间、实验室 vs 现场口径、位移从哪来 |
-| 性能测量工具实操 | `waterfall` `memory` `coverage` | 瀑布图怎么读、堆快照对比、已用/总字节 |
-| 加载与首屏优化 | `block` `images` `lazy` `metrics` | 关键渲染路径、资源优先级、懒加载的边界 |
-| 构建侧优化 | `coverage` `lazy` | 三个层级的按需、代码覆盖率 |
-| 运行时性能 | `thrash` `longtask` `virtual` `worker` `memory` | 强制同步布局、长任务与切片、虚拟滚动、Worker 边界、泄漏 |
+| 性能优化总纲与指标量化 | `metrics` `score` `cls` `waterfall` `memory` `coverage` | 指标定义与区间、实验室 vs 现场口径、位移从哪来、瀑布图怎么读、堆快照对比、已用/总字节 |
+| 加载性能与 LCP | `block` `images` `lazy` `coverage` `metrics` | LCP 四段定位、关键渲染路径、资源优先级、三个层级的按需、懒加载的边界 |
+| 交互性能与 INP | `thrash` `longtask` `virtual` `worker` `memory` | INP 三段定位、强制同步布局、长任务与切片、虚拟滚动、Worker 边界、泄漏 |
+| 视觉稳定与 CLS | `cls` | 逐次位移的时刻与分数归因、尺寸预留与字体 |
 | 性能优化闭环 | `budget` `score` `metrics` | 预算怎么定、CI 卡口、优化前后指标 |
 | 优化手段速查 | 全部 | 每条手段后面挂本节实测的数字 |
 | Vue SPA 性能实战 | `spa` `spa:nav` `spa:list` `spa:cache` | 一个页面把加载 / 构建 / 运行时 / 缓存 / 闭环五段串起来 |
