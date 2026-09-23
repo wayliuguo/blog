@@ -77,7 +77,7 @@ export const DEFAULT_TRANSPORT = {
   flushInterval: 3000, // 否则最多等 3 秒
   maxRetry: 2,         // 每批失败后最多再试 2 次
   sampleRate: 1,       // 采样率（0~1）
-  maxQueue: 100,       // 队列上限，超出丢最旧的
+  maxQueue: 100        // 队列上限，超出丢最旧的
 }
 ```
 
@@ -190,10 +190,11 @@ export const DEFAULT_TRANSPORT = {
   }
 ```
 
-为什么这个顺序不能反：
+表里第一行是上一代做法，后三行是现在的选择。为什么这个顺序不能反：
 
 | 方式 | 页面卸载时能否送达 | 是否阻塞 | 限制 |
 | --- | --- | --- | --- |
+| `new Image()` 图片打点 | 能，但浏览器会为它推迟卸载 | 不阻塞首屏 | 只能 GET，数据受 URL 长度上限制约（约 2~8 KB），拿不到响应 |
 | 同步 `XMLHttpRequest` | 能 | **阻塞卸载** | 浏览器已基本禁用 |
 | `fetch`（无 keepalive） | 不能，请求会被取消 | 不阻塞 | — |
 | `fetch + keepalive` | 能 | 不阻塞 | 请求体有 64KB 上限 |
