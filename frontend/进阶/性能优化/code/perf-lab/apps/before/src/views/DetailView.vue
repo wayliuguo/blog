@@ -32,7 +32,7 @@ const fxSpan = ref(null)
 const SAMPLE = 'Hamburgefonstiv 0123456789 mnopqrst'
 /** 一段英文 + 数字，重复 4 遍：等宽 webfont 与系统回退字体的行数差要这么长才明显 */
 const TEXT =
-    ('The quick brown fox jumps over the lazy dog 0123456789. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ').repeat(
+    'The quick brown fox jumps over the lazy dog 0123456789. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. '.repeat(
         4
     )
 

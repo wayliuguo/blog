@@ -67,7 +67,9 @@ onMounted(() => {
         </div>
         <div class="rank">
             <h4>畅销榜</h4>
-            <div v-for="line in rank" :key="line" class="row"><b>{{ line }}</b></div>
+            <div v-for="line in rank" :key="line" class="row">
+                <b>{{ line }}</b>
+            </div>
         </div>
     </section>
 </template>
