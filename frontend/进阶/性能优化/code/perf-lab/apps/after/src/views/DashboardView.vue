@@ -63,7 +63,9 @@ onMounted(async () => {
 <template>
     <section class="view" data-route="dashboard">
         <div class="bar">
-            <span class="meta">仪表盘 · 4 张 KPI 卡 + 18 张分区走势 + 销售榜 · 首屏 {{ BATCH }} 张、其余空闲分批上屏</span>
+            <span class="meta"
+                >仪表盘 · 4 张 KPI 卡 + 18 张分区走势 + 销售榜 · 首屏 {{ BATCH }} 张、其余空闲分批上屏</span
+            >
         </div>
         <div class="kpis">
             <div v-for="k in stats" :key="k.name" class="kpi">
@@ -80,7 +82,9 @@ onMounted(async () => {
         </div>
         <div class="rank">
             <h4>畅销榜</h4>
-            <div v-for="line in rank" :key="line" class="row"><b>{{ line }}</b></div>
+            <div v-for="line in rank" :key="line" class="row">
+                <b>{{ line }}</b>
+            </div>
         </div>
     </section>
 </template>

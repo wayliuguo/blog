@@ -93,7 +93,11 @@
                 color: #cbd5e1;
                 border-radius: 8px;
                 padding: 12px 16px;
-                font: 12px/1.7 ui-monospace, 'Cascadia Code', Consolas, monospace;
+                font:
+                    12px/1.7 ui-monospace,
+                    'Cascadia Code',
+                    Consolas,
+                    monospace;
                 max-height: 280px;
                 overflow: auto;
             }
@@ -108,7 +112,9 @@
                 border: 1px dashed #cbd5e1;
                 border-radius: 8px;
                 padding: 12px 16px;
-                font: 12px/1.7 ui-monospace, monospace;
+                font:
+                    12px/1.7 ui-monospace,
+                    monospace;
                 white-space: pre;
                 max-height: 320px;
                 overflow: auto;
@@ -152,7 +158,8 @@
             <h1>前端监控·单页验证台</h1>
             <p>
                 用一个页面验证「前端监控体系」的全部概念：三类数据（错误 / 性能 / 业务）在同一个 SDK 里采集、攒批上报，
-                右侧聚合面板拉取采集端 <code>/api/report</code> 看效果。自动化跑 <code>?scenario=errors|perf|track</code>。
+                右侧聚合面板拉取采集端 <code>/api/report</code> 看效果。自动化跑
+                <code>?scenario=errors|perf|track</code>。
             </p>
         </header>
 
@@ -247,7 +254,7 @@
                 </section>
             </div>
 
-            <div class="bar" style="margin-top:16px">
+            <div class="bar" style="margin-top: 16px">
                 <button id="btnAll" class="primary">一键跑全部三类</button>
                 <button id="btnDeps" data-trigger="dep">制造性能坏情况（长任务+位移+晚到）</button>
                 <span class="note">页面隐藏时（切后台 / 关页）会自动收口上报 LCP / CLS 终值。</span>

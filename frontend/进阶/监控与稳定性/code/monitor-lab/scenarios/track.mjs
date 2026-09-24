@@ -20,7 +20,9 @@ import {
 
 export default async function run() {
     const collector = await startCollector()
-    const chrome = openChrome(`http://127.0.0.1:${collector.port}/monitor-lab.html?scenario=track`, ['--window-size=1280,800'])
+    const chrome = openChrome(`http://127.0.0.1:${collector.port}/monitor-lab.html?scenario=track`, [
+        '--window-size=1280,800'
+    ])
     console.log(title('场景 · 埋点与行为分析（headless Chrome 实跑）'))
 
     try {
