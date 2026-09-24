@@ -1,7 +1,5 @@
 # Electron 与桌面端
 
-跨端的最后一站是桌面：VS Code、Slack、Figma 桌面版、钉钉都选了 Electron。它把 Chromium 和 Node.js 打包进同一个应用——Web 团队的全部生态直接复用，代价是包体积与内存。这一篇拆 Electron 的进程模型、IPC 与安全边界，并用 `cross-lab/electron.cjs` 实测 invoke/handle 往返、contextBridge 白名单和自动更新状态机。
-
 ## 一、进程模型：主进程与渲染进程
 
 Electron 应用只有**一个主进程**和**若干渲染进程**（每个窗口/WebView 各一个）：

@@ -1,7 +1,5 @@
 # Superpowers
 
-> 分析版本：v6.3.0
-
 ## 定位
 
 Superpowers 是一个**零依赖的 AI Agent 行为约束插件**（作者 Jesse Vincent，仓库 [obra/superpowers](https://github.com/obra/superpowers)），通过向 Claude Code、Cursor、Copilot CLI 等编程 agent 注入结构化指令（skills），规范 agent 在软件开发全流程中的行为。

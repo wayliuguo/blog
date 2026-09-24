@@ -1,8 +1,5 @@
 # Redis 基础与数据类型
 
-
----
-
 ## Redis 是什么
 
 Redis（Remote Dictionary Server）是一个**基于内存**的键值数据库，常用于缓存、会话管理、消息队列、排行榜等场景。

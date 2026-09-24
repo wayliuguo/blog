@@ -1,0 +1,6 @@
+node_modules/
+dist-before/
+dist-after/
+apps/*/node_modules/
+# vite 加载 ESM 配置时会生成临时文件，正常会自己删；进程被中断时会留下
+**/vite.config.mjs.timestamp-*.mjs

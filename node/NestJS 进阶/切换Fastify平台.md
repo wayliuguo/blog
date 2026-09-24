@@ -1,9 +1,5 @@
 # 切换 Fastify 平台
 
-> NestJS 默认使用 Express 作为底层 HTTP 平台，也支持切换到 Fastify 获得更好的性能。
-
----
-
 ## 为什么选择 Fastify
 
 | 对比项 | Express | Fastify |

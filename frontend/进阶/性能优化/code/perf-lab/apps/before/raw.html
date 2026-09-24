@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Vue SPA 实验台 · 优化前</title>
+        <!-- 样式走外链：浏览器要把它下完、解析完才肯画第一帧 -->
+        <link rel="stylesheet" href="/app.css" />
+    </head>
+    <body>
+        <!-- 空壳：JS 没跑完之前，屏幕上什么都没有 -->
+        <div id="app"></div>
+        <script>
+            window.__PERF_OPT = false
+        </script>
+        <script src="/lab.js"></script>
+        <script type="module" src="./main.js"></script>
+    </body>
+</html>

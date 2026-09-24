@@ -1,9 +1,5 @@
 # webpack
 
-webpack 仍然是大厂存量项目的主力：微前端的 Module Federation、复杂资源处理、老浏览器兼容，目前都还是它最稳。但它的配置项多到让人望而生畏，多数人停留在"改改现成配置"的阶段。
-
-本篇的目标是把 webpack 拆成五个对象（Compiler / Compilation / Module / Chunk / Asset），理解它们之后，配置就只是"给这几个对象填参数"。所有结论都来自本仓可运行的脚本实测。
-
 ## 一、五个对象：webpack 的心智模型
 
 ```

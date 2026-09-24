@@ -1,7 +1,5 @@
 # React 使用 TypeScript
 
-React 与 TypeScript 结合使用，可以帮助我们在写组件时获得完整的类型提示与编译期检查。本文围绕写 React 组件时的 TS 实践展开，涵盖函数组件的类型定义、Props 与接口、事件与 ref 的类型、泛型组件、hooks 泛型以及 TSX 的注意事项。
-
 ## 组件声明的整体认识
 
 - 组件以 **函数组件**（Functional Component，简称 FC）为基准写法：**输入 props，返回一段 JSX**。

@@ -1,9 +1,5 @@
 # Koa 快速入门
 
-> Koa 由 Express 原班人马打造，更轻量、更现代。
-
----
-
 ## Koa 是什么
 
 Koa 是 Express 的继任者，核心设计理念：

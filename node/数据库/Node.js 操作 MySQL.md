@@ -1,8 +1,5 @@
 # Node.js 操作 MySQL
 
-
----
-
 ## 使用 mysql2 连接数据库
 
 `mysql2` 是 Node.js 连接 MySQL 最流行的库之一，支持 Promise。

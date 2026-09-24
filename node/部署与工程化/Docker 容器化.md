@@ -1,10 +1,5 @@
 # Docker 容器化
 
-> 从"能跑"到"生产级"：Dockerfile 的渐进式演进
-> 实战参考：nest-template 四阶段 Dockerfile → show-track-server 五阶段 Dockerfile
-
----
-
 ## 为什么 Docker 是部署的基石
 
 Docker 解决的是部署领域最古老的问题：**"在我机器上是好的"**。本地环境、测试环境、生产环境配置差异导致"环境不一致"——Docker 把应用和它的运行环境一起打包，实现"一次构建，到处运行"。

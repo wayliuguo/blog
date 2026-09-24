@@ -1,0 +1,18 @@
+{
+    "name": "perf-after",
+    "version": "2.1.0",
+    "private": true,
+    "description": "优化后工程：关键 CSS 内联 + 骨架屏 + CSS 异步，四个视图动态 import 拆成独立 chunk",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "vue": "^3.3.4"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^4.2.3",
+        "vite": "^4.4.7"
+    }
+}

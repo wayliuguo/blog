@@ -1,7 +1,5 @@
 # React 高级与原理
 
-本文面向已经掌握 React 基础（组件、JSX、Hooks、路由、状态管理）的读者，深入讲解 React 的渲染机制、Fiber 架构、虚拟 DOM、diff 算法、并发特性，以及手写 mini-react 的原理。目标是让你真正理解 React 底层"做了什么、为什么这么做"。
-
 ## 一、React 渲染机制：render 与 commit 阶段
 
 React 的一次渲染（在内部称为"更新"）完整流程分为三个阶段：**Render（渲染/调度）**、**Commit（提交/挂载）**。

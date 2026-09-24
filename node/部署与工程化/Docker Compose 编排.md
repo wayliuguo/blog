@@ -1,10 +1,5 @@
 # Docker Compose 编排
 
-> 从"一个容器"到"一组服务"：编排的渐进式演进
-> 实战参考：show-track-server 的 `docker-compose.infra.prod.yml` 与 `docker-compose.prod.yml`
-
----
-
 ## 为什么需要 Compose
 
 一个后端应用背后至少有三样东西：**应用、MySQL、Redis**。用 `docker run` 一个个启动三个容器要敲几十个参数，且容器间网络、启动顺序、数据持久化全靠人肉管理。

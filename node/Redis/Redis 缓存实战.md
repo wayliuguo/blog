@@ -1,8 +1,5 @@
 # Redis 缓存实战
 
-
----
-
 ## 缓存场景实战
 
 本篇的代码块均取自配套脚本 `redis-demo`，采用 CommonJS 写法（`require(...)`）。

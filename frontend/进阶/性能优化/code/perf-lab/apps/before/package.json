@@ -1,0 +1,18 @@
+{
+    "name": "perf-before",
+    "version": "2.1.0",
+    "private": true,
+    "description": "优化前工程（对照基线）：raw.html 外链 CSS + 空壳，四个视图静态 import 全进主 bundle",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "vue": "^3.3.4"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^4.2.3",
+        "vite": "^4.4.7"
+    }
+}

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Vue SPA 实验台 · 优化后</title>
+        <!-- 首屏关键 CSS 内联：骨架屏的尺寸和布局，省掉一次阻塞首屏的请求 -->
+        <style>
+            body {
+                margin: 0;
+                font:
+                    14px/1.5 system-ui,
+                    'Microsoft YaHei',
+                    sans-serif;
+                color: #1f2328;
+            }
+            .app {
+                max-width: 880px;
+                margin: 0 auto;
+                padding: 16px;
+            }
+            .top {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 48px;
+                border-bottom: 1px solid #e6e8eb;
+            }
+            .sk {
+                background: linear-gradient(90deg, #f1f2f4 25%, #e9eaec 37%, #f1f2f4 63%);
+                background-size: 400% 100%;
+                animation: sk 1.4s ease infinite;
+                border-radius: 6px;
+            }
+            @keyframes sk {
+                0% {
+                    background-position: 100% 50%;
+                }
+                100% {
+                    background-position: 0 50%;
+                }
+            }
+            .sk-nav {
+                display: inline-block;
+                width: 180px;
+                height: 16px;
+            }
+            .sk-bar {
+                height: 28px;
+                width: 320px;
+                margin: 12px 0;
+            }
+            .sk-row {
+                height: 20px;
+                margin-bottom: 16px;
+            }
+            .sk-text {
+                color: #9ca3af;
+                margin: 4px 0 12px;
+            }
+        </style>
+        <!-- 全量 CSS 改成异步加载：不挡首屏 -->
+        <link rel="stylesheet" href="/app.css" media="print" onload="this.media='all'" />
+    </head>
+    <body>
+        <!-- 骨架屏直接写在 HTML 里：JS 还没到位就有东西可画 -->
+        <div id="app">
+            <div class="app">
+                <header class="top">
+                    <nav><span class="sk sk-nav"></span></nav>
+                </header>
+                <main>
+                    <p class="sk-text">订单数据加载中…</p>
+                    <div class="sk sk-bar"></div>
+                    <div class="sk sk-row"></div>
+                    <div class="sk sk-row"></div>
+                    <div class="sk sk-row"></div>
+                </main>
+            </div>
+        </div>
+        <!-- 入口文件在 HTML 里声明「这一版是优化后的」，options.js 的所有开关默认值都跟着它走 -->
+        <script>
+            window.__PERF_OPT = true
+        </script>
+        <script src="/lab.js"></script>
+        <script type="module" src="./main.js"></script>
+    </body>
+</html>
