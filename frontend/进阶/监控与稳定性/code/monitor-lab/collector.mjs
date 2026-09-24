@@ -46,7 +46,11 @@ function ingest(batch) {
         // 按类型粗汇总，方便服务端侧一眼确认收到了什么
         const byType = {}
         for (const e of accepted) byType[e.type] = (byType[e.type] || 0) + 1
-        console.log(`  ▼ 收到 ${accepted.length} 条：${Object.entries(byType).map(([k, v]) => `${k}×${v}`).join('  ')}（累计 ${total}）`)
+        console.log(
+            `  ▼ 收到 ${accepted.length} 条：${Object.entries(byType)
+                .map(([k, v]) => `${k}×${v}`)
+                .join('  ')}（累计 ${total}）`
+        )
     }
 }
 

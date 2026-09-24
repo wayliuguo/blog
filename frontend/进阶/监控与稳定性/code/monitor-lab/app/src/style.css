@@ -16,7 +16,10 @@ body {
     padding: 0;
 }
 body {
-    font: 14px/1.6 system-ui, 'Microsoft YaHei', sans-serif;
+    font:
+        14px/1.6 system-ui,
+        'Microsoft YaHei',
+        sans-serif;
     color: var(--text);
     background: var(--bg);
 }
