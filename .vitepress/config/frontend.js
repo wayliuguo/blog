@@ -278,16 +278,9 @@ export default [
                 text: '监控与稳定性',
                 collapsed: false,
                 items: [
-                    { text: '监控平台', link: '/frontend/进阶/监控与稳定性/监控平台' },
+                    { text: '前端监控体系', link: '/frontend/进阶/监控与稳定性/前端监控体系' },
                     { text: '前端监控 SDK 实现', link: '/frontend/进阶/监控与稳定性/前端监控 SDK 实现' },
-                    { text: '错误监控', link: '/frontend/进阶/监控与稳定性/错误监控' },
-                    { text: '性能与体验监控', link: '/frontend/进阶/监控与稳定性/性能与体验监控' },
-                    { text: '埋点与行为分析', link: '/frontend/进阶/监控与稳定性/埋点与行为分析' },
-                    { text: '数据管道与告警', link: '/frontend/进阶/监控与稳定性/数据管道与告警' },
-                    {
-                        text: '企业级性能与监控工程实践',
-                        link: '/frontend/进阶/监控与稳定性/企业级性能与监控工程实践'
-                    },
+                    { text: '前端监控实战·单页验证', link: '/frontend/进阶/监控与稳定性/前端监控实战·单页验证' },
                     { text: '模块总结（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/总结' },
                     { text: '模块面试题（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/面试题' }
                 ]

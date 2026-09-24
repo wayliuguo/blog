@@ -1,0 +1,274 @@
+:root {
+    --line: #e6e8eb;
+    --ink: #1f2328;
+    --brand: #4b6ef5;
+}
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    font:
+        14px/1.5 system-ui,
+        'Microsoft YaHei',
+        sans-serif;
+    color: var(--ink);
+    background: #fff;
+}
+.app {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 16px;
+}
+.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    border-bottom: 1px solid var(--line);
+}
+.top nav a {
+    margin-right: 16px;
+    color: var(--brand);
+    text-decoration: none;
+}
+.top nav a.active {
+    font-weight: 600;
+}
+.badge {
+    font-size: 12px;
+    color: #6b7280;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 2px 8px;
+}
+main {
+    padding-top: 12px;
+}
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.bar button {
+    padding: 6px 12px;
+    border: 1px solid var(--brand);
+    background: #fff;
+    color: var(--brand);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.meta {
+    color: #6b7280;
+    font-size: 12px;
+}
+/* ---------- 仪表盘（两版业务相同，样式共用一套） ---------- */
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.kpi {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.kpi h3 {
+    margin: 0 0 4px;
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+}
+.kpi p {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+.kpi small {
+    color: #16a34a;
+    font-size: 12px;
+}
+.zones {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.zone {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.zone h4 {
+    margin: 0 0 6px;
+    font-size: 13px;
+}
+.zone svg {
+    display: block;
+    width: 100%;
+}
+.rank {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 4px 12px;
+}
+.rank h4 {
+    margin: 8px 0;
+    font-size: 13px;
+}
+/* 行高 36px：虚拟滚动的偏移量按它算（ListView.vue 里的 ROW_H 与这里必须一致） */
+.row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 36px;
+    border-bottom: 1px solid var(--line);
+}
+.row b {
+    width: 120px;
+    font-weight: 600;
+}
+.row span {
+    width: 80px;
+}
+.row i {
+    font-style: normal;
+    color: #8b5cf6;
+}
+.row em {
+    font-style: normal;
+    color: #6b7280;
+    margin-left: auto;
+}
+.viewport {
+    height: 360px;
+    overflow: auto;
+    border: 1px solid var(--line);
+}
+.total {
+    position: relative;
+}
+.pending {
+    padding: 24px;
+    color: #6b7280;
+}
+.hero {
+    display: block;
+    margin: 8px 0;
+    background: #f3f4f6;
+}
+.lines p {
+    color: #374151;
+}
+/* 图集：尺寸写死是为了只留「要不要懒加载」一个变量，量到的差异才是懒加载的 */
+.shots {
+    margin-top: 16px;
+}
+.shots img {
+    display: block;
+    margin: 0 0 4px;
+    background: #f3f4f6;
+}
+.sk {
+    background: linear-gradient(90deg, #f1f2f4 25%, #e9eaec 37%, #f1f2f4 63%);
+    background-size: 400% 100%;
+    animation: sk 1.4s ease infinite;
+    border-radius: 6px;
+}
+@keyframes sk {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0 50%;
+    }
+}
+/* ---------- 字体与公告位的公共样式（两版的差异只在与实现相关的两处） ---------- */
+.fx-tick {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+/* 字体实验的「被校准过的回退字体」：size-adjust 让它占的宽度贴近 webfont，
+   换字时文字才不会被顶下去。webfont 自己不在这里声明 —— 它由 JS 在 800ms 时才加进来 */
+@font-face {
+    font-family: 'DemoFallback';
+    src: local('Segoe UI'), local('Helvetica Neue'), local('Arial');
+    size-adjust: 118%;
+}
+/* 公告位：本版先预留 240px —— 晚到的公告插进来只是填空，不产生位移。
+   不加边框：边框会让预留盒比公告条高出 2px，读数里就多一个解释不清的位移 */
+.fx-slot {
+    min-height: 0;
+}
+.fx-slot.fx-reserved {
+    min-height: 240px;
+    background: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 8px, #f1f5f9 8px, #f1f5f9 16px);
+}
+.fx-banner {
+    height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+}
+.fx-anchor {
+    font-size: 12px;
+    color: #6b7280;
+    padding: 8px 0;
+}
+/* 固定成窄栏：换字后行数差被放大，文字块高度才会真的跳一下 */
+.fx-text {
+    width: 420px;
+}
+.fx-text p {
+    margin: 0 0 12px;
+    color: #374151;
+}
+/* 量推进宽度用的行内盒：宽度就是这段文字的排版宽度 */
+.fx-sample {
+    font-size: 13px;
+    color: #6b7280;
+}
+.fx-sample span {
+    display: inline-block;
+    white-space: nowrap;
+    color: #111827;
+}
+.fx-footer {
+    margin-top: 16px;
+    padding: 12px;
+    height: 600px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    color: #475569;
+    font-size: 13px;
+}
+/* 动画：本版用 transform 做动画，收起态也用 transform 实现（合成属性的写法） */
+.fx-sheet-wrap {
+    height: 320px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+.fx-sheet {
+    position: relative;
+    top: 0;
+    transform: translateY(-320px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef2ff;
+    border-bottom: 1px solid #c7d2fe;
+    color: #3730a3;
+}
+.fx-filler p {
+    color: #9ca3af;
+    font-size: 13px;
+    margin: 8px 0;
+}

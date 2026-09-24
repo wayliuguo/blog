@@ -19,12 +19,10 @@ monitor-lab/
 ├── alert.mjs                告警规则：阈值 + 连续 N 次 + 静默期 + 恢复通知
 ├── harness.mjs              脚手架：对齐表格 / 起采集端 / 起无头 Chrome / 等上报
 ├── scenarios/               5 个可跑场景 + all.mjs
-├── site/                    演示页（浏览器打开即可手动玩）
-│   ├── errors-lab.html      依次触发 6 类错误
-│   ├── perf-lab.html        长任务 + 无预留横幅 + 晚到大图
-│   ├── track-lab.html       曝光 / 委托点击 / 自定义事件
-│   └── agent.html · error-report.html · monitor.html   （旧版一体化 demo 的页面）
-├── enterprise-server.js     旧版一体化闭环服务（端口 5188，被「监控平台」篇引用）
+├── site/                    单页验证台（浏览器打开即可手动验证三类数据）
+│   └── monitor-lab.html     三个面板（错误 / 性能 / 埋点）+ 一键跑全部 + /api/report 聚合面板
+│                            ?scenario=errors|perf|track 预置对象限实验台的自动化序列
+├── enterprise-server.js     旧版一体化闭环服务（端口 5188，示例过渡保留）
 └── data/                    运行产物：events.jsonl（已 gitignore）
 ```
 
@@ -33,13 +31,12 @@ monitor-lab/
 | 命令 | 场景 | 会看到什么 | 对应篇目 |
 | --- | --- | --- | --- |
 | `npm run transport` | 上报传输层 | 12 条事件逐条发 12 次请求、攒批发 3 次；采样 100%/50%/10% 的实际接受率；重试轮数与放弃条件；队列溢出丢弃 40/50 | 前端监控 SDK 实现 |
-| `npm run errors` | 错误监控 | 无头 Chrome 实跑捕获 6 类错误（运行时 / Promise / 资源 / 接口 / 网络 / 跨域）及各自字段；指纹频控把 6 条捕获压成 4 条出端 | 错误监控 |
-| `npm run perf` | 性能与体验监控 | TTFB/FCP/LCP/CLS/TBT 实测值与评级；cls 与 clsRaw 的口径对照；140ms 长任务 → TBT 90ms；一次 flush 的字节数 | 性能与体验监控 |
-| `npm run track` | 埋点与行为分析 | 8 条事件流（PV → 2 条首屏曝光 → 2 次委托点击 → 自定义事件 → 滚动后曝光 → 停留）；小看板与漏斗 | 埋点与行为分析 |
-| `npm run pipeline` | 数据管道与告警 | 4 秒 1600 条事件 → 秒桶表 → 滑动窗口分位值 → 事故秒 P95 1119ms → 3 条触发 + 3 条恢复 → 静默期把 24 条重复压成 3 条 | 数据管道与告警 |
+| `npm run errors` | 错误监控 | 无头 Chrome 实跑捕获 6 类错误（运行时 / Promise / 资源 / 接口 / 网络 / 跨域）及各自字段；指纹频控把 6 条捕获压成 4 条出端 | 前端监控体系 · 四 |
+| `npm run perf` | 性能与体验监控 | TTFB/FCP/LCP/CLS/TBT 实测值与评级；cls 与 clsRaw 的口径对照；140ms 长任务 → TBT 90ms；一次 flush 的字节数 | 前端监控体系 · 五 |
+| `npm run track` | 埋点与行为分析 | 8 条事件流（PV → 2 条首屏曝光 → 2 次委托点击 → 自定义事件 → 滚动后曝光 → 停留）；小看板与漏斗 | 前端监控体系 · 六 |
 | `npm run all` | 全部场景 | 依次跑上面 5 个 | — |
-| `npm start` | 采集端 | 端口 5189，手动打开 `/errors-lab.html` 等页面，用 `/api/report` 看聚合 | — |
-| `npm run enterprise` | 旧版一体化闭环 | 端口 5188，`agent.html` → 上报 → 秒桶聚合 → `monitor.html` 报表 | 监控平台 / 企业级性能与监控工程实践 |
+| `npm run site` | 单页验证台 | 端口 5189，浏览器打开 `/monitor-lab.html`：三个面板手动触发错误 / 性能 / 埋点，点「刷新聚合」从 `/api/report` 看秒桶 / 分位 / KPI | 前端监控体系 / 前端监控实战·单页验证 |
+| `npm start` | 采集端（同 site） | 端口 5189，也是自动化场景 & 单页验证台的接收端，用 `/api/report` 看聚合 | — |
 
 ## 运行方式
 

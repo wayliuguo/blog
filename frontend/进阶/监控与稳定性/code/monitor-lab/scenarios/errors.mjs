@@ -52,7 +52,7 @@ function fakeWindow() {
 export default async function run() {
     /* ---------- 1. 真实浏览器 ---------- */
     const collector = await startCollector()
-    const chrome = openChrome(`http://127.0.0.1:${collector.port}/errors-lab.html`)
+    const chrome = openChrome(`http://127.0.0.1:${collector.port}/monitor-lab.html?scenario=errors`)
     console.log(title('场景 · 错误监控（headless Chrome 实跑）'))
 
     try {

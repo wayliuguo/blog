@@ -4,33 +4,30 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const LAB = resolve(here, '../..') // perf-lab 根：两个工程与共享源码都在这里
-const SHARED = resolve(LAB, 'shared')
 
 /**
- * 「优化前」工程：一个独立的 vite + vue 项目
- *   入口 raw.html：CSS 外链（阻塞渲染）+ #app 空壳
- *   入口 main.js：四个视图静态 import，全部打进主 bundle
- * 业务源码不放在这个工程里，而是从 ../../shared/ 用 @lab 别名引入 —— 两个工程跑同一份组件，
- * 差异只剩本目录里的 html + main.js，「优化前 vs 优化后」才是干净的单变量对照。
- * memory.html 是内存实验的独立页（要单独开 --enable-precise-memory-info），挂在这个工程里顺带构建。
+ * 「优化前」项目：一个完全标准的 vite + vue 生产工程，没有任何为对比做的特殊配置
+ *   入口 index.html：空壳，样式与视图全部经 src/main.js 进依赖图
+ *   构建产物：vite 把 CSS 抽成 assets/index-*.css 并注入 <link>（阻塞首屏），
+ *             五个视图全部打进主 bundle（没有路由级 chunk）
+ * 源码就在本目录 src/ 下，不与 after 项目共享任何文件 —— 两个项目的差异就是各层的优化本身。
+ * 各自独立构建，绝不合在一次构建里：多入口合建时 rollup 会把共用模块提到公共 chunk，
+ * before 这份就不再是「一个 bundle 全量包含」的干净基线。
+ * memory.html 是内存实验的独立页（要单独开 --enable-precise-memory-info）。
  */
 export default defineConfig({
     root: here,
     // 相对 base：产物用相对路径引用资源，可被任意静态服务器或直接打开
     base: './',
-    // app.css 与 lab.js 两版共用，指向 shared/public
-    publicDir: resolve(SHARED, 'public'),
-    resolve: { alias: { '@lab': SHARED } },
+    publicDir: resolve(here, 'public'),
     plugins: [vue()],
-    server: { port: 5187, fs: { allow: [LAB] } },
+    server: { port: 5187 },
     build: {
-        // 产物落在 perf-lab 根：dist-before / dist-after 两套分别独立构建
-        outDir: resolve(LAB, 'dist-before'),
+        outDir: resolve(here, '../../dist-before'),
         emptyOutDir: true,
         rollupOptions: {
             input: {
-                raw: resolve(here, 'raw.html'),
+                index: resolve(here, 'index.html'),
                 memory: resolve(here, 'memory.html')
             }
         }

@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <title>前端监控·单页验证台</title>
+        <style>
+            body {
+                font:
+                    14px/1.6 system-ui,
+                    'Microsoft YaHei',
+                    sans-serif;
+                margin: 0;
+                color: #1f2328;
+            }
+            .pad {
+                padding: 20px 24px;
+            }
+            header {
+                background: #0f172a;
+                color: #e2e8f0;
+                padding: 18px 24px;
+            }
+            header h1 {
+                margin: 0 0 6px;
+                font-size: 20px;
+                color: #fff;
+            }
+            header p {
+                margin: 0;
+                opacity: 0.8;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 16px;
+            }
+            .panel {
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                overflow: hidden;
+            }
+            .panel h2 {
+                margin: 0;
+                font-size: 15px;
+                padding: 10px 16px;
+                background: #f8fafc;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            .panel .body {
+                padding: 14px 16px;
+            }
+            .trigger {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                padding: 8px 0;
+                border-bottom: 1px dashed #eef1f4;
+            }
+            .trigger:last-child {
+                border-bottom: 0;
+            }
+            button {
+                font: inherit;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+                border-radius: 6px;
+                padding: 5px 14px;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            button:hover {
+                background: #f1f5f9;
+            }
+            button.primary {
+                background: #2563eb;
+                border-color: #2563eb;
+                color: #fff;
+            }
+            .note {
+                color: #64748b;
+                font-size: 12px;
+            }
+            code {
+                background: #f3f4f6;
+                padding: 1px 4px;
+                border-radius: 3px;
+                font-size: 12px;
+            }
+            #log {
+                margin-top: 16px;
+                background: #0b1220;
+                color: #cbd5e1;
+                border-radius: 8px;
+                padding: 12px 16px;
+                font: 12px/1.7 ui-monospace, 'Cascadia Code', Consolas, monospace;
+                max-height: 280px;
+                overflow: auto;
+            }
+            #log .ev {
+                color: #7dd3fc;
+            }
+            #log .ok {
+                color: #4ade80;
+            }
+            #report {
+                margin-top: 16px;
+                border: 1px dashed #cbd5e1;
+                border-radius: 8px;
+                padding: 12px 16px;
+                font: 12px/1.7 ui-monospace, monospace;
+                white-space: pre;
+                max-height: 320px;
+                overflow: auto;
+            }
+            .bar {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .card {
+                padding: 14px;
+                margin: 12px 0;
+                background: #f3f4f6;
+                border-radius: 6px;
+            }
+            .spacer {
+                height: 1400px;
+                background: repeating-linear-gradient(180deg, #fff, #fff 40px, #fafafa 40px, #fafafa 80px);
+            }
+            #hero {
+                height: 260px;
+                background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+            }
+            #banner {
+                background: #fde68a;
+                padding: 12px;
+                text-align: center;
+            }
+            #slot {
+                margin-top: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>前端监控·单页验证台</h1>
+            <p>
+                用一个页面验证「前端监控体系」的全部概念：三类数据（错误 / 性能 / 业务）在同一个 SDK 里采集、攒批上报，
+                右侧聚合面板拉取采集端 <code>/api/report</code> 看效果。自动化跑 <code>?scenario=errors|perf|track</code>。
+            </p>
+        </header>
+
+        <div class="pad">
+            <div class="grid">
+                <!-- 错误 -->
+                <section class="panel">
+                    <h2>稳定性 · 错误（体系篇 · 四）</h2>
+                    <div class="body">
+                        <div class="trigger">
+                            <span>运行时错误<code>&lt;error&gt;</code></span>
+                            <button data-trigger="runtime">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>Promise 拒绝<code>unhandledrejection</code></span>
+                            <button data-trigger="promise">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>资源加载失败（捕获阶段）</span>
+                            <button data-trigger="resource">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>接口错误 404<code>fetch</code></span>
+                            <button data-trigger="http">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>网络错误（拒绝连接）</span>
+                            <button data-trigger="network">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>跨域<code>Script error.</code></span>
+                            <button data-trigger="cross">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>提示</span>
+                            <span class="note">六类抓法无一抓全，指纹频控按 message+位置+行号去重</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 性能 -->
+                <section class="panel">
+                    <h2>体验 · 性能（体系篇 · 五）</h2>
+                    <div class="body">
+                        <div class="trigger">
+                            <span>长任务 140ms<code>longtask→TBT</code></span>
+                            <button data-trigger="jam">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>无预留横幅<code>layout-shift→CLS</code></span>
+                            <button data-trigger="shift">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>晚到大元素<code>→LCP</code></span>
+                            <button data-trigger="late">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>收口并查看指标</span>
+                            <button data-trigger="report" class="primary">刷新聚合</button>
+                        </div>
+                        <div class="trigger">
+                            <span>提示</span>
+                            <span class="note">LCP / CLS 越晚越准，页面 hidden 时才定稿；指标评级按官方阈值</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 业务 -->
+                <section class="panel">
+                    <h2>业务 · 埋点（体系篇 · 六）</h2>
+                    <div class="body">
+                        <div class="trigger">
+                            <span>PV / 会话<code>anonId + 30min 会话</code></span>
+                            <button data-trigger="pv">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>点击 / 曝光（声明式属性）</span>
+                            <button data-expose="hero-cta" data-track="cta-hero">开始体验</button>
+                            <span class="note">下方卡片</span>
+                        </div>
+                        <div class="card" data-expose="card-intro">首屏可见的卡片（进视口即曝光）</div>
+                        <div class="card"><button data-track="cta-card">卡片内按钮</button></div>
+                        <div class="trigger">
+                            <span>自定义事件<code>track('search',…)</code></span>
+                            <button data-trigger="search">触发</button>
+                        </div>
+                        <div class="trigger">
+                            <span>提示</span>
+                            <span class="note">IntersectionObserver 采曝光、事件委托采点击；脱敏在采集口</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="bar" style="margin-top:16px">
+                <button id="btnAll" class="primary">一键跑全部三类</button>
+                <button id="btnDeps" data-trigger="dep">制造性能坏情况（长任务+位移+晚到）</button>
+                <span class="note">页面隐藏时（切后台 / 关页）会自动收口上报 LCP / CLS 终值。</span>
+            </div>
+
+            <div id="log"><span class="note">日志：事件日志（SDK 上报到 /collect）</span></div>
+            <div id="report">聚合面板：点「刷新聚合」从 /api/report 拉取秒桶 / 分位 / KPI …</div>
+        </div>
+
+        <div id="slot"></div>
+        <div class="spacer"></div>
+        <div class="pad">
+            <div class="card" data-expose="footer-banner">底部横幅（需要滚动到才会曝光）</div>
+        </div>
+
+        <script type="module">
+            import { init } from '/sdk/index.mjs'
+
+            const sm = init({ appId: 'monitor-lab', url: '/collect', throttleMs: 0, sampleRate: 1 })
+            const logBox = document.getElementById('log')
+            const reportBox = document.getElementById('report')
+
+            function log(text, cls = '') {
+                const el = document.createElement('div')
+                el.className = cls
+                el.textContent = text
+                logBox.appendChild(el)
+                logBox.scrollTop = logBox.scrollHeight
+            }
+            const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+            function jam(ms) {
+                const end = performance.now() + ms
+                while (performance.now() < end) {}
+            }
+
+            async function refreshReport() {
+                try {
+                    const r = await fetch('/api/report')
+                    const d = await r.json()
+                    reportBox.textContent = JSON.stringify(d, null, 2)
+                    log('刷新 /api/report 成功', 'ok')
+                } catch (e) {
+                    reportBox.textContent = '拉取失败：' + e.message
+                }
+            }
+
+            // ---- 错误触发器（对应体系篇·四的六类） ----
+            const triggers = {
+                runtime() {
+                    setTimeout(() => {
+                        const nothing = undefined
+                        nothing.foo()
+                    }, 10)
+                    log('触发：运行时错误（读 undefined 属性）')
+                },
+                promise() {
+                    Promise.reject(new Error('接口数据解析失败'))
+                    log('触发：未处理 Promise 拒绝')
+                },
+                resource() {
+                    let img = document.getElementById('ghost')
+                    if (!img) {
+                        img = document.createElement('img')
+                        img.id = 'ghost'
+                        document.body.appendChild(img)
+                    }
+                    img.src = '/missing-image.png'
+                    log('触发：资源加载失败 /missing-image.png（捕获阶段 + 无 message）')
+                },
+                async http() {
+                    await fetch('/definitely-missing')
+                    log('触发：接口 404（SDK 包裹 fetch 自动上报 status）')
+                },
+                async network() {
+                    try {
+                        await fetch('http://127.0.0.1:1/nope')
+                    } catch {
+                        /* 业务吞掉，SDK 已上报 */
+                    }
+                    log('触发：网络错误（连接被拒绝，Failed to fetch）')
+                },
+                cross() {
+                    window.dispatchEvent(
+                        new ErrorEvent('error', { message: 'Script error.', filename: '', lineno: 0, colno: 0 })
+                    )
+                    log('触发：跨域脚本被抹平，只拿到 Script error.')
+                },
+                // ---- 性能触发器 ----
+                jam() {
+                    jam(140)
+                    log('触发：长任务 140ms（TBT 只算超出 50ms 的部分，约 90ms）')
+                },
+                shift() {
+                    const banner = document.createElement('div')
+                    banner.id = 'banner'
+                    banner.textContent = '活动横幅（没有预留高度，插入时把内容推下去 → layout-shift）'
+                    document.body.insertBefore(banner, document.body.firstChild)
+                    log('触发：无预留横幅插入 → 布局位移进入 CLS 统计')
+                },
+                late() {
+                    const hero = document.createElement('div')
+                    hero.id = 'hero'
+                    hero.textContent = '最后出现、面积最大的元素 → 接管 LCP'
+                    document.getElementById('slot').appendChild(hero)
+                    log('触发：晚到大元素 → LCP 被刷新 / 定稿')
+                },
+                pv() {
+                    sm.track.pageView({ ref: 'direct' })
+                    log('触发：PV（挂在 anonId 上，UV 靠它去重、会话按 30 分钟不活跃切分）')
+                },
+                search() {
+                    sm.track.track('search', { keyword: '性能优化' })
+                    log('触发：自定义事件 search（脱敏口里 keyword 不出端）')
+                },
+                async report() {
+                    await refreshReport()
+                }
+            }
+
+            // ---- 交互按钮 ----
+            document.querySelectorAll('[data-trigger]').forEach(btn => {
+                btn.addEventListener('click', () => triggers[btn.dataset.trigger]())
+            })
+            document.querySelectorAll('[data-track]').forEach(btn => {
+                if (btn.dataset.track) {
+                    // 委托点击监听由 sdk 统一处理，这里只负责提示
+                    btn.addEventListener('click', () => log(`点击 ${btn.dataset.track}（事件委托上报）`))
+                }
+            })
+            document.getElementById('btnDeps').addEventListener('click', async () => {
+                await triggers.jam()
+                await sleep(120)
+                await triggers.shift()
+                await sleep(300)
+                await triggers.late()
+                await sleep(200)
+                await triggers.report()
+            })
+            document.getElementById('btnAll').addEventListener('click', async () => {
+                log('—— 一键跑全部三类 ——')
+                triggers.pv()
+                await sleep(30)
+                await triggers.jam()
+                await sleep(120)
+                await triggers.shift()
+                await sleep(300)
+                await triggers.late()
+                // 6 类错误
+                triggers.runtime()
+                triggers.promise()
+                triggers.resource()
+                await sleep(60)
+                await triggers.http()
+                await triggers.network()
+                triggers.cross()
+                await sleep(120)
+                sm.track.track('search', { keyword: '一键验证' })
+                sm.flushAll('test')
+                await sleep(200)
+                await triggers.report()
+                window.scrollTo(0, document.body.scrollHeight)
+                log('—— 已触发全部并收口上报，滚动到底触发底部曝光 ——', 'ok')
+            })
+
+            // ---- 自动化模式：?scenario=errors|perf|track，复刻各自原实验页的事件序列 ----
+            const scenario = new URLSearchParams(location.search).get('scenario')
+
+            // 交互模式：一进页面就启用曝光观察 + 委托点击，让「业务面板」的手动点击真正上报
+            if (!scenario) {
+                sm.track.observeExposure()
+                sm.track.listenClicks()
+            }
+
+            async function runAutomated() {
+                log(`自动化场景：${scenario}`)
+                if (scenario === 'track' || scenario === 'all') {
+                    // 复刻 track-lab：声明式埋点 + 曝光 + 委托点击 + 自定义事件 + 停留
+                    sm.track.pageView({ ref: 'direct' })
+                    const watched = sm.track.observeExposure()
+                    sm.track.listenClicks()
+                    await sleep(300)
+                    document.querySelector('[data-track="cta-hero"]').click()
+                    document.querySelector('[data-track="cta-card"]').click()
+                    sm.track.track('search', { keyword: '性能优化' })
+                    await sleep(200)
+                    window.scrollTo(0, document.body.scrollHeight)
+                    await sleep(500)
+                    await sm.flushAll('test')
+                    await fetch('/collect', {
+                        method: 'POST',
+                        body: JSON.stringify({ events: [{ kind: 'lab-done', ts: Date.now(), watched }] })
+                    })
+                }
+                if (scenario === 'errors' || scenario === 'all') {
+                    // 复刻 errors-lab：6 类错误
+                    await sleep(50)
+                    setTimeout(() => {
+                        const nothing = undefined
+                        nothing.foo()
+                    }, 10)
+                    Promise.reject(new Error('接口数据解析失败'))
+                    let img = document.createElement('img')
+                    img.id = 'ghost'
+                    document.body.appendChild(img)
+                    img.src = '/missing-image.png'
+                    await sleep(80)
+                    await fetch('/definitely-missing')
+                    try {
+                        await fetch('http://127.0.0.1:1/nope')
+                    } catch {}
+                    window.dispatchEvent(
+                        new ErrorEvent('error', { message: 'Script error.', filename: '', lineno: 0, colno: 0 })
+                    )
+                    await sleep(80)
+                    await sm.flushAll('test')
+                    await fetch('/collect', {
+                        method: 'POST',
+                        body: JSON.stringify({ events: [{ kind: 'lab-done', ts: Date.now() }] })
+                    })
+                }
+                if (scenario === 'perf' || scenario === 'all') {
+                    // 复刻 perf-lab：长任务 + 位移横幅 + 晚到大图 + 资源体积
+                    await sleep(200)
+                    jam(140)
+                    await sleep(120)
+                    const banner = document.createElement('div')
+                    banner.id = 'banner'
+                    banner.textContent = '活动横幅（没有预留高度，插入时把下面内容整体推下去）'
+                    document.body.insertBefore(banner, document.body.firstChild)
+                    await sleep(300)
+                    const hero = document.createElement('div')
+                    hero.id = 'hero'
+                    hero.textContent = '这是最后出现、面积最大的元素'
+                    document.getElementById('slot').appendChild(hero)
+                    await sleep(300)
+                    const resources = performance
+                        .getEntriesByType('resource')
+                        .map(r => ({ name: r.name, size: r.transferSize || 0 }))
+                    sm.emit({
+                        kind: 'resource-summary',
+                        count: resources.length,
+                        bytes: resources.reduce((a, r) => a + r.size, 0)
+                    })
+                    await sm.flushAll('test')
+                    await fetch('/collect', {
+                        method: 'POST',
+                        body: JSON.stringify({ events: [{ kind: 'lab-done', ts: Date.now() }] })
+                    })
+                }
+                log('自动化场景完成', 'ok')
+            }
+
+            if (scenario) {
+                document.getElementById('btnAll').style.display = 'none'
+                runAutomated()
+            }
+        </script>
+    </body>
+</html>
