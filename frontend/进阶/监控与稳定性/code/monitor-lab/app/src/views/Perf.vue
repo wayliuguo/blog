@@ -19,8 +19,8 @@
         </section>
 
         <p class="tip">
-            LCP / CLS <b>越晚越准</b>：这里能立刻 <code>flushAll</code> 看一次快照，真实终值在页面 <code>visibilitychange → hidden</code> 时自动上报。
-            TBT 只算长任务超出 50ms 的部分：140ms 长任务 ≈ 90ms。
+            LCP / CLS <b>越晚越准</b>：这里能立刻 <code>flushAll</code> 看一次快照，真实终值在页面
+            <code>visibilitychange → hidden</code> 时自动上报。 TBT 只算长任务超出 50ms 的部分：140ms 长任务 ≈ 90ms。
         </p>
     </div>
 </template>
@@ -48,7 +48,11 @@ function report() {
             tbt: metrics.tbt,
             ttfb: metrics.ttfb,
             longtasks: metrics.longtasks,
-            rating: { lcp: rate(metrics.lcp, 2500, 4000), cls: rate(metrics.cls, 0.1, 0.25), tbt: rate(metrics.tbt, 200, 600) }
+            rating: {
+                lcp: rate(metrics.lcp, 2500, 4000),
+                cls: rate(metrics.cls, 0.1, 0.25),
+                tbt: rate(metrics.tbt, 200, 600)
+            }
         },
         null,
         2
@@ -66,7 +70,11 @@ function rate(v, good, poor) {
     background: #0b1220;
     color: #cbd5e1;
     border-top: 1px solid var(--line);
-    font: 12px/1.7 ui-monospace, 'Cascadia Code', Consolas, monospace;
+    font:
+        12px/1.7 ui-monospace,
+        'Cascadia Code',
+        Consolas,
+        monospace;
     white-space: pre;
     overflow: auto;
     max-height: 300px;

@@ -11,13 +11,21 @@
 
         <p class="tip">
             六类抓法无一抓全：资源错误<b>不冒泡</b>只在捕获阶段、Promise 拒绝<b>不走 onerror</b>要单独监听、
-            跨域脚本被同源策略抹成一句 <code>Script error.</code>。每类在 Console 都有独立一行，页面隐藏上报的 perf 也会在列。
+            跨域脚本被同源策略抹成一句 <code>Script error.</code>。每类在 Console 都有独立一行，页面隐藏上报的 perf
+            也会在列。
         </p>
     </div>
 </template>
 
 <script setup>
-import { triggerRuntime, triggerPromise, triggerResource, triggerHttp, triggerNetwork, triggerCross } from '../monitor.js'
+import {
+    triggerRuntime,
+    triggerPromise,
+    triggerResource,
+    triggerHttp,
+    triggerNetwork,
+    triggerCross
+} from '../monitor.js'
 
 const rows = [
     { key: 'runtime', label: '运行时错误 <code>&lt;error&gt;</code>', fn: triggerRuntime },

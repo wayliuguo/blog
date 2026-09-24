@@ -29,7 +29,9 @@ function describePayload(event) {
     if ('keyword' in rest) pick.keyword = rest.keyword
     if ('stay' in rest) pick.stay = rest.stay
     if ('status' in rest) pick.status = rest.status
-    const s = Object.entries(pick).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(' ')
+    const s = Object.entries(pick)
+        .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+        .join(' ')
     return rest.text || s || ''
 }
 
@@ -48,7 +50,11 @@ export function createDevLogger(transport) {
     transport.__devLogger = true
 
     const line = (kind, justify, txt, color = '#334155') =>
-        console.log(`%c[monitor]%c ${kind}${' '.repeat(Math.max(0, justify - kind.length))} ${txt}`, 'color:#64748b', `color:${color};`)
+        console.log(
+            `%c[monitor]%c ${kind}${' '.repeat(Math.max(0, justify - kind.length))} ${txt}`,
+            'color:#64748b',
+            `color:${color};`
+        )
 
     // 包一层 enqueue：入队成功打印「采集」，被采样跳过的打印「采样」
     const enqueue = transport.enqueue.bind(transport)
@@ -66,7 +72,14 @@ export function createDevLogger(transport) {
         const res = await flush(reason)
         const mark = res.ok ? `✓` : `✗`
         const color = res.ok ? '#16a34a' : '#dc2626'
-        line('发送', 4, `${res.batch} 条 ${mark}（原因 ${res.reason}${!res.ok ? `，尝试 ${res.attempt + 1} 次后放弃` : ''}，余 ${pending - res.batch} 条在列）`, color)
+        line(
+            '发送',
+            4,
+            `${res.batch} 条 ${mark}（原因 ${res.reason}${!res.ok ? `，尝试 ${res.attempt + 1} 次后放弃` : ''}，余 ${
+                pending - res.batch
+            } 条在列）`,
+            color
+        )
         return res
     }
 
