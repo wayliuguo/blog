@@ -11,7 +11,7 @@ export function fingerprintOf(e) {
 }
 
 export function installErrorCapture(options = {}) {
-    const win = options.win || (typeof window !== 'undefined' ? window : globalThis)
+    const win = options.win || window
     const emit = options.emit || (() => {})
     const captured = []
     const seen = new Map() // 指纹 -> 上次上报时间，用于频控

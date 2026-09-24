@@ -1,2 +1,5 @@
 # 采集端落盘的原始事件（跑一次场景就会生成，属于运行产物）
 data/
+# 依赖与构建产物（本 demo 用 npm 装 Vite/Vue，产物不入库）
+node_modules/
+app/dist/

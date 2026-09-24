@@ -9,7 +9,7 @@
 export const PERF_THRESHOLDS = { ttfb: 800, fcp: 1800, lcp: 2500, cls: 0.1, tbt: 200 }
 
 export function createPerfCollector(options = {}) {
-    const win = options.win || (typeof window !== 'undefined' ? window : globalThis)
+    const win = options.win || window
     const perf = options.performance || win.performance
     const PO = options.PerformanceObserver || win.PerformanceObserver
     const observers = []

@@ -7,6 +7,7 @@ import { createTransport } from './transport.mjs'
 import { installErrorCapture } from './errors.mjs'
 import { createPerfCollector, ratePerf } from './perf.mjs'
 import { createTracker } from './track.mjs'
+import { createDevLogger } from './dev-logger.mjs'
 
 export const DEFAULTS = {
     appId: 'default',
@@ -15,7 +16,8 @@ export const DEFAULTS = {
     throttleMs: 3000, // 同一条错误 3 秒内只报一次
     autoErrors: true,
     autoPerf: true,
-    autoTrack: true
+    autoTrack: true,
+    debug: undefined // 显式开 console 日志；缺省时跟随开发态 import.meta.env.DEV
 }
 
 let instance = null
@@ -24,10 +26,15 @@ export function init(options = {}) {
     // 单例：业务里可能多处 init，重复初始化只会重复绑监听、重复上报
     if (instance) return instance
     const cfg = { ...DEFAULTS, ...options }
-    const win = cfg.win || (typeof window !== 'undefined' ? window : globalThis)
+    const win = cfg.win || window
 
-    const transport = createTransport({ url: cfg.url, sampleRate: cfg.sampleRate, env: win, ...(cfg.transport || {}) })
+    const transport = createTransport({ url: cfg.url, sampleRate: cfg.sampleRate })
     const emit = event => transport.enqueue({ appId: cfg.appId, ts: event.ts ?? Date.now(), ...event })
+
+    // 开发态可视化：init.debug 或 Vite 开发态 import.meta.env.DEV 时，把每次入队/每批发送打印到 console
+    if (cfg.debug || (typeof import.meta !== 'undefined' && import.meta.env && !!import.meta.env.DEV)) {
+        createDevLogger(transport)
+    }
 
     const errors = cfg.autoErrors ? installErrorCapture({ win, emit, throttleMs: cfg.throttleMs }) : null
     const perf = cfg.autoPerf ? createPerfCollector({ win }) : null

@@ -14,7 +14,8 @@ export const DEFAULTS = {
   throttleMs: 3000,   // 同一条错误 3 秒内只报一次
   autoErrors: true,
   autoPerf: true,
-  autoTrack: true
+  autoTrack: true,
+  debug: undefined    // 显式开 console 日志；缺省跟随开发态 import.meta.env.DEV
 }
 ```
 
@@ -32,10 +33,15 @@ export function init(options = {}) {
   // 单例：业务里可能多处 init，重复初始化只会重复绑监听、重复上报
   if (instance) return instance
   const cfg = { ...DEFAULTS, ...options }
-  const win = cfg.win || (typeof window !== 'undefined' ? window : globalThis)
+  const win = cfg.win || window
 
-  const transport = createTransport({ url: cfg.url, sampleRate: cfg.sampleRate, env: win, ...(cfg.transport || {}) })
+  const transport = createTransport({ url: cfg.url, sampleRate: cfg.sampleRate })
   const emit = event => transport.enqueue({ appId: cfg.appId, ts: event.ts ?? Date.now(), ...event })
+
+  // 开发态可视化：init.debug 或 Vite 开发态 import.meta.env.DEV 时，把每次入队/每批发送打印到 console
+  if (cfg.debug || (typeof import.meta !== 'undefined' && import.meta.env && !!import.meta.env.DEV)) {
+    createDevLogger(transport)
+  }
 
   const errors = cfg.autoErrors ? installErrorCapture({ win, emit, throttleMs: cfg.throttleMs }) : null
   const perf = cfg.autoPerf ? createPerfCollector({ win }) : null
@@ -83,7 +89,7 @@ export const DEFAULT_TRANSPORT = {
 
 同样是 12 条事件，逐条发和攒批发差 4 倍：
 
-> 摘自 `./code/monitor-lab/scenarios/transport.mjs`（运行：`npm run transport`）
+> 传输层机制对照（逻辑在 `sdk/transport.mjs`；攒批与定时发送可在单页验证台的 Console／Network 直接观察到，采样 / 重试 / 溢出由配置驱动）
 
 ```
 ---- 攒批：同样 12 条事件，请求次数差 4 倍 ----
@@ -99,7 +105,7 @@ export const DEFAULT_TRANSPORT = {
 
 入队 2000 条，三种采样率的实际结果：
 
-> 摘自 `./code/monitor-lab/scenarios/transport.mjs`（运行：`npm run transport`）
+> 传输层机制对照（逻辑在 `sdk/transport.mjs`；攒批与定时发送可在单页验证台的 Console／Network 直接观察到，采样 / 重试 / 溢出由配置驱动）
 
 ```
 ---- 采样：入队 2000 条，实际接受多少（随机数，每次略有浮动） ----
@@ -131,7 +137,7 @@ export const DEFAULT_TRANSPORT = {
 
 `maxRetry = 2` 意味着「首投 + 最多 2 次重试」，共 3 次尝试；3 次都不行就放弃并计入 `dropped`：
 
-> 摘自 `./code/monitor-lab/scenarios/transport.mjs`（运行：`npm run transport`）
+> 传输层机制对照（逻辑在 `sdk/transport.mjs`；攒批与定时发送可在单页验证台的 Console／Network 直接观察到，采样 / 重试 / 溢出由配置驱动）
 
 ```
 ---- 重试：maxRetry=2，最多额外试 2 次；失败 3 次（首投 + 2 次重试）后放弃并计入 dropped ----
@@ -148,7 +154,7 @@ export const DEFAULT_TRANSPORT = {
 
 如果网络卡住，批次发不出去，队列就会一直接收新事件。必须有上限，超了丢最旧的：
 
-> 摘自 `./code/monitor-lab/scenarios/transport.mjs`（运行：`npm run transport`）
+> 传输层机制对照（逻辑在 `sdk/transport.mjs`；攒批与定时发送可在单页验证台的 Console／Network 直接观察到，采样 / 重试 / 溢出由配置驱动）
 
 ```
 ---- 溢出：maxQueue=10，入队 50 条（网络慢时队列会一直涨） ----
@@ -170,12 +176,12 @@ export const DEFAULT_TRANSPORT = {
 ```js
   async function deliver(body) {
     // 首选 sendBeacon：页面卸载时也能送达，且不阻塞主线程
-    if (env.navigator && typeof env.navigator.sendBeacon === 'function') {
-      if (env.navigator.sendBeacon(cfg.url, body)) return true
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      if (navigator.sendBeacon(cfg.url, body)) return true
     }
-    if (typeof env.fetch === 'function') {
+    if (typeof fetch === 'function') {
       try {
-        const res = await env.fetch(cfg.url, {
+        const res = await fetch(cfg.url, {
           method: 'POST', body, keepalive: true,
           headers: { 'Content-Type': 'application/json' }
         })
@@ -234,9 +240,9 @@ LCP 与 CLS 都是**整页生命周期内**收敛的指标：一个用户滚动�
 
 ## 五、SDK 自己不能成为性能问题
 
-监控 SDK 的第一条自我约束是**轻**。本实验台一次 `flushAll` 的实际体积：
+监控 SDK 的第一条自我约束是**轻**。一次 `flushAll` 的实际体积量级：
 
-> 摘自 `./code/monitor-lab/scenarios/perf.mjs`（运行：`npm run perf`）
+> 体积口径示意（发送形态见单页验证台 Network 里的 `POST /collect` 请求体）
 
 ```
 ---- 上报体积：监控不能自己变成性能问题 ----
@@ -293,13 +299,14 @@ export function sanitizeUrl(url) {
 
 | 文件 | 演示什么 | 对应小节 |
 | --- | --- | --- |
-| `./code/monitor-lab/sdk/index.mjs` | SDK 入口：单例 init、插件注册、`flushAll` 生命周期收口 | 一、SDK 分成四层，一层只干一件事 |
+| `./code/monitor-lab/sdk/index.mjs` | SDK 入口：单例 init、插件注册、`flushAll` 生命周期收口、dev-logger 开关 | 一、SDK 分成四层，一层只干一件事 |
 | `./code/monitor-lab/sdk/transport.mjs` | 传输层：采样入队、攒批、`sendBeacon`/`fetch` 投递、有限重试、队列溢出丢弃 | 三、传输层：采样、攒批、重试、溢出，四件事都必须有 |
-| `./code/monitor-lab/scenarios/transport.mjs` | 四组对照实验：逐条 vs 攒批、三种采样率、三档失败重试、队列溢出 | 三、传输层：采样、攒批、重试、溢出，四件事都必须有 |
-| `./code/monitor-lab/scenarios/perf.mjs` | 一次 flush 的上报体积实测（监控自身的开销） | 五、SDK 自己不能成为性能问题 |
+| `./code/monitor-lab/sdk/dev-logger.mjs` | 开发态彩色 console：每条入队 / 每批发送 | 单页验证台用 Console 验证 |
+| `./code/monitor-lab/app/src/views/*.vue` | 按路由演示三类上报的按钮与说明 | 单页验证（去首页进各页点按钮） |
 | `./code/monitor-lab/sdk/track.mjs` | 埋点采集里的脱敏口径：URL 只留 path、文本截断 | 六、治理：采样率怎么定、什么该脱敏、频控按什么键 |
 
-运行方式：在 `code/monitor-lab` 目录执行 `npm run transport`（纯 Node，不需要浏览器）或 `npm run perf`（需本机 Chrome）。
+运行方式：在 `code/monitor-lab` 目录执行 `npm run start`（构建 + 起采集端，单一端口）后浏览器打开
+`http://localhost:5189/`，进各路由看 Console（`[monitor] 采集 / 发送`）与 Network（`POST /collect`）。
 
 ## 参考
 

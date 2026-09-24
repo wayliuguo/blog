@@ -1,17 +1,20 @@
 {
   "name": "monitor-lab",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "监控与稳定性模块配套实验台：零依赖 SDK（错误/性能/埋点）+ 采集端聚合告警 + 5 个可跑场景",
+  "type": "module",
+  "description": "监控与稳定性模块配套验证台：零依赖浏览器 SDK（错误/性能/埋点）+ 极简采集端 + Vite/Vue3 SPA 按路由演示上报",
   "scripts": {
-    "start": "node collector.mjs",
-    "site": "node collector.mjs",
-    "enterprise": "node enterprise-server.js",
-    "transport": "node scenarios/transport.mjs",
-    "errors": "node scenarios/errors.mjs",
-    "perf": "node scenarios/perf.mjs",
-    "track": "node scenarios/track.mjs",
-    "pipeline": "node scenarios/pipeline.mjs",
-    "all": "node scenarios/all.mjs"
+    "dev": "vite --config app/vite.config.mjs",
+    "build": "vite build --config app/vite.config.mjs",
+    "preview": "vite preview --config app/vite.config.mjs",
+    "server": "node collector.mjs",
+    "start": "vite build --config app/vite.config.mjs && node collector.mjs"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^5.4.11",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   }
 }

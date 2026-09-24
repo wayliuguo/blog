@@ -10,10 +10,10 @@ const SESSION_GAP = 30 * 60 * 1000 // 30 分钟不活跃算新会话
 const MAX_TEXT = 40
 
 export function createTracker(options = {}) {
-    const win = options.win || (typeof window !== 'undefined' ? window : globalThis)
+    const win = options.win || window
     const emit = options.emit || (() => {})
     const now = options.now || (() => Date.now())
-    const store = options.store || win.localStorage || globalThis.localStorage
+    const store = options.store || window.localStorage
     const events = []
 
     const session = { id: '', startedAt: now(), lastAt: now(), pageViews: 0, enterAt: now() }
