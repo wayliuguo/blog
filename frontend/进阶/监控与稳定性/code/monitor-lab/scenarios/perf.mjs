@@ -22,7 +22,7 @@ import {
 
 export default async function run() {
     const collector = await startCollector()
-    const chrome = openChrome(`http://127.0.0.1:${collector.port}/perf-lab.html`)
+    const chrome = openChrome(`http://127.0.0.1:${collector.port}/monitor-lab.html?scenario=perf`)
     console.log(title('场景 · 性能与体验监控（headless Chrome 实跑）'))
 
     try {

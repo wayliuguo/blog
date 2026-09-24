@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>订单工作台 · 优化前</title>
+    </head>
+    <body>
+        <!-- 真实项目最常见、也最「不设防」的入口：一个空壳，等 JS 来画。
+             样式由 src/main.js import 进依赖图，构建时 vite 自动抽成 assets/index-*.css
+             并把 <link rel="stylesheet"> 注入到这里 —— 下载解析完之前浏览器一个字都不画（阻塞首屏）。 -->
+        <div id="app"></div>
+        <script src="/lab.js"></script>
+        <script type="module" src="./src/main.js"></script>
+    </body>
+</html>

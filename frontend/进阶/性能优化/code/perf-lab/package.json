@@ -1,25 +1,18 @@
 {
-  "name": "perf-lab",
-  "version": "2.1.0",
-  "private": true,
-  "description": "性能优化模块配套实验台：两个独立 vite + vue 工程（apps/before 优化前 / apps/after 优化后）+ 一份共享源码，手动打开两个版本对比实测",
-  "workspaces": [
-    "apps/*"
-  ],
-  "scripts": {
-    "dev:before": "npm -w perf-before run dev",
-    "dev:after": "npm -w perf-after run dev",
-    "build:before": "npm -w perf-before run build",
-    "build:after": "npm -w perf-after run build",
-    "build": "npm run build:before && npm run build:after",
-    "preview:before": "npm -w perf-before run preview",
-    "preview:after": "npm -w perf-after run preview"
-  },
-  "dependencies": {
-    "vue": "^3.3.4"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^4.2.3",
-    "vite": "^4.4.7"
-  }
+    "name": "perf-lab",
+    "version": "3.0.0",
+    "private": true,
+    "description": "性能优化模块配套实验台：两个完全独立的项目（apps/before 优化前 / apps/after 优化后），各自持有一份源码，按层级（加载层 LCP / 运行层 INP / 视觉层 CLS）做成优化前后的两种实现，启动两个项目对照",
+    "workspaces": [
+        "apps/*"
+    ],
+    "scripts": {
+        "dev:before": "npm -w perf-before run dev",
+        "dev:after": "npm -w perf-after run dev",
+        "build:before": "npm -w perf-before run build",
+        "build:after": "npm -w perf-after run build",
+        "build": "npm run build:before && npm run build:after",
+        "preview:before": "npm -w perf-before run preview",
+        "preview:after": "npm -w perf-after run preview"
+    }
 }

@@ -149,7 +149,7 @@ function listen(port, tries = 0) {
         const actual = server.address().port
         if (actual !== PORT) console.log(`  文档里的默认端口是 ${PORT}，现在实际跑在 ${actual}`)
         console.log(`监控采集端 -> http://localhost:${actual}/`)
-        console.log(`  演示页  /errors-lab.html  /perf-lab.html  /track-lab.html`)
+        console.log(`  单页验证台 /monitor-lab.html   （?scenario=errors|perf|track 预置对应自动化序列）`)
         console.log(`  报表 API /api/report   原始事件 /api/events`)
     })
 }

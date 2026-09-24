@@ -1,15 +1,13 @@
 /**
- * 内存独立页：同样分配 60 轮，留引用（泄漏）vs 可回收（正常）
- * 唯一一个不塞进 SPA 开关的实验：它要 --enable-precise-memory-info 单独开浏览器，
- * 否则 performance.memory 的粒度是 100KB 级，看不出趋势
+ * 内存独立页（优化前实现）：同样分配 60 轮，每轮的数组都挂在 window 上留引用 —— GC 收不走
+ * 这是唯一一个要单独开浏览器的实验：需要 --enable-precise-memory-info，
+ * 否则 performance.memory 的粒度是 100KB 级，看不出逐轮趋势。
+ * 对照 after 项目的 memory.html（可回收版），两边开出来的增长量就是这层的差异。
  */
-const mode = new URLSearchParams(location.search).get('mode') || 'clean'
 const ROUNDS = 60
-const KEEP = mode === 'leak' // leak = 每轮的数组都挂在 window 上，GC 收不走
+/** 优化前的写法：结果数组挂在全局，生命周期与页面同长，GC 永远收不走 */
+const bags = (window.__leakedBags = [])
 const out = document.getElementById('out')
-
-// 泄漏版本的「口袋」：挂在全局，生命周期与页面同长
-window.__leakedBags = []
 
 /** 分配 n 个对象，每个带 512 字节字符串，模拟真实业务里的数据缓存 */
 function alloc(n) {
@@ -25,8 +23,7 @@ async function main() {
     const samples = []
     for (let r = 0; r < ROUNDS; r++) {
         const chunk = alloc(2000)
-        if (KEEP) window.__leakedBags.push(chunk) // 留引用 → GC 收不走
-        // chunk 在 clean 模式下出了作用域就没人引用，下一次分配压力上来时会被回收
+        bags.push(chunk) // 留引用 → GC 收不走
         samples.push(heap())
         await new Promise(resolve => setTimeout(resolve, 0))
     }
@@ -37,7 +34,7 @@ async function main() {
     const growth = first != null && last != null ? last - first : null
 
     out.textContent = [
-        `模式            : ${mode}`,
+        `实现            : 留引用（泄漏）`,
         `轮次            : ${ROUNDS}（每轮 2000 个对象 × 512B）`,
         `第 10% 处堆大小 : ${mb(first)}`,
         `末轮堆大小      : ${mb(last)}`,
@@ -47,14 +44,14 @@ async function main() {
 
     Lab.finish(
         {
-            mode,
+            impl: 'leak',
             rounds: ROUNDS,
             precise: !!(performance.memory && performance.memory.jsHeapSizeLimit),
             first: first == null ? null : Math.round(first / 1024),
             last: last == null ? null : Math.round(last / 1024),
             peak: peak == null ? null : Math.round(peak / 1024),
             growth: growth == null ? null : Math.round(growth / 1024),
-            kept: KEEP ? window.__leakedBags.length : 0
+            kept: bags.length
         },
         200
     )

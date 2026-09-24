@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <title>内存实验 · 优化后：可回收（正常）</title>
+        <link rel="icon" href="data:," />
+        <script src="/lab.js"></script>
+        <style>
+            body {
+                margin: 0;
+                font:
+                    16px/1.6 system-ui,
+                    'Microsoft YaHei',
+                    sans-serif;
+            }
+            header {
+                padding: 16px 24px;
+                background: #eef2ff;
+            }
+            header h1 {
+                margin: 0;
+                font-size: 22px;
+            }
+            #out {
+                padding: 12px 24px;
+                font: 13px/1.7 monospace;
+                white-space: pre;
+            }
+        </style>
+    </head>
+    <body>
+        <header><h1>同样分配 60 轮：本版实现是「结果不留在全局」（可回收）</h1></header>
+        <div id="out">采样中…</div>
+        <script type="module" src="./memory.js"></script>
+    </body>
+</html>
