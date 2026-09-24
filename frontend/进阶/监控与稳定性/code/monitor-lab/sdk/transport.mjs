@@ -1,7 +1,8 @@
 /**
- * 上报传输层（浏览器 / Node 通用，零依赖）
+ * 上报传输层（纯浏览器，零依赖）
  * 职责链路：采样 → 入队 → 攒批 → sendBeacon/fetch 投递 → 失败重试 → 溢出丢弃
- * 设计要点：env 依赖注入（默认 globalThis），因此同一份代码在浏览器与 Node 里都能跑
+ * 设计要点：只认浏览器全局（window / navigator / fetch），不再做 Node 侧依赖注入——
+ * 这套 demo 的边界就是「SDK 实现 + 使用（采集→采样→攒批→发送）」，后端聚合不属于它。
  */
 
 export const DEFAULT_TRANSPORT = {
@@ -15,7 +16,6 @@ export const DEFAULT_TRANSPORT = {
 
 export function createTransport(options = {}) {
     const cfg = { ...DEFAULT_TRANSPORT, ...options }
-    const env = cfg.env || globalThis
     const queue = []
     const stats = { accepted: 0, sampled: 0, sent: 0, dropped: 0, retried: 0, batches: 0 }
     let timer = null
@@ -44,12 +44,12 @@ export function createTransport(options = {}) {
 
     async function deliver(body) {
         // 首选 sendBeacon：页面卸载时也能送达，且不阻塞主线程
-        if (env.navigator && typeof env.navigator.sendBeacon === 'function') {
-            if (env.navigator.sendBeacon(cfg.url, body)) return true
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+            if (navigator.sendBeacon(cfg.url, body)) return true
         }
-        if (typeof env.fetch === 'function') {
+        if (typeof fetch === 'function') {
             try {
-                const res = await env.fetch(cfg.url, {
+                const res = await fetch(cfg.url, {
                     method: 'POST',
                     body,
                     keepalive: true,

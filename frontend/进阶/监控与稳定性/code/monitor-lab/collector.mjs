@@ -1,37 +1,35 @@
 /**
- * 采集端（零依赖 Node 服务，端口 5189）
- * 一个进程同时干三件事：
- *   1. 静态下发：site/ 下的演示页 + sdk/ 下的 SDK 模块（同源上报，省掉 CORS）
- *   2. 接收上报：POST /collect 批量入库（内存 + data/events.jsonl 落盘）
- *   3. 聚合与告警：GET /api/report 返回秒桶、分位值、KPI 与告警流
+ * 采集端（纯 Node 零依赖，默认端口 5189）
+ * 极简职责，只服务「SDK 实现 + 使用」的演示闭环：
+ *   1. 静态下发：app/dist 的 Vite build 产物（生产形态一条命令跑起来）
+ *   2. 接收上报：POST /collect → 校验批次 → 追加到 data/events.jsonl → console 打印批次摘要
  *
- * 启动：npm start（端口被占用会自动 +1，实际端口以启动日志为准）
+ * 不做聚合 / 告警 / 报表接口——那些是采集端后端的事，超出本 demo 边界。
+ *
+ * 使用：
+ *   生产形态：npm run start（先 build 出 app/dist，再跑本服务，单一端口）
+ *   开发形态：npm run dev（vite 5173，把 /collect 代理回本服务）；本服务单独用 npm run server 起
  */
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { bucketize, summarizeBucket, rollup } from './aggregate.mjs'
-import { createAlerter, DEFAULT_RULES } from './alert.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT || 5189)
-const SITE = path.join(__dirname, 'site')
-const SDK = path.join(__dirname, 'sdk')
+const STATIC = path.join(__dirname, 'app', 'dist') // Vite build 产物
 const DATA = path.join(__dirname, 'data')
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
-    '.mjs': 'text/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
     '.json': 'application/json; charset=utf-8',
-    '.svg': 'image/svg+xml'
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon'
 }
 
-const events = []
-const alerter = createAlerter(DEFAULT_RULES)
-let alerts = []
+let total = 0 // 内存计数，配合 JSONL 落盘说明「批次可落盘可重放」
 
 // 落盘：真实系统这里会是 Kafka / 日志采集器，演示里写 JSONL 足够说明「批次可以落盘重放」
 function persist(batch) {
@@ -39,52 +37,17 @@ function persist(batch) {
     fs.appendFileSync(path.join(DATA, 'events.jsonl'), batch.map(e => JSON.stringify(e)).join('\n') + '\n')
 }
 
+// 校验 + 打印批次摘要
 function ingest(batch) {
-    const accepted = []
-    for (const raw of batch) {
-        const ev = { kind: 'event', ts: raw.ts || Date.now(), ...raw }
-        events.push(ev)
-        accepted.push(ev)
+    const accepted = batch.filter(e => e && typeof e === 'object').map(e => ({ ...e }))
+    if (accepted.length) {
+        total += accepted.length
+        persist(accepted)
+        // 按类型粗汇总，方便服务端侧一眼确认收到了什么
+        const byType = {}
+        for (const e of accepted) byType[e.type] = (byType[e.type] || 0) + 1
+        console.log(`  ▼ 收到 ${accepted.length} 条：${Object.entries(byType).map(([k, v]) => `${k}×${v}`).join('  ')}（累计 ${total}）`)
     }
-    persist(accepted)
-
-    // 简化版评估：每收一批就看一眼最新秒桶，命中规则即推告警
-    // 注意 evaluate 用的是「桶的时间戳」而不是服务器当前时间——告警描述的是数据，不是收包时刻
-    const buckets = bucketize(events, 1000).map(summarizeBucket)
-    const latest = buckets[buckets.length - 1] || {}
-    const fired = alerter.evaluate(
-        {
-            p95: latest.p95,
-            p99: latest.p99,
-            errorRate: latest.errorRate,
-            tps: latest.tps
-        },
-        latest.ts ?? Date.now()
-    )
-    if (fired.length) alerts = [...alerts, ...fired]
-    return { accepted: accepted.length, alerts: fired.length, total: events.length }
-}
-
-function snapshot() {
-    const buckets = bucketize(events, 1000).map(summarizeBucket)
-    return {
-        kpi: buckets[buckets.length - 1] || null,
-        window: rollup(events, 60000),
-        buckets,
-        alerts,
-        total: events.length
-    }
-}
-
-function resolveStatic(url) {
-    const name = decodeURIComponent(url.split('?')[0])
-    if (name === '/') return path.join(SITE, 'agent.html')
-    if (name.startsWith('/sdk/')) {
-        const f = path.normalize(path.join(SDK, name.slice('/sdk/'.length)))
-        return f.startsWith(SDK) ? f : null
-    }
-    const f = path.normalize(path.join(SITE, name))
-    return f.startsWith(SITE) ? f : null
 }
 
 function readBody(req) {
@@ -98,8 +61,21 @@ function readBody(req) {
 }
 
 function json(res, data, code = 200) {
-    res.writeHead(code, { 'Content-Type': MIME['.json'], 'Access-Control-Allow-Origin': '*' })
+    res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' })
     res.end(JSON.stringify(data))
+}
+
+// hash 路由静态下发：Spa 的 /xxx 路径都回退到 index.html，避免刷新 404
+function resolveStatic(url) {
+    let name = decodeURIComponent(url.split('?')[0])
+    if (name === '/') name = '/index.html'
+    const f = path.normalize(path.join(STATIC, name))
+    if (!f.startsWith(STATIC)) return null
+    if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) {
+        const idx = path.join(STATIC, 'index.html')
+        return fs.existsSync(idx) ? idx : null
+    }
+    return f
 }
 
 function handle(req, res) {
@@ -114,7 +90,8 @@ function handle(req, res) {
                 parsed = null
             }
             const batch = Array.isArray(parsed) ? parsed : (parsed && parsed.events) || []
-            json(res, ingest(batch))
+            ingest(batch)
+            return json(res, { accepted: batch.length, total })
         })
     }
     if (req.method === 'OPTIONS') {
@@ -122,16 +99,8 @@ function handle(req, res) {
         return res.end()
     }
 
-    if (url.startsWith('/api/report')) return json(res, snapshot())
-    if (url.startsWith('/api/events')) return json(res, { total: events.length, events })
-    if (url.startsWith('/api/reset')) {
-        events.length = 0
-        alerts = []
-        return json(res, { ok: true })
-    }
-
     const file = resolveStatic(url)
-    if (!file || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return res.writeHead(404).end('Not Found')
+    if (!file) return res.writeHead(404).end('Not Found')
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'text/plain', 'Cache-Control': 'no-store' })
     res.end(fs.readFileSync(file))
 }
@@ -145,12 +114,11 @@ function listen(port, tries = 0) {
         listen(port + 1, tries + 1)
     })
     server.listen(port, () => {
-        // PORT=0 时由系统分配空端口，必须回读真实端口号（自动化脚本靠这一行定位服务）
         const actual = server.address().port
         if (actual !== PORT) console.log(`  文档里的默认端口是 ${PORT}，现在实际跑在 ${actual}`)
-        console.log(`监控采集端 -> http://localhost:${actual}/`)
-        console.log(`  单页验证台 /monitor-lab.html   （?scenario=errors|perf|track 预置对应自动化序列）`)
-        console.log(`  报表 API /api/report   原始事件 /api/events`)
+        console.log(`监控接收端 -> http://localhost:${actual}/`)
+        console.log(`  静态下发 app/dist（生产形态的 SPA build 产物）`)
+        console.log(`  接收 POST /collect，落盘 data/events.jsonl，每批在控制台打印摘要`)
     })
 }
 listen(PORT)
