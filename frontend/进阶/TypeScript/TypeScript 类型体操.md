@@ -1,7 +1,5 @@
 # TypeScript 类型体操
 
-类型体操（type gymnastics）指**只用类型层面、在编译期完成的计算**：用条件类型、映射类型、`infer`、模板字面量、递归把"值的集合"当成数据进行变换。它不是面试炫技——`ts-toolbelt`、`type-fest`、Vue3 / Prisma 的类型推导里到处是它；能不能徒手写出一个 `DeepReadonly`、`ParseParams`，直接区分"会用 TS"和"懂 TS"。本篇给一套可运行的训练场，把九类套路逐一拆开练。配置与基础类型见上一篇 [TypeScript 类型系统](./TypeScript%20类型系统.md)，工程落地见下一篇 [TypeScript 工程实践](./TypeScript%20工程实践.md)。
-
 ## 一、热身：怎么"判题"
 
 类型体操没有运行时，练手靠的是**让编译器当裁判**。核心是一个相等判定：

@@ -1,9 +1,5 @@
 # Koa 源码分析
 
-> Koa 的核心比 Express 更精简，只有两个关键机制：**洋葱模型中间件链** 和 **Context 封装**。
-
----
-
 ## 最小实现
 
 > 摘自 `./code/koa-mini/index.js`（运行：`npm start`）

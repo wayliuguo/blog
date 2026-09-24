@@ -1,26 +1,5 @@
 # PostgreSQL 与 pgvector
 
-
-会用 MySQL，甚至能熟练写 ORM，不等于"会数据库"。除了事务与查询，现代后端还要存结构化 + 半结构化混合数据、做向量检索、支撑内容推荐与相似度搜索。
-
-PostgreSQL（下文简称 PG）正是传统后端处理混合数据负载的那座桥：
-
-> 关系型数据库的能力 PG 都有（事务、SQL、索引、JSONB），而现代后端需要的向量检索、JSON 元数据、复杂分析，PG 又比 MySQL 更顺手。学完 MySQL 再学 PG，不是"换一个数据库"，而是"把同一份数据基础设施的能力面补齐"。
-
-PG 在现代后端数据栈里的位置：
-
-```txt
-传统后端：  MySQL  ── 业务事务、订单、账户
-                    │
-数据基础设施：       ├── PostgreSQL + JSONB  ── 存业务运行记录、半结构化配置、metadata
-                    ├── PostgreSQL + pgvector ── 向量检索（文档切块 → Embedding → 相似度 TopK）
-                    └── 专用向量数据库（Milvus / Qdrant）── 超大规模向量场景（后期才需要）
-```
-
-核心心智模型：**中小型业务系统用 PostgreSQL + pgvector 就够用了，先别急着上专用向量数据库。**
-
----
-
 ## 为什么是 PostgreSQL：定位差异
 
 | 维度 | MySQL | PostgreSQL |

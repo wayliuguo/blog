@@ -1,9 +1,5 @@
 # WebSocket 实时通信
 
-> NestJS 内置了 WebSocket 支持，通过 Gateway 实现实时双向通信。
-
----
-
 ## 安装依赖
 
 ```bash

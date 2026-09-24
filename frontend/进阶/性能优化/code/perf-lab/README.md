@@ -1,93 +1,110 @@
 # perf-lab · 性能优化配套实验台
 
-零依赖（Node 内置模块 + 本机 Chrome）——唯一的例外是 Vue SPA 闭环实验，它需要一个真的 Vue 3，所以 `vue` 是唯一的运行时依赖。每个场景都是**真跑真测**：起一个本地 HTTP 服务，用无头 Chrome 打开实验页，页面把浏览器真实采集到的指标 POST 回来，Node 侧汇总成表。
+**两个独立工程，一份共享源码。** `apps/before` 是「优化前」（`raw.html`：CSS 外链阻塞 + `#app` 空壳 + 静态 `import` 全部视图），`apps/after` 是「优化后」（`index.html`：关键 CSS 内联 + 骨架屏 + 动态 `import()`）。业务组件与逻辑只有一份，放在 `shared/`，两个工程都用 `@lab` 别名引入。
+
+**不依赖任何命令行测量工具，也不依赖本机 Chrome 自动化。** 直接打开两个版本对比即可：页面自己会订阅真实性能条目，把实测打到浏览器 console（`[perf-lab] 本次实测` 那一条）。读者开 DevTools 看 console、看 Network、看 Performance 面板就能得到全部读数。
 
 ```bash
-npm start          # 手动浏览：把 pages/ 挂在 http://localhost:5187/
-npm run <场景名>    # 跑一个场景，终端出表
-npm run list       # 列出全部场景
-npm run all        # 依次跑完全部场景（耗时较长）
+npm install              # 一次装好两个工程（npm workspaces）；运行时依赖只有 vue
+
+npm run dev:before       # 优化前：http://localhost:5187/raw.html
+npm run dev:after        # 优化后：http://localhost:5193/index.html
+npm run build            # 分别构建两套产物：dist-before/ 与 dist-after/
+npm run preview:before   # 用构建产物起服务（更接近线上，推荐做字节/缓存对比）
+npm run preview:after    # 同上，优化后
 ```
 
-> 需要本机有 Chrome。找不到时用环境变量指定：`CHROME_PATH=/path/to/chrome npm run metrics`
+`build` 与「看实验」是两件事：想看**首屏字节 / 二次访问缓存**，用 `preview` 起构建产物最准（dev 模式每个文件都带 HMR 开销，字节数失真）。跑实验前必须先 `build`。构建产物不入库（`.gitignore` 已排除），只留源码。
 
-## 一、场景对照表
+## 一、实验对照表（全部手动，开 before / after 对比）
 
-| npm script | 实验页 | 对照的是什么 | 读哪个数 |
-|---|---|---|---|
-| `metrics` | `metrics.html` | 轻量首屏 vs 未治理首屏（阻塞脚本 + 大图） | TTFB / FCP / LCP / load + 逐资源字节 |
-| `waterfall` | `metrics.html` | 同上，换成资源瀑布视角 | 每根条的起点（何时开始请求）与长度（下载耗时） |
-| `cls` | `cls.html` | 图片不留尺寸 + 横幅插顶部 vs 都做了预留 | 累计位移值、位移次数 |
-| `block` | `block-naive/defer/bottom.html` | 同一个慢脚本放 head 同步 / head defer / body 末尾 | FCP 与 DOMContentLoaded 之差 |
-| `images` | `images.html` | 12 张 200KB 图 全部 eager vs loading="lazy" | 发出的图片请求数、总字节数 |
-| `lazy` | `lazy.html` | 路由级代码分割：首屏全量 vs 按需 | **首屏加载到可用**的耗时（总量相同） |
-| `coverage` | `coverage.html` | 10 个特性整包引入 vs 只 import 用到的 3 个 | JS 传输字节、请求的 chunk 数 |
-| `thrash` | `thrash.html` | 2000 个盒子改宽度：交错读写 vs 集中读写 | 循环耗时、强制同步布局次数 |
-| `longtask` | `longtask.html` | 60000 行列表：一次插入 vs 每 6000 行让出 | **最长同步块**、首屏可见耗时 |
-| `virtual` | `virtual.html` | 10000 行长列表：全量渲染 vs 虚拟滚动 | DOM 节点数、首屏渲染、一次大跨度滚动 |
-| `worker` | `worker.html` | 同一段计算放主线程 vs 放 Web Worker | 最长帧间隔、期间出帧数 |
-| `memory` | `memory.html` | 60 轮分配：留引用 vs 可回收 | 堆净增长、峰值堆 |
-| `score` | `metrics.html` + `cls.html` | 把实测值套上 Core Web Vitals 区间 | 每个指标的评级与整体结论 |
-| `budget` | `metrics.html` | 性能预算卡口 | PASS / FAIL，超线时**退出码 1** |
-| `spa` | `spa/index.html` vs `spa/optimized.html` | Vue SPA 首屏：全量打包 + 空壳 vs 分割 + 骨架屏 | FCP / LCP / 首屏有内容 / 关键路径 JS 数 |
-| `spa:nav` | 同上 | 切路由：全量打包 vs 分割不预取 vs 分割 + 空闲预取 | 切路由耗时、切换时才下的 chunk 数 |
-| `spa:list` | 同上 | 2000 行：全量渲染 + 同步计算 vs 虚拟滚动 + 分片；滚动回调两种写法 | 交互到下一帧、新增长任务、30 屏总耗时 |
-| `spa:cache` | `spa/optimized.html` | 二次访问：无缓存 vs HTTP 强缓存 vs Service Worker | 二次的传输字节、命中缓存的资源数 |
+十二个实验分两层对照：**八个基础 case**（同一个开关在 before / after 下行为不同）和**四个页面内手动对照**（读数本身是同一次加载里的前后差值，做成面板由页面自演）。两类都在 `npm run dev:after` / `dev:before` 打开的页面里读，只是取证方式不同。
+
+| 层 | `?act=` / 路由 | 对照变量（before → after） | 打开哪个 URL（after 端口 5193，before 端口 5187） | 看哪里 |
+|---|---|---|---|---|
+| 加载 | `spa` | 静态 import 全量 bundle → 动态 import 拆 chunk | 两个都开 `#/list` | console `jsBytes` / `criticalBytes`（或在 build 日志里看 raw vs optimized 两个主包） |
+| 加载 | `nav` | 静态路由（切即全在）/ 路由级分割 + 空闲预取 | `index.html?act=nav#/list`（点「详情」也行） | console `navMs` / `navChunks` |
+| 加载 | `cache` | 内容 hash + 长缓存 | 两个都开 `#/list`，加载一次再刷新 | 二次加载 console `jsBytes`≈0，或 Network 面板「from cache」 |
+| 加载 | `images` | 首屏外图 `loading="lazy"` 开 / 关 | `index.html?gallery=1&lazy=1#/detail/1`（lazy=0 对照；before 用 `raw.html`） | Network 面板图片请求数；**LCP 需在 DevTools 开 Slow 3G** 后看 console `metrics.lcp` |
+| 运行 | `agg` | 同步聚合 / MessageChannel 分片 / Worker | `index.html?act=agg#/report`（或点聚合按钮） | console `aggMs` / `newTasks` / `longestTask` |
+| 运行 | `scroll` | 全量 / rAF 节流 / 虚拟滚动 | `index.html?act=scroll#/list`（连滚 30 帧） | console `scrollMs` / `domNodes` / `longestTask` |
+| 运行 | `memory` | 留引用（泄漏）/ 可回收（独立页） | `memory.html?mode=clean` 与 `?mode=leak`（在 5187 上） | 页面正文 + console `growth`（**需 `--enable-precise-memory-info` 起 Chrome**） |
+| 视觉 | `cls` | 主图带 / 不带 `width/height` | `index.html?act=cls#/detail/1`（before 默认不带） | console `cls` / `clsRaw` |
+| 视觉 | `rerender` | 列表 key 用下标 / 稳定 id；无关状态留父 / 下沉 | `index.html?act=rerender&key=idx&sink=0#/list` 等 | console `rendersOnInsert` / `rendersOnTick` |
+| 视觉 | `banner` | 顶部公告不预留 / 先 `min-height` 占位 | `index.html?act=banner&reserve=0#/list` 等 | console `pushed` / `clsRaw` |
+| 视觉 | `font` | 回退字体未 / 已 `size-adjust` 校准 | `index.html?act=font&sz=0#/detail/1` 等 | console `deltaH` / `advanceBefore`→`advanceAfter` / `clsRaw` |
+| 视觉 | `anim` | 展开动画改 `top` / 改 `transform` | `index.html?act=anim&anim=top#/detail/1` 等 | console `clsRaw` / 位移条目数 |
+
+> 注意：`?act=` / `?key=` 等开关必须写在 `#` **之前**（真实的 query string），应用才能从 `location.search` 读到；写在 `#` 后面会被当成路由一部分而失效。记忆口诀：**`index.html?act=xxx#/route`**。
+
+### 四个页面内手动对照（`?act=`）
+
+剩下四件事的读数**都是同一次加载里的前后差值**——换字那一刻文本块高了多少、公告插进来把下面推下去多少、同一个脏更新触发了几次行渲染——差值横跨一次加载里的两个时刻，做成「开页面 → 读一个数」反而会失掉要观察的那段过程。所以它们做成页面内面板：`npm run dev:after` 打开页面，`?act=` 指定演哪一出，页面自己把两个时刻的读数一起打到 console。
+
+三条使用规则：
+
+- **一次只带一个 `act=`**。驱动力在 `shared/App.vue` 的 `drive()`：它按 `?act=` 去 `window.__spa.exp[act]()` 取该实验读数（`shared/views/*.vue` 各自挂上去），跑完拼进上报对象。多个 act 同时给只会执行第一个命中的。
+- **交互面板之间不串味**。四个面板各占一个 `mode` 分支（`v-if / v-else-if`），带 `act=` 时只挂载自己那一个；同一次会话里换个 URL 重新进即可切到另一个实验。
+- **看差值，不看绝对值**。本机 localhost 的 JS 执行本身只要几毫秒，个别读数（如 `anim` 的时长）噪声可能盖过差异——结论要落在「两次对比之间哪个数变了、变了多少」。
 
 ## 二、篇目对照表
 
-| 篇 | 用到的场景 | 对应小节 |
+| 篇 | 用到的实验 | 对应小节 |
 |---|---|---|
-| 性能优化总纲与指标量化 | `metrics` `score` `cls` `waterfall` `memory` `coverage` | 指标定义与区间、实验室 vs 现场口径、位移从哪来、瀑布图怎么读、堆快照对比、已用/总字节 |
-| 加载性能与 LCP | `block` `images` `lazy` `coverage` `metrics` | LCP 四段定位、关键渲染路径、资源优先级、三个层级的按需、懒加载的边界 |
-| 交互性能与 INP | `thrash` `longtask` `virtual` `worker` `memory` | INP 三段定位、强制同步布局、长任务与切片、虚拟滚动、Worker 边界、泄漏 |
-| 视觉稳定与 CLS | `cls` | 逐次位移的时刻与分数归因、尺寸预留与字体 |
-| 性能优化闭环 | `budget` `score` `metrics` | 预算怎么定、CI 卡口、优化前后指标 |
-| 优化手段速查 | 全部 | 每条手段后面挂本节实测的数字 |
-| Vue SPA 性能实战 | `spa` `spa:nav` `spa:list` `spa:cache` | 一个页面把加载 / 构建 / 运行时 / 缓存 / 闭环五段串起来 |
+| 性能优化体系与指标 | 12 个实验（8 基础 case + 4 页面内） | 一：指标体系与排障主线；二：加载层 LCP（`spa` `nav` `cache` `images`）；三：运行层 INP（`agg` `scroll` `memory`，以及 `rerender`）；四：视觉层 CLS（`cls` `banner` `font` `anim`）；五：收口 |
+| 性能优化实战（本实验台手册） | 全部 | 怎么起工程、怎么手动读、每个实验怎么对照、数字怎么读 |
 
 ## 三、结构
 
 ```
 perf-lab/
-├─ cli.mjs                 命令行入口：node cli.mjs <场景名>
-├─ server.js               手动浏览用的静态服务（端口 5187，占用自动 +1）
-├─ harness/
-│  ├─ server.mjs           实验台服务器：静态下发 pages/ + /asset /slow /bundle /feature /report
-│  ├─ chrome.mjs           定位并启动本机无头 Chrome
-│  ├─ index.mjs            measure() 跑单页、sweep() 跑多套对照、多轮取中位数
-│  └─ table.mjs            中英混排对齐的表格、时间线、单位换算
-├─ pages/
-│  ├─ lab.js               页面侧：订阅性能条目 + 统一 POST 回实验台
-│  ├─ sw.js                SPA 实验用的 Service Worker（缓存 /spa/ 与 /vendor/）
-│  ├─ spa/                 Vue SPA 闭环实验：见下方说明
-│  └─ *.html               各实验页（每个都以 Lab.finish({...}) 收尾）
-└─ scenarios/
-   └─ *.mjs                每个场景一个文件，默认导出 run()
+├─ package.json            根：npm workspaces（apps/*）+ 全部 scripts（只有 dev/build/preview）
+├─ shared/                 业务源码唯一一份，两个工程共用（@lab 别名）
+│  ├─ App.vue              SPA 外壳：hash 路由、实验驱动（?act=）、指标采集
+│  ├─ lib/
+│  │  ├─ options.js        开关解析：入口总开关 window.__PERF_OPT + 单项 ?key=0/1 覆盖
+│  │  ├─ store.js          数据与聚合（makeItems / heavyAggregate / sliceAggregate）
+│  │  ├─ agg-worker.js     Worker 版聚合
+│  │  └─ report-engine.js  报表页的重活：透视 / 异常检测 / 导出（低频繁重路由）
+│  ├─ views/               ListView / DetailView / ReportView / AboutView
+│  │                       ——四个手动实验的面板与读数就挂在这些视图里（window.__spa.exp）
+│  └─ public/
+│     ├─ app.css           应用样式（两版共用，含 font / banner / anim 三个实验面板的样式）
+│     ├─ lab.js            页面侧：订阅性能条目 + 把实测打到 console（无服务端、无回传）
+│     └─ lab-assets/       hero.svg（≈50KB）+ shot0..11.svg（各 ≈21KB），替换原 /asset 动态端点
+└─ apps/
+   ├─ before/              优化前工程 → dist-before/
+   │  ├─ vite.config.mjs   入口 raw.html + memory.html，5187
+   │  ├─ raw.html          CSS 外链阻塞、#app 空壳（window.__PERF_OPT=false）
+   │  ├─ memory.html       内存实验独立页
+   │  ├─ memory.js         内存实验页脚本
+   │  └─ main.js           静态 import 全部视图
+   └─ after/               优化后工程 → dist-after/
+      ├─ vite.config.mjs   入口 index.html，5193
+      ├─ index.html        关键 CSS 内联 + 骨架屏（window.__PERF_OPT=true）
+      └─ main.js           () => import('@lab/views/X.vue')
 ```
 
-### `pages/spa/` 是什么
+源码里没有一行「为了凑差异」的假代码：`report-engine.js` 是 36 个指标 + 6 个维度 + 透视 / 异常检测 / 导出的真实现（14.7 KB），它是报表路由的依赖，构建后自己就是一块独立 chunk。
 
-一个真的 Vue 3 单页应用（hash 路由 + 三个路由模块 + 2000 条订单），两版外壳对应两种工程决策：
+## 四、开关怎么用
 
-| 文件 | 角色 |
-|---|---|
-| `index.html` + `app.js` | 未优化外壳：CSS 外链阻塞、`#app` 空壳、三个路由静态全量引入 |
-| `optimized.html` + `app-opt.js` | 优化外壳：关键 CSS 内联 + 骨架屏、全量 CSS 异步加载、路由动态 import |
-| `boot.js` | 两版共用：hash 路由、组件懒加载、空闲预取、实验驱动（?act=） |
-| `options.js` | 开关：`opt=1` 全开，单个开关（split / virtual / slice / prefetch / throttle / imgopt / sw）可单独覆盖 |
-| `routes/list.js` `detail.js` `about.js` | 三个路由组件 |
-| `routes-all.js` | 未优化版用：把三个路由静态打进同一张依赖图 |
+- 入口总开关写在 HTML 里：`after/index.html` 设 `window.__PERF_OPT = true`，`before/raw.html` 设 `false`。它决定一批优化开关的默认开合（路由级分割、虚拟滚动、分片聚合、Worker、图片尺寸预留、空闲预取）。
+- 单项开关命令行上覆盖总开关，用来做「只改一项」的对照：
+  - `?virtual=0` → 优化后入口里只关掉虚拟滚动
+  - `?split=1` → 优化前入口里单独打开路由级分割
+  - `?imgopt=0` → 优化后入口里关掉主图尺寸预留（复现 CLS）
+  - `?lazy=1` / `?gallery=1` → 详情页图集渲染与懒加载
+- 可用开关：`split` `virtual` `slice` `worker` `throttle` `prefetch` `imgopt` `gallery` `lazy`；另有 `n=` 改列表条数（默认 2000）、`act=` 指定实验动作。
+- **一次只留一个变量**：两套入口的渲染开关默认一致，差异只来自「整个入口」（CSS 外链/内联、空壳/骨架屏、静态/动态 import 三处合起来）。想最干净地只比打包，给 after 加 `?prefetch=0` 即可（不影响关键路径字节 `criticalBytes` 的读数）。
 
-浏览器里直接跑 ESM，没有构建步骤——服务端把 `node_modules/vue/dist/vue.esm-browser.prod.js` 挂在 `/vendor/vue.js`。真实项目里这一步由 Vite 做（`() => import('./views/List.vue')`），写法和收益一致。
+## 五、为什么这么设计（已知取舍）
 
-## 四、为什么这么设计（已知取舍）
-
-- **不用 puppeteer**。实验只需要「打开页面 → 页面把数据送回来」这一条链路，用 `spawn` 拉起本机 Chrome + 页面 `fetch('/report')` 就够了，换来的是零依赖。代价是拿不到 CDP 的能力（比如强制 GC、CPU 节流、网络面板录屏），这些留给人开 DevTools 手动做。
-- **端口用 0 让系统分配**。`npm run <场景>` 起的服务不写死端口，避免和 `npm start` 的 5187 撞车，也允许几个场景同时跑。唯一的例外是 `spa:cache`：HTTP 缓存按 origin 存，端口每次都变的话上一次访问写进磁盘的缓存根本不会被查到，所以它固定用 5192。
-- **限速是必须的**。本机 localhost 传 500KB 只要几毫秒，`lazy` / `metrics` 这类对比在无限速下两个版本读数完全一样。服务器支持 `&kbps=2000`，按带宽分片慢发，把网络差异放大到可比。这是实验台的模拟，不是真实网络测量。
-- **多轮取中位数**。每套对照默认跑 3 轮（抖动的场景跑 5 轮），数值逐项取中位，数组类的取最后一轮。单轮结果受机器负载影响很大。
-- **共享 Chrome profile**。`harness/chrome.mjs` 复用同一个 `--user-data-dir`，省掉每次启动的初始化开销；副作用是如果上一个 Chrome 没退干净，新的启动可能被转发到旧实例，出现读数串台——所以 `measure()` 每轮结束都会 `kill()` 再进下一轮。
-- **`CLS` 读的是「全量位移」不是规范 CLS**。规范口径会剔掉 `hadRecentInput` 为 true 的位移，而无头环境里没有真实输入事件、这个字段却仍是 true，导致规范 CLS 恒为 0。所以上报里 `cls` 是规范口径（真实用户环境用这个）、`clsRaw` 是所有位移之和（无头对照实验用这个）。
-- **`memory` 需要 `--enable-precise-memory-info`**。不加这个 flag 时 `performance.memory` 的粒度是 100KB 级，量不出逐轮趋势。
-- **INP 在无头环境里测不到真的**。真实 INP 要用户实际输入才会产生 `event` 条目，而脚本 `click()` 派发的是不可信事件，不产生条目。所以 `spa:list` 里的「交互到下一帧」用的是「派发事件 → 第二个 `requestAnimationFrame` 回调」的耗时，口径和 INP 一致，但不是浏览器上报的那个值。无头环境下 `requestAnimationFrame` 的回调节奏不可靠，所以改成量「最长同步块」：在计时块里读一次 `offsetHeight` 强制结算布局，得到的就是主线程真正被独占的时长。这个数比帧间隔稳定得多，也更贴近「用户点了多久没反应」。
+- **两个独立工程，而不是「一个工程、两个入口」**。多入口一起构建时 rollup 会把两个入口共用的模块提到公共 chunk，优化前那份就不再是「一个 bundle 全量包含」的干净基线，对比直接不成立。`apps/before` 与 `apps/after` 各自 `vite build`，各按自己的方式打包，差异才是真的。
+- **也不是把源码复制成两份**。两份代码同步维护必然腐烂，改一处忘一处，最后比出来的不是「工程决策的差异」而是「两份代码的差异」。源码放 `shared/`、用 `@lab` 别名引入，两个工程跑同一份组件、同一套开关逻辑。
+- **测量能力长在页面里，不靠外部工具**。浏览器原生 `PerformanceObserver` 订阅 paint / LCP / layout-shift / longtask，`performance.getEntriesByType('resource')` 直接给每个文件的 `transferSize`（首屏字节、缓存后字节、图片传输量都在里面）。`lab.js` 把这些整理成一份 payload 打到 console——所以开页面、开 DevTools 就能读数，不需要无头 Chrome、不需要服务端。
+- **CLS 上报到小数点后四位**。CLS 真值多落在 0.005~0.1 之间，一位小数会把 0.0633 显示成 0.1、把 0.0081 显示成 0，两组对照直接看成一个数。口径仍分 `cls`（规范，剔掉用户输入 500ms 内的预期位移）与 `clsRaw`（所有位移之和，对照实验看这个）。
+- **INP 用「最长同步块」近似**。真实 INP 要用户实际输入才产生 `event` 条目；脚本 `click()` 派发的是不可信事件，所以 `agg` / `nav` 里量的是「计时块里强制结算布局后主线程被独占的时长」——比帧间隔稳定，也更贴近「用户点了多久没反应」。
+- **限速靠 DevTools，不靠本地服务**。本机 localhost 传 500 KB 只要几毫秒，不放大网络差异，「少一次往返」「图没预留尺寸」这些结论根本显示不出来。所以 `images` / `cls` 想要明显的 LCP 差，在 DevTools → Network 里开 **Slow 3G**（或自定义限速）再对比即可——这是标准的手动手法，比自己写一个限速服务简单。
+- **`memory` 需要 `--enable-precise-memory-info`**。不加这个 flag，`performance.memory` 的粒度是 100 KB 级，量不出逐轮趋势。该 case 不进 SPA，是 `apps/before` 下一张独立的 `memory.html`，用带 flag 的 Chrome 打开 `?mode=clean` / `?mode=leak` 对照。
+- **图片是提交的静态 SVG**（`shared/public/lab-assets/`），不走任何动态端点。hero ≈ 50KB、每张 shot ≈ 21KB，概念比例不变；具体字节只影响「懒加载省了多少传输」的绝对值，不影响结论方向。

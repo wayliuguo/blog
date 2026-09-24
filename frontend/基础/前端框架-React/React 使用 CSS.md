@@ -1,7 +1,5 @@
 # React 使用 CSS
 
-React 组件化开发带来了样式的若干写法：普通 CSS（含内联 style）、CSS Module、CSS-in-JS（如 styled-components）、Tailwind 以及 classnames 动态拼接等。本文梳理这些方案的用法、优缺点与选型对比，都是在 React 里写样式的常用手段。
-
 ## 普通 CSS
 
 ### 内联 style

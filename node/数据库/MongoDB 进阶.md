@@ -1,8 +1,5 @@
 # MongoDB 进阶
 
-
----
-
 ## 索引与查询优化
 
 > 本篇示例几乎都逐字摘自配套工程 `mongo-demo`（官方 `mongodb` 驱动 + Mongoose，见 `./code/mongo-demo/README.md`）。**本机没有 MongoDB 服务，需要连库的脚本均未实跑**；`readpref` 一段的枚举校验不连库，下方给出实测输出。唯一例外是「分片键常见坑点」——`sh.shardCollection(...)` 是 `mongosh` 的分片集群管理命令，驱动里没有对应 API，只能标为示意片段。

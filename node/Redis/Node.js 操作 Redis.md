@@ -1,8 +1,5 @@
 # Node.js 操作 Redis
 
-
----
-
 ## 安装与连接
 
 ### 安装 ioredis

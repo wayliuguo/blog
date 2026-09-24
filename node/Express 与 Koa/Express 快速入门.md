@@ -1,9 +1,5 @@
 # Express 快速入门
 
-> Express 是 Node.js 最流行的 Web 框架，也是 NestJS 的底层依赖。
-
----
-
 ## 先接上模块二：Express 站在哪一层
 
 模块二里我们用 `node:http` 手写过最小服务器（下面这段逐字摘自配套脚本 `code/express-basics`，本篇代码块均为 CommonJS 写法）：

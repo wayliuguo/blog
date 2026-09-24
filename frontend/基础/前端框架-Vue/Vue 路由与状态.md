@@ -1,7 +1,5 @@
 # Vue 路由与状态
 
-Vue 是单页应用（SPA），页面的切换并不依赖浏览器刷新，而是借助路由在内存中维护"当前 URL"并映射到对应组件。`vue-router`（Vue Router 4，配合 Vue 3）是官方路由方案；而跨组件共享状态、管理全局数据，则由轻量级的 `Pinia` 承担。本文覆盖 Vue Router 4 的路由表与 createRouter、history 模式、路由匹配与嵌套、动态路由、路由守卫、懒加载与编程式导航，以及 Pinia 的核心概念与组合式 API 实践，帮助你建立 Vue 路由 + 状态管理的完整知识框架。
-
 ## 路由基础与 createRouter
 
 前端路由的核心是**在不刷新页面**的前提下，实现 URL 与页面内容的一一对应。Vue Router 4 采用了全新的 `createRouter` + `createWebHistory` 组合式 API 来创建路由实例。

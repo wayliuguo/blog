@@ -1,9 +1,5 @@
 # IoC 与依赖注入原理
 
-> 你在 Controller 里写 `private readonly userService: UserService`，从不 `new`，它却能直接用。这一篇把"框架在背后到底做了什么"讲清楚——理解了它，NestJS 的 Module、Provider、`@Injectable()` 就不再是黑盒。
-
----
-
 ## 从"为什么不需要 new"说起
 
 假设没有 IoC，一个真实项目里的对象依赖会长成这样：

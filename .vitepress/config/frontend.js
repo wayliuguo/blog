@@ -268,13 +268,8 @@ export default [
                 text: '性能优化',
                 collapsed: false,
                 items: [
-                    { text: '性能优化总纲与指标量化', link: '/frontend/进阶/性能优化/性能优化总纲与指标量化' },
-                    { text: '加载性能与 LCP', link: '/frontend/进阶/性能优化/加载性能与%20LCP' },
-                    { text: '交互性能与 INP', link: '/frontend/进阶/性能优化/交互性能与%20INP' },
-                    { text: '视觉稳定与 CLS', link: '/frontend/进阶/性能优化/视觉稳定与%20CLS' },
-                    { text: '性能优化闭环', link: '/frontend/进阶/性能优化/性能优化闭环' },
-                    { text: '优化手段速查', link: '/frontend/进阶/性能优化/优化手段速查' },
-                    { text: 'Vue SPA 性能实战', link: '/frontend/进阶/性能优化/Vue%20SPA%20性能实战' },
+                    { text: '性能优化体系与指标', link: '/frontend/进阶/性能优化/性能优化体系与指标' },
+                    { text: '性能优化实战', link: '/frontend/进阶/性能优化/性能优化实战' },
                     { text: '模块总结（性能优化）', link: '/frontend/进阶/性能优化/总结' },
                     { text: '模块面试题（性能优化）', link: '/frontend/进阶/性能优化/面试题' }
                 ]

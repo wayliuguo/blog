@@ -1,9 +1,5 @@
 # NestJS 项目模板
 
-> 一个接近真实生产的 NestJS 项目配置，基于 NestJS CLI 生成，但整理了清晰的目录结构和最佳实践。参考 show-track-server 真实项目整理。
-
----
-
 ## 目录结构
 
 ```
