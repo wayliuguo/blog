@@ -2,6 +2,7 @@ import frontend from './config/frontend'
 import nav from './config/nav'
 import node from './config/node'
 import ai from './config/ai'
+import interview from './config/interview'
 
 module.exports = {
     title: "well's blog",
@@ -20,7 +21,8 @@ module.exports = {
         sidebar: {
             '/frontend/': frontend,
             '/node/': node,
-            '/ai': ai
+            '/ai': ai,
+            '/interview/': interview
         },
         // 添加 outline 配置以显示三级标题
         outline: {

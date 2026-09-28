@@ -13,5 +13,10 @@ export default [
         text: 'Node 后端',
         link: '/node/运行环境/Node.js 是什么',
         activeMatch: '/node/'
+    },
+    {
+        text: '面试',
+        link: '/interview/反问面试官',
+        activeMatch: '/interview/'
     }
 ]
