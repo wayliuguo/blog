@@ -8,5 +8,5 @@ hero:
     actions:
         - theme: brand
           text: 😊快速开始
-          link: /ai/claudeCode
+          link: /ai/coding-agent/claudeCode
 ---
