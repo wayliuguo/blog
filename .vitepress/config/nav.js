@@ -1,7 +1,7 @@
 export default [
     {
         text: 'AI',
-        link: '/ai/claudeCode',
+        link: '/ai/coding-agent/claudeCode',
         activeMatch: '/ai/'
     },
     {

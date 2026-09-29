@@ -1,0 +1,28 @@
+{
+  "name": "agent-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "intent": "tsx llm-access/intent-schema.ts",
+    "tool-calling": "tsx tool-calling/tools-schema.ts",
+    "agent-loop": "tsx agent-loop/agent-loop.ts",
+    "context": "tsx memory/context-manager.ts",
+    "cosine": "tsx embedding/cosine-similarity.ts",
+    "vector-store": "tsx embedding/in-memory-vector-store.ts",
+    "rag": "tsx rag/rag-retrieval.ts",
+    "langchain": "tsx langchain/langchain-agent.ts",
+    "langgraph": "tsx langgraph/langgraph-agent.ts",
+    "mcp-server": "tsx mcp/server.ts",
+    "mcp-client": "tsx mcp/client.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.1.0",
+    "zod": "^3.23.0"
+  }
+}
