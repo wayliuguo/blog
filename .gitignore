@@ -6,4 +6,5 @@ node_modules/
 .vitepress/verify-dist*
 .vitepress/verify-*
 .vitepress/build-check*.log
+.vitepress/build-*.log
 .workbuddy/tmp/
