@@ -1,0 +1,21 @@
+{
+    "name": "plugin-lab",
+    "version": "1.0.0",
+    "private": true,
+    "description": "跨工具插件实验：同一需求的 Rollup / webpack / Vite 三套实现与 unplugin 统一",
+    "scripts": {
+        "three-ways": "node three-ways.mjs",
+        "unplugin": "node unplugin-demo.mjs",
+        "ondemand": "node import-on-demand.mjs",
+        "ban": "node ban-api.mjs"
+    },
+    "devDependencies": {
+        "@babel/parser": "^7.24.0",
+        "@babel/traverse": "^7.24.0",
+        "rollup": "^4.14.0",
+        "unplugin": "^3.4.0",
+        "vite": "^8.0.0",
+        "webpack": "^5.90.0",
+        "webpack-cli": "^5.1.0"
+    }
+}

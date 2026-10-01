@@ -211,9 +211,8 @@ export default [
                     { text: '编译与 AST', link: '/frontend/进阶/构建体系/编译与%20AST' },
                     { text: '手写 mini-bundler', link: '/frontend/进阶/构建体系/手写%20mini-bundler' },
                     { text: 'webpack', link: '/frontend/进阶/构建体系/webpack' },
-                    { text: 'esbuild', link: '/frontend/进阶/构建体系/esbuild%20与%20Rust%20工具链' },
-                    { text: 'Rollup', link: '/frontend/进阶/构建体系/Rollup' },
                     { text: 'Vite', link: '/frontend/进阶/构建体系/Vite' },
+                    { text: 'Rollup', link: '/frontend/进阶/构建体系/Rollup' },
                     { text: '模块总结（构建体系）', link: '/frontend/进阶/构建体系/总结' },
                     { text: '模块面试题（构建体系）', link: '/frontend/进阶/构建体系/面试题' }
                 ]

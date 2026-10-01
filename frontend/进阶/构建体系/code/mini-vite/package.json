@@ -1,0 +1,9 @@
+{
+    "name": "mini-vite",
+    "version": "1.0.0",
+    "private": true,
+    "description": "几十行 dev server 最小内核：按 URL 返回、import 原样保留、只转被请求到的模块",
+    "scripts": {
+        "mini": "node index.mjs"
+    }
+}

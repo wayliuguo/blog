@@ -1,0 +1,14 @@
+{
+    "name": "rollup-lab",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Rollup 库打包实验：external + 多格式 + 手写插件 + 体积门禁",
+    "scripts": {
+        "build": "rollup -c rollup.config.mjs",
+        "mini:cjs": "node mini-cjs.mjs"
+    },
+    "devDependencies": {
+        "acorn": "^8.11.0",
+        "rollup": "^4.14.0"
+    }
+}

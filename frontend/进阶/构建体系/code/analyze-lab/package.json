@@ -1,0 +1,12 @@
+{
+    "name": "analyze-lab",
+    "version": "1.0.0",
+    "private": true,
+    "description": "产物体积分析：四种打包姿势对照、tree-shaking 验证、代码分割、压缩对照",
+    "scripts": {
+        "analyze": "node optimize.cjs"
+    },
+    "devDependencies": {
+        "esbuild": "^0.28.0"
+    }
+}
