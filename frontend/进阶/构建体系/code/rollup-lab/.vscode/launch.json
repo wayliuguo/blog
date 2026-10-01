@@ -1,0 +1,17 @@
+{
+    // 在 rollup-lab 目录打开工作区，F5 即可调试 rollup 构建。
+    // 断点直接打在 plugins/*.mjs、rollup.config.mjs 里就能命中。
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "调试 rollup 构建",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "build"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ]
+}

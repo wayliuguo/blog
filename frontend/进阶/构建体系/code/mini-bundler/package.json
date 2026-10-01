@@ -1,0 +1,15 @@
+{
+    "name": "mini-bundler",
+    "version": "1.0.0",
+    "private": true,
+    "description": "手写打包器：模块图 / ESM→CJS 转换 / 运行时",
+    "scripts": {
+        "mini": "node index.cjs",
+        "cycle": "node index.cjs src/cycle/entry.js",
+        "tdz": "node index.cjs src/cycle-tdz/entry.js"
+    },
+    "devDependencies": {
+        "acorn": "^8.11.0",
+        "magic-string": "^0.30.0"
+    }
+}

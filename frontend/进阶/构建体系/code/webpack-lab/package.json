@@ -1,0 +1,21 @@
+{
+    "name": "webpack-lab",
+    "version": "1.0.0",
+    "private": true,
+    "description": "webpack 生产构建实验：Vue 3 单入口 + 手写 loader/plugin + 路由懒加载 + 代码分割 + 压缩",
+    "scripts": {
+        "build": "webpack --config webpack.config.cjs",
+        "preview": "webpack serve --config webpack.config.cjs"
+    },
+    "dependencies": {
+        "vue": "^3.5.43",
+        "vue-router": "^4.6.4"
+    },
+    "devDependencies": {
+        "terser": "^5.51.2",
+        "vue-loader": "^17.4.2",
+        "webpack": "^5.90.0",
+        "webpack-cli": "^5.1.0",
+        "webpack-dev-server": "^6.0.0"
+    }
+}

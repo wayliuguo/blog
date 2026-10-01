@@ -42,7 +42,7 @@ mini-bundler/src/
 └── utils/upper.js    叶子模块
 ```
 
-> 摘自 `./code/build-lab/mini-bundler/src/entry.js`
+> 摘自 `./code/mini-bundler/src/entry.js`
 
 ```js
 // 入口：四种 import 形式各用一遍
@@ -59,10 +59,9 @@ console.log('版本：' + config.version)
 
 `src/` 下放了一份 `package.json`（`{"type": "module"}`），所以这些文件可以被 Node 直接按 ESM 执行——这正是后面做对照实验的前提。
 
-> 摘自 `./code/build-lab/mini-bundler/bundle.cjs`（运行：`npm run mini`）
+> 摘自 `./code/mini-bundler/index.cjs`（运行：`npm run mini`）
 
 ```js
-const ROOT = __dirname
 const ENTRY = path.resolve(ROOT, process.argv[2] || 'src/entry.js')
 const OUT_FILE = path.join(ROOT, 'dist', 'bundle.js')
 ```
@@ -91,8 +90,8 @@ const OUT_FILE = path.join(ROOT, 'dist', 'bundle.js')
   + __require(4)
 
 ---- 3. 产物 ----
-  写出 dist/bundle.js：2035 字节
-  源码合计 878 字节 → 产物是源码的 2.32 倍（差额是运行时 + 包装）
+  写出 dist/bundle.js：2288 字节
+  源码合计 909 字节 → 产物是源码的 2.52 倍（差额是运行时 + 包装）
 
 ---- 4. 执行结果对照 ----
   原生 ESM：node src/entry.js
@@ -115,7 +114,7 @@ const OUT_FILE = path.join(ROOT, 'dist', 'bundle.js')
 
 打包器拿到的只是字符串 `'./greet.js'`，得先算出它到底是谁：
 
-> 摘自 `./code/build-lab/mini-bundler/bundle.cjs`
+> 摘自 `./code/mini-bundler/lib/resolve.cjs`
 
 ```js
 /**
@@ -151,7 +150,7 @@ function resolveId(specifier, importer) {
 
 ## 四、建图：DFS + 「先登记再递归」
 
-> 摘自 `./code/build-lab/mini-bundler/bundle.cjs`（运行：`npm run mini`）
+> 摘自 `./code/mini-bundler/lib/graph.cjs`（运行：`npm run mini`）
 
 ```js
 /** @type {Map<string, {id:number, file:string, code:string, ast:object, deps:Array<{spec:string,id:number}>}>} 绝对路径 → 模块记录 */
@@ -195,7 +194,7 @@ function collect(file) {
 
 AST 拿到手，剩下的就是把 ESM 语法映射成 CJS 语义。因为要**原地改写**（其余代码一行不动、行号尽量不变），这里用 `magic-string`：
 
-> 摘自 `./code/build-lab/mini-bundler/bundle.cjs`
+> 摘自 `./code/mini-bundler/lib/transform.cjs`
 
 ```js
 /**
@@ -246,7 +245,7 @@ function renderImport(node, id) {
 
 export 侧的处理策略是「**就地删关键字 + 末尾统一赋值**」：
 
-> 摘自 `./code/build-lab/mini-bundler/bundle.cjs`
+> 摘自 `./code/mini-bundler/lib/transform.cjs`
 
 ```js
         } else if (node.type === 'ExportDefaultDeclaration') {
@@ -267,7 +266,7 @@ export 侧的处理策略是「**就地删关键字 + 末尾统一赋值**」：
 
 实测产物里三个模块的 export 部分：
 
-> 摘自 `./code/build-lab/mini-bundler/dist/bundle.js`
+> 摘自 `./code/mini-bundler/dist/bundle.js`
 
 ```
     // 1: src/greet.js
@@ -295,7 +294,7 @@ export 侧的处理策略是「**就地删关键字 + 末尾统一赋值**」：
 
 ## 七、运行时：缓存的写入时机决定一切
 
-> 摘自 `./code/build-lab/mini-bundler/bundle.cjs`
+> 摘自 `./code/mini-bundler/lib/generate.cjs`
 
 ```js
 /**
@@ -338,7 +337,7 @@ function generate(list) {
 
 先看函数导出（`a.js` 导出 `function a`，`b.js` 在顶层就读它）：
 
-> 摘自 `./code/build-lab/mini-bundler/src/cycle/b.js`
+> 摘自 `./code/mini-bundler/src/cycle/b.js`
 
 ```js
 import { a } from './a.js'
@@ -352,7 +351,7 @@ export function b() {
 }
 ```
 
-实测输出（`npm run mini:cycle`）：
+实测输出（`npm run cycle`）：
 
 ```
 ---- 4. 执行结果对照 ----
@@ -382,7 +381,7 @@ export function b() {
 
 换成 `const` 导出，差别会从「值不同」升级成「行为不同」：
 
-> 摘自 `./code/build-lab/mini-bundler/src/cycle-tdz/b.js`
+> 摘自 `./code/mini-bundler/src/cycle-tdz/b.js`
 
 ```js
 import { a, A_NAME } from './a.js'
@@ -396,7 +395,7 @@ export function b() {
 }
 ```
 
-实测输出（`npm run mini:tdz`）：
+实测输出（`npm run tdz`）：
 
 ```
 ---- 4. 执行结果对照 ----
@@ -434,25 +433,30 @@ export function b() {
 
 ## 配套代码
 
-本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。
+本篇示例来自 `code/mini-bundler`（**独立项目**，首次运行前先 `npm install`）。打包器主体按「四件事」拆进 `lib/`，一个文件一个概念，`index.cjs` 只做编排与结果打印。
 
 | 文件 | 作用 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/build-lab/mini-bundler/bundle.cjs` | 打包器主体：依赖解析 / 建图 / 转换 / 生成 / 对照执行 | 三 · 四 · 五 · 六 · 七 |
-| `./code/build-lab/mini-bundler/src/entry.js` | 入口：四种 import 形式各用一遍 | 二、跑起来 |
-| `./code/build-lab/mini-bundler/src/greet.js` | 具名导出 + 依赖叶子模块 | 六、三种 export |
-| `./code/build-lab/mini-bundler/src/config.js` | `export default` + `export { x as y }` | 六、三种 export |
-| `./code/build-lab/mini-bundler/src/side-effect.js` | 无导出的副作用模块 | 五、四种 import |
-| `./code/build-lab/mini-bundler/src/utils/upper.js` | 叶子模块（相对路径多一层） | 三、依赖解析 |
-| `./code/build-lab/mini-bundler/src/cycle/b.js` | 循环依赖：函数导出在顶层被读 | 八、循环依赖 |
-| `./code/build-lab/mini-bundler/src/cycle-tdz/b.js` | 循环依赖：const 导出在顶层被读 | 八、循环依赖 |
-| `./code/build-lab/mini-bundler/src/package.json` | `{"type":"module"}`，让源码能被原生 ESM 直接跑（对照的前提） | 二、跑起来 |
+| `./code/mini-bundler/index.cjs` | 主流程编排：建图 → 逐个转换 → 生成产物 → 对照执行 | 二 |
+| `./code/mini-bundler/lib/root.cjs` | 项目根与相对路径工具（日志里短路径） | — |
+| `./code/mini-bundler/lib/resolve.cjs` | 依赖解析：相对路径 → 磁盘上的真实文件 | 三 |
+| `./code/mini-bundler/lib/graph.cjs` | 建图：DFS 收集模块（防环 + 去重） | 四 |
+| `./code/mini-bundler/lib/transform.cjs` | 转换：ESM → CJS（import 与 export 两侧） | 五 · 六 |
+| `./code/mini-bundler/lib/generate.cjs` | 生成：模块表 + 精简运行时 | 七 |
+| `./code/mini-bundler/src/entry.js` | 入口：四种 import 形式各用一遍 | 二、跑起来 |
+| `./code/mini-bundler/src/greet.js` | 具名导出 + 依赖叶子模块 | 六、三种 export |
+| `./code/mini-bundler/src/config.js` | `export default` + `export { x as y }` | 六、三种 export |
+| `./code/mini-bundler/src/side-effect.js` | 无导出的副作用模块 | 五、四种 import |
+| `./code/mini-bundler/src/utils/upper.js` | 叶子模块（相对路径多一层） | 三、依赖解析 |
+| `./code/mini-bundler/src/cycle/b.js` | 循环依赖：函数导出在顶层被读 | 八、循环依赖 |
+| `./code/mini-bundler/src/cycle-tdz/b.js` | 循环依赖：const 导出在顶层被读 | 八、循环依赖 |
+| `./code/mini-bundler/src/package.json` | `{"type":"module"}`，让源码能被原生 ESM 直接跑（对照的前提） | 二、跑起来 |
 
-运行：`cd code/build-lab && npm install`，然后
+运行：`cd code/mini-bundler && npm install`，然后
 
 - `npm run mini` —— 正常项目，产物与原生 ESM 逐行对照
-- `npm run mini:cycle` —— 循环依赖（函数导出）
-- `npm run mini:tdz` —— 循环依赖（const 导出）
+- `npm run cycle` —— 循环依赖（函数导出）
+- `npm run tdz` —— 循环依赖（const 导出）
 
 ## 参考
 

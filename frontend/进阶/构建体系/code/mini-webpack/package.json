@@ -1,0 +1,12 @@
+{
+    "name": "mini-webpack",
+    "version": "1.0.0",
+    "private": true,
+    "description": "约百行最小 webpack：五对象流水线（Compiler → Compilation → Module → Chunk → Asset）+ 可运行产物",
+    "scripts": {
+        "mini": "node index.cjs"
+    },
+    "devDependencies": {
+        "acorn": "^8.11.0"
+    }
+}

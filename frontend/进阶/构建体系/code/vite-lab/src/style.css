@@ -1,0 +1,17 @@
+@import './base.css';
+
+.title {
+    color: #646cff;
+}
+
+.tip {
+    color: #444;
+}
+
+.btn {
+    padding: 6px 14px;
+    border: 1px solid #646cff;
+    background: #fff;
+    color: #646cff;
+    cursor: pointer;
+}

@@ -1,0 +1,14 @@
+{
+    "name": "bench",
+    "version": "1.0.0",
+    "private": true,
+    "description": "构建全景实测：200 个模块下 esbuild / rollup / webpack 的耗时与体积对照",
+    "scripts": {
+        "bench": "node run.cjs"
+    },
+    "devDependencies": {
+        "esbuild": "^0.28.0",
+        "rollup": "^4.14.0",
+        "webpack": "^5.90.0"
+    }
+}

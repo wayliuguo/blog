@@ -16,7 +16,7 @@
 
 拿一段最普通的代码看看解析结果：
 
-> 摘自 `./code/build-lab/ast-lab/parse.cjs`（运行：`npm run ast`）
+> 摘自 `./code/ast-lab/parse.cjs`（运行：`npm run parse`）
 
 ```js
 const code = `
@@ -63,7 +63,7 @@ x, add, a, b
 
 先写一个 15 行的朴素遍历，感受一下它能做什么、不能做什么：
 
-> 摘自 `./code/build-lab/ast-lab/parse.cjs`（运行：`npm run ast`）
+> 摘自 `./code/ast-lab/parse.cjs`（运行：`npm run parse`）
 
 ```js
 const names = []
@@ -85,7 +85,7 @@ walk(ast)
 
 一个能立刻理解的转换：**生产环境移除 `console.log`**。
 
-> 摘自 `./code/build-lab/ast-lab/transform.cjs`（运行：`npm run ast`）
+> 摘自 `./code/ast-lab/transform.cjs`（运行：`npm run transform`）
 
 ```js
 traverse(ast, {
@@ -123,7 +123,7 @@ const n = 1;
 
 再演示一次"插入"而不是"替换"：
 
-> 摘自 `./code/build-lab/ast-lab/transform.cjs`（运行：`npm run ast`）
+> 摘自 `./code/ast-lab/transform.cjs`（运行：`npm run transform`）
 
 ```js
 traverse(ast2, {
@@ -152,7 +152,7 @@ function f() {
 
 Babel 插件就是一个函数，返回 `{ name, visitor }`。下面这个插件把 `__DEV__` 在编译期替换成布尔字面量——这是 tree-shaking 的常见前置手段：
 
-> 摘自 `./code/build-lab/ast-lab/custom-plugin.cjs`（运行：`npm run ast:plugin`）
+> 摘自 `./code/ast-lab/custom-plugin.cjs`（运行：`npm run plugin`）
 
 ```js
 function replaceDevFlag({ types: t }) {
@@ -212,7 +212,7 @@ var a = [1, 2].map(function (x) {
 
 改几百个文件时，正则替换是灾难。AST 替换和正则替换的差别，实测一眼可见：
 
-> 摘自 `./code/build-lab/ast-lab/codemod.cjs`（运行：`npm run ast:codemod`）
+> 摘自 `./code/ast-lab/codemod.cjs`（运行：`npm run codemod`）
 
 ```js
 const tricky = 'const s = \'React.createElement("div")\'  // 字符串里长得一模一样'
@@ -401,16 +401,16 @@ File                                ← parse() 的返回值，代表「一个�
 
 ## 配套代码
 
-本篇示例来自 `code/build-lab`（独立的 npm 项目，首次运行前先 `npm install`）。
+本篇示例来自 `code/ast-lab`（独立的 npm 项目，首次运行前先 `npm install`）。
 
 | 文件 | 作用 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/build-lab/ast-lab/parse.cjs` | 解析源码看 AST 结构 + 手写朴素遍历 | 二、AST 长什么样 · 三、手工遍历 |
-| `./code/build-lab/ast-lab/transform.cjs` | 替换 console.log、插入语句，演示 generate | 四、transform |
-| `./code/build-lab/ast-lab/custom-plugin.cjs` | 手写 Babel 插件：`__DEV__` 编译期替换 | 五、写插件 |
-| `./code/build-lab/ast-lab/codemod.cjs` | codemod 批量改写 + 正则误伤对照 | 六、codemod |
+| `./code/ast-lab/parse.cjs` | 解析源码看 AST 结构 + 手写朴素遍历 | 二、AST 长什么样 · 三、手工遍历 |
+| `./code/ast-lab/transform.cjs` | 替换 console.log、插入语句，演示 generate | 四、transform |
+| `./code/ast-lab/custom-plugin.cjs` | 手写 Babel 插件：`__DEV__` 编译期替换 | 五、写插件 |
+| `./code/ast-lab/codemod.cjs` | codemod 批量改写 + 正则误伤对照 | 六、codemod |
 
-运行：`cd code/build-lab && npm install && npm run ast`，再看 `npm run ast:plugin` 与 `npm run ast:codemod`。
+运行：`cd code/ast-lab && npm install`，然后 `npm run parse`（解析）、`npm run transform`（改写）、`npm run plugin`（手写插件）、`npm run codemod`（批量改写）。
 
 ## 参考
 
