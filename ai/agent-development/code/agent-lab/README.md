@@ -7,15 +7,21 @@
 
 ```bash
 npm install          # 装 tsx / typescript / zod / @modelcontextprotocol/*
-npm run intent       # Structured Output + Zod 意图解析
 npm run tool-calling # Tool Calling 的 function schema
+npm run tool-closure # 单轮 Tool Calling 闭环：选工具 → 执行 → 回灌 → 二次调用
 npm run agent-loop   # 最小 Agent Loop（mock LLM）
+npm run registry     # ToolRegistry：Zod 校验 + 四步收口 invoke
 npm run context      # 按轮次裁剪上下文
+npm run summary      # Rolling Summary 压缩历史（mock LLM 摘要）
+npm run memory-extract # Memory Extractor 提取长期记忆
 npm run cosine       # 余弦相似度
 npm run vector-store # 内存向量库 + TopK
 npm run rag          # RAG 检索本质（伪 embedding）
+npm run token-chunk  # Token-aware 递归切块 + 保留标题路径
+npm run rag-pipeline # 文档入库流水线：Loader/Parser/切块/checksum 去重/事务写入
 npm run langchain    # LangChain 风格工具封装 + 消息闭环（零依赖镜像）
 npm run langgraph    # LangGraph 风格状态图（零依赖镜像）
+npm run workflow     # 生成 → 校验分支 → 暂停审核 → 恢复（零依赖镜像）
 npm run mcp-server   # 天气 MCP Server（需 @modelcontextprotocol/server）
 npm run mcp-client   # 天气 MCP Client（需 @modelcontextprotocol/client）
 ```
@@ -29,16 +35,22 @@ npm run mcp-client   # 天气 MCP Client（需 @modelcontextprotocol/client）
 
 | 子模块 / 文件 | 演示的机制 | 对应篇目 |
 | ---- | ---- | ---- |
-| `llm-access/intent-schema.ts` | Structured Output + Zod 运行时校验 | 第 1 篇（Agent 是什么） |
 | `tool-calling/tools-schema.ts` | Tool Calling 的 function schema | 第 2 篇（Tool Calling） |
+| `tool-calling/tool-closure.ts` | 单轮 Tool Calling 闭环（tool_call_id 回灌） | 第 2 篇（Tool Calling） |
 | `agent-loop/agent-tool.ts` | 统一工具协议 AgentTool | 第 3 篇（Agent Loop） |
+| `agent-loop/tool-registry.ts` | ToolRegistry：Zod 校验 + 四步收口 invoke | 第 3 篇（Agent Loop） |
 | `agent-loop/agent-loop.ts` | 最小 Agent Loop | 第 3 篇（Agent Loop） |
 | `memory/context-manager.ts` | 按对话轮次裁剪历史 | 第 4 篇（上下文与记忆） |
+| `memory/rolling-summary.ts` | Rolling Summary 压缩历史（mock LLM） | 第 4 篇（上下文与记忆） |
+| `memory/memory-extractor.ts` | Memory Extractor 提取长期记忆 | 第 4 篇（上下文与记忆） |
 | `embedding/cosine-similarity.ts` | 余弦相似度 | 第 5 篇（Embedding 与向量检索） |
 | `embedding/embedding-provider.interface.ts` | Embedding 抽象解耦 | 第 5 篇 |
 | `embedding/in-memory-vector-store.ts` | 内存向量库 + TopK | 第 5 篇 |
 | `rag/rag-retrieval.ts` | RAG 检索本质（余弦 TopK） | 第 6 篇（RAG） |
+| `rag/token-chunker.ts` | Token-aware 递归切块 + 保留标题路径 | 第 6 篇（RAG） |
+| `rag/document-pipeline.ts` | 入库流水线：Loader/Parser/checksum 去重/事务 | 第 6 篇（RAG） |
 | `langchain/langchain-agent.ts` | LangChain 风格工具封装 + 消息闭环（零依赖镜像） | 第 7 篇（LangChain） |
 | `langgraph/langgraph-agent.ts` | LangGraph 风格状态图（零依赖镜像） | 第 8 篇（LangGraph） |
+| `langgraph/workflow.ts` | 生成 → 校验分支 → 暂停审核 → 恢复（零依赖镜像） | 第 8 篇（LangGraph） |
 | `mcp/server.ts` | MCP Server：registerTool + stdio 传输 | 第 9 篇（MCP） |
 | `mcp/client.ts` | MCP Client：connect / listTools / callTool | 第 9 篇（MCP） |

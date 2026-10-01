@@ -11,11 +11,26 @@ import { fileURLToPath } from 'node:url'
 
 async function main() {
   const client = new Client({ name: 'weather-client', version: '1.0.0' })
-  const transport = new StdioClientTransport({
-    command: process.execPath,
-    args: [fileURLToPath(new URL('./server.js', import.meta.url))],
-    stderr: 'inherit',
-  })
+
+  // tsx 直跑（源码态）启动 server.ts 需经 tsx；编译后（dist 态）直接 node server.js
+  const isTs = import.meta.url.endsWith('.ts')
+  const serverPath = fileURLToPath(
+    new URL(isTs ? './server.ts' : './server.js', import.meta.url),
+  )
+  const tsxCli = fileURLToPath(
+    new URL('../node_modules/tsx/dist/cli.mjs', import.meta.url),
+  )
+  const transport = isTs
+    ? new StdioClientTransport({
+        command: process.execPath,
+        args: [tsxCli, serverPath],
+        stderr: 'inherit',
+      })
+    : new StdioClientTransport({
+        command: process.execPath,
+        args: [serverPath],
+        stderr: 'inherit',
+      })
 
   try {
     await client.connect(transport)
