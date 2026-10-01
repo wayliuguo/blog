@@ -4,15 +4,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "intent": "tsx llm-access/intent-schema.ts",
-    "tool-calling": "tsx tool-calling/tools-schema.ts",
+        "tool-calling": "tsx tool-calling/tools-schema.ts",
+    "tool-closure": "tsx tool-calling/tool-closure.ts",
     "agent-loop": "tsx agent-loop/agent-loop.ts",
+    "registry": "tsx agent-loop/tool-registry.ts",
     "context": "tsx memory/context-manager.ts",
+    "summary": "tsx memory/rolling-summary.ts",
+    "memory-extract": "tsx memory/memory-extractor.ts",
     "cosine": "tsx embedding/cosine-similarity.ts",
     "vector-store": "tsx embedding/in-memory-vector-store.ts",
     "rag": "tsx rag/rag-retrieval.ts",
+    "chunk": "tsx rag/token-chunker.ts",
+    "token-chunk": "tsx rag/token-chunker.ts",
+    "rag-pipeline": "tsx rag/document-pipeline.ts",
     "langchain": "tsx langchain/langchain-agent.ts",
     "langgraph": "tsx langgraph/langgraph-agent.ts",
+    "workflow": "tsx langgraph/workflow.ts",
     "mcp-server": "tsx mcp/server.ts",
     "mcp-client": "tsx mcp/client.ts"
   },
@@ -23,6 +30,6 @@
   "dependencies": {
     "@modelcontextprotocol/client": "^2.0.0",
     "@modelcontextprotocol/server": "^2.1.0",
-    "zod": "^3.23.0"
+    "zod": "^4.6.5"
   }
 }

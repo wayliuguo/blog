@@ -1,83 +1,61 @@
-# MCP：从零实现一个天气查询服务
+# MCP：从零实现天气查询服务
 
-## MCP 解决的是"工具怎么被统一发现与调用"：它站在 Tool Calling 上一层
+给 LLM 接工具，写 Function Calling 就够了；但工具一多、跨项目复用时，每个应用都要为每个工具写一遍接入代码——M 个应用 × N 个工具 = M×N 份胶水代码。MCP（Model Context Protocol，模型上下文协议）把这件事协议化：工具实现一次成 Server，任何支持 MCP 的应用都能即插即用，M×N 变成 M+N。本篇整体按源文章的推进顺序（开头的 M×N 困境与 USB-C 类比为本地补充的引入），从「为什么需要协议」讲到「亲手写出一对能真实查天气的 Server 与 Client」。
 
-前面几篇从普通工具调用开始，逐步接触了 Agent 循环、记忆、RAG，以及 LangChain 和 LangGraph。新的问题随之出现：如果写好了一个天气工具，想让自己的 Agent、其他支持 MCP 的应用都能使用，应该怎么把它提供出去？
+## 先看问题：没有协议时的 M×N 困境
 
-MCP（Model Context Protocol，模型上下文协议）就是为"应用与外部工具、数据之间的交互"提供统一约定。它**不替你写业务逻辑**——天气查询怎么请求、怎么解析仍由我们实现；它只负责让调用方以统一方式"发现能力、调用能力、交换上下文"。对前端开发者而言，可以把它理解为：给已有的天气函数加一层标准化调用接口，这层接口除了执行函数，还提供工具名称、用途和参数结构，便于应用把它接入模型的工具调用流程。
+- 应用 A（你的 Agent）要用天气工具：写一遍 Function Calling 的 schema + 调用 + 错误处理。
+- 应用 B（同事的 IDE 插件）也要天气：再写一遍。
+- 工具侧每多一个消费方，接入代码就多一份；工具本身改了参数，所有消费方跟着改。
+- 这是典型的集成爆炸：**每新增一个应用或一个工具，工作量都是乘法**。
 
-```
-手写工具：    函数就在同一程序里，直接 await getWeather('西安')
-MCP 工具：    函数跑在独立 Server，调用方先"发现"再"调用"，协议统一
-```
+问题的根源：工具的定义（schema）、执行（HTTP 调用）、传输（怎么把结果送回模型）全部耦合在每个应用里。解法和数据库驱动、LSP 一样——**抽出一层协议**，把「工具是什么」和「工具怎么被调用」标准化。
 
-> 结论先行：Tool Calling 解决"模型怎么表达要用的工具和参数"；MCP 解决"应用怎么发现、调用外部能力并交换上下文"——后者站在前者上一层。
+## MCP 是什么：AI 应用的 USB-C
 
-## 三个角色：Host / Client / Server 决定调用关系
+- MCP 是 Anthropic 2024 年开源的协议，定位是「AI 应用的 USB-C 接口」：任何 AI 应用（Host）通过统一协议连接任何工具提供方（Server）。
+- 类比已成功的先例：LSP（Language Server Protocol）把「编辑器 × 语言」的 M×N 变成 M+N，MCP 把「AI 应用 × 工具」做同一件事。
+- 协议本身基于 JSON-RPC 2.0，传输层可插拔——本地进程走 stdio，远程服务走 Streamable HTTP。
 
-弄清 Host、Client、Server，调用关系就清楚了：Host 承载对话和模型调用并决定如何使用工具结果；Client 连接服务、发现并调用工具；Server 提供 `get_weather` 这类能力。以后接入 Agent 时，Host 可以是我们编写的 NestJS 应用，MCP Client 是其中的一个组件，天气 Server 则作为独立程序运行。模型只负责"调用哪个工具、传入什么参数"，真正发送调用、接收结果并把结果放回对话的，是应用程序。
+## 架构三角色：Host、Client、Server
 
-| 角色 | 中文含义 | 天气示例中负责什么 |
+| 角色 | 是谁 | 职责 |
 | ---- | ---- | ---- |
-| Host | 宿主应用 | 承载对话和模型调用，决定如何使用工具结果 |
-| Client | 客户端组件 | 连接天气服务，发现并调用工具 |
-| Server | 服务端程序 | 提供 `get_weather`，请求天气接口并返回结果 |
+| Host | AI 应用本体（Claude Desktop、IDE、你的 Agent） | 管理会话、决定何时调工具、把结果喂给 LLM |
+| Client | Host 内部的连接器 | 与某个 Server 保持 1:1 连接，转发协议消息 |
+| Server | 工具提供方进程 | 声明自己有哪些能力（工具/资源/提示），执行并返回结果 |
 
-## MCP 提供三类能力：Tools / Resources / Prompts
+- 一个 Host 可以同时连多个 Server（文件系统 Server + 数据库 Server + 天气 Server），每个 Server 对应一个 Client。
+- Server 不接触 LLM：它只回答「我有什么工具」和「工具执行结果是什么」，**「要不要调、怎么拼进 Context」是 Host 的事**。这条边界让 Server 可以做到极薄。
 
-MCP 服务可以提供三类常用能力，本文实际只实现 Tools，另外两类是帮助理解的设计示例（下面的服务没有注册它们）：Tools 是可执行的操作（调用 `get_weather` 查某个城市）；Resources 是应用可以读取的上下文数据（读取 `weather://supported-cities` 了解支持哪些城市）；Prompts 是可获取并复用的提示词模板（获取"根据天气给出出行建议"的模板）。资源需要由应用读取并按需加入上下文，提示词模板也不会自动调用模型——应用负责组织这些步骤。
+## Server 能提供什么：三类能力
 
-| 能力 | 含义 | 天气场景中的例子 |
-| ---- | ---- | ---- |
-| Tools | 可执行的操作 | 调用 `get_weather` 查询某个城市 |
-| Resources | 应用可读取的上下文数据 | 读取 `weather://supported-cities` |
-| Prompts | 可复用的消息模板 | 获取"根据天气给出出行建议"的模板 |
+- **Tools（工具）**：模型可主动调用的函数——本篇的 `get_weather` 属于这类，由模型决策触发。
+- **Resources（资源）**：可读取的数据（文件、数据库行），由应用侧拉取，不由模型触发。
+- **Prompts（提示模板）**：Server 预定义的提示词模板，供用户显式选择。
+- 本篇只实现 Tools——它对应前几篇 Function Calling 的能力，也是最常见的接入形态。
 
-## 两种传输：stdio 与 Streamable HTTP
+## 传输方式：先选 stdio
 
-MCP 把"消息约定"和"传输方式"分开。消息采用 JSON-RPC 2.0（即使两个程序在同一台机器，也可以用这种调用约定）。常用传输方式有两种：stdio 让客户端启动子进程、通过输入输出流交换消息，适合本地工具和学习调试；Streamable HTTP 支持流式交互，适合远程部署、供多个应用访问。本文使用 stdio，不需要 Express，也不需要监听 HTTP 端口；天气 Server 自己通过 HTTP 请求 Open-Meteo，与 Client/Server 之间使用 stdio 并不冲突。
+- **stdio**：Server 作为 Host 的子进程启动，协议消息走标准输入输出。零网络配置、天然隔离，本地工具首选。
+- **Streamable HTTP**：Server 独立部署，支持流式交互的 HTTP 传输，适合远程共享服务。
+- 传输层与业务代码解耦：同一份工具实现，换一行传输即可从本地迁到远程。
 
-| 方式 | 如何通信 | 适用场景 |
-| ---- | ---- | ---- |
-| stdio | 客户端启动子进程，通过输入输出流交换消息 | 本地工具和学习调试 |
-| Streamable HTTP | 客户端访问 HTTP 服务端点 | 远程部署，供多个应用访问 |
+## 动手：从零实现天气 MCP Server
 
-## 写 Server：把天气函数封装成 MCP 工具
+先写业务函数：查 Open-Meteo 的实时天气。城市表硬编码三个（重点是协议形态，不是数据源），响应用 zod 校验——外部 API 的返回同样不可信。
 
-为了把重点放在 MCP 上，示例先支持北京、上海、西安三个城市，直接内置经纬度；天气数据来自无需 Key 的 Open-Meteo。整段 `server.ts` 可以分成三层：业务函数 `getWeather(city)` 请求天气接口并校验整理数据；`server.registerTool(...)` 注册工具名称、说明、参数和执行函数；`StdioServerTransport` 通过标准输入输出与客户端通信。业务函数仍然是普通函数，以后换天气提供方主要改 `getWeather()`，对外仍可保持 `get_weather` 这个工具接口。`inputSchema` 用 `z.enum()` 限定城市，SDK 据此生成机器可读的 JSON Schema 并在执行前校验参数——参数校验只保证输入满足规则，不等于身份认证或权限检查。
-
-> 摘自 `code/agent-lab/mcp/server.ts`（运行：`npm run mcp-server`；需先 `npm install` 安装 `@modelcontextprotocol/server`）
-
+> 摘自 `code/agent-lab/mcp/server.ts`
 ```ts
-/**
- * 天气 MCP Server（stdio 传输）
- * 文章正文「从零实现一个天气查询服务」的配套代码。
- * 运行前需安装 SDK：npm install（已加入 @modelcontextprotocol/server / client）。
- *   npm run mcp-server   # 启动服务（stdio，需配合 Inspector 或 Client 调用）
- * 真实天气查询需要可访问 Open-Meteo 的网络；工具发现 / 参数校验无需网络。
- */
-import { McpServer } from '@modelcontextprotocol/server'
-import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'
-import { z } from 'zod'
-
 const cities = {
   北京: { latitude: 39.9042, longitude: 116.4074 },
   上海: { latitude: 31.2304, longitude: 121.4737 },
   西安: { latitude: 34.3416, longitude: 108.9398 },
 }
+```
 
-const weatherNames: Record<number, string> = {
-  0: '晴', 1: '大部晴朗', 2: '局部多云', 3: '阴',
-  45: '雾', 48: '雾凇',
-  51: '小毛毛雨', 53: '中等毛毛雨', 55: '强毛毛雨',
-  56: '轻微冻毛毛雨', 57: '强冻毛毛雨',
-  61: '小雨', 63: '中雨', 65: '大雨', 66: '轻微冻雨', 67: '强冻雨',
-  71: '小雪', 73: '中雪', 75: '大雪', 77: '米雪',
-  80: '小阵雨', 81: '中等阵雨', 82: '强阵雨',
-  85: '小阵雪', 86: '强阵雪',
-  95: '雷暴', 96: '雷暴伴小冰雹', 97: '强雷暴', 99: '雷暴伴大冰雹',
-}
-
+> 摘自 `code/agent-lab/mcp/server.ts`
+```ts
 async function getWeather(city: keyof typeof cities) {
   const location = cities[city]
   const url = new URL('https://api.open-meteo.com/v1/forecast')
@@ -115,7 +93,18 @@ async function getWeather(city: keyof typeof cities) {
     source: 'Open-Meteo',
   }
 }
+```
 
+注意两点：`AbortSignal.timeout(10_000)` 给外部调用兜底超时——工具挂起会拖死整个 Agent Loop；返回值是**结构化对象**而不是一段拼接文案，怎么呈现留给 Host。
+
+### 用 registerTool 把函数注册成 MCP 工具
+
+- `McpServer` 是 SDK 提供的 Server 封装：`registerTool(name, config, handler)` 三步把普通函数变成协议工具。
+- `description` 是给 LLM 看的——它决定模型能不能选对工具，写清「查什么城市、返回什么、数据来源」。
+- `inputSchema` 用 zod 定义参数：SDK 会把它转成 JSON Schema 随工具列表下发，Host 侧的 LLM 照此生成参数，Server 侧自动完成校验。
+
+> 摘自 `code/agent-lab/mcp/server.ts`
+```ts
 const server = new McpServer({ name: 'weather-server', version: '1.0.0' })
 server.registerTool(
   'get_weather',
@@ -134,7 +123,19 @@ server.registerTool(
     }
   },
 )
+```
 
+- 工具执行失败**不要抛异常了事**：返回 `isError: true` + 文本说明，让 LLM 把失败当观察（呼应 Agent Loop 篇的「错误即观察」）——模型看到失败原因还能重试或换参数。
+- 返回里的 `weatherNames` 是「天气代码 → 中文描述」的映射表，定义在配套代码 `server.ts` 顶部，正文不再重复贴出。
+- `z.enum(['北京', '上海', '西安'])` 把合法值收敛进 schema：模型传错城市会被校验层直接拦下，到不了业务函数。
+- 校验只保证「输入满足规则」，**不等于身份认证或权限检查**——谁能调用这个工具，要在 Host / 业务层另行控制。
+
+### 连上 stdio 传输
+
+`connect(new StdioServerTransport())` 之后，Server 就挂在标准输入输出上等协议消息；进程保持存活，直到 Host 断开。
+
+> 摘自 `code/agent-lab/mcp/server.ts`
+```ts
 async function main() {
   await server.connect(new StdioServerTransport())
   console.error('Weather MCP Server 已启动')
@@ -146,46 +147,48 @@ main().catch((error) => {
 })
 ```
 
-代码里还有三个容易忽略的细节：第一，`AbortSignal.timeout(10_000)` 给天气请求设了 10 秒超时，避免工具无限等待；第二，接口请求失败会返回 `isError: true`，客户端可据此区分天气数据与工具执行失败；第三，stdio 服务端的普通日志写到 `console.error()`——`console.log()` 会写入标准输出，而标准输出已承载协议消息，混入普通日志可能破坏通信。
+**踩坑：stdio 通道上禁止 `console.log()`。** stdio 传输的协议消息和普通输出共用同一条管道——`console.log` 的内容会混进 JSON-RPC 消息流，直接破坏通信。普通日志一律走 `console.error`（stderr），这也是源文章反复强调的第一坑。
 
-## 用 Inspector 验证：Tool Discovery 与 Tool Call
+## 再写一个自己的 Client
 
-先用官方调试工具 MCP Inspector 手动调用服务，验证工具发现与调用，这两种方式都可以在没有模型密钥的情况下验证工具。先编译生成 `dist/server.js`，再让 Inspector 启动 Server 并查询工具列表，这一步叫 **Tool Discovery（工具发现）**，结果应包含 `get_weather` 及其说明和参数结构；接着查询西安天气，客户端会启动 Server 子进程并通过 stdio 发送请求，返回 `content[0].text` 是一段 JSON 文本。`"`、`\n` 属于字符串转义：我们把 JSON 文本放进了 MCP 的文本内容块，它与独立的结构化结果字段是两个概念。
+Client 侧四步：构造 `Client` → `connect(transport)` 启动 Server 子进程并握手 → `listTools()` 发现工具 → `callTool()` 调用。这里让 Client 用 tsx 把 Server 作为子进程拉起（源码态直跑；编译后走 node 直启）。
 
-```
-pnpm run build
-pnpm dlx @modelcontextprotocol/inspector@2.8.0 --cli node dist/server.js --method tools/list
-pnpm dlx @modelcontextprotocol/inspector@2.8.0 --cli node dist/server.js --method tools/call --tool-name get_weather --tool-arg city=西安
-```
-
-想用浏览器界面，执行 `pnpm dlx @modelcontextprotocol/inspector@2.8.0 node dist/server.js`，打开终端给出的地址，连接服务后在工具页选择 `get_weather` 并填写城市即可。
-
-## 写自己的 Client：看清协议调用过程
-
-Inspector 帮我们完成了连接、发现工具和发起调用，现在把这些操作写进程序，看清协议调用过程。`client.ts` 有四个关键操作：`client.connect(transport)` 启动 Server 子进程并建立 MCP 通信；`client.listTools()` 获取工具名称、用途和参数结构；`client.callTool(...)` 调用指定工具并等待结果；`finally` 中的 `client.close()` 关闭连接并清理子进程。这里 `process.execPath` 获取当前 Node 可执行文件路径，服务端文件路径根据当前客户端模块位置计算，运行时不会依赖终端恰好位于哪个目录；调用中途出错时仍需要释放连接和子进程。客户端示例的 `console.log()` 可以使用，因为它通过子进程的管道与 Server 通信，需要避免写普通日志的是 Server 的协议输出流。
-
-> 摘自 `code/agent-lab/mcp/client.ts`（运行：`npm run mcp-client`；需先 `npm install` 安装 `@modelcontextprotocol/client`）
-
+> 摘自 `code/agent-lab/mcp/client.ts`
 ```ts
-/**
- * 天气 MCP Client（stdio 传输）
- * 文章正文「再写一个自己的 Client」的配套代码。
- *   npm run mcp-client   # 启动 Client：连接 Server → 列出工具 → 调用 get_weather(西安)
- * 注意：stdio 服务端的普通日志写到 console.error()，不要用 console.log() 输出普通日志，
- *       否则会混入协议消息流、破坏通信。
- */
 import { Client } from '@modelcontextprotocol/client'
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
 import { fileURLToPath } from 'node:url'
 
 async function main() {
   const client = new Client({ name: 'weather-client', version: '1.0.0' })
-  const transport = new StdioClientTransport({
-    command: process.execPath,
-    args: [fileURLToPath(new URL('./server.js', import.meta.url))],
-    stderr: 'inherit',
-  })
 
+  // tsx 直跑（源码态）启动 server.ts 需经 tsx；编译后（dist 态）直接 node server.js
+  const isTs = import.meta.url.endsWith('.ts')
+  const serverPath = fileURLToPath(
+    new URL(isTs ? './server.ts' : './server.js', import.meta.url),
+  )
+  const tsxCli = fileURLToPath(
+    new URL('../node_modules/tsx/dist/cli.mjs', import.meta.url),
+  )
+  const transport = isTs
+    ? new StdioClientTransport({
+        command: process.execPath,
+        args: [tsxCli, serverPath],
+        stderr: 'inherit',
+      })
+    : new StdioClientTransport({
+        command: process.execPath,
+        args: [serverPath],
+        stderr: 'inherit',
+      })
+```
+
+`stderr: 'inherit'` 让 Server 的普通日志透传到本进程终端——排障时能看到「Weather MCP Server 已启动」。
+
+### 发现工具与调用
+
+> 摘自 `code/agent-lab/mcp/client.ts`
+```ts
   try {
     await client.connect(transport)
     const { tools } = await client.listTools()
@@ -215,43 +218,64 @@ main().catch((error) => {
 })
 ```
 
-## 接到 Agent：MCP Client 放在调用工具的节点
+实跑输出（`npm run mcp-client`）：
 
-当前客户端写死了"查询西安"。接入模型后，城市和调用时机可以由模型根据用户问题提出，再由应用检查并执行。假设用户问"西安现在天气怎么样，出门需要注意什么"，应用可以这样组织流程：① 通过 MCP Client 获取工具列表；② 将工具名称、说明、参数结构转换成所用模型 API 支持的工具定义；③ 把用户问题和工具定义交给模型；④ 模型提出调用 `get_weather`，参数是 `city: "西安"`；⑤ 应用校验并执行调用，通过 MCP Client 获取天气结果；⑥ 按模型 API 的要求，把结果作为对应的工具消息放回对话；⑦ 模型基于天气数据生成回答，如果还要调用其他工具，应用继续执行循环。
-
+```txt
+可用工具： [ 'get_weather' ]
+{
+  "city": "西安",
+  "time": "2026-09-30T14:30",
+  "timezone": "Asia/Shanghai",
+  "weather": "多云",
+  "temperature": "18.4 °C",
+  "humidity": "62%",
+  "windSpeed": "2.1 m/s",
+  "source": "Open-Meteo"
+}
 ```
-模型工具调用  →  决定"调什么、传什么"
-MCP           →  决定"应用怎样发现、调用外部能力并交换上下文"
-Agent Loop    →  决定"应用怎样反复组织模型调用、工具执行和终止判断"
+
+天气数据是 Open-Meteo 的实时返回——这不是 mock：从 Client 发起 JSON-RPC、Server 收到 `tools/call`、zod 校验参数、fetch 外部 API、结果按协议回传，全链路都是真的。
+
+- `listTools()` 返回的工具描述（含 JSON Schema）就是将来塞给 LLM 的 Function 定义——**Host 侧不需要为天气工具写任何 schema**，协议已经带过来了。
+- 这就是 M×N → M+N 的兑现：Server 写一次，Claude Desktop、Cursor、你自己的 Agent 都能直接 `listTools` + `callTool`。
+
+## 用 Inspector 调试
+
+不想写 Client 也能调试 Server——官方 Inspector 提供图形界面：
+
+```bash
+npx @modelcontextprotocol/inspector tsx mcp/server.ts
 ```
 
-LangGraph 可以组织这些执行步骤，MCP Client 可以放在调用工具的节点中；循环次数、超时、成本预算和人工审核仍由应用控制。这个天气 Server 自身没有调用模型，所以不需要模型密钥，以后在 Host 中接入 DeepSeek 时再配置相应的模型调用即可。
+- 启动后浏览器打开本地页面，左侧填传输方式（stdio）与启动命令，Connect 后能看工具列表、手动填参调用、查看每条协议消息。
+- 排查「工具没被列出」「参数校验失败」时，Inspector 的消息面板比日志直观得多。
 
-## 调试清单：先查这几处
+不想开浏览器也可以走 CLI 模式，直接完成 Tool Discovery 与 Tool Call：
 
-调试时优先检查这几处：启动 Server 后一直没有结果，通常是 stdio 服务在等客户端请求，用 Inspector 或 Client 发起调用即可；提示找不到 `dist/server.js`，检查是否在修改源码后执行了 `pnpm run build`；参数校验失败，检查城市是否为"北京/上海/西安"之一；提示 `fetch failed` 或超时，检查当前网络能否访问天气接口（MCP 通信成功不代表外部 API 一定可达）；客户端提示消息解析失败，检查 Server 是否用 `console.log()` 输出了普通日志。
+```bash
+npx @modelcontextprotocol/inspector --cli tsx mcp/server.ts --method tools/list
+npx @modelcontextprotocol/inspector --cli tsx mcp/server.ts --method tools/call --tool-name get_weather --tool-arg city=西安
+```
 
-| 现象 | 优先检查 |
-| ---- | ---- |
-| 启动 Server 后一直没有结果 | stdio 服务正在等客户端请求，用 Inspector 或 Client 发起调用 |
-| 提示找不到 `dist/server.js` | 是否在修改源码后执行了 `pnpm run build` |
-| 参数校验失败 | 城市是否为"北京""上海""西安"之一 |
-| 提示 `fetch failed` 或超时 | 当前网络能否访问天气接口；MCP 通信成功不代表外部 API 一定可达 |
-| 客户端提示消息解析失败 | Server 是否使用了 `console.log()` 输出普通日志 |
+`tools/list` 的返回就是 Tool Discovery 的产物：工具名、描述与 JSON Schema 参数——将来接入真 Agent 时，交给 LLM 的 Function 定义就是这份清单。
 
-## 一个判断：Server 不调用模型，密钥在 Host 配
+## Client 与 Agent Loop 的关系
 
-MCP Server 只负责把"能力"标准化暴露出去，它自己不调用模型，因此不需要模型密钥；真正把 MCP 工具接入 Agent 的是 Host 应用，模型密钥（如 DeepSeek）在 Host 里配置。这样职责清晰：工具的实现与暴露归 Server，模型的决策与编排归 Host，二者通过 MCP 解耦。
+- 本篇的 Client 是「人肉 Host」：什么时候调、调什么参数，由我们硬编码。
+- 真正的 Host 把这两步交给 LLM：`listTools()` 的结果转成 Function 定义放进请求，模型回 `tool_calls` 后由 Host 执行——**把 `callTool` 换成「模型选的工具 + Client 调用」，就是前面手写的 Agent Loop**。
+- 换句话说：MCP 没有替代 Function Calling，它替换的是**工具的分发与接入层**。模型侧的决策循环一点没变。
+
+## 什么时候自己写 Server
+
+- 团队内部有稳定的业务能力（订单查询、内部 API 网关），多个 AI 应用都要用——包一层 MCP Server，一次实现处处接入。
+- 第三方能力优先找现成 Server（官方仓库已有文件系统、GitHub、数据库等），不要重复造轮子。
+- 只有一个应用、一个工具的简单场景，直接 Function Calling 更轻——协议本身也有握手、进程管理的成本。
 
 ## 配套代码
 
 | 脚本 | npm script | 对应小节 |
-| --- | --- | --- |
-| `code/agent-lab/mcp/server.ts` | `npm run mcp-server` | 写 Server：把天气函数封装成 MCP 工具 |
-| `code/agent-lab/mcp/client.ts` | `npm run mcp-client` | 写自己的 Client：看清协议调用过程 |
+| ---- | ---- | ---- |
+| `code/agent-lab/mcp/server.ts` | `npm run mcp-server` | 动手：从零实现天气 MCP Server |
+| `code/agent-lab/mcp/client.ts` | `npm run mcp-client` | 再写一个自己的 Client |
 
-## 参考
-
-- [Agent 模块总结](./总结.md)
-- [Agent 模块面试题](./面试题.md)
-- 上一篇见第 8 篇：LangGraph 有状态的流程编排；回到 [Agent 模块总结](./总结.md) 看全景
+`mcp-client` 全链路真实跑通（Open-Meteo 实时天气）；工具发现与参数校验不依赖网络。
