@@ -33,7 +33,7 @@
 | ---- | ---- | ---- | ---- |
 | `mini-bundler/` | `npm run mini` · `cycle` · `tdz` | 手写打包器：模块图 / ESM→CJS 转换 / 运行时，并与原生 ESM 对照执行 | 手写 mini-bundler |
 | `mini-webpack/` | `npm run mini` | 约百行最小 webpack：Compiler → Compilation → Module → Chunk → Asset 五对象流水线 | webpack 第八节 |
-| `mini-vite/` | `npm run mini` | 双引擎最小 Vite：同一插件容器跨 dev（按 URL 按需转换、不打包）/ build（全量建图、拼成一个文件），并打印钩子调用对照表 | Vite 第十节 |
+| `mini-vite/` | `npm run mini` | build 单引擎最小 Vite：插件容器 + 三种钩子调用约定 + 全量建图打包，并打印钩子触发次数 | Vite 第十节 |
 
 ## 目录结构
 
@@ -48,7 +48,7 @@
 | `analyze-lab/` | 体积对照实验（脚本自己生成 `src/` 与 `dist/`） |
 | `mini-bundler/` | 手写打包器：`index.cjs` 编排 + `lib/{resolve,graph,transform,generate,root}.cjs` + 被测源码 `src/`（含 `cycle/` 与 `cycle-tdz/` 两组循环依赖） |
 | `mini-webpack/` | 最小 webpack：`index.cjs` 编排 + `lib/{hook,compiler,compilation,module,resolver,graph,transpile,runtime,emit}.cjs` + 示例插件 `plugins/` + `src/` |
-| `mini-vite/` | 双引擎最小 Vite：`index.mjs` 编排 + `lib/{hook,plugin-container,resolve,module-graph,transform,server,build,emit}.mjs` + 示例插件 `plugins/` + 演示源码 `src/`（唯一依赖 `acorn`） |
+| `mini-vite/` | build 单引擎最小 Vite：`index.mjs` 编排 + `lib/{hook,plugin-container,resolve,module-graph,transform,build,emit}.mjs` + 示例插件 `plugins/` + 演示源码 `src/`（唯一依赖 `acorn`） |
 
 ## 断点调试
 

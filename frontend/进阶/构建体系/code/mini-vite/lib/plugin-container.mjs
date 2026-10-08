@@ -16,9 +16,8 @@ const CONFIG_HOOKS = ['config', 'configResolved']
 const CALL_HOOKS = ['buildStart', 'buildEnd', 'closeBundle', 'generateBundle']
 const FIRST_HOOKS = ['resolveId', 'load']
 const PIPE_HOOKS = ['transform', 'renderChunk', 'transformIndexHtml']
-const COLLECT_HOOKS = ['configureServer']
 
-const RUN_HOOKS = [...CALL_HOOKS, ...FIRST_HOOKS, ...PIPE_HOOKS, ...COLLECT_HOOKS]
+const RUN_HOOKS = [...CALL_HOOKS, ...FIRST_HOOKS, ...PIPE_HOOKS]
 const ALL_HOOKS = [...CONFIG_HOOKS, ...RUN_HOOKS]
 
 const TIER = { pre: 0, normal: 1, post: 2 }
@@ -47,9 +46,9 @@ function applyMatches(plugin, command, mode) {
  * @param {{command:'serve'|'build', mode?:string, root:string}} options
  */
 export function createPluginContainer(rawPlugins, options) {
-    const { command, root, mode = command === 'serve' ? 'development' : 'production' } = options
+    const { command, root, mode = 'production' } = options
 
-    /** 每个钩子被触发的次数，供 §十 的 dev vs build 对照表使用 */
+    /** 每个钩子被触发的次数，供 §十 的钩子触发次数表使用 */
     const hookCalls = Object.fromEntries(ALL_HOOKS.map(h => [h, 0]))
 
     const context = plugin => ({
@@ -180,13 +179,6 @@ export function createPluginContainer(rawPlugins, options) {
             return hooks.renderChunk.pipe(code, chunk, renderOptions)
         },
 
-        /** 配置 dev server：收齐各插件返回的 post hook（排在内置中间件之后） */
-        async configureServer(server) {
-            count('configureServer')
-            const results = await hooks.configureServer.collect(server)
-            return results.filter(r => typeof r === 'function')
-        },
-
         /** 处理 HTML：字符串流经所有插件，数组归一成注入 <head> */
         async transformIndexHtml(html, ctx) {
             count('transformIndexHtml')
@@ -195,4 +187,4 @@ export function createPluginContainer(rawPlugins, options) {
     }
 }
 
-export { CONFIG_HOOKS, RUN_HOOKS, CALL_HOOKS, FIRST_HOOKS, PIPE_HOOKS, COLLECT_HOOKS }
+export { CONFIG_HOOKS, RUN_HOOKS, CALL_HOOKS, FIRST_HOOKS, PIPE_HOOKS }
