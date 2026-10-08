@@ -94,8 +94,6 @@ Vue3 包结构
 - 计算属性 `computed` 与侦听器 `watch`。
 - 嵌套响应、只读 / 浅响应（`readonly` / `shallowReadonly` / `shallowReactive`）等特性。
 
-> mini-vue 参考源码：https://gitee.com/wayliuhaha/vue3-mini（本篇文章中的实现均参考该仓库）
-
 ## 二、编译原理
 
 ### 2.1 SFC 单文件组件解析
@@ -1057,8 +1055,6 @@ export function inject(key) {
 借用 JS 原型链（`Object.create`），实现了 `inject` 沿祖先链查找且支持同名覆盖的效果，这也是 Vue 依赖注入"就近覆盖、向上穿透"的原理。
 
 ## 五、mini-vue 手写思路
-
-参考实现：https://gitee.com/wayliuhaha/vue3-mini
 
 手写 mini-vue 建议按"自底向上、先响应式后运行时"的顺序推进，每层都可用 `vitest` 写单测验证。
 
