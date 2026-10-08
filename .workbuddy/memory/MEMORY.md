@@ -25,7 +25,9 @@ code/ 目录靠 srcExclude '**/code/**' 排除。形态①scenarios+cli.mjs；�
 safe-delete shim 按 turn 累计删除计数，超阈值（count>50）后 vite 的 emptyDir/清空 .vitepress/.temp 一律报 SAFE_DELETE_BULK_CONFIRM_REQUIRED，dangerouslyDisableSandbox 也无效。解法：`CODEBUDDY_SAFE_DELETE_ENABLED=0 node node_modules/vitepress/bin/vitepress.js build`（只影响该进程，别写进配置）。想少触发就先 `rm -rf .vitepress/dist .vitepress/.temp`（Bash rm 不受 node shim 拦）。
 
 ## Git / 本机
-提交一律 --no-verify；origin=gitee.com/wayliuhaha/blog、master；大批量提交分桶、信息写 .git/COMMIT_MSG_TMP.txt 再 -F；git 用 "E:\Program Files\Git\cmd\git.EXE"；bash PATH 坏→Python 全路径；临时脚本放 C:\Users\10855\.workbuddy\tmp\。
+提交一律 --no-verify；origin=gitee.com/wayliuhaha/blog、master；大批量提交分桶、信息写 .git/COMMIT_MSG_TMP.txt 再 -F；**本机 git 在 /mingw64/bin/git（裸 `git` 可用），记忆里旧的 "E:\Program Files\Git\cmd\git.EXE" 已不存在**；bash PATH 坏→Python 全路径；临时脚本放 C:\Users\10855\.workbuddy\tmp\。
+分桶铁律：先 `git reset HEAD -- <非本桶路径>` 清掉上一轮会话遗留的旧暂存（前一轮 `git add` 留下的条目会整批并进新提交，2026-10-01 首次提交就误吞了 200 个 frontend 文件），再 `git add -A -- <本桶路径>`；提交后 `git show --name-only --format=""` 反查有无混入别的板块（中文路径必须加 `-c core.quotepath=false`，否则名字被转义成 `\350\277...` 查不到）。
+**push：本机未存 gitee 凭据（无 .git-credentials，`git credential fill` 报 could not read Username），push 会卡在鉴权不报错（等输用户名，15 分钟无输出即此因）。** 先 `GIT_TERMINAL_PROMPT=0 git push --dry-run origin master` 秒判通道，别傻等；真要推必须先拿到用户名+口令/私人令牌（gitee 建议用私人令牌），配好 credentials 再推。
 
 ## 浏览器实测
 npm 被沙箱拦→Python subprocess 直调 vite；CDP：chrome --headless=new --remote-debugging-port=9223，Node22 全局 WebSocket，模板 C:\Users\10855\.workbuddy\tmp\lab-cdp-values.cjs。--virtual-time-budget 下双 rAF 可能不 tick。
@@ -36,10 +38,12 @@ type-gym 50 题 / runtime-lab；判题 Equal<A,B>+Expect<T>；体操正文代码
 ## 运行时事实必须实跑（Node 22 探针）
 默认值/阈值/事件顺序/报错码先跑确认；实测数字注明来源命令。
 
-## AI 板块 · Agent 开发（2026-09-30 第五轮）
-源文章=公众号《前端转 Agent 开发》（楠熠之）10 篇合 9 篇。侧边栏 ai.js：Coding Agent → Skills → Agent 开发；Agent 开发按 基础入门/记忆与知识/框架实战/协议与生态 四组（无章号）+ 总结/面试题，分组全带 collapsed:false。
-- 篇1 配套=code/agent-nest/（NestJS 工程，正文片段即工程文件，用户选「仅真实调用」无 mock；openai@4/5 peer 只容 zod3）。篇2-9 配套=agent-lab/（tsx；mcp/* 真实 SDK；langchain/langgraph 零依赖镜像标「示意片段」）。
-- 坑：MCP SDK v2 要求 zod ≥4.2（agent-lab 已升 ^4.6.5）；mcp/client.ts isTs 分支（tsx 启 server.ts）；stdio server 日志只能 console.error；实跑读数必须真实（对抗审查曾抓到编造输出，已替换）。
+## AI 板块 · Agent 开发（2026-10-08 第六轮重构）
+源文章=公众号《前端转 Agent 开发》（楠熠之）10 篇合 9 篇，**原文已归档 .workbuddy/docs/agent-source/**（9 个 md）。侧边栏 ai.js：Coding Agent → Skills → Agent 开发；四组（基础入门/记忆与知识/框架实战/协议与生态，无章号）+ 总结/面试题。
+- 配套代码（2026-10-08 用户定规：**一章一项目、同层级、命名对齐章节**）：code/ 下 agent-basics(篇1，原 agent-nest，NestJS+DeepSeek 真实工程无 mock)/tool-calling/agent-loop/context-memory(篇4)/embedding/rag/langchain/langgraph(零依赖镜像)/mcp(真实 SDK v2) 九个独立项目，各带 package.json+README，code/README.md 有章节↔项目总表。agent-lab 已删。验证报告在 .workbuddy/docs/agent-verification-report.md（待用户确认修订范围：A1 高=篇4 Memory 枚举 preference/fact 应为 preference/profile/project 等）。
+- 坑：MCP SDK v2 要求 zod ≥4.2；mcp/client.ts isTs 分支 tsx 启 server.ts（tsxCli 路径='./node_modules/...'，项目本地 tsx）；stdio server 日志只能 console.error；实跑读数必须真实。
+- **code/ 目录 git 未跟踪曾致脚本被改后正文同步静默破裂（29 处对不上），已修但应尽快提交；改脚本必跑 check-code-sync。**
 
 ## 遗留
-既有死链一处：frontend/进阶/构建体系/面试题.md → ./esbuild%20与%20Rust%20工具链.md（待修）；node/01-运行环境 空壳待删。
+node/01-运行环境 空壳待删。
+（原「构建体系/面试题.md → esbuild%20与%20Rust%20工具链.md」死链已于 2026-10-01 修掉：该 md 删除、内容并入 webpack 选型篇、面试题篇目链接同步移除。）
