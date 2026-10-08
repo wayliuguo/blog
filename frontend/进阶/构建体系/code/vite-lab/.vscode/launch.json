@@ -1,14 +1,60 @@
 {
-    // 在 vite-lab 目录打开工作区，F5 即可调试 vite build。
-    // 断点直接打在 plugins/*.mjs、vite.config.mjs 里就能命中。
+    // 三条配置覆盖三种调试场景，F5 前先选对应的那条。
+    //
+    // 贯穿全篇的一条硬规则：Node 端的插件断点必须加 --configLoader。
+    // Vite 默认 configLoader:'bundle' 会把 vite.config.mjs 连同它 import 的本地插件
+    // 打包成 node_modules/.vite-temp/vite.config.mjs.timestamp-*.mjs 再 import，
+    // 运行时执行的是那份副本，磁盘上的 plugins/*.mjs 从头到尾没被执行 —— 断点绑不上
+    // （空心灰圈），且临时文件在 node_modules 下还会被默认 skipFiles 跳过。
+    // 实测（CDP 直接下断点）：bundle 下 0 解析 0 命中；native 下精确命中。
+    // native 要求配置是纯 ESM（本 lab 是 .mjs，满足）；若将来改成 .ts，换成 runner。
     "version": "0.2.0",
     "configurations": [
         {
+            // ① 浏览器端：调 app 代码（.vue / src/*.js）。
+            // 启动 npm run dev → 等终端打出 "Local: http://localhost:5182/" →
+            // 自动打开 Chrome 并挂上调试器，此时在 src/ 里打断点即可命中。
+            // （VS Code 内置的 debug-server-ready 扩展会在匹配前剥掉 ANSI 颜色码，
+            //   所以这个 pattern 能匹配到 Vite 带色的输出。）
+            // autoAttachChildProcesses 顺带让 vite 子进程也挂上 Node 调试器。
             "type": "node",
             "request": "launch",
-            "name": "调试 vite build",
+            "name": "① dev + Chrome（调 app 代码）",
             "runtimeExecutable": "npm",
-            "runtimeArgs": ["run", "build"],
+            "runtimeArgs": ["run", "dev"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "autoAttachChildProcesses": true,
+            "serverReadyAction": {
+                "pattern": "Local:\\s+(https?://\\S+)",
+                "uriFormat": "%s",
+                "action": "debugWithChrome"
+            }
+        },
+        {
+            // ② Node 端 · dev 引擎：调 dev 插件（apply:'serve'，如 mini-mock / mini-hmr）。
+            // 直连 vite.js，省掉 npm → cmd → vite.cmd 的包装（Windows 上 .bin/vite 是
+            // #!/bin/sh 脚本，runtimeExecutable 指它会 ENOENT）。
+            // --configLoader native 让插件按磁盘原文件执行，断点精确命中。
+            // dev 是常驻进程，断完手动停；端口与 npm run dev 对齐。
+            "type": "node",
+            "request": "launch",
+            "name": "② 调试 dev 插件",
+            "program": "${workspaceFolder}/node_modules/vite/bin/vite.js",
+            "args": ["dev", "--port", "5182", "--configLoader", "native"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            // ③ Node 端 · build 引擎：调 build 插件（apply:'build'，如 mini-drop /
+            // mini-terser / mini-html / mini-size-gate）。这些插件在 dev 下根本不加载，
+            // 必须走 build 才断得到。
+            "type": "node",
+            "request": "launch",
+            "name": "③ 调试 build 插件",
+            "program": "${workspaceFolder}/node_modules/vite/bin/vite.js",
+            "args": ["build", "--configLoader", "native"],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "skipFiles": ["<node_internals>/**"]

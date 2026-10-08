@@ -20,7 +20,7 @@
 | `bench/` | `npm run bench` | 200 个模块下 esbuild / rollup / webpack 的耗时与体积对照 | 构建全景与选型 |
 | `ast-lab/` | `npm run parse` · `transform` · `plugin` · `codemod` | parse 出 AST、手工遍历与 transform、手写 Babel 插件、codemod 批量改写 | 编译与 AST |
 | `webpack-lab/` | `npm run build` · `preview` | Vue 3 单入口生产构建：`.vue` SFC + `vue-router` 路由懒加载，手写 loader（css / extract-css）+ 手写插件（Html / CssExtract / Terser） | webpack |
-| `vite-lab/` | `npm run build` · `preview` | Vue 3 单入口生产构建：`.vue` SFC + `vue-router` 路由懒加载，官方 `@vitejs/plugin-vue` + 手写插件（虚拟模块 / 剔除 / HTML 收尾 / 压缩 / 体积门禁） | Vite |
+| `vite-lab/` | `npm run dev` · `build` · `preview` | Vue 3 单入口工程：`.vue` SFC + `vue-router` 路由懒加载，官方 `@vitejs/plugin-vue` + 手写插件（dev 期 mock API / HMR 观测；build 期虚拟模块 / 剔除 / HTML 收尾 / 压缩 / 体积门禁） | Vite |
 | `rollup-lab/` | `npm run build` · `mini:cjs` | 库打包：external + 多格式 + 手写插件（虚拟模块 / 禁用 API / CJS 替身 / 体积门禁）；`mini:cjs` 对照 CJS 互操作 | Rollup |
 | `plugin-lab/` | `npm run three-ways` · `unplugin` · `ondemand` · `ban` | 同一需求的 Rollup / webpack / Vite 三套钩子实现、unplugin 统一、按需引入、禁用 API 门禁 | webpack / Vite / Rollup（跨工具插件） |
 | `analyze-lab/` | `npm run analyze` | 四种打包姿势的体积对照、tree-shaking 验证、代码分割、压缩对照 | 各篇的产物分析 |
@@ -33,7 +33,7 @@
 | ---- | ---- | ---- | ---- |
 | `mini-bundler/` | `npm run mini` · `cycle` · `tdz` | 手写打包器：模块图 / ESM→CJS 转换 / 运行时，并与原生 ESM 对照执行 | 手写 mini-bundler |
 | `mini-webpack/` | `npm run mini` | 约百行最小 webpack：Compiler → Compilation → Module → Chunk → Asset 五对象流水线 | webpack 第八节 |
-| `mini-vite/` | `npm run mini` | 几十行 dev server 内核：按 URL 返回、import 原样保留、只转被请求到的 | Vite 第八节 |
+| `mini-vite/` | `npm run mini` | 双引擎最小 Vite：同一插件容器跨 dev（按 URL 按需转换、不打包）/ build（全量建图、拼成一个文件），并打印钩子调用对照表 | Vite 第十节 |
 
 ## 目录结构
 
@@ -42,13 +42,13 @@
 | `bench/` | 构建耗时与 tree-shaking 对照（`gen.cjs` 生成样本、`one.cjs` 单工具、`run.cjs` 汇总） |
 | `ast-lab/` | Babel 解析 / 遍历 / transform / 插件 / codemod |
 | `webpack-lab/` | Vue 3 生产配置：`src/` 为 SFC + 路由源码，手写 loader（`loaders/`）、手写 plugin（`plugins/`）、`webpack.config.cjs` |
-| `vite-lab/` | Vue 3 生产配置：`src/` 为 SFC + 路由源码，`vite.config.mjs` + 官方 `vue()` + 手写插件（`plugins/`） |
+| `vite-lab/` | Vue 3 工程配置：`src/` 为 SFC + 路由源码，`vite.config.mjs` + 官方 `vue()` + 手写插件（`plugins/`：dev 期 `mini-mock` / `mini-hmr`，build 期 `mini-virtual` / `mini-drop` / `mini-html` / `mini-terser` / `mini-size-gate`） |
 | `rollup-lab/` | 库打包配置：`rollup.config.mjs` + 手写插件（`plugins/`）+ `mini-cjs.mjs` CJS 互操作对照 |
 | `plugin-lab/` | 三套钩子对照 + unplugin 一次编写多处运行 |
 | `analyze-lab/` | 体积对照实验（脚本自己生成 `src/` 与 `dist/`） |
 | `mini-bundler/` | 手写打包器：`index.cjs` 编排 + `lib/{resolve,graph,transform,generate,root}.cjs` + 被测源码 `src/`（含 `cycle/` 与 `cycle-tdz/` 两组循环依赖） |
 | `mini-webpack/` | 最小 webpack：`index.cjs` 编排 + `lib/{hook,compiler,compilation,module,resolver,graph,transpile,runtime,emit}.cjs` + 示例插件 `plugins/` + `src/` |
-| `mini-vite/` | 最小 dev server：`index.mjs` 编排 + `lib/{server,transform}.mjs` + 演示源码 `src/` |
+| `mini-vite/` | 双引擎最小 Vite：`index.mjs` 编排 + `lib/{hook,plugin-container,resolve,module-graph,transform,server,build,emit}.mjs` + 示例插件 `plugins/` + 演示源码 `src/`（唯一依赖 `acorn`） |
 
 ## 断点调试
 

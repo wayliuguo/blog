@@ -3,6 +3,7 @@
 //   (b) 注释行与 console.log 调试行 → 直接改写源码
 //
 // enforce: 'pre' 抢在 Vite 内置转换之前处理源码
+// apply: 'build' 只在构建期加载 —— 少了这一行，dev 下 console.log 也会被删掉，调试直接失灵
 const SRC_RE = /[/\\]src[/\\]/
 
 export default function miniDrop(options = {}) {
@@ -12,6 +13,7 @@ export default function miniDrop(options = {}) {
     return {
         name: 'mini-drop',
         enforce: 'pre',
+        apply: 'build',
 
         transform(code, id) {
             const clean = id.split('?')[0]

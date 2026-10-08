@@ -10,6 +10,21 @@
             "name": "Launch Program",
             "skipFiles": ["<node_internals>/**"],
             "program": "${workspaceFolder}\\code\\node\\myKoa\\index.js"
+        },
+        {
+            // 仓库根为工作区时，嵌套的 vite-lab/.vscode/launch.json 不生效，用这条调试 vite-lab 构建。
+            // 直指 vite 的 CLI 入口，构建链路跑在同一个被调试的 node 进程里。
+            // --configLoader native：Vite 默认 bundle 会把配置和本地插件打包进 node_modules/.vite-temp/
+            // 的临时文件，运行时执行的是副本而非磁盘上的 plugins/*.mjs，断点绑不上；native 直接
+            // import() 原文件，断点精确命中（实测 runner 能命中但行号有偏移，故用 native）。
+            "type": "node",
+            "request": "launch",
+            "name": "调试 vite-lab build",
+            "program": "${workspaceFolder}/frontend/进阶/构建体系/code/vite-lab/node_modules/vite/bin/vite.js",
+            "args": ["build", "--configLoader", "native"],
+            "cwd": "${workspaceFolder}/frontend/进阶/构建体系/code/vite-lab",
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
         }
     ]
 }

@@ -2,8 +2,9 @@
     "name": "vite-lab",
     "version": "1.0.0",
     "private": true,
-    "description": "Vite 生产构建实验：Vue 3 单入口 + 手写插件 + 路由懒加载 + 代码分割 + 压缩",
+    "description": "Vite 实验：Vue 3 单入口 + 手写插件（dev / build 两套）+ 路由懒加载 + 代码分割 + 压缩",
     "scripts": {
+        "dev": "vite --port 5182",
         "build": "vite build",
         "preview": "vite build && vite preview --port 5181"
     },
