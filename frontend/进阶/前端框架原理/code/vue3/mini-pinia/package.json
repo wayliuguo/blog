@@ -1,0 +1,12 @@
+{
+    "name": "mini-pinia",
+    "version": "1.0.0",
+    "private": true,
+    "description": "手写 mini-pinia：响应式底座（三层依赖表）+ createPinia / defineStore / storeToRefs / $patch，零依赖可运行 + 单测",
+    "scripts": {
+        "step:reactivity": "node steps/01-reactivity.js",
+        "step:pinia": "node steps/02-pinia.js",
+        "step:compare": "node steps/03-compare.js",
+        "test": "node --test test/*.test.js"
+    }
+}

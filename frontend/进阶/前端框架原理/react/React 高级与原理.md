@@ -564,4 +564,5 @@ function useState(initialValue) {
 - 本模块总结：[总结](../总结.md)
 - 本模块面试题：[面试题](../面试题.md)
 - 上一篇：[发布、灰度与回滚](../../交付与质量/发布、灰度与回滚.md)
-- 下一篇：[Vue3 原理](../vue3/Vue3%20原理.md)
+- 下一篇：[手写 mini-react](./手写%20mini-react.md)
+- 本模块另五篇：[手写 mini-react](./手写%20mini-react.md) · [React 状态管理原理与实现](./React%20状态管理原理与实现.md) · [Vue3 原理](../vue3/Vue3%20原理.md) · [手写 mini-vue](../vue3/手写%20mini-vue.md) · [Vue3 状态管理原理与实现](../vue3/Vue3%20状态管理原理与实现.md)

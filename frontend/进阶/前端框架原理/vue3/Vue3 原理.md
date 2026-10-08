@@ -1149,5 +1149,6 @@ instance.update = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.
 
 - 本模块总结：[总结](../总结.md)
 - 本模块面试题：[面试题](../面试题.md)
-- 上一篇：[React 高级与原理](../react/React%20高级与原理.md)
-- 下一篇：[手写 mini-react](../react/手写%20mini-react.md)
+- 上一篇：[React 状态管理原理与实现](../react/React%20状态管理原理与实现.md)
+- 下一篇：[手写 mini-vue](./手写%20mini-vue.md)
+- 本模块另五篇：[React 高级与原理](../react/React%20高级与原理.md) · [手写 mini-react](../react/手写%20mini-react.md) · [React 状态管理原理与实现](../react/React%20状态管理原理与实现.md) · [手写 mini-vue](./手写%20mini-vue.md) · [Vue3 状态管理原理与实现](./Vue3%20状态管理原理与实现.md)
