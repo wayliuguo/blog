@@ -45,53 +45,55 @@
 
 先写业务函数：查 Open-Meteo 的实时天气。城市表硬编码三个（重点是协议形态，不是数据源），响应用 zod 校验——外部 API 的返回同样不可信。
 
-> 摘自 `code/agent-lab/mcp/server.ts`
+> 摘自 `code/mcp/server.ts`
 ```ts
 const cities = {
-  北京: { latitude: 39.9042, longitude: 116.4074 },
-  上海: { latitude: 31.2304, longitude: 121.4737 },
-  西安: { latitude: 34.3416, longitude: 108.9398 },
+    北京: { latitude: 39.9042, longitude: 116.4074 },
+    上海: { latitude: 31.2304, longitude: 121.4737 },
+    西安: { latitude: 34.3416, longitude: 108.9398 }
 }
 ```
 
-> 摘自 `code/agent-lab/mcp/server.ts`
+> 摘自 `code/mcp/server.ts`
 ```ts
 async function getWeather(city: keyof typeof cities) {
-  const location = cities[city]
-  const url = new URL('https://api.open-meteo.com/v1/forecast')
-  url.search = new URLSearchParams({
-    latitude: String(location.latitude),
-    longitude: String(location.longitude),
-    current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
-    temperature_unit: 'celsius',
-    wind_speed_unit: 'ms',
-    timezone: 'Asia/Shanghai',
-  }).toString()
+    const location = cities[city]
+    const url = new URL('https://api.open-meteo.com/v1/forecast')
+    url.search = new URLSearchParams({
+        latitude: String(location.latitude),
+        longitude: String(location.longitude),
+        current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
+        temperature_unit: 'celsius',
+        wind_speed_unit: 'ms',
+        timezone: 'Asia/Shanghai'
+    }).toString()
 
-  const response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
-  if (!response.ok) throw new Error(`天气接口返回 HTTP ${response.status}`)
+    const response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+    if (!response.ok) throw new Error(`天气接口返回 HTTP ${response.status}`)
 
-  const data = z.object({
-    current: z.object({
-      time: z.string(),
-      temperature_2m: z.number(),
-      relative_humidity_2m: z.number(),
-      weather_code: z.number(),
-      wind_speed_10m: z.number(),
-    }),
-  }).parse(await response.json())
+    const data = z
+        .object({
+            current: z.object({
+                time: z.string(),
+                temperature_2m: z.number(),
+                relative_humidity_2m: z.number(),
+                weather_code: z.number(),
+                wind_speed_10m: z.number()
+            })
+        })
+        .parse(await response.json())
 
-  const current = data.current
-  return {
-    city,
-    time: current.time,
-    timezone: 'Asia/Shanghai',
-    weather: weatherNames[current.weather_code] ?? `未知天气代码 ${current.weather_code}`,
-    temperature: `${current.temperature_2m} °C`,
-    humidity: `${current.relative_humidity_2m}%`,
-    windSpeed: `${current.wind_speed_10m} m/s`,
-    source: 'Open-Meteo',
-  }
+    const current = data.current
+    return {
+        city,
+        time: current.time,
+        timezone: 'Asia/Shanghai',
+        weather: weatherNames[current.weather_code] ?? `未知天气代码 ${current.weather_code}`,
+        temperature: `${current.temperature_2m} °C`,
+        humidity: `${current.relative_humidity_2m}%`,
+        windSpeed: `${current.wind_speed_10m} m/s`,
+        source: 'Open-Meteo'
+    }
 }
 ```
 
@@ -103,25 +105,25 @@ async function getWeather(city: keyof typeof cities) {
 - `description` 是给 LLM 看的——它决定模型能不能选对工具，写清「查什么城市、返回什么、数据来源」。
 - `inputSchema` 用 zod 定义参数：SDK 会把它转成 JSON Schema 随工具列表下发，Host 侧的 LLM 照此生成参数，Server 侧自动完成校验。
 
-> 摘自 `code/agent-lab/mcp/server.ts`
+> 摘自 `code/mcp/server.ts`
 ```ts
 const server = new McpServer({ name: 'weather-server', version: '1.0.0' })
 server.registerTool(
-  'get_weather',
-  {
-    description: '查询北京、上海或西安的当前天气、温度、湿度和风速。数据来自 Open-Meteo 天气模型。',
-    inputSchema: z.object({ city: z.enum(['北京', '上海', '西安']).describe('要查询的城市') }),
-  },
-  async ({ city }) => {
-    try {
-      const weather = await getWeather(city)
-      return { content: [{ type: 'text', text: JSON.stringify(weather, null, 2) }] }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error('天气查询失败：', message)
-      return { isError: true, content: [{ type: 'text', text: `天气查询失败：${message}` }] }
+    'get_weather',
+    {
+        description: '查询北京、上海或西安的当前天气、温度、湿度和风速。数据来自 Open-Meteo 天气模型。',
+        inputSchema: z.object({ city: z.enum(['北京', '上海', '西安']).describe('要查询的城市') })
+    },
+    async ({ city }) => {
+        try {
+            const weather = await getWeather(city)
+            return { content: [{ type: 'text', text: JSON.stringify(weather, null, 2) }] }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            console.error('天气查询失败：', message)
+            return { isError: true, content: [{ type: 'text', text: `天气查询失败：${message}` }] }
+        }
     }
-  },
 )
 ```
 
@@ -134,16 +136,16 @@ server.registerTool(
 
 `connect(new StdioServerTransport())` 之后，Server 就挂在标准输入输出上等协议消息；进程保持存活，直到 Host 断开。
 
-> 摘自 `code/agent-lab/mcp/server.ts`
+> 摘自 `code/mcp/server.ts`
 ```ts
 async function main() {
-  await server.connect(new StdioServerTransport())
-  console.error('Weather MCP Server 已启动')
+    await server.connect(new StdioServerTransport())
+    console.error('Weather MCP Server 已启动')
 }
 
-main().catch((error) => {
-  console.error(error)
-  process.exit(1)
+main().catch(error => {
+    console.error(error)
+    process.exit(1)
 })
 ```
 
@@ -153,68 +155,67 @@ main().catch((error) => {
 
 Client 侧四步：构造 `Client` → `connect(transport)` 启动 Server 子进程并握手 → `listTools()` 发现工具 → `callTool()` 调用。这里让 Client 用 tsx 把 Server 作为子进程拉起（源码态直跑；编译后走 node 直启）。
 
-> 摘自 `code/agent-lab/mcp/client.ts`
+> 摘自 `code/mcp/client.ts`
 ```ts
 import { Client } from '@modelcontextprotocol/client'
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
 import { fileURLToPath } from 'node:url'
 
 async function main() {
-  const client = new Client({ name: 'weather-client', version: '1.0.0' })
+    const client = new Client({ name: 'weather-client', version: '1.0.0' })
 
-  // tsx 直跑（源码态）启动 server.ts 需经 tsx；编译后（dist 态）直接 node server.js
-  const isTs = import.meta.url.endsWith('.ts')
-  const serverPath = fileURLToPath(
-    new URL(isTs ? './server.ts' : './server.js', import.meta.url),
-  )
-  const tsxCli = fileURLToPath(
-    new URL('../node_modules/tsx/dist/cli.mjs', import.meta.url),
-  )
-  const transport = isTs
-    ? new StdioClientTransport({
-        command: process.execPath,
-        args: [tsxCli, serverPath],
-        stderr: 'inherit',
-      })
-    : new StdioClientTransport({
-        command: process.execPath,
-        args: [serverPath],
-        stderr: 'inherit',
-      })
+    // tsx 直跑（源码态）启动 server.ts 需经 tsx；编译后（dist 态）直接 node server.js
+    const isTs = import.meta.url.endsWith('.ts')
+    const serverPath = fileURLToPath(new URL(isTs ? './server.ts' : './server.js', import.meta.url))
+    const tsxCli = fileURLToPath(new URL('./node_modules/tsx/dist/cli.mjs', import.meta.url))
+    const transport = isTs
+        ? new StdioClientTransport({
+              command: process.execPath,
+              args: [tsxCli, serverPath],
+              stderr: 'inherit'
+          })
+        : new StdioClientTransport({
+              command: process.execPath,
+              args: [serverPath],
+              stderr: 'inherit'
+          })
 ```
 
 `stderr: 'inherit'` 让 Server 的普通日志透传到本进程终端——排障时能看到「Weather MCP Server 已启动」。
 
 ### 发现工具与调用
 
-> 摘自 `code/agent-lab/mcp/client.ts`
+> 摘自 `code/mcp/client.ts`
 ```ts
-  try {
-    await client.connect(transport)
-    const { tools } = await client.listTools()
-    console.log('可用工具：', tools.map((tool) => tool.name))
+    try {
+        await client.connect(transport)
+        const { tools } = await client.listTools()
+        console.log(
+            '可用工具：',
+            tools.map(tool => tool.name)
+        )
 
-    const result = await client.callTool({
-      name: 'get_weather',
-      arguments: { city: '西安' },
-    })
+        const result = await client.callTool({
+            name: 'get_weather',
+            arguments: { city: '西安' }
+        })
 
-    if (result.isError) {
-      console.error('工具执行失败：')
-      process.exitCode = 1
+        if (result.isError) {
+            console.error('工具执行失败：')
+            process.exitCode = 1
+        }
+
+        for (const block of result.content) {
+            if (block.type === 'text') console.log(block.text)
+        }
+    } finally {
+        await client.close()
     }
-
-    for (const block of result.content) {
-      if (block.type === 'text') console.log(block.text)
-    }
-  } finally {
-    await client.close()
-  }
 }
 
-main().catch((error) => {
-  console.error('客户端运行失败：', error)
-  process.exitCode = 1
+main().catch(error => {
+    console.error('客户端运行失败：', error)
+    process.exitCode = 1
 })
 ```
 
@@ -244,7 +245,7 @@ main().catch((error) => {
 不想写 Client 也能调试 Server——官方 Inspector 提供图形界面：
 
 ```bash
-npx @modelcontextprotocol/inspector tsx mcp/server.ts
+npx @modelcontextprotocol/inspector@2.8.0 tsx mcp/server.ts
 ```
 
 - 启动后浏览器打开本地页面，左侧填传输方式（stdio）与启动命令，Connect 后能看工具列表、手动填参调用、查看每条协议消息。
@@ -253,8 +254,8 @@ npx @modelcontextprotocol/inspector tsx mcp/server.ts
 不想开浏览器也可以走 CLI 模式，直接完成 Tool Discovery 与 Tool Call：
 
 ```bash
-npx @modelcontextprotocol/inspector --cli tsx mcp/server.ts --method tools/list
-npx @modelcontextprotocol/inspector --cli tsx mcp/server.ts --method tools/call --tool-name get_weather --tool-arg city=西安
+npx @modelcontextprotocol/inspector@2.8.0 --cli tsx mcp/server.ts --method tools/list
+npx @modelcontextprotocol/inspector@2.8.0 --cli tsx mcp/server.ts --method tools/call --tool-name get_weather --tool-arg city=西安
 ```
 
 `tools/list` 的返回就是 Tool Discovery 的产物：工具名、描述与 JSON Schema 参数——将来接入真 Agent 时，交给 LLM 的 Function 定义就是这份清单。
@@ -271,11 +272,22 @@ npx @modelcontextprotocol/inspector --cli tsx mcp/server.ts --method tools/call 
 - 第三方能力优先找现成 Server（官方仓库已有文件系统、GitHub、数据库等），不要重复造轮子。
 - 只有一个应用、一个工具的简单场景，直接 Function Calling 更轻——协议本身也有握手、进程管理的成本。
 
+## 调试排查表
+
+原文把最常见的四类故障整理成一张表，调不通时按行对号入座：
+
+| 现象 | 根因 | 处理 |
+| ---- | ---- | ---- |
+| 消息解析失败 / 协议流错乱 | Server 侧用 `console.log` 输出日志，污染了 stdio 协议流 | 服务端日志一律 `console.error`（Client 侧不受限） |
+| 报错找不到 `dist/server.js` | 改了源码忘记 build | `npm run build` 后重跑；源码态调试可直接 `tsx src/server.ts` |
+| `fetch failed` / 超时 | MCP 通信成功，但外部 API（Open-Meteo）不可达 | 先 curl 外网接口，把协议层故障与业务层故障分开排 |
+| 参数校验失败 | 调用参数不在 `z.enum(['北京', '上海', '西安'])` 枚举内 | 用 `tools/list` 看返回的 JSON Schema，把参数约束写进 description 传给模型 |
+
 ## 配套代码
 
 | 脚本 | npm script | 对应小节 |
 | ---- | ---- | ---- |
-| `code/agent-lab/mcp/server.ts` | `npm run mcp-server` | 动手：从零实现天气 MCP Server |
-| `code/agent-lab/mcp/client.ts` | `npm run mcp-client` | 再写一个自己的 Client |
+| `code/mcp/server.ts` | `npm run mcp-server` | 动手：从零实现天气 MCP Server |
+| `code/mcp/client.ts` | `npm run mcp-client` | 再写一个自己的 Client |
 
 `mcp-client` 全链路真实跑通（Open-Meteo 实时天气）；工具发现与参数校验不依赖网络。

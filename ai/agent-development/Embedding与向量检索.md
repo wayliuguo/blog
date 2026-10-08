@@ -41,7 +41,7 @@ memory.includes('后端注册接口')   // false，什么都搜不到
 
 用任何向量库之前，先手动实现相似度计算，理解底层：
 
-> 摘自 `code/agent-lab/embedding/cosine-similarity.ts`
+> 摘自 `code/embedding/cosine-similarity.ts`
 
 ```ts
 // 计算两个向量的余弦相似度：越接近 1 越相似，越接近 0 越不相关。
@@ -80,7 +80,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 所有 Vector → 逐个计算 Similarity → 按相似度排序 → 取 Top K
 ```
 
-> 摘自 `code/agent-lab/embedding/in-memory-vector-store.ts`
+> 摘自 `code/embedding/in-memory-vector-store.ts`
 
 ```ts
 // 内存版向量库：写入向量，按余弦相似度取 Top K。
@@ -108,7 +108,7 @@ export class InMemoryVectorStore {
 
 Embedding 不应该直接写死在 MemoryService 里。先定义接口：
 
-> 摘自 `code/agent-lab/embedding/embedding-provider.interface.ts`
+> 摘自 `code/embedding/embedding-provider.interface.ts`
 
 ```ts
 // 抽象 Embedding 模型，解耦具体厂商（OpenAI / 阿里云 / 本地模型）。
@@ -253,6 +253,8 @@ Prisma 模型（示意）：
 2. **维度 1536 不能照抄**——先跑 `vector.length` 实测当前 Embedding 模型的维度，输出多少写多少。
 3. **为什么允许 embedding 为 NULL**——Memory 保存涉及 Database + Embedding API 两个环节；Embedding API 超时 / 429 / 网络错误时，不希望整个 Memory 保存失败，先允许 NULL，后续再加 retry 机制。`db pull` 之后看到 `Unsupported("vector")?` 是正常现象，不是出错。
 
+工程版本事实（原文明确约定）：本篇按 **Prisma 7** 落地——generator 用 `provider = "prisma-client"`（output 指向 `../generated/prisma`），配套 `prisma.config.ts`，并**明确不升 Prisma 8**；迁移走两步法：`npx prisma migrate dev --name create_user_memory --create-only` 先生成迁移文件，手工补 `CREATE EXTENSION vector;` 与 `vector(1536)` 列后再执行。
+
 ## MemoryRepository：参数化 Raw SQL 检索
 
 所有 pgvector 操作封装进 Repository。检索 SQL 的关键点全部在里面（示意）：
@@ -337,8 +339,8 @@ Memory 不再只是「把聊天记录保存下来」，而是完整五步：**�
 
 | 脚本 | npm script | 对应小节 |
 | --- | --- | --- |
-| `code/agent-lab/embedding/cosine-similarity.ts` | `npm run cosine` | 手写余弦相似度 |
-| `code/agent-lab/embedding/embedding-provider.interface.ts` | （独立示例；真实 Provider 实现时引用） | EmbeddingProvider 抽象 |
-| `code/agent-lab/embedding/in-memory-vector-store.ts` | `npm run vector-store` | 内存向量库：upsert / search TopK |
+| `code/embedding/cosine-similarity.ts` | `npm run cosine` | 手写余弦相似度 |
+| `code/embedding/embedding-provider.interface.ts` | （独立示例；真实 Provider 实现时引用） | EmbeddingProvider 抽象 |
+| `code/embedding/in-memory-vector-store.ts` | `npm run vector-store` | 内存向量库：upsert / search TopK |
 
 > PostgreSQL + pgvector / Prisma / 真实 Embedding API 部分依赖数据库与密钥环境，正文以示意片段呈现；检索 SQL 的同类逻辑可由第 6 篇的 `rag-retrieval.ts` 在本机验证。

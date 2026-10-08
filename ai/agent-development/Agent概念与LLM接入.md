@@ -50,7 +50,7 @@ User → LLM → Tool A → LLM → Tool B → LLM → Tool C → LLM → Final 
 
 > 结论先行：LLM 是 Agent 的核心组件，但 LLM 本身不等于 Agent。
 
-分界线清楚了，接下来不动用任何框架，用 NestJS + DeepSeek 从最底层把这条链路亲手搭出来——本篇全部代码来自配套工程 `code/agent-nest/`，拼起来就是一个能 `npm start` 的完整项目。
+分界线清楚了，接下来不动用任何框架，用 NestJS + DeepSeek 从最底层把这条链路亲手搭出来——本篇全部代码来自配套工程 `code/agent-basics/`，拼起来就是一个能 `npm start` 的完整项目。
 
 ## 第一步架构决策：把 Agent 和 LLM 拆开
 
@@ -89,15 +89,15 @@ DeepSeek OpenAI Claude
 
 `LlmModule` 只做一件事：把 `LlmService` 提供出去：
 
-> 摘自 `code/agent-nest/src/llm/llm.module.ts`
+> 摘自 `code/agent-basics/src/llm/llm.module.ts`
 
 ```ts
 import { Module } from '@nestjs/common'
 import { LlmService } from './llm.service'
 
 @Module({
-  providers: [LlmService],
-  exports: [LlmService],
+    providers: [LlmService],
+    exports: [LlmService]
 })
 export class LlmModule {}
 ```
@@ -111,7 +111,7 @@ export class LlmModule {}
 
 DeepSeek 提供 OpenAI 兼容接口，所以直接安装 OpenAI SDK（`npm install openai`），通过 `baseURL` 把请求指到 DeepSeek 网关：
 
-> 摘自 `code/agent-nest/src/llm/llm.service.ts`
+> 摘自 `code/agent-basics/src/llm/llm.service.ts`
 
 ```ts
 import { Injectable } from '@nestjs/common'
@@ -119,24 +119,24 @@ import OpenAI from 'openai'
 
 @Injectable()
 export class LlmService {
-  private readonly client: OpenAI
+    private readonly client: OpenAI
 
-  constructor() {
-    // 优先 DeepSeek 变量名，回退 OpenAI 变量名
-    const apiKey = process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      throw new Error(
-        '未找到 API Key：请在项目根目录 .env 中写入 DEEPSEEK_API_KEY=sk-...（也可写 OPENAI_API_KEY），' +
-          ' Key 在 platform.deepseek.com 申请。',
-      )
+    constructor() {
+        // 优先 DeepSeek 变量名，回退 OpenAI 变量名
+        const apiKey = process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY
+        if (!apiKey) {
+            throw new Error(
+                '未找到 API Key：请在项目根目录 .env 中写入 DEEPSEEK_API_KEY=sk-...（也可写 OPENAI_API_KEY），' +
+                    ' Key 在 platform.deepseek.com 申请。'
+            )
+        }
+
+        // 调用链：NestJS → LlmService → OpenAI SDK → DeepSeek API → LLM
+        this.client = new OpenAI({
+            apiKey,
+            baseURL: 'https://api.deepseek.com'
+        })
     }
-
-    // 调用链：NestJS → LlmService → OpenAI SDK → DeepSeek API → LLM
-    this.client = new OpenAI({
-      apiKey,
-      baseURL: 'https://api.deepseek.com',
-    })
-  }
 ```
 
 虽然用的是 OpenAI SDK，但 `baseURL: 'https://api.deepseek.com'` 决定了实际请求的是 DeepSeek。API Key 从环境变量读（工程里是 `.env`，见 `.env.example`），不写进代码、不提交 Git。
@@ -158,7 +158,7 @@ ERROR [ExceptionHandler] Missing credentials. Please pass an `apiKey`, or set th
 
 原因很简单：**NestJS 不读 `.env`，`tsx`/`node` 也不读**。文件躺在磁盘上，和 `process.env` 之间没有任何自动通道，`process.env.DEEPSEEK_API_KEY` 从头到尾就是 `undefined`。官方做法是用 `@nestjs/config`：
 
-> 摘自 `code/agent-nest/src/main.ts`
+> 摘自 `code/agent-basics/src/main.ts`
 
 ```ts
 // 必须放在第一行：在 Nest 启动之前把根目录 .env 灌进 process.env。
@@ -167,7 +167,7 @@ ERROR [ExceptionHandler] Missing credentials. Please pass an `apiKey`, or set th
 import 'dotenv/config'
 ```
 
-> 摘自 `code/agent-nest/src/app.module.ts`
+> 摘自 `code/agent-basics/src/app.module.ts`
 
 ```ts
 import { Module } from '@nestjs/common'
@@ -175,10 +175,10 @@ import { ConfigModule } from '@nestjs/config'
 import { AgentModule } from './agent/agent.module'
 
 @Module({
-  // ConfigModule.forRoot() 会把项目根目录的 .env 读进 process.env。
-  // 少了这一行，LlmService 里的 process.env.DEEPSEEK_API_KEY 永远是 undefined。
-  // isGlobal: true 表示全应用可见，AgentModule 里不必再单独 import。
-  imports: [ConfigModule.forRoot({ isGlobal: true }), AgentModule],
+    // ConfigModule.forRoot() 会把项目根目录的 .env 读进 process.env。
+    // 少了这一行，LlmService 里的 process.env.DEEPSEEK_API_KEY 永远是 undefined。
+    // isGlobal: true 表示全应用可见，AgentModule 里不必再单独 import。
+    imports: [ConfigModule.forRoot({ isGlobal: true }), AgentModule]
 })
 export class AppModule {}
 ```
@@ -189,20 +189,20 @@ export class AppModule {}
 
 有了 client，第一次调用只需要一个 `messages` 数组：
 
-> 摘自 `code/agent-nest/src/llm/llm.service.ts`
+> 摘自 `code/agent-basics/src/llm/llm.service.ts`
 
 ```ts
-  async chat(message: string) {
-    const response = await this.client.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: '你是一个专业的 AI Agent 助手。' },
-        { role: 'user', content: message },
-      ],
-    })
+    async chat(message: string) {
+        const response = await this.client.chat.completions.create({
+            model: 'deepseek-chat',
+            messages: [
+                { role: 'system', content: '你是一个专业的 AI Agent 助手。' },
+                { role: 'user', content: message }
+            ]
+        })
 
-    return response.choices[0].message.content
-  }
+        return response.choices[0].message.content
+    }
 ```
 
 `LlmService` 现在已经拥有调用模型的能力。
@@ -211,7 +211,7 @@ export class AppModule {}
 
 接着把「Agent 行为」装进 `AgentModule`：`imports` 引入 `LlmModule`，挂上 Controller 和 Service：
 
-> 摘自 `code/agent-nest/src/agent/agent.module.ts`
+> 摘自 `code/agent-basics/src/agent/agent.module.ts`
 
 ```ts
 import { Module } from '@nestjs/common'
@@ -220,16 +220,16 @@ import { AgentService } from './agent.service'
 import { LlmModule } from '../llm/llm.module'
 
 @Module({
-  imports: [LlmModule],
-  controllers: [AgentController],
-  providers: [AgentService],
+    imports: [LlmModule],
+    controllers: [AgentController],
+    providers: [AgentService]
 })
 export class AgentModule {}
 ```
 
 `AgentService` 注入 `LlmService`。现在看它只是转发一次请求，但未来这里会逐渐长出 Prompt、Context、Tools、Memory、RAG、Agent Loop——**`AgentService` 最终会成为整个 Agent 系统的核心**：
 
-> 摘自 `code/agent-nest/src/agent/agent.service.ts`
+> 摘自 `code/agent-basics/src/agent/agent.service.ts`
 
 ```ts
   constructor(private readonly llmService: LlmService) {}
@@ -241,7 +241,7 @@ export class AgentModule {}
 
 Controller 暴露 `POST /agent/chat`，顺带做参数校验：
 
-> 摘自 `code/agent-nest/src/agent/agent.controller.ts`
+> 摘自 `code/agent-basics/src/agent/agent.controller.ts`
 
 ```ts
 import { BadRequestException, Body, Controller, Post } from '@nestjs/common'
@@ -322,7 +322,7 @@ user: 我叫张三。        →  assistant: 你好张三。
 
 要让它「记得」，必须把历史重新放进去：
 
-> 摘自 `code/agent-nest/src/llm/llm.service.ts`
+> 摘自 `code/agent-basics/src/llm/llm.service.ts`
 
 ```ts
       messages: [
@@ -380,34 +380,34 @@ Context 的形态清楚了，下一个问题是：模型回答的内容程序怎
 
 实现上是在 System Prompt 里写清约定，并用 API 提供的 JSON 模式约束输出。给 `LlmService` 增加 `parseIntent`：
 
-> 摘自 `code/agent-nest/src/llm/llm.service.ts`
+> 摘自 `code/agent-basics/src/llm/llm.service.ts`
 
 ```ts
-  async parseIntent(message: string) {
-    const response = await this.client.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: [
-        {
-          role: 'system',
-          content: `你是一个用户意图分析器。你必须以 JSON 格式返回结果。
+    async parseIntent(message: string) {
+        const response = await this.client.chat.completions.create({
+            model: 'deepseek-chat',
+            messages: [
+                {
+                    role: 'system',
+                    content: `你是一个用户意图分析器。你必须以 JSON 格式返回结果。
 支持以下 intent：
 weather: { "intent": "weather", "city": "城市", "date": "日期" }
 calculator: { "intent": "calculator", "expression": "数学表达式" }
 chat: { "intent": "chat", "message": "用户原始消息" }
-只返回 JSON。`,
-        },
-        { role: 'user', content: message },
-      ],
-      response_format: { type: 'json_object' },
-    })
+只返回 JSON。`
+                },
+                { role: 'user', content: message }
+            ],
+            response_format: { type: 'json_object' }
+        })
 
-    const content = response.choices[0].message.content
-    if (!content) {
-      throw new Error('模型返回内容为空')
+        const content = response.choices[0].message.content
+        if (!content) {
+            throw new Error('模型返回内容为空')
+        }
+
+        return JSON.parse(content) as unknown
     }
-
-    return JSON.parse(content) as unknown
-  }
 ```
 
 这一步非常重要：**LLM 开始真正成为后端程序中的一个智能组件**。但 `parseIntent` 的返回值里藏着三个坑。
@@ -438,7 +438,7 @@ LLM → JSON String → JSON.parse() → JavaScript Object
 
 模型返回的 JSON 接下来要进入程序逻辑，先给三种意图定义类型（工程里的 `intent.types.ts`）：
 
-> 摘自 `code/agent-nest/src/llm/intent.types.ts`
+> 摘自 `code/agent-basics/src/llm/intent.types.ts`
 
 ```ts
 // 三种意图的 TypeScript 类型：模式由源文约定，类型只做编译期描述。
@@ -483,7 +483,7 @@ LLM → Structured Output → JSON → Zod Schema → Validation → TypeScript 
 
 工程里的实现是 `intent.schema.ts`——用 `z.discriminatedUnion` 按 `intent` 字段判别三种意图：
 
-> 摘自 `code/agent-nest/src/llm/intent.schema.ts`
+> 摘自 `code/agent-basics/src/llm/intent.schema.ts`
 
 ```ts
 // 运行时校验：JSON 合法 ≠ Schema 正确，必须显式 parse 才进业务系统。
@@ -491,29 +491,29 @@ import { z } from 'zod'
 import type { IntentResult } from './intent.types'
 
 const WeatherIntentSchema = z.object({
-  intent: z.literal('weather'),
-  city: z.string().min(1),
-  date: z.string().min(1),
+    intent: z.literal('weather'),
+    city: z.string().min(1),
+    date: z.string().min(1)
 })
 
 const CalculatorIntentSchema = z.object({
-  intent: z.literal('calculator'),
-  expression: z.string().min(1),
+    intent: z.literal('calculator'),
+    expression: z.string().min(1)
 })
 
 const ChatIntentSchema = z.object({
-  intent: z.literal('chat'),
-  message: z.string().min(1),
+    intent: z.literal('chat'),
+    message: z.string().min(1)
 })
 
 export const IntentResultSchema = z.discriminatedUnion('intent', [
   WeatherIntentSchema,
   CalculatorIntentSchema,
-  ChatIntentSchema,
+    ChatIntentSchema
 ])
 
 export function validateIntent(raw: unknown): IntentResult {
-  return IntentResultSchema.parse(raw) as IntentResult
+    return IntentResultSchema.parse(raw) as IntentResult
 }
 ```
 
@@ -523,7 +523,7 @@ export function validateIntent(raw: unknown): IntentResult {
 
 现在把校验后的 Intent 接进程序行为——这是全篇最有「Agent 味道」的一步。`AgentService` 增加 `handle`：
 
-> 摘自 `code/agent-nest/src/agent/agent.service.ts`
+> 摘自 `code/agent-basics/src/agent/agent.service.ts`
 
 ```ts
   // 第一次让 LLM 参与程序决策：解析意图 → 校验 → switch 分发。
@@ -575,14 +575,14 @@ User → LLM → 不需要工具 → Answer
 
 | 文件 | 职责 | 对应小节 |
 | ---- | ---- | ---- |
-| `code/agent-nest/src/main.ts` | `import 'dotenv/config'` 加载 `.env` + 启动自检 | 坑：`.env` 不会自动进 `process.env` |
-| `code/agent-nest/src/app.module.ts` | imports [ConfigModule.forRoot(), AgentModule] | .env 加载 / 组装 AgentModule 与第一个接口 |
-| `code/agent-nest/src/llm/llm.module.ts` | providers + exports LlmService | 第一步架构决策 |
-| `code/agent-nest/src/llm/llm.service.ts` | OpenAI SDK 接 DeepSeek；chat() / parseIntent()；Key 变量回退 + 缺 Key 中文报错 | 实现 LlmService / Structured Output |
-| `code/agent-nest/src/llm/intent.types.ts` | 三种意图的 TypeScript 类型 | 定义 TypeScript 类型 |
-| `code/agent-nest/src/llm/intent.schema.ts` | Zod discriminatedUnion 运行时校验 | 用 Zod 收口 |
-| `code/agent-nest/src/agent/agent.module.ts` | imports [LlmModule] | 组装 AgentModule 与第一个接口 |
-| `code/agent-nest/src/agent/agent.service.ts` | 注入 LlmService；handle() 决策 | 第一次让 LLM 参与程序决策 |
-| `code/agent-nest/src/agent/agent.controller.ts` | POST /agent/chat、/agent/intent | 组装 AgentModule 与第一个接口 |
+| `code/agent-basics/src/main.ts` | `import 'dotenv/config'` 加载 `.env` + 启动自检 | 坑：`.env` 不会自动进 `process.env` |
+| `code/agent-basics/src/app.module.ts` | imports [ConfigModule.forRoot(), AgentModule] | .env 加载 / 组装 AgentModule 与第一个接口 |
+| `code/agent-basics/src/llm/llm.module.ts` | providers + exports LlmService | 第一步架构决策 |
+| `code/agent-basics/src/llm/llm.service.ts` | OpenAI SDK 接 DeepSeek；chat() / parseIntent()；Key 变量回退 + 缺 Key 中文报错 | 实现 LlmService / Structured Output |
+| `code/agent-basics/src/llm/intent.types.ts` | 三种意图的 TypeScript 类型 | 定义 TypeScript 类型 |
+| `code/agent-basics/src/llm/intent.schema.ts` | Zod discriminatedUnion 运行时校验 | 用 Zod 收口 |
+| `code/agent-basics/src/agent/agent.module.ts` | imports [LlmModule] | 组装 AgentModule 与第一个接口 |
+| `code/agent-basics/src/agent/agent.service.ts` | 注入 LlmService；handle() 决策 | 第一次让 LLM 参与程序决策 |
+| `code/agent-basics/src/agent/agent.controller.ts` | POST /agent/chat、/agent/intent | 组装 AgentModule 与第一个接口 |
 
-运行方式见 `code/agent-nest/README.md`：`npm install` → 配置 `.env` → `npm start` → curl 测 `/agent/chat` 与 `/agent/intent`。注意 `npm start` 跑的是 `tsc` 产物（`dist/`），不是 `tsx src/main.ts`——原因见上文「用 `tsx` 直接跑，依赖注入会静默失效」。
+运行方式见 `code/agent-basics/README.md`：`npm install` → 配置 `.env` → `npm start` → curl 测 `/agent/chat` 与 `/agent/intent`。注意 `npm start` 跑的是 `tsc` 产物（`dist/`），不是 `tsx src/main.ts`——原因见上文「用 `tsx` 直接跑，依赖注入会静默失效」。

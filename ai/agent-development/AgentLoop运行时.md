@@ -90,13 +90,14 @@ tool_calls
 
 把上面的概念落成可运行代码（LLM 用 mock 注入，脱离 API 也能跑）：
 
-> 摘自 `code/agent-lab/agent-loop/agent-loop.ts`
+> 摘自 `code/agent-loop/agent-loop.ts`
 
 ```ts
 export async function runAgentLoop(
   userMessage: string,
   tools: AgentTool[],
   llm: (messages: unknown[]) => Promise<LlmTurn>,
+  // 默认 5：原文示例为 MAX_ITERATIONS = 10，语义一致，本实验台轮数够演示即可
   maxIterations = 5
 ): Promise<string> {
   const toolMap = new Map(tools.map(t => [t.name, t]))
@@ -157,7 +158,7 @@ if (toolName === 'search_indoor_places') { ... }
 
 Registry 要能泛化处理所有工具，前提是所有工具长一个样。约定统一协议：
 
-> 摘自 `code/agent-lab/agent-loop/agent-tool.ts`
+> 摘自 `code/agent-loop/agent-tool.ts`
 
 ```ts
 // 所有工具遵循统一协议：名字、描述、参数 schema、执行函数。
@@ -171,7 +172,7 @@ export interface AgentTool {
 
 每个具体工具实现这四要素：
 
-> 摘自 `code/agent-lab/agent-loop/agent-tool.ts`
+> 摘自 `code/agent-loop/agent-tool.ts`
 
 ```ts
 // 示例工具：真实实现会调用天气 API，这里返回固定结构以便脱离外部服务运行。
@@ -191,7 +192,7 @@ export class WeatherTool implements AgentTool {
 
 Registry 内部就是「名字 → 工具实例」的 Map。模型返回 `function.name` 后查表执行，AgentService 与具体工具从此解耦——它只依赖名字与协议：
 
-> 摘自 `code/agent-lab/agent-loop/tool-registry.ts`
+> 摘自 `code/agent-loop/tool-registry.ts`
 
 ```ts
 export class ToolRegistry {
@@ -220,11 +221,11 @@ TypeScript 类型 `type WeatherArgs = { city: string }` 帮不上忙——它只
 不可信数据 → Validation Boundary → 可信数据
 ```
 
-> 摘自 `code/agent-lab/agent-loop/tool-registry.ts`
+> 摘自 `code/agent-loop/tool-registry.ts`
 
 ```ts
 const WeatherArgsSchema = z.object({
-  city: z.string().min(1).describe('城市名称，例如西安、北京、上海'),
+    city: z.string().min(1).describe('城市名称，例如西安、北京、上海')
 })
 ```
 
@@ -232,20 +233,20 @@ const WeatherArgsSchema = z.object({
 
 最初容易写两份 Schema：Zod 版给校验、JSON Schema 版给 LLM。两份必然漂移。Zod 4 可以直接把 Zod Schema 转成 JSON Schema，一源两用：
 
-> 摘自 `code/agent-lab/agent-loop/tool-registry.ts`
+> 摘自 `code/agent-loop/tool-registry.ts`
 
 ```ts
-  // 给 LLM 的 Tool Definition：由 Zod Schema 自动生成 JSON Schema（一源两用）
-  getDefinitions() {
-    return [...this.tools.values()].map((tool) => ({
-      type: 'function' as const,
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: z.toJSONSchema(tool.schema),
-      },
-    }))
-  }
+    // 给 LLM 的 Tool Definition：由 Zod Schema 自动生成 JSON Schema（一源两用）
+    getDefinitions() {
+        return [...this.tools.values()].map(tool => ({
+            type: 'function' as const,
+            function: {
+                name: tool.name,
+                description: tool.description,
+                parameters: z.toJSONSchema(tool.schema)
+            }
+        }))
+    }
 ```
 
 一个 Zod Schema 派生出参数校验（`parse`）与 Tool Definition（`z.toJSONSchema`）；以后参数变化只改这一份。
@@ -254,33 +255,33 @@ const WeatherArgsSchema = z.object({
 
 Registry 的职责不止「找到工具」。查找、校验、执行、错误处理应统一封装在 `invoke()` 里。注意这里的 `AgentTool.schema` 直接定义为 Zod 类型（`z.ZodType`），比 `agent-tool.ts` 的 `unknown` 更进一步——校验因此能收口进 Registry：
 
-> 摘自 `code/agent-lab/agent-loop/tool-registry.ts`
+> 摘自 `code/agent-loop/tool-registry.ts`
 
 ```ts
-  // Tool Runtime：查找 → 校验 → 执行 → 错误处理，四步统一收口
-  async invoke(toolName: string, args: unknown): Promise<ToolResult> {
-    const tool = this.getTool(toolName)
-    if (!tool) {
-      return { success: false, error: `Tool 不存在: ${toolName}` }
-    }
-    try {
-      const parsed = tool.schema.parse(args)
-      const data = await tool.execute(parsed as Record<string, unknown>)
-      return { success: true, data }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return {
-          success: false,
-          error: 'Tool 参数校验失败',
-          details: error.issues.map((issue) => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-          })),
+    // Tool Runtime：查找 → 校验 → 执行 → 错误处理，四步统一收口
+    async invoke(toolName: string, args: unknown): Promise<ToolResult> {
+        const tool = this.getTool(toolName)
+        if (!tool) {
+            return { success: false, error: `Tool 不存在: ${toolName}` }
         }
-      }
-      return { success: false, error: error instanceof Error ? error.message : 'Tool 执行失败' }
+        try {
+            const parsed = tool.schema.parse(args)
+            const data = await tool.execute(parsed as Record<string, unknown>)
+            return { success: true, data }
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return {
+                    success: false,
+                    error: 'Tool 参数校验失败',
+                    details: error.issues.map(issue => ({
+                        path: issue.path.join('.'),
+                        message: issue.message
+                    }))
+                }
+            }
+            return { success: false, error: error instanceof Error ? error.message : 'Tool 执行失败' }
+        }
     }
-  }
 ```
 
 职责分层就此清晰：
@@ -384,6 +385,6 @@ User → AgentController → AgentService
 
 | 脚本 | npm script | 对应小节 |
 | --- | --- | --- |
-| `code/agent-lab/agent-loop/agent-tool.ts` | （被 agent-loop.ts 引用；registry 内是 schema 为 z.ZodType 的独立定义） | 统一 AgentTool 协议四要素 |
-| `code/agent-lab/agent-loop/agent-loop.ts` | `npm run agent-loop` | 第一版 Agent Loop：while/for、Stop Condition、回填 |
-| `code/agent-lab/agent-loop/tool-registry.ts` | `npm run registry` | Tool Registry：Zod 校验、一源两用、错误即 Observation |
+| `code/agent-loop/agent-tool.ts` | （被 agent-loop.ts 引用；registry 内是 schema 为 z.ZodType 的独立定义） | 统一 AgentTool 协议四要素 |
+| `code/agent-loop/agent-loop.ts` | `npm run agent-loop` | 第一版 Agent Loop：while/for、Stop Condition、回填 |
+| `code/agent-loop/tool-registry.ts` | `npm run registry` | Tool Registry：Zod 校验、一源两用、错误即 Observation |

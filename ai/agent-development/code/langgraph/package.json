@@ -1,0 +1,14 @@
+{
+  "name": "langgraph",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "langgraph": "tsx langgraph-agent.ts",
+    "workflow": "tsx workflow.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

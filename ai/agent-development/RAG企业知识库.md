@@ -85,10 +85,10 @@ SELECT content, vector_dims(embedding) FROM "DocumentChunk";   -- 1024
 
 配套脚本用「伪 embedding」在本机复现同类检索链路（真实向量来自 Embedding 模型，这里用字符频次伪向量代替（对文本按字符频次统计成固定维度向量，不是哈希），检索逻辑完全一致）：
 
-> 摘自 `code/agent-lab/rag/rag-retrieval.ts`
+> 摘自 `code/rag/rag-retrieval.ts`
 
 ```ts
-// 用"伪 embedding"演示 RAG 检索本质：把文本哈希成低维向量做余弦 TopK。
+// 用"伪 embedding"演示 RAG 检索本质：把文本按字符频次折算成低维向量做余弦 TopK。
 // 真实场景里 vector 来自 Embedding 模型；这里只为不依赖外部服务即可跑通检索链路。
 function pseudoEmbedding(text: string, dim = 16): number[] {
   const vec = new Array(dim).fill(0)
@@ -122,7 +122,7 @@ employee-handbook.md → 自动读取 → 自动解析 → 自动切片 → 自�
 
 Pipeline 第一步。先定义统一数据结构与 Loader 接口，再给第一版实现——`supports()` 判定文件类型，`load()` 负责读取：
 
-> 摘自 `code/agent-lab/rag/document-pipeline.ts`
+> 摘自 `code/rag/document-pipeline.ts`
 
 ```ts
 // ---------- Loader：只负责「文件 → 文本」 ----------
@@ -137,22 +137,22 @@ export interface DocumentLoader {
 }
 ```
 
-> 摘自 `code/agent-lab/rag/document-pipeline.ts`
+> 摘自 `code/rag/document-pipeline.ts`
 
 ```ts
 export class TextDocumentLoader implements DocumentLoader {
-  supports(fileName: string): boolean {
-    return ['.txt', '.md', '.markdown'].some((ext) => fileName.endsWith(ext))
-  }
-  async load(filePath: string): Promise<LoadedDocument> {
-    const content = files.get(filePath)
-    if (content === undefined) throw new Error(`文件不存在: ${filePath}`)
-    const ext = filePath.slice(filePath.lastIndexOf('.'))
-    return {
-      content,
-      metadata: { fileName: filePath, mimeType: ext === '.txt' ? 'text/plain' : 'text/markdown' },
+    supports(fileName: string): boolean {
+        return ['.txt', '.md', '.markdown'].some(ext => fileName.endsWith(ext))
     }
-  }
+    async load(filePath: string): Promise<LoadedDocument> {
+        const content = files.get(filePath)
+        if (content === undefined) throw new Error(`文件不存在: ${filePath}`)
+        const ext = filePath.slice(filePath.lastIndexOf('.'))
+        return {
+            content,
+            metadata: { fileName: filePath, mimeType: ext === '.txt' ? 'text/plain' : 'text/markdown' }
+        }
+    }
 }
 ```
 
@@ -169,7 +169,7 @@ Parser：文本 → 结构
 
 Parser 把 Markdown 解析成结构化小节（Structure Extraction），产出 `heading / section / content`——这是后面 Chunking 的重要基础：
 
-> 摘自 `code/agent-lab/rag/document-pipeline.ts`
+> 摘自 `code/rag/document-pipeline.ts`
 
 ```ts
 // ---------- Parser：只负责「文本 → 结构」（Structure Extraction） ----------
@@ -180,7 +180,7 @@ export interface DocumentSection {
 }
 ```
 
-> 摘自 `code/agent-lab/rag/document-pipeline.ts`
+> 摘自 `code/rag/document-pipeline.ts`
 
 ```ts
 export function parseMarkdownSections(content: string): DocumentSection[] {
@@ -233,7 +233,7 @@ Demo 里常见 `text.slice(0, 500); text.slice(500, 1000)`——确实能跑，�
 
 反例：Chunk 只存正文「申请时间不得超过 7 天。」——语义不完整，「什么申请？」无从知晓。把标题层级拼进 Chunk，让每个 Chunk **离开原始文档也能被独立理解**：
 
-> 摘自 `code/agent-lab/rag/token-chunker.ts`
+> 摘自 `code/rag/token-chunker.ts`
 
 ```ts
 // 标题路径拼进 Chunk：离开原文也尽量是「可独立理解的语义单元」。
@@ -252,7 +252,7 @@ export function buildChunkContent(section: DocumentSection): string {
 
 最初的实现是 `maxChunkLength = 500`（字符数），后来发现不对——Embedding 和 LLM 都围绕 **Token** 工作，字符数不等于 Token 数。所以抽象出 TokenCounter 接口：
 
-> 摘自 `code/agent-lab/rag/token-chunker.ts`
+> 摘自 `code/rag/token-chunker.ts`
 
 ```ts
 // 近似 Token 计数：中文字符 ≈ 1 token，英文字符 ≈ 0.25 token。
@@ -268,42 +268,38 @@ export interface TokenCounter {
 
 完整的 Chunker 要处理「一个 Section 太大」的情况：按段落、句子逐级降级拼装；单句连标题都装不下时，退到字符级硬切兜底：
 
-> 摘自 `code/agent-lab/rag/token-chunker.ts`
+> 摘自 `code/rag/token-chunker.ts`
 
 ```ts
 // Token-aware 递归切块：超限就按「段落 → 句子 → 字符硬切」逐级降级。
-export function chunkSection(
-  section: DocumentSection,
-  maxTokens: number,
-  counter: TokenCounter,
-): ChunkData[] {
-  const content = buildChunkContent(section)
-  if (counter.count(content) <= maxTokens) {
-    return [toChunk(content, section, maxTokens, counter)]
-  }
+export function chunkSection(section: DocumentSection, maxTokens: number, counter: TokenCounter): ChunkData[] {
+    const content = buildChunkContent(section)
+    if (counter.count(content) <= maxTokens) {
+        return [toChunk(content, section, maxTokens, counter)]
+    }
 ```
 
-> 摘自 `code/agent-lab/rag/token-chunker.ts`
+> 摘自 `code/rag/token-chunker.ts`
 
 ```ts
-  for (const piece of pieces) {
-    // 单句连标题都装不下：字符级硬切兜底
-    if (headerTokens + counter.count(piece) > maxTokens) {
-      flush()
-      const charsPerToken = piece.length / Math.max(1, counter.count(piece))
-      const budget = Math.max(4, Math.floor((maxTokens - headerTokens) * charsPerToken))
-      for (let rest = piece; rest.trim(); rest = rest.slice(budget)) {
-        chunks.push(toChunk(header + rest.slice(0, budget), section, maxTokens, counter))
-      }
-      continue
+    for (const piece of pieces) {
+        // 单句连标题都装不下：字符级硬切兜底
+        if (headerTokens + counter.count(piece) > maxTokens) {
+            flush()
+            const charsPerToken = piece.length / Math.max(1, counter.count(piece))
+            const budget = Math.max(4, Math.floor((maxTokens - headerTokens) * charsPerToken))
+            for (let rest = piece; rest.trim(); rest = rest.slice(budget)) {
+                chunks.push(toChunk(header + rest.slice(0, budget), section, maxTokens, counter))
+            }
+            continue
+        }
+        if (headerTokens + counter.count(buffer + piece) > maxTokens) {
+            flush()
+        }
+        buffer += piece
     }
-    if (headerTokens + counter.count(buffer + piece) > maxTokens) {
-      flush()
-    }
-    buffer += piece
-  }
-  flush()
-  return chunks
+    flush()
+    return chunks
 ```
 
 实跑读数（`npm run token-chunk`，`maxTokens = 40`）——「年假制度」一节被切成三个 Chunk，每个都带标题路径；同文档的下一节也照此处理：
@@ -366,7 +362,7 @@ export function chunkSection(
 
 各环节备齐后串成一条 `ingest(filePath)`。同一份文档重复上传的问题用 **SHA-256 内容指纹**解决——相同内容必然得到相同 checksum，拒绝重复入库，避免 Top-K 被重复知识占据：
 
-> 摘自 `code/agent-lab/rag/document-pipeline.ts`
+> 摘自 `code/rag/document-pipeline.ts`
 
 ```ts
 // ---------- Ingestion：checksum 去重 + 事务式写入（要么全成、要么全无） ----------
@@ -375,7 +371,7 @@ function checksum(content: string): string {
 }
 ```
 
-> 摘自 `code/agent-lab/rag/document-pipeline.ts`
+> 摘自 `code/rag/document-pipeline.ts`
 
 ```ts
 export async function ingest(filePath: string): Promise<{ inserted: boolean; chunks: number }> {
@@ -510,12 +506,14 @@ RAG Generation / Context Assembly / Prompt Engineering / Answer + Sources
 
 结合之前学的 Tool Calling、Agent Loop、Memory、Vector Memory，已经整合了企业 RAG 的基础内容——但做出检索闭环就自称「企业级」，是初学者最常见的自我高估。
 
+原文对本篇的一句话定位：**RAG 不只是「把向量存起来做相似度检索」，它是一整套数据工程（文档 → Chunk）、检索工程（Embedding → TopK → 过滤）与 LLM 工程（Context → 生成 → 引用）的组合**——本篇各节正好按这三段展开。
+
 ## 配套代码
 
 | 脚本 | npm script | 对应小节 |
 | --- | --- | --- |
-| `code/agent-lab/rag/rag-retrieval.ts` | `npm run rag` | Vector Retrieval 本质：相似度排序 TopK |
-| `code/agent-lab/rag/token-chunker.ts` | `npm run token-chunk` | Token-aware 递归切块、标题路径、硬切兜底 |
-| `code/agent-lab/rag/document-pipeline.ts` | `npm run rag-pipeline` | Loader/Parser 分离、checksum 去重、事务式入库 |
+| `code/rag/rag-retrieval.ts` | `npm run rag` | Vector Retrieval 本质：相似度排序 TopK |
+| `code/rag/token-chunker.ts` | `npm run token-chunk` | Token-aware 递归切块、标题路径、硬切兜底 |
+| `code/rag/document-pipeline.ts` | `npm run rag-pipeline` | Loader/Parser 分离、checksum 去重、事务式入库 |
 
 > Embedding 批量调用、pgvector 真实写入与版本切换事务依赖数据库与 Embedding API，正文以示意片段呈现。
