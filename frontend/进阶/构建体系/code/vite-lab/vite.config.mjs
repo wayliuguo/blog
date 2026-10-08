@@ -1,8 +1,9 @@
-// Vite 生产配置：单入口 + 手写插件 + 代码分割 + 压缩
+// Vite 配置：单入口 + 手写插件（dev / build 两套）+ 代码分割 + 压缩
 //
-// 两个命令共用这一份配置：
-//   npm run build    → vite build            （写盘到 dist/）
-//   npm run preview  → vite build && vite preview（构建 + 本地预览真实产物）
+// 三个命令共用这一份配置：
+//   npm run dev      → vite --port 5182           （dev 引擎：不打包，按请求即时转换）
+//   npm run build    → vite build                 （build 引擎：写盘到 dist/）
+//   npm run preview  → vite build && vite preview （构建 + 本地预览真实产物）
 // 不需要第二份配置文件，也不需要自定义环境变量。
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -11,6 +12,8 @@ import miniDrop from './plugins/mini-drop.mjs'
 import miniHtml from './plugins/mini-html.mjs'
 import miniTerser from './plugins/mini-terser.mjs'
 import miniSizeGate from './plugins/mini-size-gate.mjs'
+import miniMock from './plugins/mini-mock.mjs'
+import miniHmr from './plugins/mini-hmr.mjs'
 
 const DIR = import.meta.dirname
 
@@ -31,7 +34,10 @@ export default defineConfig({
         // 顺序即注册顺序；真正的先后由各自的 enforce / order 决定
         miniVirtual(),
         miniDrop(),
-        miniHtml({ nonce: 'lab-nonce' })
+        miniHtml({ nonce: 'lab-nonce' }),
+        // 下面两个只在 dev 生效（各自声明了 apply: 'serve'），build 时根本不加载
+        miniMock(),
+        miniHmr()
     ],
 
     // 依赖预构建：把 CJS / 碎片化依赖预先转成 ESM 并合并

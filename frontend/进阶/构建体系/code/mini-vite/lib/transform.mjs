@@ -1,34 +1,47 @@
-// 转换阶段：只改「模块说明符」，不动其它代码。
+// import-analysis：把源码里的静态说明符解析成 id，并登记依赖。
 //
-// 这是 dev 侧最反直觉的一步 —— import 语句本身被**原样保留**，浏览器据此再发下一个 ESM 请求，
-// 于是"一个模块一个文件"这个粒度被保住了，HMR 才有得做（打包器里这个粒度会消失）。
+// 对应真实 Vite 的 vite:import-analysis 插件。它做两件事：
+//   1. 解析 —— 把 './helper.js' 这类说明符交给容器的 resolveId，拿到最终 id；
+//   2. 改写 —— dev 侧把说明符换成浏览器能请求的 URL（build 侧不用改，因为打包时整条 import 会被删掉）。
+// 顺手把依赖关系写进模块图，供 dev 逆推 HMR 边界、build 做拓扑排序。
 //
-// 真实 Vite 的 vite:import-analysis 插件做同样的事，还额外处理：
-//   相对导入 → 补全后缀、拼成浏览器能取的绝对 URL
-//   裸导入   → /node_modules/.vite/deps/xxx.js（依赖预构建产物）
+// 不做（最小实现范围）：动态 import()、import.meta、?raw 之类的查询参数。
+import { parse } from 'acorn'
+import { toUrl } from './resolve.mjs'
 
-// 模块图的最小形态：只记录本轮 dev server 转换过哪些模块。
-// 真实 Vite 的 module graph 节点上还挂 importers / importedModules，HMR 靠它逆推 accept 边界。
-export const transformed = new Set()
+export function createImportAnalysisPlugin({ command, root, resolve, moduleGraph }) {
+    return {
+        name: 'mini:import-analysis',
+        // 排在用户 transform 之后：用户插件看到的是原始源码
+        enforce: 'post',
 
-// 匹配 import / export 语句里的模块说明符；捕获「关键字 + 引号」以便原地替换
-const SPECIFIER_RE = /(\bfrom\s*|\bimport\s*)(['"])([^'"]+)\2/g
+        async transform(code, id) {
+            if (!/\.[cm]?js$/.test(id)) return null
 
-/**
- * @param {string} id   - 模块的 URL 路径（如 '/src/main.js'），用作模块图里的节点 key
- * @param {string} code - 该模块的源码
- * @returns {{code:string}} 转换后的代码
- */
-export function transform(id, code) {
-    // 只有被浏览器请求到的模块才会走到这里 —— 这就是"按需转换"
-    transformed.add(id)
+            const ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module' })
+            const deps = []
+            const edits = []
 
-    const out = code.replace(SPECIFIER_RE, (whole, keyword, quote, specifier) => {
-        // 相对导入原样保留：浏览器会再发一个 ESM 请求，服务端到时再按需转换它
-        if (specifier.startsWith('.')) return whole
-        // 裸导入指向预构建前缀，对应真实 Vite 的 node_modules/.vite/deps
-        return `${keyword}${quote}/@deps/${specifier}.js${quote}`
-    })
+            for (const node of ast.body) {
+                const source = node.source // import ... from 'x' / export ... from 'x'
+                if (!source) continue
+                const resolved = await resolve(source.value, id)
+                if (!resolved) continue
+                deps.push(resolved)
+                if (command === 'serve') {
+                    edits.push({ start: source.start, end: source.end, text: JSON.stringify(toUrl(resolved, root)) })
+                }
+            }
 
-    return { code: out }
+            moduleGraph.setImports(id, deps)
+            if (!edits.length) return null
+
+            // 从后往前替换，避免前面的改写让后面的位置错位
+            let out = code
+            for (const e of edits.sort((a, b) => b.start - a.start)) {
+                out = out.slice(0, e.start) + e.text + out.slice(e.end)
+            }
+            return out
+        }
+    }
 }
