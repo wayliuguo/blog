@@ -18,7 +18,7 @@ build 从入口全量解析依赖图 ──> 打包、分割、压缩（产物�
 | 产物 | 一个个真实 ESM 请求，不拼 bundle | chunk / asset，与 webpack 同类 |
 | 谁在用 | 本地开发 | 上线 |
 
-- **dev 快在"不打包"**。第十节的 `mini-vite` 把这件事跑给你看：只请求入口，`helper.js` 被 import 到才会被转换，`lazy.js` 没人请求就一次都不转；同一份插件表切到 build 引擎，则一次走完整张模块图、拼成一个文件。
+- **dev 快在"不打包"**。`vite-lab` 的真实 dev server 把这件事跑给你看：只请求入口，`helper.js` 被 import 到才会被转换，没被请求到的模块一次都不转；第十节的 `mini-vite` 演示另一半——build 从入口一次走完整张模块图、拼成一个文件。
 - **build 是同一张图的一次快照**。从入口全量走一遍 `resolveId → load → transform`，把图固化成 chunk。本 lab 一次 `npm run build` 实测 `40 modules transformed`（Vue + vue-router + 两个路由视图一起进图）。
 
 dev 侧维护的东西叫**模块图**（module graph）：一个 URL ↔ 一个模块节点，节点上挂 `importers`（谁 import 我）与 `importedModules`（我 import 谁）。它解释了 Vite 的几个反直觉行为：
@@ -827,32 +827,28 @@ CSS 由 `cssCodeSplit: true` 单独成文件，与 webpack 篇抽离 CSS 的目�
 - **dev 插件用配置②、build 插件用配置③，别选错**：`apply: 'serve'` 的插件（mini-mock / mini-hmr）在 build 下根本不加载，`apply: 'build'` 的（mini-drop / mini-terser / mini-html / mini-size-gate）在 dev 下也不加载——选错配置，断点自然不命中。dev 是常驻进程，不会自己退出，断完手动停。
 - **断点是空心灰圈就是没绑定**，两种原因：一是调试器没连上、或连错了进程（终端里敲命令、F5 跑成了别的配置都会这样）；二是连上了、但跑的是 `configLoader: 'bundle'` 打包出来的副本——加 `--configLoader native` 即可。以仓库根为工作区打开时，嵌套的 `.vscode/launch.json` 不生效，需把这段配置合并进根配置（根目录已放了一条 `--configLoader native` 的 build 版）。
 
-## 十、mini-vite：双引擎（dev 不打包 / build 才打包）
+## 十、mini-vite：一次构建（插件容器 + 打包）
 
-前面的原理是"纸上结论"，`mini-vite` 把它变成能跑的代码。它是**独立项目**（`code/mini-vite/`，与 vite-lab 平级；只有一个 devDependency `acorn`，用来解析 import/export），`npm run mini` 一次跑完 dev + build 两段，不需要浏览器、也不需要真实项目。
+前面的原理是"纸上结论"，`mini-vite` 把它变成能跑的代码。它是**独立项目**（`code/mini-vite/`，与 vite-lab 平级；只有一个 devDependency `acorn`，用来解析 import/export），`npm run mini` 跑一段 build，不需要浏览器、也不需要真实项目。
 
-它复刻的不是"另一个打包器"，而是**同一套插件容器如何跨两个引擎**：
+它复刻的不是"另一个打包器"，而是**插件容器如何按钩子语义调用插件**：从入口全量建图 → 拓扑排序 → 拼成一个文件。定位与 `mini-webpack` 对齐——一次构建、一个产物。
 
-- **dev 引擎**：按 URL 按需转换，import 原样保留，浏览器原生 ESM 自己加载；
-- **build 引擎**：从入口全量建图，拓扑排序后拼成一个文件。
+dev 侧「按需转换、不打包」的原理见 §一，由 `vite-lab` 的真实 dev server 演示；本节只讲 build 侧。
 
-两段跑的是**同一份插件表**——插件只声明"我在哪个钩子上做什么"，至于这个钩子是在 dev 还是 build 触发，由引擎决定。这正是 §三 两张速查表里「生效端」那一列的代码版。
-
-**读法（由内向外）**：先看 `lib/hook.mjs`（钩子怎么被调用）与 `lib/plugin-container.mjs`（插件怎么被过滤、排序、注册）——这两份把插件机制讲完；再看 `lib/server.mjs` / `lib/build.mjs` 两个引擎，它们只是"在什么时机调用容器"。文件按职责拆开，一个文件一件事，与 `mini-webpack` 的 `lib/` 粒度对齐：
+**读法（由内向外）**：先看 `lib/hook.mjs`（钩子怎么被调用）与 `lib/plugin-container.mjs`（插件怎么被过滤、排序、注册）——这两份把插件机制讲完；再看 `lib/build.mjs`，它只是"在什么时机调用容器"。文件按职责拆开，一个文件一件事，与 `mini-webpack` 的 `lib/` 粒度对齐：
 
 | 文件 | 承担的概念 | 对应真实 Vite |
 | --- | --- | --- |
-| `index.mjs` | 入口：跑一遍 dev、跑一遍 build，最后打印钩子调用对照表 | — |
-| `lib/hook.mjs` | 极简 tapable：`call` / `first` / `pipe` / `collect` 四种调用约定 | `getSortedPluginHooks` |
+| `index.mjs` | 入口：跑一段 build，打印钩子触发次数 | — |
+| `lib/hook.mjs` | 极简 tapable：`call` / `first` / `pipe` 三种调用约定 | `getSortedPluginHooks` |
 | `lib/plugin-container.mjs` | 插件容器：`config` → `apply` 过滤 → `enforce`/`order` 排序 → 钩子注册 → 分发 | `pluginContainer.ts` |
-| `lib/resolve.mjs` | 说明符 → id（相对 / 裸导入 / 虚拟模块），id ↔ URL 互转 | `vite:resolve` |
+| `lib/resolve.mjs` | 说明符 → id（相对 / 裸导入 / 虚拟模块） | `vite:resolve` |
 | `lib/module-graph.mjs` | 模块图：节点 + `imports` / `importers` + 拓扑排序 | `moduleGraph.ts` |
-| `lib/transform.mjs` | import-analysis：acorn 解析 import → 改写说明符 + 记图 | `vite:import-analysis` |
-| `lib/server.mjs` | dev 引擎：http + 中间件链 + 按需转换 | dev server 内置中间件链 |
+| `lib/transform.mjs` | import-analysis：acorn 解析 import → 记图 | `vite:import-analysis` |
 | `lib/build.mjs` | build 引擎：全量建图 + 打包（scope hoisting 极简版） | Rollup / Rolldown |
 | `lib/emit.mjs` | 产物：`generateBundle` → 写盘 → HTML → `closeBundle` | `generateBundle` / `closeBundle` |
-| `plugins/` | 5 个示例插件（`mini-virtual` / `mini-banner` / `mini-report` / `mini-mock` / `mini-html`） | — |
-| `src/` | 演示源码（`main.js` / `helper.js` / `deep*.js` / `lazy.js`） | — |
+| `plugins/` | 4 个示例插件（`mini-virtual` / `mini-banner` / `mini-report` / `mini-html`） | — |
+| `src/` | 演示源码（`main.js` / `helper.js` / `deep*.js`） | — |
 
 ### 10.1 插件容器：过滤、排序、注册
 
@@ -891,11 +887,11 @@ CSS 由 `cssCodeSplit: true` 单独成文件，与 webpack 篇抽离 CSS 的目�
     }
 ```
 
-`apply` 过滤把 `apply: 'serve'` 的插件从 build 的插件表里剔除、`apply: 'build'` 的从 dev 里剔除——所以 §4.2 的 `mini-hmr` 那类插件在 build 时根本不加载，断点自然打不中。
+`apply` 过滤把不匹配当前 `command` 的插件剔除——本实现只跑 build，所以 `apply: 'serve'` 的插件不参与；真实 Vite 在 dev 下则反过来。§4.2 的 `mini-hmr` 那类插件在 build 时根本不加载，断点自然打不中。
 
-### 10.2 钩子的四种调用约定
+### 10.2 钩子的三种调用约定
 
-容器把钩子按语义分成四类，`lib/hook.mjs` 各给一个方法——这就是"钩子怎么被调用"的全部：
+容器把钩子按语义分成三类，`lib/hook.mjs` 各给一个方法——这就是"钩子怎么被调用"的全部：
 
 > 摘自 `./code/mini-vite/lib/hook.mjs`（运行：`npm run mini`）
 
@@ -930,15 +926,6 @@ export class Hook {
         }
         return current
     }
-
-    async collect(...args) {
-        const out = []
-        for (const t of this.taps) {
-            const result = await t.fn(...args)
-            if (result != null) out.push(result)
-        }
-        return out
-    }
 }
 ```
 
@@ -947,7 +934,6 @@ export class Hook {
 | `call` | 依次 `await`，忽略返回值 | `buildStart` / `buildEnd` / `closeBundle` / `generateBundle` |
 | `first` | 依次 `await`，第一个非空结果即返回 | `resolveId` / `load` |
 | `pipe` | 上一个的返回值喂给下一个 | `transform` / `renderChunk` / `transformIndexHtml` |
-| `collect` | 收齐所有非空返回值 | `configureServer`（收各插件返回的 post hook） |
 
 容器暴露的分发方法只是"挑一种约定去调"——`resolveId` / `load` 用 `first`（第一个认领的插件赢）、`transform` 用 `pipe`（代码依次流经所有插件）：
 
@@ -977,14 +963,12 @@ export class Hook {
         },
 ```
 
-### 10.3 dev 引擎：改写说明符 + 记图
-
-`lib/transform.mjs` 把源码里的静态说明符交给容器的 `resolveId` 解析，并在 **dev 侧**改写成浏览器能请求的 URL（build 侧不改——打包时整条 import 会被删掉），顺手把依赖关系写进模块图：
+`transform` 钩子在本实现里只"解析说明符 + 记图"，不改代码——`lib/transform.mjs` 用 acorn 解析静态 `import` / `export ... from`，把说明符交给容器的 `resolveId`，再把依赖写进模块图，供 build 做拓扑排序：
 
 > 摘自 `./code/mini-vite/lib/transform.mjs`（运行：`npm run mini`）
 
 ```js
-export function createImportAnalysisPlugin({ command, root, resolve, moduleGraph }) {
+export function createImportAnalysisPlugin({ resolve, moduleGraph }) {
     return {
         name: 'mini:import-analysis',
         // 排在用户 transform 之后：用户插件看到的是原始源码
@@ -995,57 +979,24 @@ export function createImportAnalysisPlugin({ command, root, resolve, moduleGraph
 
             const ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module' })
             const deps = []
-            const edits = []
 
             for (const node of ast.body) {
                 const source = node.source // import ... from 'x' / export ... from 'x'
                 if (!source) continue
                 const resolved = await resolve(source.value, id)
-                if (!resolved) continue
-                deps.push(resolved)
-                if (command === 'serve') {
-                    edits.push({ start: source.start, end: source.end, text: JSON.stringify(toUrl(resolved, root)) })
-                }
+                if (resolved) deps.push(resolved)
             }
 
             moduleGraph.setImports(id, deps)
-            if (!edits.length) return null
-
-            // 从后往前替换，避免前面的改写让后面的位置错位
-            let out = code
-            for (const e of edits.sort((a, b) => b.start - a.start)) {
-                out = out.slice(0, e.start) + e.text + out.slice(e.end)
-            }
-            return out
+            return null
         }
     }
 }
 ```
 
-"按需"体现在 `lib/server.mjs` 的 `serveModule`：**只有被请求到的模块才会走 `load → transform`**，浏览器没请求的 `lazy.js` 一次都不会被碰：
-
-> 摘自 `./code/mini-vite/lib/server.mjs`（运行：`npm run mini`）
-
-```js
-    async function serveModule(url, res) {
-        const id = fromUrl(url, root)
-        const code = await container.load(id)
-        if (code == null) {
-            res.statusCode = 404
-            return res.end(`// 没有插件提供 ${id}`)
-        }
-        const transformed = await container.transform(code, id)
-        moduleGraph.markTransformed(id)
-        const deps = moduleGraph.get(id)?.imports ?? []
-        log(`GET ${url}  →  转换（依赖 ${deps.length} 个）`)
-        res.setHeader('Content-Type', 'application/javascript')
-        res.end(transformed)
-    }
-```
-
 ### 10.4 build 引擎：全量建图 + 拼成一个文件
 
-build 引擎从入口出发把**整张图**走一遍（这就是与 dev 的差别），再按拓扑序把各模块摊平进一个作用域——删掉 import 语句、去掉 export 关键字，即"scope hoisting 极简版"：
+build 引擎从入口出发把**整张图**走一遍，再按拓扑序把各模块摊平进一个作用域——删掉 import 语句、去掉 export 关键字，即"scope hoisting 极简版"：
 
 > 摘自 `./code/mini-vite/lib/build.mjs`（运行：`npm run mini`）
 
@@ -1072,7 +1023,7 @@ function flatten(code, id) {
     return out.trim()
 }
 // …
-    // 全量建图：与 dev 的区别就在这里——dev 只处理被请求到的模块，这里处理整张图
+    // 全量建图：从入口出发，把整张依赖图（可达模块）都走一遍
     async function visit(id) {
         if (visited.has(id)) return
         visited.add(id)
@@ -1101,56 +1052,44 @@ function flatten(code, id) {
 
 ### 10.5 一次运行的读数
 
-`npm run mini` 一次跑完三段：build 建图打包、dev 按需转换、钩子调用对照。实测输出（节选）：
+`npm run mini` 跑一段 build：建图 → 打包 → 执行产物 → 打印钩子触发次数。实测输出：
 
 ```
 === build 引擎：一次走完整张模块图，拼成一个文件 ===
+  [mini-virtual] config：command=build mode=production
+  [mini-virtual] configResolved：缓存 mode=production
   [mini-banner] renderChunk：给产物加 banner
   [mini-report] generateBundle：输出目录 …/mini-vite/dist
-    - assets/index.js  606 B
-  参与打包的模块 6 个：src/deep2.js → src/deep.js → src/helper.js → /@deps/tiny-lib.js → \0virtual:build-info → src/main.js
+    - assets/index.js  603 B
+  [mini-html] transformIndexHtml：ctx.bundle=true
+  参与打包的模块 6 个：src/deep2.js → src/deep.js → src/helper.js → \0deps:tiny-lib → \0virtual:build-info → src/main.js
+  产物 assets/index.js：603 B
   执行产物（node dist/assets/index.js）：
     hi, mini-vite! (deep:deep2)
     hello from tiny-lib
     mode = production
 
-=== dev 引擎：按 URL 按需转换，import 原样保留 ===
-  [mini-mock] configureServer：注册 /api/* 中间件
-  [dev] GET /src/main.js  →  转换（依赖 3 个）
-  [dev] GET /src/helper.js  →  转换（依赖 1 个）
-  main.js 里的说明符已被改写：
-    ✓ /src/helper.js   ✓ /@deps/tiny-lib.js   ✓ /@id/__x00__virtual:build-info
-  GET /api/user  →  {"name":"mini-vite","from":"mini-mock"}
-  GET /  →  HTML 已被 mini-html 处理
-  deep.js 被转换过吗：否 —— 浏览器还没请求到它
-  lazy.js 进入模块图了吗：否 —— 它不在依赖图里
+=== 钩子调用（一次构建）===
+  钩子                build
+  config              1
+  configResolved      1
+  buildStart          1
+  resolveId           5
+  load                6
+  transform           6
+  renderChunk         1
+  generateBundle      1
+  closeBundle         1
+  transformIndexHtml  1
+  buildEnd            1
 ```
 
-最后一段是钩子调用对照（**一次实测样本**，数字受请求顺序影响）：
+最后一段是钩子触发次数（**一次实测样本**）。这张表同时落地两件事：
 
-```
-  钩子                dev   build
-  config              1     1
-  configResolved      1     1
-  buildStart          1     1
-  resolveId           4     5
-  load                4     6
-  transform           4     6
-  renderChunk         0     1       ← build 专属
-  generateBundle      0     1       ← build 专属
-  closeBundle         0     1       ← build 专属
-  configureServer     1     0       ← dev 专属
-  transformIndexHtml  1     1
-  buildEnd            1     1
-```
+- **通用钩子（Rollup 兼容）在 build 下都跑一遍**：`resolveId` 5 次、`load` / `transform` 各 6 次——整张图 6 个模块（4 个磁盘文件 + 1 个裸导入占位 `\0deps:tiny-lib` + 1 个虚拟模块 `\0virtual:build-info`）；
+- **build 专属钩子各 1 次**：`renderChunk` / `generateBundle` / `closeBundle` / `transformIndexHtml`。`transform` 在 build 侧只"解析 + 记图"、不改代码（改写说明符是 dev 侧的事，见 §一）。
 
-这张表同时落地三件事：
-
-- **通用钩子两端都跑、但次数不同**：`transform` 在 dev 触发 4 次（只处理被请求到的模块），build 触发 6 次（整张图 6 个模块）——正是 §一 讲的"dev 处理被请求到的模块，build 处理整个依赖图"；
-- **build 专属钩子在 dev 为 0**：`renderChunk` / `generateBundle` / `closeBundle`；
-- **dev 专属钩子在 build 为 0**：`configureServer`。
-
-对照真实 Vite，这个最小实现已经"骨架齐全"：插件容器（过滤 / 排序 / 注册 / 分发）、四种调用约定、两套引擎共用一份插件表、虚拟模块、模块图与拓扑排序。Vite 真身叠加的，是内置插件链（`vite:resolve` / `vite:import-analysis` / `vite:transform` …）、HMR 的 accept 边界、依赖预构建的缓存、以及 Rolldown 生产引擎——**机制没变，只是把每一步做重、做对、做成可插拔**。
+对照真实 Vite，这个最小实现已经"骨架齐全"：插件容器（过滤 / 排序 / 注册 / 分发）、三种调用约定、虚拟模块、模块图与拓扑排序。Vite 真身叠加的，是内置插件链（`vite:resolve` / `vite:import-analysis` / `vite:transform` …）、HMR 的 accept 边界、依赖预构建的缓存、以及 Rolldown 生产引擎——**机制没变，只是把每一步做重、做对、做成可插拔**。
 
 ## 配套代码
 
@@ -1175,17 +1114,16 @@ function flatten(code, id) {
 | `./code/vite-lab/plugins/mini-terser.mjs` | 手写压缩插件（`renderChunk`） | 三、六 |
 | `./code/vite-lab/plugins/mini-size-gate.mjs` | 手写体积门禁 + manifest（`generateBundle`） | 三、六 |
 | `./code/vite-lab/.vscode/launch.json` | VS Code 调试配置（三条：① 浏览器端 app ② dev 插件 ③ build 插件，Node 端 `program` 直指 `vite.js` + `--configLoader native`） | 九 |
-| `./code/mini-vite/index.mjs` | 双引擎入口：跑一遍 dev、跑一遍 build，打印钩子调用对照表 | 十 |
-| `./code/mini-vite/lib/hook.mjs` | 极简 tapable：`call` / `first` / `pipe` / `collect` 四种调用约定 | 十 |
+| `./code/mini-vite/index.mjs` | 单 build 引擎入口：建图打包 + 钩子触发次数读数 | 十 |
+| `./code/mini-vite/lib/hook.mjs` | 极简 tapable：`call` / `first` / `pipe` 三种调用约定 | 十 |
 | `./code/mini-vite/lib/plugin-container.mjs` | 插件容器：`config` → `apply` 过滤 → `enforce`/`order` 排序 → 钩子注册 → 分发 | 十 |
-| `./code/mini-vite/lib/resolve.mjs` | 说明符 → id（相对 / 裸导入 / 虚拟模块），id ↔ URL 互转 | 十 |
+| `./code/mini-vite/lib/resolve.mjs` | 说明符 → id（相对 / 裸导入 / 虚拟模块） | 十 |
 | `./code/mini-vite/lib/module-graph.mjs` | 模块图：`imports` / `importers` + 拓扑排序 | 十 |
-| `./code/mini-vite/lib/transform.mjs` | import-analysis：acorn 解析 import → 改写说明符 + 记图 | 十 |
-| `./code/mini-vite/lib/server.mjs` | dev 引擎：http + 中间件链 + 按需转换 | 十 |
+| `./code/mini-vite/lib/transform.mjs` | import-analysis：acorn 解析 import → 记图 | 十 |
 | `./code/mini-vite/lib/build.mjs` | build 引擎：全量建图 + 打包（scope hoisting 极简版） | 十 |
 | `./code/mini-vite/lib/emit.mjs` | 产物：`generateBundle` → 写盘 → HTML → `closeBundle` | 十 |
-| `./code/mini-vite/plugins/mini-virtual.mjs`、`mini-banner.mjs`、`mini-report.mjs`、`mini-mock.mjs`、`mini-html.mjs` | 5 个示例插件，各挂一个（或一组）钩子 | 十 |
-| `./code/mini-vite/src/` | 演示源码（main / helper / deep / deep2 / lazy） | 十 |
+| `./code/mini-vite/plugins/mini-virtual.mjs`、`mini-banner.mjs`、`mini-report.mjs`、`mini-html.mjs` | 4 个示例插件，各挂一个（或一组）钩子 | 十 |
+| `./code/mini-vite/src/` | 演示源码（main / helper / deep / deep2） | 十 |
 
 运行：`cd code/vite-lab && npm install`，然后 `npm run dev`（开发，5182）、`npm run build`（构建）、`npm run preview`（构建 + 预览，5181）。
 

@@ -1,8 +1,7 @@
 // build 引擎：一次走完整张模块图，把所有模块拼成一个文件。
 //
-// 与 dev 引擎共用同一个插件容器——差别只在"处理哪些模块"：
-//   dev   按 URL 按需转换，import 原样保留；
-//   build 全量建图 + 拓扑排序 + 拼接，import 语句在拼接前被删掉。
+// 这是 mini-vite 的「一次构建、一个产物」——与 mini-webpack 的定位对齐。
+// 全量建图 + 拓扑排序 + 拼接，import 语句在拼接前被删掉。
 //
 // 打包用"scope hoisting 极简版"：按拓扑序把各模块代码摊平到一个作用域，
 // 删掉 import 语句、去掉 export 关键字。真实 Rollup / Rolldown 会额外做重命名、
@@ -16,7 +15,6 @@ import { parse } from 'acorn'
 export function label(id, root) {
     // \0 是不可见控制字符，打印时写成转义形式
     if (id.startsWith('\0')) return '\\0' + id.slice(1)
-    if (id.startsWith('/@')) return id
     return path.relative(root, id).split(path.sep).join('/')
 }
 
@@ -61,7 +59,7 @@ export async function build({ root, container, moduleGraph }) {
     const codeById = new Map()
     const visited = new Set()
 
-    // 全量建图：与 dev 的区别就在这里——dev 只处理被请求到的模块，这里处理整张图
+    // 全量建图：从入口出发，把整张依赖图（可达模块）都走一遍
     async function visit(id) {
         if (visited.has(id)) return
         visited.add(id)

@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "private": true,
     "type": "module",
-    "description": "最小 Vite：dev 按需转换不打包 / build 全量建图打包，两引擎共用同一个插件容器",
+    "description": "最小 Vite（build 单引擎）：插件容器 + 三种钩子调用约定 + 全量建图打包",
     "scripts": {
         "mini": "node index.mjs"
     },
