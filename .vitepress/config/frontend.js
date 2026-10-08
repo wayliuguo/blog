@@ -248,12 +248,30 @@ export default [
                 text: '前端框架原理',
                 collapsed: false,
                 items: [
-                    { text: 'React 高级与原理', link: '/frontend/进阶/前端框架原理/react/React%20高级与原理' },
-                    { text: '手写 mini-react', link: '/frontend/进阶/前端框架原理/react/手写%20mini-react' },
-                    { text: 'React 状态管理原理与实现', link: '/frontend/进阶/前端框架原理/react/React%20状态管理原理与实现' },
-                    { text: 'Vue3 原理', link: '/frontend/进阶/前端框架原理/vue3/Vue3%20原理' },
-                    { text: '手写 mini-vue', link: '/frontend/进阶/前端框架原理/vue3/手写%20mini-vue' },
-                    { text: 'Vue3 状态管理原理与实现', link: '/frontend/进阶/前端框架原理/vue3/Vue3%20状态管理原理与实现' },
+                    {
+                        text: 'React',
+                        collapsed: false,
+                        items: [
+                            { text: 'React 高级与原理', link: '/frontend/进阶/前端框架原理/react/React%20高级与原理' },
+                            { text: '手写 mini-react', link: '/frontend/进阶/前端框架原理/react/手写%20mini-react' },
+                            {
+                                text: 'React 状态管理原理与实现',
+                                link: '/frontend/进阶/前端框架原理/react/React%20状态管理原理与实现'
+                            }
+                        ]
+                    },
+                    {
+                        text: 'Vue3',
+                        collapsed: false,
+                        items: [
+                            { text: 'Vue3 原理', link: '/frontend/进阶/前端框架原理/vue3/Vue3%20原理' },
+                            { text: '手写 mini-vue', link: '/frontend/进阶/前端框架原理/vue3/手写%20mini-vue' },
+                            {
+                                text: 'Vue3 状态管理原理与实现',
+                                link: '/frontend/进阶/前端框架原理/vue3/Vue3%20状态管理原理与实现'
+                            }
+                        ]
+                    },
                     { text: '模块总结（前端框架原理）', link: '/frontend/进阶/前端框架原理/总结' },
                     { text: '模块面试题（前端框架原理）', link: '/frontend/进阶/前端框架原理/面试题' }
                 ]
