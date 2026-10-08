@@ -22,7 +22,7 @@ test/fake-dom.js       把浏览器那份 nodeOps 跑在 Node 里的最小 DOM
 
 整个系统只有三个变量：一张依赖表、一个 effect 栈、一个"当前正在跑的 effect"。
 
-> 摘自 `./code/mini-vue/src/reactivity/effect.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
 const targetMap = new WeakMap()
@@ -32,7 +32,7 @@ let activeEffect = null
 
 `effect` 负责"把函数包成可被追踪的东西"。它做三件事：入栈、**先清掉旧依赖再执行**、出栈。
 
-> 摘自 `./code/mini-vue/src/reactivity/effect.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
 class ReactiveEffect {
@@ -61,7 +61,7 @@ class ReactiveEffect {
 
 两个容易忽略的设计：**用栈而不是单个变量**，因为 effect 里可能再跑 effect（computed 的 getter、子组件渲染），必须能恢复外层；**`deps` 是反向索引**，每个 effect 记下自己进过哪些 dep，`stop()` 时才知道要退订哪些。
 
-> 摘自 `./code/mini-vue/src/reactivity/effect.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
 function cleanupEffect(effect) {
@@ -72,7 +72,7 @@ function cleanupEffect(effect) {
 
 收集与触发分别落在 get 与 set 上。`track` 是"建表"的过程——`targetMap`（对象）→ `depsMap`（属性）→ `dep`（effect 集合），三层逐级补空：
 
-> 摘自 `./code/mini-vue/src/reactivity/effect.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
 function track(target, key) {
@@ -95,7 +95,7 @@ function track(target, key) {
 
 `trigger` 只有几行，但有两个细节值钱：**遍历前先复制一份**，因为 effect 执行过程中可能增删集合；**跳过自己**，避免"在 effect 里改自己依赖的数据"导致死循环。
 
-> 摘自 `./code/mini-vue/src/reactivity/effect.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
 function trigger(target, key) {
@@ -115,7 +115,7 @@ function trigger(target, key) {
 
 观察脚本把这几件事按顺序摆开：
 
-> 摘自 `./code/mini-vue/steps/01-reactivity.js`（运行：`npm run step:reactivity`）
+> 摘自 `../code/vue3/mini-vue/steps/01-reactivity.js`（运行：`npm run step:reactivity`）
 
 ```js
 const log = []
@@ -159,7 +159,7 @@ effect(() => {
 
 `readonly` 那部分留了个"反常识"的点：**只读代理不收集依赖**。原因很简单——不会被 set 的对象永远不会触发 trigger，收集了也没人用。单测把这条固化了：
 
-> 摘自 `./code/mini-vue/test/reactivity.test.js`（运行：`npm test`）
+> 摘自 `../code/vue3/mini-vue/test/reactivity.test.js`（运行：`npm test`）
 
 ```js
 test('readonly：读不收集依赖，写被忽略', () => {
@@ -182,7 +182,7 @@ test('readonly：读不收集依赖，写被忽略', () => {
 
 `ReactiveEffect.run()` 里那句 `cleanupEffect(this)` 常被当成优化细节略过，但它决定的是正确性。想象一个 effect 里写 `flag ? a : b`：第一次收集了 `flag` 与 `a`，切到 `b` 分支后，如果 `a` 的依赖还在，**改 `a` 会触发一次结果完全没变的渲染**。清理后重新收集，依赖表才始终等于"这次真正读了什么"。
 
-> 摘自 `./code/mini-vue/steps/02-effect-scheduler.js`（运行：`npm run step:effect`）
+> 摘自 `../code/vue3/mini-vue/steps/02-effect-scheduler.js`（运行：`npm run step:effect`）
 
 ```js
 effect(() => {
@@ -209,7 +209,7 @@ effect(() => {
 
 `reactive` 的 getter 里做了两件事：收集依赖、把"值是对象"的属性继续代理。后一件事是**惰性**的——不是一开始就递归遍历整棵树。
 
-> 摘自 `./code/mini-vue/src/reactivity/reactive.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/reactive.js`
 
 ```js
 function createGetter(isReadonly = false, isShallow = false) {
@@ -232,7 +232,7 @@ function createGetter(isReadonly = false, isShallow = false) {
 
 `reactive` 本身很短，但**缓存那三行是必须的**：同一对象每次访问都新建 Proxy，依赖就会收集到不同的 dep 上，触发时自然对不上号。
 
-> 摘自 `./code/mini-vue/src/reactivity/reactive.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/reactive.js`
 
 ```js
     const existing = reactiveMap.get(target)
@@ -247,7 +247,7 @@ function createGetter(isReadonly = false, isShallow = false) {
 
 `reactive` 只接受对象，所以基本类型要用一个类包起来，靠 `.value` 读写。注意构造时那句"值是对象就转 reactive"——所以 `ref({a: 1}).value.a` 也是响应式的。
 
-> 摘自 `./code/mini-vue/src/reactivity/ref.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/ref.js`
 
 ```js
 class RefImpl {
@@ -263,7 +263,7 @@ class RefImpl {
 
 computed 的价值是"没人读就不算"。实现只需要一个布尔值加一处调度：
 
-> 摘自 `./code/mini-vue/src/reactivity/computed.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/computed.js`
 
 ```js
         this.effect = new ReactiveEffect(getter, () => {
@@ -273,7 +273,7 @@ computed 的价值是"没人读就不算"。实现只需要一个布尔值加一
         })
 ```
 
-> 摘自 `./code/mini-vue/src/reactivity/computed.js`
+> 摘自 `../code/vue3/mini-vue/src/reactivity/computed.js`
 
 ```js
     get value() {
@@ -306,7 +306,7 @@ computed 的价值是"没人读就不算"。实现只需要一个布尔值加一
 
 运行时核心不认识 DOM。所有平台相关的动作都由调用方注入，核心只负责"什么时候该调用哪个"：
 
-> 摘自 `./code/mini-vue/src/runtime-core/renderer.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/renderer.js`
 
 ```js
 function createRenderer(options) {
@@ -325,7 +325,7 @@ function createRenderer(options) {
 
 浏览器那份实现就是标准的 DOM API，只有 `insert` 的一个细节值得留意——**anchor 为 null 时 `insertBefore` 就是 append**，所以九个操作里不需要单独来一个 `appendChild`：
 
-> 摘自 `./code/mini-vue/src/runtime-dom/nodeOps.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-dom/nodeOps.js`
 
 ```js
     insert: (child, parent, anchor) => {
@@ -339,7 +339,7 @@ function createRenderer(options) {
 
 `runtime-dom` 这一层的全部职责就是"把两样东西装到一起"：
 
-> 摘自 `./code/mini-vue/src/runtime-dom/index.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-dom/index.js`
 
 ```js
 const { render, createApp } = createRenderer({ ...nodeOps, patchProp })
@@ -352,7 +352,7 @@ module.exports = { createApp, render, h, createVNode, nextTick, nodeOps, patchPr
 
 这是"平台无关"最直接的证明。宿主 A 用真实 DOM 的替身（`nodeOps` + 假 DOM），宿主 B 干脆把界面拼成字符串——相当于服务端渲染的雏形。两边跑的是同一个组件定义、同一份 runtime-core。
 
-> 摘自 `./code/mini-vue/steps/03-renderer.js`（运行：`npm run step:renderer`）
+> 摘自 `../code/vue3/mini-vue/steps/03-renderer.js`（运行：`npm run step:renderer`）
 
 ```js
 // ---------- 宿主 B：不建节点，直接拼字符串 ----------
@@ -416,7 +416,7 @@ renderer 全程只调用注入进来的那 9 个函数，所以：
 
 VNode 是普通对象，`shapeFlag` 用一个整数表达两件正交的事：**是元素还是组件**、**孩子是文本还是数组**。
 
-> 摘自 `./code/mini-vue/src/runtime-core/vnode.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/vnode.js`
 
 ```js
 function createBaseVNode(type, props, children) {
@@ -442,7 +442,7 @@ function createBaseVNode(type, props, children) {
 }
 ```
 
-> 摘自 `./code/mini-vue/src/shared/index.js`
+> 摘自 `../code/vue3/mini-vue/src/shared/index.js`
 
 ```js
 const ShapeFlags = {
@@ -458,7 +458,7 @@ const ShapeFlags = {
 
 分发本身很短，因为它靠位运算把两层判断压成了一次：
 
-> 摘自 `./code/mini-vue/src/runtime-core/renderer.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/renderer.js`
 
 ```js
         const { type, shapeFlag } = n2
@@ -482,7 +482,7 @@ const ShapeFlags = {
 
 `Fragment` 没有自己的节点，所以它用**两个空文本节点夹住自己这一段**当锚点——插入子节点时以尾锚点为参照，删除时把两个锚点一起摘掉。这也是为什么"顶层直接渲染一个数组"不会多出包裹节点：
 
-> 摘自 `./code/mini-vue/src/runtime-core/renderer.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/renderer.js`
 
 ```js
     function render(vnode, container) {
@@ -501,7 +501,7 @@ const ShapeFlags = {
 
 Vue3 的列表 diff 是**先对齐头尾、再处理中间乱序**，也就是常说的"双端比较"。前两步便宜且常见：
 
-> 摘自 `./code/mini-vue/src/runtime-core/renderer.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/renderer.js`
 
 ```js
         // 1. 从头同步：能对上的直接复用，一个属性都不多改
@@ -526,7 +526,7 @@ Vue3 的列表 diff 是**先对齐头尾、再处理中间乱序**，也就是�
 
 头尾都没对上时才走"中间乱序"：按 key 建索引，找出哪些还能复用、哪些是新增，再统一搬移。
 
-> 摘自 `./code/mini-vue/src/runtime-core/renderer.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/renderer.js`
 
 ```js
         const s1 = i
@@ -545,7 +545,7 @@ Vue3 的列表 diff 是**先对齐头尾、再处理中间乱序**，也就是�
 
 `key` 只影响"匹配谁"，不参与属性更新，所以它被单独放在 VNode 上而不是 `props` 里。属性更新的三种写法（事件 / DOM property / attribute）也集中在 `patchProp`：
 
-> 摘自 `./code/mini-vue/src/runtime-dom/patchProp.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-dom/patchProp.js`
 
 ```js
 const isOn = key => /^on[A-Z]/.test(key)
@@ -566,7 +566,7 @@ function patchProp(el, key, prevValue, nextValue) {
 
 和 React 那篇一样，断言 diff 最直接的办法是数宿主操作。两个结构完全相同的列表，只差有没有 key：
 
-> 摘自 `./code/mini-vue/steps/04-dom-diff.js`（运行：`npm run step:diff`）
+> 摘自 `../code/vue3/mini-vue/steps/04-dom-diff.js`（运行：`npm run step:diff`）
 
 ```js
 // 每个 <li> 上挂一个 data-id：无 key 时"就地改写"会把它也一起改掉，看得见
@@ -621,7 +621,7 @@ const withKey = items =>
 
 第三点也要说清楚：**有 key 的重排不是零成本**。真实 Vue 会先算最长递增子序列，跳过本来就在正确位置的节点（这里 3 个节点里其实只需搬 1 个）；本实现为了好读简化成"从后往前逐个插"，所以搬运次数偏多。这几条同样固化成了断言：
 
-> 摘自 `./code/mini-vue/test/diff.test.js`（运行：`npm test`）
+> 摘自 `../code/vue3/mini-vue/test/diff.test.js`（运行：`npm test`）
 
 ```js
 test('有 key：纯重排只搬移节点，不改内容', () => {
@@ -640,7 +640,7 @@ test('有 key：纯重排只搬移节点，不改内容', () => {
 
 到这里，前三层终于合上了：**组件的 render 被包成一个 effect**，它读到的响应式数据就是它的依赖。
 
-> 摘自 `./code/mini-vue/src/runtime-core/component.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/component.js`
 
 ```js
 function setupRenderEffect(instance, initialVNode, container, anchor, patch) {
@@ -666,7 +666,7 @@ function setupRenderEffect(instance, initialVNode, container, anchor, patch) {
 
 而"改三次只渲染一次"就发生在 scheduler 里。它用的是**微任务**，所以整块同步代码跑完、DOM 还是旧的，`nextTick()` 之后才能读到新值：
 
-> 摘自 `./code/mini-vue/src/runtime-core/scheduler.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/scheduler.js`
 
 ```js
 function queueJob(job) {
@@ -692,7 +692,7 @@ function flushJobs() {
 
 props 那层解决的是另一类问题：子组件改父组件传下来的值必须被拦住，但 props 本身还得跟着父组件更新。
 
-> 摘自 `./code/mini-vue/src/runtime-core/componentProps.js`
+> 摘自 `../code/vue3/mini-vue/src/runtime-core/componentProps.js`
 
 ```js
     // 声明过的进 props，没声明的进 attrs——这决定了它会不会出现在 $attrs 里
@@ -710,7 +710,7 @@ props 那层解决的是另一类问题：子组件改父组件传下来的值�
 
 ### 实测：挂载、批处理、只读告警、跳过子渲染、卸载
 
-> 摘自 `./code/mini-vue/steps/05-component.js`（运行：`npm run step:component`）
+> 摘自 `../code/vue3/mini-vue/steps/05-component.js`（运行：`npm run step:component`）
 
 ```js
 const Counter = {
@@ -792,43 +792,43 @@ const Counter = {
 
 ## 配套代码
 
-本篇示例来自 `code/mini-vue`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
+本篇示例来自 `code/vue3/mini-vue`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
 
 | 文件 | 作用 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/mini-vue/src/shared/index.js` | 类型判断与 `ShapeFlags` | 五、VNode 与 shapeFlag |
-| `./code/mini-vue/src/reactivity/effect.js` | `ReactiveEffect` / `effect` / `track` / `trigger` / `stop` | 二、响应式地基 |
-| `./code/mini-vue/src/reactivity/reactive.js` | `reactive` / `readonly` / `shallowReadonly` 与代理缓存 | 三、effect 的清理 |
-| `./code/mini-vue/src/reactivity/ref.js` | `RefImpl` / `proxyRefs` / `unref` | 三、effect 的清理 |
-| `./code/mini-vue/src/reactivity/computed.js` | 脏标记 + scheduler 实现的惰性 `computed` | 三、effect 的清理 |
-| `./code/mini-vue/src/reactivity/index.js` | reactivity 层出口 | 二 · 三 |
-| `./code/mini-vue/src/runtime-core/vnode.js` | `createVNode` / `h` / `shapeFlag` / `normalizeVNode` | 五、VNode 与 shapeFlag |
-| `./code/mini-vue/src/runtime-core/scheduler.js` | `queueJob` / `flushJobs` / `nextTick`（微任务批处理） | 七、组件 |
-| `./code/mini-vue/src/runtime-core/renderer.js` | `createRenderer`：patch 分发、列表 diff、组件挂载与卸载 | 四 · 五 · 六 · 七 |
-| `./code/mini-vue/src/runtime-core/component.js` | 组件实例、`setup` 代理、渲染 effect | 七、组件 |
-| `./code/mini-vue/src/runtime-core/componentProps.js` | `props` 浅只读、`attrs` 分流、`slots` 归一 | 七、组件 |
-| `./code/mini-vue/src/runtime-dom/nodeOps.js` | 浏览器宿主操作（真实 DOM） | 四、宿主抽象 |
-| `./code/mini-vue/src/runtime-dom/patchProp.js` | 事件 / property / attribute 三种属性写法 | 六、列表 diff |
-| `./code/mini-vue/src/runtime-dom/index.js` | `createRenderer({ ...nodeOps, patchProp })` 与 `createApp` | 四、宿主抽象 |
-| `./code/mini-vue/steps/01-reactivity.js` | 依赖收集与触发、惰性深度代理、增删属性 | 二、响应式地基 |
-| `./code/mini-vue/steps/02-effect-scheduler.js` | scheduler、分支清理、`stop`、`computed` 惰性 | 三、effect 的清理 |
-| `./code/mini-vue/steps/03-renderer.js` | 两个宿主跑同一份 render，对调用次数 | 四、宿主抽象 |
-| `./code/mini-vue/steps/04-dom-diff.js` | 有 / 无 key 的宿主操作次数对照 | 六、列表 diff |
-| `./code/mini-vue/steps/05-component.js` | 挂载、批处理、只读 props、跳过子渲染、卸载 | 七、组件 |
-| `./code/mini-vue/test/fake-dom.js` | 让 `nodeOps` 能跑在 Node 里的最小 DOM + 宿主操作记录器 | 四 · 六 |
-| `./code/mini-vue/test/reactivity.test.js` | 响应式 11 条断言（含 readonly 不收集依赖） | 二 · 三 |
-| `./code/mini-vue/test/renderer.test.js` | 挂载 / 属性 / 事件 / Fragment 7 条断言 | 五、VNode 与 shapeFlag |
-| `./code/mini-vue/test/diff.test.js` | 列表 diff 8 条断言（含宿主操作序列） | 六、列表 diff |
+| `../code/vue3/mini-vue/src/shared/index.js` | 类型判断与 `ShapeFlags` | 五、VNode 与 shapeFlag |
+| `../code/vue3/mini-vue/src/reactivity/effect.js` | `ReactiveEffect` / `effect` / `track` / `trigger` / `stop` | 二、响应式地基 |
+| `../code/vue3/mini-vue/src/reactivity/reactive.js` | `reactive` / `readonly` / `shallowReadonly` 与代理缓存 | 三、effect 的清理 |
+| `../code/vue3/mini-vue/src/reactivity/ref.js` | `RefImpl` / `proxyRefs` / `unref` | 三、effect 的清理 |
+| `../code/vue3/mini-vue/src/reactivity/computed.js` | 脏标记 + scheduler 实现的惰性 `computed` | 三、effect 的清理 |
+| `../code/vue3/mini-vue/src/reactivity/index.js` | reactivity 层出口 | 二 · 三 |
+| `../code/vue3/mini-vue/src/runtime-core/vnode.js` | `createVNode` / `h` / `shapeFlag` / `normalizeVNode` | 五、VNode 与 shapeFlag |
+| `../code/vue3/mini-vue/src/runtime-core/scheduler.js` | `queueJob` / `flushJobs` / `nextTick`（微任务批处理） | 七、组件 |
+| `../code/vue3/mini-vue/src/runtime-core/renderer.js` | `createRenderer`：patch 分发、列表 diff、组件挂载与卸载 | 四 · 五 · 六 · 七 |
+| `../code/vue3/mini-vue/src/runtime-core/component.js` | 组件实例、`setup` 代理、渲染 effect | 七、组件 |
+| `../code/vue3/mini-vue/src/runtime-core/componentProps.js` | `props` 浅只读、`attrs` 分流、`slots` 归一 | 七、组件 |
+| `../code/vue3/mini-vue/src/runtime-dom/nodeOps.js` | 浏览器宿主操作（真实 DOM） | 四、宿主抽象 |
+| `../code/vue3/mini-vue/src/runtime-dom/patchProp.js` | 事件 / property / attribute 三种属性写法 | 六、列表 diff |
+| `../code/vue3/mini-vue/src/runtime-dom/index.js` | `createRenderer({ ...nodeOps, patchProp })` 与 `createApp` | 四、宿主抽象 |
+| `../code/vue3/mini-vue/steps/01-reactivity.js` | 依赖收集与触发、惰性深度代理、增删属性 | 二、响应式地基 |
+| `../code/vue3/mini-vue/steps/02-effect-scheduler.js` | scheduler、分支清理、`stop`、`computed` 惰性 | 三、effect 的清理 |
+| `../code/vue3/mini-vue/steps/03-renderer.js` | 两个宿主跑同一份 render，对调用次数 | 四、宿主抽象 |
+| `../code/vue3/mini-vue/steps/04-dom-diff.js` | 有 / 无 key 的宿主操作次数对照 | 六、列表 diff |
+| `../code/vue3/mini-vue/steps/05-component.js` | 挂载、批处理、只读 props、跳过子渲染、卸载 | 七、组件 |
+| `../code/vue3/mini-vue/test/fake-dom.js` | 让 `nodeOps` 能跑在 Node 里的最小 DOM + 宿主操作记录器 | 四 · 六 |
+| `../code/vue3/mini-vue/test/reactivity.test.js` | 响应式 11 条断言（含 readonly 不收集依赖） | 二 · 三 |
+| `../code/vue3/mini-vue/test/renderer.test.js` | 挂载 / 属性 / 事件 / Fragment 7 条断言 | 五、VNode 与 shapeFlag |
+| `../code/vue3/mini-vue/test/diff.test.js` | 列表 diff 8 条断言（含宿主操作序列） | 六、列表 diff |
 
-运行：`cd code/mini-vue`，然后
+运行：`cd code/vue3/mini-vue`，然后
 
 - `npm run step:reactivity` / `step:effect` / `step:renderer` / `step:diff` / `step:component` —— 五个观察脚本
 - `npm test` —— 26 个单测
 
 ## 参考
 
-- 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[手写 mini-react](./手写%20mini-react.md)
-- 下一篇：[性能优化体系与指标](../性能优化/性能优化体系与指标.md)
-- 本模块另三篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](./Vue3%20原理.md) · [手写 mini-react](./手写%20mini-react.md)
+- 本模块总结：[总结](../总结.md)
+- 本模块面试题：[面试题](../面试题.md)
+- 上一篇：[手写 mini-react](../react/手写%20mini-react.md)
+- 下一篇：[性能优化体系与指标](../../性能优化/性能优化体系与指标.md)
+- 本模块另三篇：[React 高级与原理](../react/React%20高级与原理.md) · [Vue3 原理](./Vue3%20原理.md) · [手写 mini-react](../react/手写%20mini-react.md)
