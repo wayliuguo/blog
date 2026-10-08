@@ -1,0 +1,14 @@
+{
+  "name": "embedding",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cosine": "tsx cosine-similarity.ts",
+    "vector-store": "tsx in-memory-vector-store.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

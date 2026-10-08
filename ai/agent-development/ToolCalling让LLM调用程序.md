@@ -41,12 +41,12 @@ LLM 负责决策 → Tool Call 描述行动 → 程序真正执行 → Tool Resu
 
 重点是理解机制，不是接真实天气 API。工具实现本身很朴素：
 
-> 摘自 `code/agent-lab/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/tool-closure.ts`
 
 ```ts
 const toolMap: Record<string, (args: { city?: string; expression?: string }) => unknown> = {
-  getWeather: ({ city = '' }) => ({ city, temperature: 32, weather: '晴' }),
-  calculator: ({ expression = '' }) => ({ expression, result: 123 * 456 }),
+    getWeather: ({ city = '' }) => ({ city, temperature: 32, weather: '晴' }),
+    calculator: ({ expression = '' }) => ({ expression, result: 123 * 456 })
 }
 ```
 
@@ -60,7 +60,7 @@ const toolMap: Record<string, (args: { city?: string; expression?: string }) => 
 
 第一次看到 tools 代码容易误会「把函数传给了模型」——完全不是。传的只是 **Tool Schema**：Name / Description / Parameters 三件事：
 
-> 摘自 `code/agent-lab/tool-calling/tools-schema.ts`
+> 摘自 `code/tool-calling/tools-schema.ts`
 
 ```ts
 export const tools = [
@@ -80,7 +80,7 @@ export const tools = [
   },
 ```
 
-> 摘自 `code/agent-lab/tool-calling/tools-schema.ts`
+> 摘自 `code/tool-calling/tools-schema.ts`
 
 ```ts
   {
@@ -166,7 +166,7 @@ Unexpected token '我', "我来帮您查询西安今天的天气。" is not vali
 
 用户说「你好，很高兴认识你」，模型返回的 message 里可能根本没有 `tool_calls`——这是完全正常的，不是所有问题都需要工具。所以代码不能假设「每次都存在 tool_calls」：
 
-> 摘自 `code/agent-lab/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/tool-closure.ts`
 
 ```ts
   // 模型不一定每次都调工具：没有 tool_calls 就直接返回文本（判空分支）
@@ -195,7 +195,7 @@ Property 'function' does not exist on type 'ChatCompletionMessageToolCall'.
 
 先判断类型再访问，TypeScript 就能收窄（Type Narrowing）到安全的形态：
 
-> 摘自 `code/agent-lab/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/tool-closure.ts`
 
 ```ts
   const toolCall = toolCalls[0]
@@ -242,7 +242,7 @@ switch (toolCall.function.name) {
 
 回灌分两步。第一步，模型返回的 `assistant(tool_calls)` 消息本身也是 Context 的一部分，必须先放回去——下一次请求时，模型需要知道「刚才是我自己决定调用 getWeather 的」：
 
-> 摘自 `code/agent-lab/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/tool-closure.ts`
 
 ```ts
   // 关键时序：assistant(tool_calls) 这条消息本身也是 Context 的一部分，
@@ -252,15 +252,15 @@ switch (toolCall.function.name) {
 
 第二步，把执行结果以 `role: 'tool'` 放进去：
 
-> 摘自 `code/agent-lab/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/tool-closure.ts`
 
 ```ts
-  // tool 结果消息三要素：role: 'tool' + tool_call_id（与 call 的 id 配对）+ JSON 字符串内容
-  messages.push({
-    role: 'tool',
-    tool_call_id: toolCall.id,
-    content: JSON.stringify(result),
-  })
+    // tool 结果消息三要素：role: 'tool' + tool_call_id（与 call 的 id 配对）+ JSON 字符串内容
+    messages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(result)
+    })
 ```
 
 Context 至此演变为四段：
@@ -275,7 +275,7 @@ system → user → assistant(tool_call) → tool(result)
 
 带着完整 Context 再次请求，模型此刻知道三件事：用户问什么、我刚决定调什么、工具返回了什么——于是生成最终的自然语言回答：
 
-> 摘自 `code/agent-lab/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/tool-closure.ts`
 
 ```ts
   // 第二次调用：模型看到完整链路（问题 → 我的决策 → 工具结果）→ 生成最终回答
@@ -362,5 +362,5 @@ while (steps++ < MAX_STEPS) {
 
 | 脚本 | npm script | 对应小节 |
 | --- | --- | --- |
-| `code/agent-lab/tool-calling/tools-schema.ts` | `npm run tool-calling` | Tool Schema：Definition ≠ Implementation |
-| `code/agent-lab/tool-calling/tool-closure.ts` | `npm run tool-closure` | 判空分支 / Type Narrowing / 回灌与 tool_call_id / 二次调用闭环 |
+| `code/tool-calling/tools-schema.ts` | `npm run tool-calling` | Tool Schema：Definition ≠ Implementation |
+| `code/tool-calling/tool-closure.ts` | `npm run tool-closure` | 判空分支 / Type Narrowing / 回灌与 tool_call_id / 二次调用闭环 |

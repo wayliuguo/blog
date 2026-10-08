@@ -1,0 +1,17 @@
+{
+  "name": "agent-loop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "agent-loop": "tsx agent-loop.ts",
+    "registry": "tsx tool-registry.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

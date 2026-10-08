@@ -99,48 +99,48 @@ system → SystemMessage；user → HumanMessage；assistant → AIMessage；too
 
 手写 AgentTool 接口有四要素；LangChain 的 `tool()` 工厂函数做同样的事——生成可被模型识别的 Schema，并在调用前校验入参。配套脚本用零依赖方式镜像了这个机制：
 
-> 摘自 `code/agent-lab/langchain/langchain-agent.ts`
+> 摘自 `code/langchain/langchain-agent.ts`
 
 ```ts
 // 镜像 LangChain 的 tool()：把「普通函数 + zod schema」包装成结构化工具。
 // 真实 LangChain 的 tool() 也做同样的事——生成可被模型识别的 JSON Schema，
 // 并在调用前用 schema 校验入参。
 type Tool = {
-  name: string
-  description: string
-  schema: z.ZodTypeAny
-  invoke: (args: unknown) => Promise<string>
+    name: string
+    description: string
+    schema: z.ZodTypeAny
+    invoke: (args: unknown) => Promise<string>
 }
 
 function tool(
-  fn: (args: any) => Promise<string> | string,
-  meta: { name: string; description: string; schema: z.ZodTypeAny },
+    fn: (args: any) => Promise<string> | string,
+    meta: { name: string; description: string; schema: z.ZodTypeAny }
 ): Tool {
-  return {
-    ...meta,
-    async invoke(args) {
-      const parsed = meta.schema.parse(args) // 对应 LangChain 在调用前用 schema 校验
-      return String(await fn(parsed))
-    },
-  }
+    return {
+        ...meta,
+        async invoke(args) {
+            const parsed = meta.schema.parse(args) // 对应 LangChain 在调用前用 schema 校验
+            return String(await fn(parsed))
+        }
+    }
 }
 ```
 
 定义一个具体工具：
 
-> 摘自 `code/agent-lab/langchain/langchain-agent.ts`
+> 摘自 `code/langchain/langchain-agent.ts`
 
 ```ts
 const getWeather = tool(
-  async ({ city }: { city: string }) => {
-    const fake: Record<string, string> = { 西安: '晴 22°C', 北京: '多云 18°C', 上海: '小雨 20°C' }
-    return fake[city] ?? '未知城市'
-  },
-  {
-    name: 'getWeather',
-    description: '查询某个城市的当前天气',
-    schema: z.object({ city: z.string().describe('城市名') }),
-  },
+    async ({ city }: { city: string }) => {
+        const fake: Record<string, string> = { 西安: '晴 22°C', 北京: '多云 18°C', 上海: '小雨 20°C' }
+        return fake[city] ?? '未知城市'
+    },
+    {
+        name: 'getWeather',
+        description: '查询某个城市的当前天气',
+        schema: z.object({ city: z.string().describe('城市名') })
+    }
 )
 ```
 
@@ -240,7 +240,7 @@ throw new Error('Agent exceeded max iterations')
 
 配套脚本镜像了完整消息闭环（human → ai(tool_calls) → tool），可运行观察：
 
-> 摘自 `code/agent-lab/langchain/langchain-agent.ts`
+> 摘自 `code/langchain/langchain-agent.ts`
 
 ```ts
 async function runAgent(userText: string) {
@@ -371,6 +371,6 @@ Tool 应该具备什么能力？什么时候应该使用 RAG？最终报告应�
 
 | 脚本 | npm script | 对应小节 |
 | --- | --- | --- |
-| `code/agent-lab/langchain/langchain-agent.ts` | `npm run langchain` | tool() 镜像、schema 校验、消息闭环（human → ai → tool） |
+| `code/langchain/langchain-agent.ts` | `npm run langchain` | tool() 镜像、schema 校验、消息闭环（human → ai → tool） |
 
 > 正文中的 `new ChatOpenAI` / `bindTools` / `withStructuredOutput` 为真实框架 API，需 API Key 环境，以示意片段呈现；脚本侧用零依赖镜像复刻同构机制。
