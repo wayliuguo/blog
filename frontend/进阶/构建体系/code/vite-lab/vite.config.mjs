@@ -68,10 +68,7 @@ export default defineConfig({
                 }
             },
             // 挂在 output 上的手写插件：压缩在前、称重在后的顺序即依赖关系
-            plugins: [
-                miniTerser(),
-                miniSizeGate({ limitKb: 60, manifest: 'build-manifest.json' })
-            ]
+            plugins: [miniTerser(), miniSizeGate({ limitKb: 60, manifest: 'build-manifest.json' })]
         }
     }
 })

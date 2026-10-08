@@ -33,9 +33,9 @@ export default function sizeGate({ limitKb = Infinity, manifest = 'bundle-manife
             console.log('    ---- 产物清单 ----')
             for (const r of rows) {
                 console.log(
-                    `      ${r.fileName.padEnd(24)} ${r.type.padEnd(6)} raw ${String(r.raw).padStart(6)}B  gzip ${String(
-                        r.gzip
-                    ).padStart(6)}B`
+                    `      ${r.fileName.padEnd(24)} ${r.type.padEnd(6)} raw ${String(r.raw).padStart(
+                        6
+                    )}B  gzip ${String(r.gzip).padStart(6)}B`
                 )
             }
 
