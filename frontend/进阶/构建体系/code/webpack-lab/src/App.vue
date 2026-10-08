@@ -17,9 +17,7 @@ import { RouterLink, RouterView } from 'vue-router'
             <RouterView />
         </main>
 
-        <p class="tip">
-            页面由手写 MiniHtmlPlugin 生成；样式由手写 loader 交给 MiniCssExtractPlugin 抽成独立 CSS。
-        </p>
+        <p class="tip">页面由手写 MiniHtmlPlugin 生成；样式由手写 loader 交给 MiniCssExtractPlugin 抽成独立 CSS。</p>
     </div>
 </template>
 

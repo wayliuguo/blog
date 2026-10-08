@@ -55,7 +55,9 @@ class MiniHtmlPlugin {
 
                     // 同样用 emitAsset：写盘、stats、clean、watch 才会都照顾到
                     compilation.emitAsset(this.filename, new webpack.sources.RawSource(html))
-                    console.log(`  [MiniHtmlPlugin] 注入 ${jsTags.length} 个 script / ${cssTags.length} 个 link → ${this.filename}`)
+                    console.log(
+                        `  [MiniHtmlPlugin] 注入 ${jsTags.length} 个 script / ${cssTags.length} 个 link → ${this.filename}`
+                    )
                 }
             )
         })

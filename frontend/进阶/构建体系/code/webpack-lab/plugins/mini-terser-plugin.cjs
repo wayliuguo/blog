@@ -33,7 +33,9 @@ class MiniTerserPlugin {
                             // updateAsset 是覆盖已有产物的正确方式，文件名不变、hash 由 webpack 重算
                             compilation.updateAsset(name, new webpack.sources.RawSource(result.code))
                             const kb = n => (n / 1024).toFixed(2)
-                            console.log(`  [MiniTerserPlugin] ${name}: ${kb(before.length)} KB → ${kb(result.code.length)} KB`)
+                            console.log(
+                                `  [MiniTerserPlugin] ${name}: ${kb(before.length)} KB → ${kb(result.code.length)} KB`
+                            )
                         })
                     )
                 }

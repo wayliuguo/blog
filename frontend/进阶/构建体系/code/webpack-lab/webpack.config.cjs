@@ -45,10 +45,7 @@ module.exports = (env = {}) => {
                 {
                     // 生产链路：css-loader 产出 CSS 字符串，extract-css-loader 登记，插件汇总成独立文件
                     test: /\.css$/,
-                    use: [
-                        path.join(ROOT, 'loaders/extract-css-loader.cjs'),
-                        path.join(ROOT, 'loaders/css-loader.cjs')
-                    ]
+                    use: [path.join(ROOT, 'loaders/extract-css-loader.cjs'), path.join(ROOT, 'loaders/css-loader.cjs')]
                 },
                 // webpack 5 内置的 asset module，用来配合 css-loader 的 url() 改写
                 { test: /\.svg$/, type: 'asset/resource' }

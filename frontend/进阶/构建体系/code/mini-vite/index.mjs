@@ -68,7 +68,11 @@ async function runBuild() {
     console.log(`  产物 ${FILE_NAME}：${Buffer.byteLength(bundle[FILE_NAME].code)} B`)
 
     const run = spawnSync(process.execPath, [path.join(outDir, FILE_NAME)], { encoding: 'utf-8' })
-    const printed = (run.stdout || run.stderr || '').trim().split('\n').map(line => `    ${line}`).join('\n')
+    const printed = (run.stdout || run.stderr || '')
+        .trim()
+        .split('\n')
+        .map(line => `    ${line}`)
+        .join('\n')
     console.log(`  执行产物（node dist/${FILE_NAME}）：\n${printed}`)
 
     return container.hookCalls
