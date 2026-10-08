@@ -1135,19 +1135,19 @@ instance.update = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `frontend/进阶/前端框架原理/code/site/`。
+本篇的可运行示例在仓库 `frontend/进阶/前端框架原理/code/vue3/site/`。
 
 | 文件 | 演示什么 | 对应小节 |
 | --- | --- | --- |
-| `./code/site/compiler-demo.html` | 模板编译：把模板字符串解析成插值占位结构，再包装成渲染函数，渲染函数接收数据返回 HTML | 二、编译原理 |
-| `./code/site/mini-reactive.html` | 响应式原理：Proxy 拦截 get/set，读取时 track 收集依赖、修改时 trigger 触发更新，数据驱动视图的最小内核 | 三、响应式系统 |
-| `./code/site/vdom-vue-diff.html` | 虚拟 DOM diff：轻量 VNode 树 diff 生成 patch，按补丁只更新真正变化的地方 | 四、运行时原理 |
+| `../code/vue3/site/compiler-demo.html` | 模板编译：把模板字符串解析成插值占位结构，再包装成渲染函数，渲染函数接收数据返回 HTML | 二、编译原理 |
+| `../code/vue3/site/mini-reactive.html` | 响应式原理：Proxy 拦截 get/set，读取时 track 收集依赖、修改时 trigger 触发更新，数据驱动视图的最小内核 | 三、响应式系统 |
+| `../code/vue3/site/vdom-vue-diff.html` | 虚拟 DOM diff：轻量 VNode 树 diff 生成 patch，按补丁只更新真正变化的地方 | 四、运行时原理 |
 
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5182/`。
+启动方式：浏览器直接打开 `../code/vue3/site/` 下的 html 即可。
 
 ## 参考
 
-- 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[React 高级与原理](./React%20高级与原理.md)
-- 下一篇：[手写 mini-react](./手写%20mini-react.md)
+- 本模块总结：[总结](../总结.md)
+- 本模块面试题：[面试题](../面试题.md)
+- 上一篇：[React 高级与原理](../react/React%20高级与原理.md)
+- 下一篇：[手写 mini-react](../react/手写%20mini-react.md)

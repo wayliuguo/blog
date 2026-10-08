@@ -20,7 +20,7 @@ hooks.js        useState / useEffect，挂在 Fiber 上的链表
 
 `createElement` 做的事非常少：把参数摆成 `{ type, key, props }`。文本与数字被包装成 `TEXT_ELEMENT` 节点，`key` 独立成字段而不进 `props`——因为它只影响 diff 的匹配，不参与属性更新。
 
-> 摘自 `./code/mini-react/src/element.js`
+> 摘自 `../code/react/mini-react/src/element.js`
 
 ```js
 function createElement(type, config, ...children) {
@@ -35,7 +35,7 @@ function createElement(type, config, ...children) {
 }
 ```
 
-> 摘自 `./code/mini-react/src/element.js`
+> 摘自 `../code/react/mini-react/src/element.js`
 
 ```js
 function createTextElement(text) {
@@ -43,7 +43,7 @@ function createTextElement(text) {
 }
 ```
 
-> 摘自 `./code/mini-react/steps/01-element.js`（运行：`npm run step:element`）
+> 摘自 `../code/react/mini-react/steps/01-element.js`（运行：`npm run step:element`）
 
 ```js
 const vdom = h(
@@ -90,7 +90,7 @@ children[2].type: Symbol(Fragment)
 
 渲染器全程只调用这几个操作。把这一组换掉就换了一个平台——浏览器用真 DOM，Node 里用假 DOM 才能跑单测。
 
-> 摘自 `./code/mini-react/src/host.js`
+> 摘自 `../code/react/mini-react/src/host.js`
 
 ```js
 function browserHost() {
@@ -115,7 +115,7 @@ function browserHost() {
 
 Node 环境下的假 DOM 只有两个概念：元素节点（`type` + `attrs`）与文本节点（`text`），实现完全一样的 6 个方法。这不是为了省事——**它恰好证明了渲染器的平台无关性**：`host.js` 末尾一行根据环境二选一。
 
-> 摘自 `./code/mini-react/src/host.js`
+> 摘自 `../code/react/mini-react/src/host.js`
 
 ```js
 const host = typeof document !== 'undefined' ? browserHost() : nodeHost()
@@ -123,7 +123,7 @@ const host = typeof document !== 'undefined' ? browserHost() : nodeHost()
 
 第一次渲染（还没有 diff）跑出来是这样：
 
-> 摘自 `./code/mini-react/steps/02-mount.js`（运行：`npm run step:mount`）
+> 摘自 `../code/react/mini-react/steps/02-mount.js`（运行：`npm run step:mount`）
 
 ```js
 function App() {
@@ -162,7 +162,7 @@ function App() {
 
 容器里只有 `h1` 和 `ul`：`App`、`Header`、`Fragment` 都是"逻辑节点"，没有自己的 DOM。这个事实在 diff 与 commit 里会反复出现——**找一个节点的父 DOM，必须沿着 `parent` 指针往上走，直到遇到一个真有 DOM 的祖先**：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function domParentOf(fiber) {
@@ -176,7 +176,7 @@ function domParentOf(fiber) {
 
 如果用递归渲染，一旦开始就必须跑完——中途没法把主线程让出去。所以 React 不递归：每个 Fiber 有 `child` / `sibling` / `parent` 三个指针，遍历变成了一条可以被随时打断的循环。
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function performUnitOfWork(fiber) {
@@ -198,7 +198,7 @@ function performUnitOfWork(fiber) {
 
 一个函数只做"一件事 + 找下一个"，这就是"工作单元"的全部含义。它顺手解释了 `createDom` 里那两个 `return null`：**函数组件与 Fragment 不创建 DOM**，它们的 `dom` 保持为 `null`。
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function createDom(fiber) {
@@ -209,7 +209,7 @@ function createDom(fiber) {
 
 驱动的循环只有八行：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function workLoop(dl) {
@@ -224,7 +224,7 @@ function workLoop(dl) {
 
 `flushWork()` 是它的同步版本（不受时间片限制，一次跑完），脚本与单测用后者才能复现：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 state.pump = () => {
@@ -238,7 +238,7 @@ state.pump = () => {
 
 光看代码看不出"可中断"值多少钱，得量。`step:slice` 渲染一个 4000 项的列表（8002 个宿主节点），对照组是完全不许让出的 `flushWork`，实验组是每次只给 2ms 的假 deadline。
 
-> 摘自 `./code/mini-react/steps/05-slice.js`（运行：`npm run step:slice`）
+> 摘自 `../code/react/mini-react/steps/05-slice.js`（运行：`npm run step:slice`）
 
 ```js
 function budgetDeadline(budget) {
@@ -247,7 +247,7 @@ function budgetDeadline(budget) {
 }
 ```
 
-> 摘自 `./code/mini-react/steps/05-slice.js`
+> 摘自 `../code/react/mini-react/steps/05-slice.js`
 
 ```js
 function runSliced() {
@@ -303,7 +303,7 @@ diff 入口是 `reconcileChildren`，它只做一件事：给每个子节点算�
 
 匹配身份由这里决定：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function identityOf(key, index) {
@@ -313,7 +313,7 @@ function identityOf(key, index) {
 
 **有 key 用 key，没 key 退化成下标**——这是"index 陷阱"的源头，不是实现偷懒，而是没有别的信息可用。旧子节点先按身份建索引，然后逐个新元素去查：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
     const matched = oldByIdentity.get(identityOf(element.key, index))
@@ -350,7 +350,7 @@ function identityOf(key, index) {
 
 `alternate` 指向旧树上的对应 Fiber，这是双缓存的接口：新树在内存里长好了才一次性切过去，构建中途被打断也不影响屏幕。最后要处理"新列表里没出现过的旧节点"：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
     // 新列表里没出现过的旧节点，一并删除
@@ -365,7 +365,7 @@ function identityOf(key, index) {
 
 断言 diff 最直接的办法是数"这一轮真实发生了多少次宿主操作"。两个结构完全相同的列表，只差有没有 key：
 
-> 摘自 `./code/mini-react/steps/03-keyed-diff.js`（运行：`npm run step:keyed`）
+> 摘自 `../code/react/mini-react/steps/03-keyed-diff.js`（运行：`npm run step:keyed`）
 
 ```js
 // 无 key：只能按下标对号入座
@@ -397,7 +397,7 @@ const withKey = items => h('ul', null, ...items.map(it => h('li', { key: it.id }
 
 key 相同就复用、只更属性这条也固化成断言了：
 
-> 摘自 `./code/mini-react/test/diff.test.js`（运行：`npm test`）
+> 摘自 `../code/react/mini-react/test/diff.test.js`（运行：`npm test`）
 
 ```js
 test('无 key：删掉第一项时，剩下的元素被就地改写', () => {
@@ -414,7 +414,7 @@ test('无 key：删掉第一项时，剩下的元素被就地改写', () => {
 
 render 阶段只算 `effectTag`，真正碰宿主环境的是 commit。顺序固定：先处理删除，再按 `child` / `sibling` 走一遍树，最后跑 effect。
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function commitRoot() {
@@ -427,7 +427,7 @@ function commitRoot() {
 }
 ```
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function commitWork(fiber) {
@@ -449,7 +449,7 @@ function commitWork(fiber) {
 
 插入位置要找"右边最近的兄弟"，这样才不需要移动已存在的节点：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function insertDom(fiber) {
@@ -469,7 +469,7 @@ function insertDom(fiber) {
 
 状态不放在任何全局变量里，而是按调用顺序存进当前 Fiber 的 `hooks` 数组。`useState` 的核心是那两行"消费队列"：
 
-> 摘自 `./code/mini-react/src/hooks.js`
+> 摘自 `../code/react/mini-react/src/hooks.js`
 
 ```js
 function useState(initial) {
@@ -497,7 +497,7 @@ function useState(initial) {
 
 `useEffect` 只是把依赖比较的结论记成 `hasEffect`，真正执行留到 commit 之后：
 
-> 摘自 `./code/mini-react/src/hooks.js`
+> 摘自 `../code/react/mini-react/src/hooks.js`
 
 ```js
 function useEffect(fn, deps) {
@@ -518,7 +518,7 @@ function useEffect(fn, deps) {
 }
 ```
 
-> 摘自 `./code/mini-react/src/hooks.js`
+> 摘自 `../code/react/mini-react/src/hooks.js`
 
 ```js
 function runEffects(fiber) {
@@ -537,7 +537,7 @@ function runEffects(fiber) {
 
 ### 实测：队列语义、执行时机与批处理
 
-> 摘自 `./code/mini-react/steps/04-hooks.js`（运行：`npm run step:hooks`）
+> 摘自 `../code/react/mini-react/steps/04-hooks.js`（运行：`npm run step:hooks`）
 
 ```js
 function Counter({ step }) {
@@ -578,7 +578,7 @@ effect 日志： ["cleanup  count=2"]
 
 第三段是 effect 的清理时机：依赖变化先 `cleanup` 再 `effect`，组件卸载则把整棵子树上的 cleanup 都跑一遍。这一步在 `commitDeletion` 里：
 
-> 摘自 `./code/mini-react/src/reconciler.js`
+> 摘自 `../code/react/mini-react/src/reconciler.js`
 
 ```js
 function commitDeletion(fiber, parentDom) {
@@ -602,7 +602,7 @@ function commitDeletion(fiber, parentDom) {
 
 "不能在条件/循环里调用 Hooks"这条规则，看过链表实现就不需要背了——它只是"链表只能按顺序对上号"的必然结果。
 
-> 摘自 `./code/mini-react/steps/04-hooks.js`
+> 摘自 `../code/react/mini-react/steps/04-hooks.js`
 
 ```js
 function Bad({ flag }) {
@@ -624,7 +624,7 @@ flag=false → 拿到的是：只在 flag=true 时读一次
 
 `flag` 从 true 变 false 后，第二个 `useState` 读的是链表第 0 个节点（旧的那句"只在 flag=true 时读一次"），于是"该显示自己状态"的组件拿到了别人的状态。同样的测试在单测里也固化了：
 
-> 摘自 `./code/mini-react/test/hooks.test.js`（运行：`npm test`）
+> 摘自 `../code/react/mini-react/test/hooks.test.js`（运行：`npm test`）
 
 ```js
 test('hooks 顺序错位：放进 if 里会读到别人的状态', () => {
@@ -656,34 +656,34 @@ test('hooks 顺序错位：放进 if 里会读到别人的状态', () => {
 
 ## 配套代码
 
-本篇示例来自 `code/mini-react`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
+本篇示例来自 `code/react/mini-react`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
 
 | 文件 | 作用 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/mini-react/src/element.js` | `createElement` / `TEXT_ELEMENT` / `Fragment` | 二、元素 |
-| `./code/mini-react/src/host.js` | 宿主抽象：浏览器与 Node 两份实现 + `printTree` | 三、宿主抽象 |
-| `./code/mini-react/src/internal.js` | 渲染器状态（`roots` / `wipRoot` / `nextUnitOfWork`）与重渲染调度 | 四、Fiber 链表 · 六、commit |
-| `./code/mini-react/src/reconciler.js` | Fiber 链表、`workLoop`、diff、commit | 四 · 五 · 六 |
-| `./code/mini-react/src/hooks.js` | `useState` / `useEffect` / `runEffects` / `runCleanups` | 七、Hooks |
-| `./code/mini-react/src/index.js` | 对外出口 + `printFibers` | 七、Hooks |
-| `./code/mini-react/steps/01-element.js` | 观察 createElement 的产物 | 二、元素 |
-| `./code/mini-react/steps/02-mount.js` | 首次渲染到宿主节点 | 三、宿主抽象 |
-| `./code/mini-react/steps/03-keyed-diff.js` | 给宿主操作装记录器，对照有 / 无 key | 五、diff |
-| `./code/mini-react/steps/04-hooks.js` | 队列语义、批处理、卸载清理、顺序错位 | 七 · 八 |
-| `./code/mini-react/steps/05-slice.js` | 时间切片实测：片数与最长阻塞 | 四、Fiber 链表 |
-| `./code/mini-react/test/helper.js` | 记录宿主操作的开关式 sink | 五、diff |
-| `./code/mini-react/test/diff.test.js` | diff 的 8 条断言（含宿主操作序列） | 五、diff |
-| `./code/mini-react/test/hooks.test.js` | hooks 的 10 条断言（含顺序错位） | 七 · 八 |
+| `../code/react/mini-react/src/element.js` | `createElement` / `TEXT_ELEMENT` / `Fragment` | 二、元素 |
+| `../code/react/mini-react/src/host.js` | 宿主抽象：浏览器与 Node 两份实现 + `printTree` | 三、宿主抽象 |
+| `../code/react/mini-react/src/internal.js` | 渲染器状态（`roots` / `wipRoot` / `nextUnitOfWork`）与重渲染调度 | 四、Fiber 链表 · 六、commit |
+| `../code/react/mini-react/src/reconciler.js` | Fiber 链表、`workLoop`、diff、commit | 四 · 五 · 六 |
+| `../code/react/mini-react/src/hooks.js` | `useState` / `useEffect` / `runEffects` / `runCleanups` | 七、Hooks |
+| `../code/react/mini-react/src/index.js` | 对外出口 + `printFibers` | 七、Hooks |
+| `../code/react/mini-react/steps/01-element.js` | 观察 createElement 的产物 | 二、元素 |
+| `../code/react/mini-react/steps/02-mount.js` | 首次渲染到宿主节点 | 三、宿主抽象 |
+| `../code/react/mini-react/steps/03-keyed-diff.js` | 给宿主操作装记录器，对照有 / 无 key | 五、diff |
+| `../code/react/mini-react/steps/04-hooks.js` | 队列语义、批处理、卸载清理、顺序错位 | 七 · 八 |
+| `../code/react/mini-react/steps/05-slice.js` | 时间切片实测：片数与最长阻塞 | 四、Fiber 链表 |
+| `../code/react/mini-react/test/helper.js` | 记录宿主操作的开关式 sink | 五、diff |
+| `../code/react/mini-react/test/diff.test.js` | diff 的 8 条断言（含宿主操作序列） | 五、diff |
+| `../code/react/mini-react/test/hooks.test.js` | hooks 的 10 条断言（含顺序错位） | 七 · 八 |
 
-运行：`cd code/mini-react`，然后
+运行：`cd code/react/mini-react`，然后
 
 - `npm run step:element` / `step:mount` / `step:keyed` / `step:hooks` / `step:slice` —— 五个观察脚本
 - `npm test` —— 26 个单测
 
 ## 参考
 
-- 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
-- 上一篇：[Vue3 原理](./Vue3%20原理.md)
-- 下一篇：[手写 mini-vue](./手写%20mini-vue.md)
-- 本模块另三篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](./Vue3%20原理.md) · [手写 mini-vue](./手写%20mini-vue.md)
+- 本模块总结：[总结](../总结.md)
+- 本模块面试题：[面试题](../面试题.md)
+- 上一篇：[Vue3 原理](../vue3/Vue3%20原理.md)
+- 下一篇：[手写 mini-vue](../vue3/手写%20mini-vue.md)
+- 本模块另三篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](../vue3/Vue3%20原理.md) · [手写 mini-vue](../vue3/手写%20mini-vue.md)
