@@ -1,0 +1,12 @@
+{
+    "name": "mini-state",
+    "version": "1.0.0",
+    "private": true,
+    "description": "手写 React 状态库：reducer（mini-redux）/ setState（mini-zustand）+ 绑定层（useSelector / useStore），零依赖可运行 + 单测",
+    "scripts": {
+        "step:reducer": "node steps/01-reducer.js",
+        "step:selector": "node steps/02-selector.js",
+        "step:binding": "node steps/03-binding.js",
+        "test": "node --test test/*.test.js"
+    }
+}

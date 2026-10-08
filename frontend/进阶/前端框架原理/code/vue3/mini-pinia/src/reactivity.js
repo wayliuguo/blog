@@ -1,5 +1,5 @@
-// 路线三：细粒度依赖追踪（Pinia / Vue reactive / Signal 的形状）
-// 与前两条路线的根本差别：订阅单位不是"store"，而是"effect 读过的那个字段"。
+// 响应式底座：三层依赖表 / effect / computed
+// 这就是 Pinia 精确唤醒的机制：依赖表记着"谁读过这个字段"，改一个字段只唤醒读过它的 effect。
 // 依赖表仍是三层：target（被读的对象）→ key（被读的字段）→ dep（读它的 effect 集合）。
 
 const targetMap = new WeakMap()
@@ -77,22 +77,6 @@ function reactive(target) {
     return proxy
 }
 
-function signal(initial) {
-    const box = {} // 只作依赖表的键，本身不存值
-    let value = initial
-    return {
-        get value() {
-            track(box, 'value')
-            return value
-        },
-        set value(next) {
-            if (Object.is(next, value)) return
-            value = next
-            trigger(box, 'value')
-        }
-    }
-}
-
 function computed(getter) {
     const box = {}
     let value
@@ -107,6 +91,7 @@ function computed(getter) {
         }
     })
     return {
+        __v_isRef: true,
         get value() {
             track(box, 'value')
             if (dirty) {
@@ -122,4 +107,4 @@ function computed(getter) {
     }
 }
 
-module.exports = { effect, reactive, signal, computed, track, trigger }
+module.exports = { effect, reactive, computed, track, trigger }

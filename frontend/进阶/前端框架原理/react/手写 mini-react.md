@@ -28,9 +28,7 @@ function createElement(type, config, ...children) {
     props.children = children
         .flat(Infinity) // <ul>{items.map(...)}</ul> 会传进来数组，先拍平
         .filter(child => child !== null && child !== undefined && child !== false)
-        .map(child =>
-            typeof child === 'object' ? child : createTextElement(String(child))
-        )
+        .map(child => (typeof child === 'object' ? child : createTextElement(String(child))))
     return { type, key, props }
 }
 ```
@@ -684,6 +682,6 @@ test('hooks 顺序错位：放进 if 里会读到别人的状态', () => {
 
 - 本模块总结：[总结](../总结.md)
 - 本模块面试题：[面试题](../面试题.md)
-- 上一篇：[Vue3 原理](../vue3/Vue3%20原理.md)
-- 下一篇：[手写 mini-vue](../vue3/手写%20mini-vue.md)
-- 本模块另三篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](../vue3/Vue3%20原理.md) · [手写 mini-vue](../vue3/手写%20mini-vue.md)
+- 上一篇：[React 高级与原理](./React%20高级与原理.md)
+- 下一篇：[React 状态管理原理与实现](./React%20状态管理原理与实现.md)
+- 本模块另四篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](../vue3/Vue3%20原理.md) · [手写 mini-vue](../vue3/手写%20mini-vue.md) · [Vue3 状态管理原理与实现](../vue3/Vue3%20状态管理原理与实现.md)

@@ -829,6 +829,6 @@ const Counter = {
 
 - 本模块总结：[总结](../总结.md)
 - 本模块面试题：[面试题](../面试题.md)
-- 上一篇：[手写 mini-react](../react/手写%20mini-react.md)
+- 上一篇：[Vue3 原理](./Vue3%20原理.md)
 - 下一篇：[性能优化体系与指标](../../性能优化/性能优化体系与指标.md)
-- 本模块另三篇：[React 高级与原理](../react/React%20高级与原理.md) · [Vue3 原理](./Vue3%20原理.md) · [手写 mini-react](../react/手写%20mini-react.md)
+- 本模块另四篇：[React 高级与原理](../react/React%20高级与原理.md) · [手写 mini-react](../react/手写%20mini-react.md) · [React 状态管理原理与实现](../react/React%20状态管理原理与实现.md) · [Vue3 状态管理原理与实现](./Vue3%20状态管理原理与实现.md)
