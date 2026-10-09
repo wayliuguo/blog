@@ -17,7 +17,8 @@ async function bootstrap() {
     }
 
     const app = await NestFactory.create(AppModule)
-    await app.listen(3000)
+    // PORT 便于本机多工程并存（3000 被其他工程占用时改端口启动）
+    await app.listen(Number(process.env.PORT) || 3000)
 }
 
 void bootstrap()

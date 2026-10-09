@@ -329,7 +329,7 @@ system → user → assistant(tool_call) → tool(result)
         return final.content ?? ''
 ```
 
-实跑读数（`npm start` 后执行 `curl -X POST http://localhost:3000/agent/tools-test -H "Content-Type: application/json" -d '{ "message": "帮我看看西安今天热不热" }'`，真实 DeepSeek 输出，2026-10-08 实测）：
+实跑读数（`npm run dev` 后执行 `curl -X POST http://localhost:3000/agent/tools-test -H "Content-Type: application/json" -d '{ "message": "帮我看看西安今天热不热" }'`，真实 DeepSeek 输出，2026-10-08 实测）：
 
 ```
 HTTP 201
@@ -400,6 +400,40 @@ while (steps++ < MAX_STEPS) {
 
 当程序具备这种「决策 → 行动 → 观察 → 再决策」的循环能力时，才算拥有 Agent Runtime。下一章就亲手把它写出来。
 
+## 跑起来验证：cmd + curl 调 Tool Calling 接口
+
+前提同第 1 篇：工程目录下 `npm install` → `.env` 写好 Key → `npm run dev`（3000 被占用时，cmd 里先 `set PORT=3012` 再 `npm run dev`，下文 URL 相应替换）。另开一个 cmd 窗口，先执行一次 `chcp 65001`（保证请求体里的中文按 UTF-8 发出）。
+
+**验证接口：`/agent/tools-test`**——这条请求背后，十步链路会完整跑一遍（模型选工具 → 程序执行 → 结果回灌 → 二次调用），你只看到最终答案：
+
+```bash
+curl -s http://localhost:3000/agent/tools-test -H "Content-Type: application/json" -d "{\"message\": \"帮我看看西安今天热不热\"}"
+```
+
+实测响应（节选）：
+
+```
+{
+  "message": "西安今天天气情况如下：\n\n- **天气**：晴 ☀️\n- **气温**：32℃\n\n……（模型基于工具结果生成的回答，此处截断）"
+}
+```
+
+返回的温度「32℃」来自 `tools.service.ts` 里的**模拟数据**（`{ city, temperature: 32, weather: '晴' }`），不是模型编的。不信就把 `32` 改成 `18`，重启工程再请求一次——回答会跟着变。这一下就把「LLM 决策、程序执行」在运行时对上了。
+
+**再验 calculator**——`tools.service.ts` 里的第二个工具，这条链路里它是**真实求值**（`new Function` 执行表达式），不是模拟数据。cmd 里换一条消息：
+
+```bash
+curl -s http://localhost:3000/agent/tools-test -H "Content-Type: application/json" -d "{\"message\": \"帮我算一下 128 乘以 37 再减去 90 等于多少\"}"
+```
+
+实测响应：
+
+````
+{"message":"128 × 37 − 90 = **4646**\n\n计算过程：128 × 37 = 4736，4736 − 90 = 4646。"}
+````
+
+这条请求里模型只做了一件事：从你的自然语言里提取出表达式，发出 `tool_calls`（`name: 'calculator'`、`arguments: '{"expression": "..."}'`）；`4736 − 90 = 4646` 这个数是**程序算出来的**，经 `role: 'tool'` 消息回灌，模型再组织成人话。还可以顺手验证运算符优先级在程序侧是准的：把消息换成 `帮我算一下 2 加 3 乘 4`，工具拿到的是 `2 + 3 * 4`，返回 `14` 而不是 `20`——因为求值发生在 `new Function` 里，遵循的是 JS 语义，不是模型口算。
+
 ## 配套代码
 
 本篇正文的所有代码片段来自同一个 NestJS 工程（沿用第 1 篇的 agent / llm 分层，按原文新增 tools 模块；依赖 DeepSeek API Key，配置见工程 `.env.example`）：
@@ -417,4 +451,4 @@ while (steps++ < MAX_STEPS) {
 | `code/tool-calling/src/agent/agent.service.ts` | testToolCalling()：判空 → Type Narrowing → switch 分发 → 回灌 → 二次调用 | 解析 Tool Call / 真正执行 Tool / 回灌 Context / 第二次调用 |
 | `code/tool-calling/src/agent/agent.controller.ts` | POST /agent/tools-test | 建立 Tool Calling 测试接口 / 坑一 |
 
-运行方式见 `code/tool-calling/README.md`：`npm install` → 配置 `.env` → `npm start` → curl 测 `/agent/tools-test`。注意 `npm start` 跑的是 `tsc` 产物（`dist/`），不是 `tsx src/main.ts`——原因同第 1 篇「用 `tsx` 直接跑，依赖注入会静默失效」。
+运行方式见 `code/tool-calling/README.md`：`npm install` → 配置 `.env` → `npm run dev` → curl 测 `/agent/tools-test`。

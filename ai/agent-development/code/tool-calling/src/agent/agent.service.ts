@@ -45,14 +45,14 @@ export class AgentService {
         // 模型已经做了决定，程序只负责按名字分发执行（Tool Dispatcher，不是 Intent Router）
         let result: unknown
         switch (toolCall.function.name) {
-            case 'getWeather':
-                result = this.toolsService.getWeather(args.city ?? '')
-                break
-            case 'calculator':
-                result = this.toolsService.calculator(args.expression ?? '')
-                break
-            default:
-                throw new Error(`未知工具: ${toolCall.function.name}`)
+        case 'getWeather':
+            result = this.toolsService.getWeather(args.city ?? '')
+            break
+        case 'calculator':
+            result = this.toolsService.calculator(args.expression ?? '')
+            break
+        default:
+            throw new Error(`未知工具: ${toolCall.function.name}`)
         }
 
         // 关键时序：assistant(tool_calls) 这条消息本身也是 Context 的一部分，

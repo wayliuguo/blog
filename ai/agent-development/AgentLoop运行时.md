@@ -381,6 +381,43 @@ User → AgentController → AgentService
 
 根因是请求结束后 messages 丢失。下一步就是把消息历史持久化（Conversation + Session + Message History），再往前是跨会话的长期记忆——第 4 篇从这里接上。到那时你对 Agent 的理解会再变一次：它不是「大模型会调用几个函数」，而是**一个围绕 LLM 构建的持续决策与执行系统**，而 while 循环就是这个系统最原始、也最值得亲手实现一次的起点。
 
+## 跑起来验证：直接运行循环脚本
+
+本篇是零依赖演示工程，没有 HTTP 服务，验证方式就是跑它本身。cmd 里：
+
+```bash
+cd code/agent-loop
+npm install
+npm run agent-loop
+```
+
+实测输出：
+
+```
+西安今天 35℃ 晴。
+```
+
+一行背后是完整的循环：mock LLM 第一轮返回 `tool_calls` → `WeatherTool` 执行 → 结果回灌 → 第二轮返回最终答案。第一版 Agent Loop 的 while/for 分工、Stop Condition、回填时序，全在这条链上。
+
+再跑 Tool Registry（Zod 校验、错误即 Observation）：
+
+```bash
+npm run registry
+```
+
+实测输出：
+
+```
+第一轮：模型传来坏参数 { city: 123 }
+  返回（错误即 Observation）： {"success":false,"error":"Tool 参数校验失败","details":[{"path":"city","message":"Invalid input: expected string, received number"}]}
+  → 把这个错误原样 push 进 messages，模型下一轮会自行修正
+第二轮：模型修正后传来 { city: "西安" }
+  返回： {"success":true,"data":{"city":"西安","temperature":35,"weather":"晴","humidity":48}}
+查无此工具： {"success":false,"error":"Tool 不存在: nope"}
+```
+
+LLM 是 mock，但循环、校验、错误回灌的机制是真实的——把 mock 换成第 2 篇的 `chatWithTools`，这套循环原样能跑。
+
 ## 配套代码
 
 | 脚本 | npm script | 对应小节 |
