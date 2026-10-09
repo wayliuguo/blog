@@ -42,6 +42,15 @@ Node.js 后端知识体系 —— 模块一「运行环境」配套实验代码�
 | `06-graceful-shutdown.js` | 优雅关闭（服务脚本） | `npm run 06shutdown` | 起服务后按 Ctrl+C，先收尾再退出（需手动） |
 | `06-error-fallback.js` | 错误三层防线（同步/异步/进程级兜底） | `npm run 06fallback` | 默认只演示前两道且进程不崩；加 `uncaught`/`unhandled` 看进程级兜底后优雅退出 |
 
+### 调试实验组（`src/07-debug/`）
+
+对应正文《VSCode 调试 Node：inspect 协议、launch 配置与断点绑定》。
+
+| 脚本 | 演示什么 | 运行命令 | 预期输出 |
+| --- | --- | --- | --- |
+| `07-inspector-runtime.cjs` | 程序内 `node:inspector.open()` 打开 inspect 端口（`--inspect` 的代码等价形态） | `npm run 07inspector` | 打印 `url = ws://127.0.0.1:9229/...` 后保持运行；另开终端 `curl http://127.0.0.1:9229/json/list` 能列出本进程调试目标。Ctrl+C 退出；9229 被占时换脚本里的端口号 |
+| `07-inspect-brk.cjs` | `debugger` 语句与 `--inspect-brk` 首行挂起 | `node --inspect-brk src/07-debug/07-inspect-brk.cjs` | 只打印 `Debugger listening` 后挂起（等调试器 Continue）；不带 `--inspect-brk` 直跑则 3 行秒完（无调试器时 `debugger` 是空操作）。注意 9229 被占会报 `address already in use` 且不挂起 |
+
 ### 模块系统实验组（`src/02-module-realm/`）
 
 上面的一对 `02-module-cjs.cjs` / `02-module-esm.mjs` 只做**最小对照**：各自亮出自己的本质特征（值拷贝 vs 活绑定），并互相导入对方一次。想逐条深挖，用这一组实验：它专门演示 CommonJS 与 ES Module 的**区别与互操作**，主线就是正文反复强调的四件事：**解析时机**（静态解析 vs 运行时解析）、**加载语义**（值的拷贝 vs 活绑定）、**同步 vs 异步加载**（require 阻塞 vs import() 不阻塞）、**互操作**（ESM 引 CJS / CJS 引 ESM / 动态 import()）；另外还覆盖缓存、`exports` 陷阱、解析算法、`type` 字段与后缀强制。全部零依赖，都能单独 `node src/02-module-realm/xx` 跑通。
