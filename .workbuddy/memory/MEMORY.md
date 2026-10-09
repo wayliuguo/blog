@@ -40,7 +40,7 @@ type-gym 50 题 / runtime-lab；判题 Equal<A,B>+Expect<T>；体操正文代码
 
 ## AI 板块 · Agent 开发（2026-10-08 第六轮重构）
 源文章=公众号《前端转 Agent 开发》（楠熠之）10 篇合 9 篇，**原文已归档 .workbuddy/docs/agent-source/**（9 个 md）。侧边栏 ai.js：Coding Agent → Skills → Agent 开发；四组（基础入门/记忆与知识/框架实战/协议与生态，无章号）+ 总结/面试题。
-- 配套代码（2026-10-08 用户定规：**一章一项目、同层级、命名对齐章节**）：code/ 下 agent-basics(篇1，原 agent-nest，NestJS+DeepSeek 真实工程无 mock)/tool-calling/agent-loop/context-memory(篇4)/embedding/rag/langchain/langgraph(零依赖镜像)/mcp(真实 SDK v2) 九个独立项目，各带 package.json+README，code/README.md 有章节↔项目总表。agent-lab 已删。验证报告在 .workbuddy/docs/agent-verification-report.md（待用户确认修订范围：A1 高=篇4 Memory 枚举 preference/fact 应为 preference/profile/project 等）。
+- 配套代码（2026-10-08 用户定规：**一章一项目、同层级、命名对齐章节**）：code/ 下 agent-basics(篇1，原 agent-nest，NestJS+DeepSeek 真实工程无 mock)/tool-calling(篇2，**2026-10-08 下午按用户要求重做为完整 NestJS 工程**：agent/llm 骨架复制篇1+新增 tools 模块（schema/service/module），testToolCalling 全链路真实 DeepSeek 已实测通；main.ts 支持 PORT 环境变量覆盖缺省 3000)/agent-loop/context-memory(篇4)/embedding/rag/langchain/langgraph(零依赖镜像)/mcp(真实 SDK v2) 九个独立项目，各带 package.json+README，code/README.md 有章节↔项目总表。agent-lab 已删。验证报告在 .workbuddy/docs/agent-verification-report.md；ToolCalling 重构审查报告在 .workbuddy/docs/toolcalling-code-review.md。
 - 坑：MCP SDK v2 要求 zod ≥4.2；mcp/client.ts isTs 分支 tsx 启 server.ts（tsxCli 路径='./node_modules/...'，项目本地 tsx）；stdio server 日志只能 console.error；实跑读数必须真实。
 - **code/ 目录 git 未跟踪曾致脚本被改后正文同步静默破裂（29 处对不上），已修但应尽快提交；改脚本必跑 check-code-sync。**
 
