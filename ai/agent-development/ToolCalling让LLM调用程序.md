@@ -39,64 +39,75 @@ LLM 负责决策 → Tool Call 描述行动 → 程序真正执行 → Tool Resu
 
 ## 准备两个最简单的 Tool
 
-重点是理解机制，不是接真实天气 API。工具实现本身很朴素：
+重点是理解机制，不是接真实天气 API。原文在 Day 1 的 NestJS 工程上新增一个 tools 模块（`nest g module tools` / `nest g service tools`；`ToolsModule` 必须 `exports: [ToolsService]`，Agent 模块才能注入），两个工具都实现为 `ToolsService` 的方法：
 
-> 摘自 `code/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/src/tools/tools.service.ts`
 
 ```ts
-const toolMap: Record<string, (args: { city?: string; expression?: string }) => unknown> = {
-    getWeather: ({ city = '' }) => ({ city, temperature: 32, weather: '晴' }),
-    calculator: ({ expression = '' }) => ({ expression, result: 123 * 456 })
+@Injectable()
+export class ToolsService {
+    // 模拟数据：重点在理解 Tool Calling 机制，不在接真实天气 API。
+    // 以后换成真实天气 API，对 Agent 侧完全透明。
+    getWeather(city: string) {
+        return { city, temperature: 32, weather: '晴' }
+    }
+
+    // 真实求值：new Function 等价于执行用户输入的任意 JS——存在代码执行风险，
+    // 只允许本地 Demo 这样写，生产必须换安全的表达式解析方案。
+    calculator(expression: string) {
+        const result = new Function(`"use strict"; return (${expression})`)() as number
+        return { expression, result }
+    }
 }
 ```
 
 这里有一个视角转换：**Agent 不关心 `getWeather()` 内部是调第三方 API、查数据库还是读缓存，它只需要知道「存在一个叫 getWeather 的工具，能根据城市查天气」**。以后把模拟数据换成真实天气 API，对 Agent 侧完全透明。
 
-**与源文的一处差异**：源文的 calculator 是真实求值——`new Function('"use strict"; return (' + expression + ')')()`，并配了明确警告：这种写法等于执行用户输入的任意 JS，**存在代码执行风险，只允许在本地 Demo 使用**，生产必须换安全的表达式解析方案。配套脚本为保持零依赖、输出可复现，calculator 返回固定结果，仅示意链路，风险警告原样保留在这里。
+注意 calculator 是真实求值——`new Function('"use strict"; return (...)')` 这种写法等于执行用户输入的任意 JS，**存在代码执行风险，只允许在本地 Demo 使用**，生产必须换安全的表达式解析方案。
 
 ## 模型怎么知道我们有哪些 Tool：Tool Schema
 
 代码里写了 `getWeather()`，但 DeepSeek 根本不知道这个函数存在。必须通过请求的 `tools` 参数告诉模型「我这里有哪些工具」。
 
-第一次看到 tools 代码容易误会「把函数传给了模型」——完全不是。传的只是 **Tool Schema**：Name / Description / Parameters 三件事：
+第一次看到 tools 代码容易误会「把函数传给了模型」——完全不是。传的只是 **Tool Schema**：Name / Description / Parameters 三件事。配套工程把 Schema 单独放在 `src/tools/tools.schema.ts`，与 `ToolsService` 的实现分开——Definition ≠ Implementation 直接落到文件组织上：
 
-> 摘自 `code/tool-calling/tools-schema.ts`
+> 摘自 `code/tool-calling/src/tools/tools.schema.ts`
 
 ```ts
-export const tools = [
-  {
-    type: 'function' as const,
-    function: {
-      name: 'getWeather',
-      description: '查询指定城市的天气',
-      parameters: {
-        type: 'object',
-        properties: {
-          city: { type: 'string', description: '城市名称，例如西安、北京' }
-        },
-        required: ['city']
-      }
-    }
-  },
+export const tools: ChatCompletionTool[] = [
+    {
+        type: 'function',
+        function: {
+            name: 'getWeather',
+            description: '查询指定城市的天气',
+            parameters: {
+                type: 'object',
+                properties: {
+                    city: { type: 'string', description: '城市名称，例如西安、北京' }
+                },
+                required: ['city']
+            }
+        }
+    },
 ```
 
-> 摘自 `code/tool-calling/tools-schema.ts`
+> 摘自 `code/tool-calling/src/tools/tools.schema.ts`
 
 ```ts
-  {
-    type: 'function' as const,
-    function: {
-      name: 'calculator',
-      description: '计算数学表达式',
-      parameters: {
-        type: 'object',
-        properties: {
-          expression: { type: 'string', description: '数学表达式，例如 123 * 456' }
-        },
-        required: ['expression']
-      }
+    {
+        type: 'function',
+        function: {
+            name: 'calculator',
+            description: '计算数学表达式',
+            parameters: {
+                type: 'object',
+                properties: {
+                    expression: { type: 'string', description: '数学表达式，例如 123 * 456' }
+                },
+                required: ['expression']
+            }
+        }
     }
-  }
 ]
 ```
 
@@ -113,19 +124,44 @@ LLM 只看得到定义，永远看不到实现。注意措辞的变化：我们�
 
 请求时把 Schema 数组传进去，并把「用不用工具」的决策权交给模型：
 
-> 示意片段（无配套脚本）
+> 摘自 `code/tool-calling/src/llm/llm.service.ts`
 
 ```ts
-const response = await this.client.chat.completions.create({
-  model: 'deepseek-chat',
-  messages,                     // system + user
-  tools,                        // Tool Schema 数组
-  tool_choice: 'auto',          // 模型自己判断要不要调工具
-})
-return response.choices[0].message
+    // Tool Calling 专用：没有 response_format，也没有「你必须返回 JSON」的 Prompt——
+    // 用 tools + tool_choice: 'auto' 把「用不用工具」的决策权交给模型。
+    async chatWithTools(messages: ChatCompletionMessageParam[], tools: ChatCompletionTool[]) {
+        const response = await this.client.chat.completions.create({
+            model: 'deepseek-chat',
+            messages,
+            tools,
+            tool_choice: 'auto'
+        })
+
+        return response.choices[0].message
+    }
 ```
 
 `tool_choice: 'auto'` 意味着：用户说「你好」，模型可以直接回答；说「帮我查西安今天的天气」，模型会判断「需要外部数据，我该调用 getWeather」。**Agent 的「决策」能力从这里开始出现。**
+
+## 建立 Tool Calling 测试接口
+
+原文在 AgentController 上挂了一个独立的测试接口，与上一篇的意图链路彻底分开：
+
+> 摘自 `code/tool-calling/src/agent/agent.controller.ts`
+
+```ts
+    // Tool Calling 测试接口：与上一篇 Structured Output 的 /agent/intent 链路彻底分开
+    @Post('tools-test')
+    async testToolCalling(@Body('message') message: string) {
+        if (!message) {
+            throw new BadRequestException('message 不能为空')
+        }
+
+        return { message: await this.agentService.testToolCalling(message) }
+    }
+```
+
+调用方式：`POST /agent/tools-test`，body 传 `{ "message": "..." }`。
 
 ## 坑一：Structured Output 和 Tool Calling 必须彻底分开
 
@@ -166,14 +202,17 @@ Unexpected token '我', "我来帮您查询西安今天的天气。" is not vali
 
 用户说「你好，很高兴认识你」，模型返回的 message 里可能根本没有 `tool_calls`——这是完全正常的，不是所有问题都需要工具。所以代码不能假设「每次都存在 tool_calls」：
 
-> 摘自 `code/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/src/agent/agent.service.ts`
 
 ```ts
-  // 模型不一定每次都调工具：没有 tool_calls 就直接返回文本（判空分支）
-  const toolCalls = assistantMessage.tool_calls
-  if (!toolCalls?.length) {
-    return assistantMessage.content ?? ''
-  }
+        // 第一次调用：模型决定「调什么、传什么」
+        const assistantMessage = await this.llmService.chatWithTools(messages, tools)
+
+        // 模型不一定每次都调工具：没有 tool_calls 就直接返回文本（判空分支）
+        const toolCalls = assistantMessage.tool_calls
+        if (!toolCalls?.length) {
+            return assistantMessage.content ?? ''
+        }
 ```
 
 逻辑分成两条分支：
@@ -195,36 +234,43 @@ Property 'function' does not exist on type 'ChatCompletionMessageToolCall'.
 
 先判断类型再访问，TypeScript 就能收窄（Type Narrowing）到安全的形态：
 
-> 摘自 `code/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/src/agent/agent.service.ts`
 
 ```ts
-  const toolCall = toolCalls[0]
-  // 新版 SDK 的 tool_calls 是联合类型：只有 function 型才有 function 字段 → Type Narrowing
-  if (toolCall.type !== 'function') {
-    throw new Error(`暂不支持的工具类型: ${toolCall.type}`)
-  }
+        const toolCall = toolCalls[0]
+        // 新版 SDK 的 tool_calls 是联合类型：只有 function 型才有 function 字段 → Type Narrowing
+        if (toolCall.type !== 'function') {
+            throw new Error(`暂不支持的工具类型: ${toolCall.type}`)
+        }
 
-  const args = JSON.parse(toolCall.function.arguments) as { city?: string }
-  const result = toolMap[toolCall.function.name](args)
+        // function.arguments 是 JSON 字符串，真正需要 JSON.parse 的地方在这里
+        const args = JSON.parse(toolCall.function.arguments) as {
+            city?: string
+            expression?: string
+        }
 ```
 
 这里同时发生了两件事：类型收窄保证编译期安全；`JSON.parse(function.arguments)` 把 JSON 字符串转成真正的对象。**Discriminated Union + Type Narrowing** 是 Agent 开发会反复用到的 TypeScript 组合。
 
 ## 真正执行 Tool：switch 的角色已经变了
 
-到了执行环节，`switch (toolCall.function.name)` 按名字分发：
+到了执行环节，`switch (toolCall.function.name)` 按名字分发，工具函数真正跑在 `ToolsService` 里：
 
-> 示意片段（无配套脚本）
+> 摘自 `code/tool-calling/src/agent/agent.service.ts`
 
 ```ts
-switch (toolCall.function.name) {
-  case 'getWeather':
-    return this.toolsService.getWeather(args.city)
-  case 'calculator':
-    return this.toolsService.calculator(args.expression)
-  default:
-    throw new Error(`未知工具: ${toolCall.function.name}`)
-}
+        // 模型已经做了决定，程序只负责按名字分发执行（Tool Dispatcher，不是 Intent Router）
+        let result: unknown
+        switch (toolCall.function.name) {
+            case 'getWeather':
+                result = this.toolsService.getWeather(args.city ?? '')
+                break
+            case 'calculator':
+                result = this.toolsService.calculator(args.expression ?? '')
+                break
+            default:
+                throw new Error(`未知工具: ${toolCall.function.name}`)
+        }
 ```
 
 读者一定会问：上一篇 `switch (intent)`，今天怎么还是 `switch (toolName)`？区别是本质性的：
@@ -242,25 +288,25 @@ switch (toolCall.function.name) {
 
 回灌分两步。第一步，模型返回的 `assistant(tool_calls)` 消息本身也是 Context 的一部分，必须先放回去——下一次请求时，模型需要知道「刚才是我自己决定调用 getWeather 的」：
 
-> 摘自 `code/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/src/agent/agent.service.ts`
 
 ```ts
-  // 关键时序：assistant(tool_calls) 这条消息本身也是 Context 的一部分，
-  // 必须在 tool 结果之前 push 进 messages——模型需要知道「刚才是我自己决定调用的」
-  messages.push({ role: 'assistant', content: assistantMessage.content ?? '', tool_calls: toolCalls })
+        // 关键时序：assistant(tool_calls) 这条消息本身也是 Context 的一部分，
+        // 必须在 tool 结果之前放回去——模型需要知道「刚才是我自己决定调用的」
+        messages.push({ role: 'assistant', content: assistantMessage.content ?? '', tool_calls: toolCalls })
 ```
 
 第二步，把执行结果以 `role: 'tool'` 放进去：
 
-> 摘自 `code/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/src/agent/agent.service.ts`
 
 ```ts
-    // tool 结果消息三要素：role: 'tool' + tool_call_id（与 call 的 id 配对）+ JSON 字符串内容
-    messages.push({
-        role: 'tool',
-        tool_call_id: toolCall.id,
-        content: JSON.stringify(result)
-    })
+        // tool 结果消息三要素：role: 'tool' + tool_call_id（与 call 的 id 配对）+ JSON 字符串内容
+        messages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(result)
+        })
 ```
 
 Context 至此演变为四段：
@@ -275,23 +321,19 @@ system → user → assistant(tool_call) → tool(result)
 
 带着完整 Context 再次请求，模型此刻知道三件事：用户问什么、我刚决定调什么、工具返回了什么——于是生成最终的自然语言回答：
 
-> 摘自 `code/tool-calling/tool-closure.ts`
+> 摘自 `code/tool-calling/src/agent/agent.service.ts`
 
 ```ts
-  // 第二次调用：模型看到完整链路（问题 → 我的决策 → 工具结果）→ 生成最终回答
-  const final = mockLLM(messages)
-  if (final.tool_calls?.length) {
-    throw new Error('演示剧本假设第二次调用不再发起工具')
-  }
-  return final.content ?? ''
+        // 第二次调用：模型看到完整链路（问题 → 我的决策 → 工具结果）→ 生成最终回答
+        const final = await this.llmService.chatWithTools(messages, tools)
+        return final.content ?? ''
 ```
 
-实跑读数（`npm run tool-closure`；脚本内 LLM 是 mock 剧本，零依赖可复现，真实请求/响应格式见前文示意片段）：
+实跑读数（`npm start` 后执行 `curl -X POST http://localhost:3000/agent/tools-test -H "Content-Type: application/json" -d '{ "message": "帮我看看西安今天热不热" }'`，真实 DeepSeek 输出，2026-10-08 实测）：
 
 ```
-== 单轮 Tool Calling 完整闭环
-  最终回答： 西安今天晴，32℃，天气比较热，外出注意防晒补水。
-链路：User → LLM → tool_calls → 执行 → tool(result) 回灌 → LLM → Final Answer
+HTTP 201
+{"message":"西安今天**挺热的** ☀️\n\n- 天气：晴\n- 气温：**32℃**\n\n晴天加上 32℃ 的高温，体感会比较晒、比较闷热。出门的话建议：\n\n- 做好防晒（帽子、墨镜、防晒霜）\n- 多喝水，尽量避开中午 12 点到下午 3 点的高温时段\n- 穿轻薄透气的衣服\n\n需要我再帮你查一下未来几天的天气，或者看看其他城市的情况吗？"}
 ```
 
 注意与第一次调用的差别：这次模型返回的是 `content`，而不是 `tool_calls`。
@@ -360,7 +402,19 @@ while (steps++ < MAX_STEPS) {
 
 ## 配套代码
 
-| 脚本 | npm script | 对应小节 |
-| --- | --- | --- |
-| `code/tool-calling/tools-schema.ts` | `npm run tool-calling` | Tool Schema：Definition ≠ Implementation |
-| `code/tool-calling/tool-closure.ts` | `npm run tool-closure` | 判空分支 / Type Narrowing / 回灌与 tool_call_id / 二次调用闭环 |
+本篇正文的所有代码片段来自同一个 NestJS 工程（沿用第 1 篇的 agent / llm 分层，按原文新增 tools 模块；依赖 DeepSeek API Key，配置见工程 `.env.example`）：
+
+| 文件 | 职责 | 对应小节 |
+| ---- | ---- | ---- |
+| `code/tool-calling/src/main.ts` | `import 'dotenv/config'` 加载 `.env` + 启动自检 | 工程骨架 |
+| `code/tool-calling/src/app.module.ts` | imports [ConfigModule.forRoot(), AgentModule] | 工程骨架 |
+| `code/tool-calling/src/llm/llm.module.ts` | providers + exports LlmService | 第一次让 LLM 自己选工具 |
+| `code/tool-calling/src/llm/llm.service.ts` | OpenAI SDK 接 DeepSeek；chatWithTools()：tools + tool_choice 'auto'，无 response_format | 第一次让 LLM 自己选工具 / 坑一 |
+| `code/tool-calling/src/tools/tools.schema.ts` | 两个 Tool 的 Schema（Definition，给模型看） | 模型怎么知道我们有哪些 Tool |
+| `code/tool-calling/src/tools/tools.service.ts` | getWeather 模拟数据 / calculator 真实求值（Implementation，程序执行） | 准备两个最简单的 Tool |
+| `code/tool-calling/src/tools/tools.module.ts` | providers + exports ToolsService | 准备两个最简单的 Tool |
+| `code/tool-calling/src/agent/agent.module.ts` | imports [LlmModule, ToolsModule] | 工程骨架 |
+| `code/tool-calling/src/agent/agent.service.ts` | testToolCalling()：判空 → Type Narrowing → switch 分发 → 回灌 → 二次调用 | 解析 Tool Call / 真正执行 Tool / 回灌 Context / 第二次调用 |
+| `code/tool-calling/src/agent/agent.controller.ts` | POST /agent/tools-test | 建立 Tool Calling 测试接口 / 坑一 |
+
+运行方式见 `code/tool-calling/README.md`：`npm install` → 配置 `.env` → `npm start` → curl 测 `/agent/tools-test`。注意 `npm start` 跑的是 `tsc` 产物（`dist/`），不是 `tsx src/main.ts`——原因同第 1 篇「用 `tsx` 直接跑，依赖注入会静默失效」。

@@ -60,6 +60,6 @@ curl -X POST http://localhost:3000/agent/intent \
 | `src/agent/agent.service.ts` | 注入 LlmService；handle() 意图分发 | 第一次让 LLM 参与程序决策 |
 | `src/agent/agent.controller.ts` | POST /agent/chat 与 /agent/intent | 组装 AgentModule 与第一个接口 |
 
-**后续篇目**：第 2 篇（Tool Calling）、第 3 篇（Agent Loop）的配套演示脚本见 `../tool-calling/` 与 `../agent-loop/`（零依赖镜像）；后续在这同一个工程上演进（新增 tools/、loop/ 等目录）时再迁入，当前仓库只包含第 1 篇的范围。
+**后续篇目**：第 2 篇（Tool Calling）在 `../tool-calling/` 有独立的完整 NestJS 工程——复制本工程骨架（agent / llm 两模块 + `.env` 约定）并按原文新增 tools 模块；第 3 篇（Agent Loop）的配套演示脚本见 `../agent-loop/`（零依赖镜像）。
 
 **注意**：本工程不含 mock——API Key 未配置时启动会直接退出并打印中文提示（见上面坑 1），配置后调用才会真正请求 DeepSeek。
