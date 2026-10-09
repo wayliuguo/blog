@@ -1,8 +1,10 @@
-// 把可用工具以 OpenAI 兼容的 function schema 形式告诉模型。
-// 注意：是"这里有一个可调用工具"，不是"请返回意图 JSON"。
-export const tools = [
+import type { ChatCompletionTool } from 'openai/resources/chat/completions'
+
+// Tool Schema 三要素：Name / Description / Parameters（JSON Schema 风格）。
+// 这是 Tool Definition（给模型看），不是 Tool Implementation（程序里真正执行的函数）。
+export const tools: ChatCompletionTool[] = [
     {
-        type: 'function' as const,
+        type: 'function',
         function: {
             name: 'getWeather',
             description: '查询指定城市的天气',
@@ -16,7 +18,7 @@ export const tools = [
         }
     },
     {
-        type: 'function' as const,
+        type: 'function',
         function: {
             name: 'calculator',
             description: '计算数学表达式',

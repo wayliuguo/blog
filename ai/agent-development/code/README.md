@@ -5,7 +5,7 @@
 | 篇 | 章节 | 项目 |
 | --- | --- | --- |
 | 1 | Agent 是什么：从接入大模型到让 LLM 参与决策 | `agent-basics/`（完整 NestJS 工程） |
-| 2 | Tool Calling | `tool-calling/` |
+| 2 | Tool Calling | `tool-calling/`（完整 NestJS 工程） |
 | 3 | Agent Loop | `agent-loop/` |
 | 4 | 上下文与记忆 | `context-memory/` |
 | 5 | Embedding 与向量检索 | `embedding/` |
@@ -16,4 +16,4 @@
 
 每个项目独立 `package.json`，先 `npm install` 再按其 README 或正文「配套代码」表运行；
 脚本名与各篇正文「运行：npm run xxx」逐字一致。
-除 `agent-basics`（需 DeepSeek Key）与 `mcp`（mcp-client 需外网）外，其余脚本无 Key、无数据库即可跑。
+除 `agent-basics` / `tool-calling`（需 DeepSeek Key）与 `mcp`（mcp-client 需外网）外，其余脚本无 Key、无数据库即可跑。
