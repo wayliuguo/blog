@@ -36,6 +36,9 @@
     "06shutdown": "node src/06-graceful-shutdown.js",
     "06fallback": "node src/06-error-fallback.js",
 
+    "07inspector": "node src/07-debug/07-inspector-runtime.cjs",
+    "07brk": "node --inspect-brk src/07-debug/07-inspect-brk.cjs",
+
     "mr01": "node src/02-module-realm/01-cache.cjs",
     "mr02": "node src/02-module-realm/02-exports-trap.cjs",
     "mr03": "node src/02-module-realm/03-cjs-value-vs-esm-binding.mjs",
