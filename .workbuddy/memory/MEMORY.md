@@ -18,7 +18,7 @@ VitePress（base:'/blog/'），板块 ai/ frontend/ interview/ node/，配置 .v
 - vitepress build：实测 63~342s，一律 run_in_background + 每次新日志文件名；md 在 build 启动后的编辑不进产物；确认 = dist html mtime 晚于 md + grep 产物新字符串。
 
 ## 配套代码
-code/ 目录靠 srcExclude '**/code/**' 排除。形态①scenarios+cli.mjs；②单入口真实工程（README 必须给实验↔篇目对照表）。需 npm install：构建体系/build-lab、性能优化/perf-lab（vite+vue+vue-router 双工程 apps/before·after，第八轮定型，无 raw.html/shared/手写 hash；改源码后手动 npm run build）、ai/agent-development/code/agent-lab（tsx 脚本）与 agent-nest（NestJS+DeepSeek，篇1 专属，无 mock，需 .env DEEPSEEK_API_KEY，Key 变量名 DEEPSEEK_API_KEY 优先、回退 OPENAI_API_KEY）。agent-nest **不能 tsx 跑**：tsx/esbuild 不支持 emitDecoratorMetadata → design:paramtypes 缺失 → Nest DI 静默失败（启动正常、请求才 500 "reading 'handle'"）；scripts 恒走 tsc 产物（start = tsc -p tsconfig.json && node dist/main.js，start:dev = tsc --watch）。另必须显式加载 .env：main.ts 顶部 import 'dotenv/config'（Nest 启动前灌 env，启动自检靠它）+ app.module.ts 的 ConfigModule.forRoot({isGlobal:true})；只写 .env 不加载则 LlmService 拿到 undefined Key。装依赖绕沙箱：Python subprocess 调 node <managed>/node_modules/npm/bin/npm-cli.js（NODE_OPTIONS=''；必要时 --ignore-scripts，esbuild postinstall 会 EBUSY）。跑 tsx：node <managed>/node_modules/tsx/dist/cli.mjs <file>。
+code/ 目录靠 srcExclude '**/code/**' 排除。形态①scenarios+cli.mjs；②单入口真实工程（README 必须给实验↔篇目对照表）。需 npm install：构建体系/build-lab、性能优化/perf-lab（vite+vue+vue-router 双工程 apps/before·after，第八轮定型，无 raw.html/shared/手写 hash；改源码后手动 npm run build）、ai/agent-development/code/agent-lab（tsx 脚本）与 agent-nest（NestJS+DeepSeek，篇1 专属，无 mock，需 .env DEEPSEEK_API_KEY，Key 变量名 DEEPSEEK_API_KEY 优先、回退 OPENAI_API_KEY）。agent-nest **启动方式 2026-10-09 起改 Nest CLI（用户定规，参考 show-track-server）**：agent-basics / tool-calling scripts 只留 dev = `nest start -w --path tsconfig.json` 与 dev:debug = `nest start --debug --watch --path tsconfig.json`，devDeps 有 @nestjs/cli ^10.4.9；正文/README 不再有 tsx 坑与 npm start（grep 已清零）。**断点调试（用户定规：调试配置放各项目目录，不放仓库根）**：两工程 tsconfig 已开 sourceMap，各建 .vscode/launch.json（attach 9229 + restart）；**必须把工程目录本身作为工作区打开才生效**（嵌套 launch.json 在仓库根工作区下不生效）；**根 .vscode/launch.json 已整份删除（2026-10-09，含 vite-lab 调试条目，git show HEAD:.vscode/launch.json 可找回）**。装依赖绕沙箱：Python subprocess 调 node <managed>/node_modules/npm/bin/npm-cli.js（NODE_OPTIONS=''；**registry.npmjs.org 走本机代理会 ECONNRESET → 加 --registry=https://registry.npmmirror.com；代理自签名证书要 npm_config_strict_ssl=false**）。另必须显式加载 .env：main.ts 顶部 import 'dotenv/config'（Nest 启动前灌 env，启动自检靠它）+ app.module.ts 的 ConfigModule.forRoot({isGlobal:true})；只写 .env 不加载则 LlmService 拿到 undefined Key。装依赖绕沙箱：Python subprocess 调 node <managed>/node_modules/npm/bin/npm-cli.js（NODE_OPTIONS=''；必要时 --ignore-scripts，esbuild postinstall 会 EBUSY）。跑 tsx：node <managed>/node_modules/tsx/dist/cli.mjs <file>。
 端口：5174-5186 各模块 dev，5187 性能 preview:before，5188/5189 monitor-lab，5191 render-lab，5193 preview:after，5197 性能 dev:after。
 
 ## vitepress build 被删守卫拦
@@ -38,10 +38,18 @@ type-gym 50 题 / runtime-lab；判题 Equal<A,B>+Expect<T>；体操正文代码
 ## 运行时事实必须实跑（Node 22 探针）
 默认值/阈值/事件顺序/报错码先跑确认；实测数字注明来源命令。
 
+## VSCode 调试 Node（2026-10-09 定规）
+- 判活口诀：`Debugger listening`=开了门，`Debugger attached.`=有人进来了；两行都在断点才会停。
+- 四种调试入口：JS Debug Terminal（零配置自动 attach）/ package.json Debug CodeLens（底层同调试终端，用户实测确认）/ launch F5 全包（runtimeExecutable npm 对齐 scripts，windows 要 npm.cmd，子进程 autoAttachChildProcesses）/ attach 配置（手动连 9229）。launch vs attach 区别=连接发起方。
+- 空心断点三查：①没 attach ②工作区开错（只有工作区根的 .vscode/launch.json 生效，嵌套不生效）③sourcemap 缺失（tsconfig sourceMap:true + 配置 sourceMaps + outFiles）。
+- 9229 被占报 `Starting inspector failed: address already in use`，且 --inspect-brk 直接不挂起继续跑完；attach 断开（Shift+F5）不杀进程。
+- node/运行环境 有一篇体系化专文（含 07-debug 配套脚本 07inspector/07brk），总结大纲 7 章 / 面试题 Q70~Q72 对应。
+
 ## AI 板块 · Agent 开发（2026-10-08 第六轮重构）
 源文章=公众号《前端转 Agent 开发》（楠熠之）10 篇合 9 篇，**原文已归档 .workbuddy/docs/agent-source/**（9 个 md）。侧边栏 ai.js：Coding Agent → Skills → Agent 开发；四组（基础入门/记忆与知识/框架实战/协议与生态，无章号）+ 总结/面试题。
 - 配套代码（2026-10-08 用户定规：**一章一项目、同层级、命名对齐章节**）：code/ 下 agent-basics(篇1，原 agent-nest，NestJS+DeepSeek 真实工程无 mock)/tool-calling(篇2，**2026-10-08 下午按用户要求重做为完整 NestJS 工程**：agent/llm 骨架复制篇1+新增 tools 模块（schema/service/module），testToolCalling 全链路真实 DeepSeek 已实测通；main.ts 支持 PORT 环境变量覆盖缺省 3000)/agent-loop/context-memory(篇4)/embedding/rag/langchain/langgraph(零依赖镜像)/mcp(真实 SDK v2) 九个独立项目，各带 package.json+README，code/README.md 有章节↔项目总表。agent-lab 已删。验证报告在 .workbuddy/docs/agent-verification-report.md；ToolCalling 重构审查报告在 .workbuddy/docs/toolcalling-code-review.md。
 - 坑：MCP SDK v2 要求 zod ≥4.2；mcp/client.ts isTs 分支 tsx 启 server.ts（tsxCli 路径='./node_modules/...'，项目本地 tsx）；stdio server 日志只能 console.error；实跑读数必须真实。
+- curl 验证小节（2026-10-09 定稿：基础入门每篇「跑起来验证」小节放配套代码节前；**用户明确要求：验证对象是跑起来的配套工程接口（POST localhost:3000/agent/chat 这类），cmd 直接复制粘贴可跑，取代 Postman/Apifox，不要 bash 脚本文件、不要直调 DeepSeek**）：篇1 /agent/chat + /agent/intent、篇2 /agent/tools-test、篇3 npm run agent-loop / registry（无 HTTP 服务）。命令内嵌正文。cmd 要点：chcp 65001 + JSON 双引号内 `"`→`\"`；set PORT 同窗口。接口读数全部真实起服务实测（3000 常被占，用 PORT=3011/3012；沙箱 curl 需 --noproxy）。agent-basics/src/main.ts 已补 PORT 覆盖（原写死 3000）。
 - **code/ 目录 git 未跟踪曾致脚本被改后正文同步静默破裂（29 处对不上），已修但应尽快提交；改脚本必跑 check-code-sync。**
 
 ## 遗留
