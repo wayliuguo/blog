@@ -8,10 +8,13 @@
 ```bash
 npm install
 cp .env.example .env   # 填入你的 DEEPSEEK_API_KEY（platform.deepseek.com 申请）
-npm start              # = tsc -p tsconfig.json && node dist/main.js，监听 http://localhost:3000
+npm run dev            # = nest start -w，编译 + 监听 http://localhost:3000，改源码自动重启
 ```
 
-`.env` 里写哪个都认，优先 `DEEPSEEK_API_KEY`，回退 `OPENAI_API_KEY`：
+断点调试（`.vscode/launch.json` 已配好，**必须把本工程目录作为 VSCode 工作区打开**）：
+①推荐——调试面板选「调试启动（F5 全包）」按 F5，VSCode 自己起服务并调试；②或终端跑 `npm run dev:debug` 后选「Attach Nest dev:debug（9229）」F5 attach。attach 成功的标志是终端多出一行 `Debugger attached.`；断点圆点变实心红才算绑定成功（sourcemap 已在 tsconfig 开启）。
+
+`.env` 里写哪个都认，优先 `DEEPSEEK_API_KEY`，回退 `OPENAI_API_KEY`。3000 被占用时可换端口启动（`src/main.ts` 里读 `PORT`，缺省 3000）：cmd 里先 `set PORT=3011` 再 `npm run dev`，bash 里 `PORT=3011 npm run dev`。
 
 ```bash
 DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
@@ -19,18 +22,13 @@ DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-### 两个必须知道的坑
+### 一个必须知道的坑
 
-1. **`.env` 不会自动进 `process.env`。** NestJS 不读它，`tsx`/`node` 也不读。必须显式加载：
+1. **`.env` 不会自动进 `process.env`。** NestJS 与 `node` 都不读它。必须显式加载：
    `src/main.ts` 顶部 `import 'dotenv/config'`（在 Nest 启动前灌入 `process.env`），
    `src/app.module.ts` 的 `ConfigModule.forRoot({ isGlobal: true })`（把配置纳入 Nest 模块体系）。
    少了前者，启动时 `LlmService` 拿到 `undefined` Key，OpenAI SDK 只会抛一句
    `Missing credentials. Please pass an apiKey...`——报的是 SDK，真因是没加载 `.env`。
-
-2. **不要 `tsx src/main.ts` 跑本项目。** `tsx` 底层是 esbuild，而 esbuild 不支持 `emitDecoratorMetadata`，
-   装饰器元数据缺失 → Nest 依赖注入解析不出来 → Controller/Service 里的实例全是 `undefined`，
-   而且**启动期不报错**，等请求进来才抛 `Cannot read properties of undefined (reading 'handle')`。
-   走 `tsc` 产物（`dist/`）才带 `design:paramtypes` 元数据。
 
 ## 接口
 

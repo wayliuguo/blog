@@ -1,0 +1,36 @@
+{
+    // 断点调试（二选一）：
+    // ① 「调试启动」：F5 一键全包——VSCode 用 npm run dev:debug 起服务并调试，
+    //    与 package.json scripts 完全对齐；子进程（nest CLI → node dist/main.js）由
+    //    autoAttachChildProcesses（默认开）自动接管，无需手动 attach。
+    // ② 「Attach Nest dev:debug」：终端里 npm run dev:debug 后按 F5 连上去。
+    //    attach 成功的标志：终端紧跟着多出一行 Debugger attached.（没有这行就是没连上）。
+    // 两种方式都必须：把本工程目录（不是仓库根）作为 VSCode 工作区打开。
+    // src/*.ts 断点能映射靠 tsconfig.json 的 "sourceMap": true。
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "调试启动（F5 全包）",
+            "runtimeExecutable": "npm",
+            "windows": { "runtimeExecutable": "npm.cmd" },
+            "runtimeArgs": ["run", "dev:debug"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"],
+            "sourceMaps": true,
+            "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "name": "Attach Nest dev:debug（9229）",
+            "port": 9229,
+            "restart": true,
+            "skipFiles": ["<node_internals>/**"],
+            "sourceMaps": true,
+            "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+        }
+    ]
+}

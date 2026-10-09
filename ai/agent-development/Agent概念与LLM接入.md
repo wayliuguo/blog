@@ -50,7 +50,7 @@ User → LLM → Tool A → LLM → Tool B → LLM → Tool C → LLM → Final 
 
 > 结论先行：LLM 是 Agent 的核心组件，但 LLM 本身不等于 Agent。
 
-分界线清楚了，接下来不动用任何框架，用 NestJS + DeepSeek 从最底层把这条链路亲手搭出来——本篇全部代码来自配套工程 `code/agent-basics/`，拼起来就是一个能 `npm start` 的完整项目。
+分界线清楚了，接下来不动用任何框架，用 NestJS + DeepSeek 从最底层把这条链路亲手搭出来——本篇全部代码来自配套工程 `code/agent-basics/`，拼起来就是一个能 `npm run dev` 跑起来的完整项目。
 
 ## 第一步架构决策：把 Agent 和 LLM 拆开
 
@@ -259,29 +259,7 @@ import { AgentService } from './agent.service'
   }
 ```
 
-### 坑：用 `tsx` 直接跑，依赖注入会静默失效
-
-`tsx src/main.ts` 跑 NestJS，最诡异的故障是这样的：**启动日志一切正常**（`Nest application successfully started`、路由也都 `Mapped` 了），但第一个请求就 500：
-
-```
-ERROR [ExceptionsHandler] Cannot read properties of undefined (reading 'handle')
-    at AgentController.intent (src/agent/agent.controller.ts:24:30)
-```
-
-`this.agentService` 是 `undefined`。Nest 是靠装饰器元数据（`emitDecoratorMetadata` 生成的 `design:paramtypes`）才知道构造函数要注入哪个类型的，而**`tsx` 底层是 esbuild，esbuild 至今不支持 `emitDecoratorMetadata`**。元数据一缺失，Nest 解析不出依赖——关键是它**不报错**，照样把 Controller 建出来，只是里面全是 `undefined`，等到请求进来才炸。
-
-所以 NestJS 工程不要走 `tsx` 这条路径，用 `tsc` 的产物：
-
-```bash
-npm run build   # tsc -p tsconfig.json，输出到 dist/
-npm start       # tsc -p tsconfig.json && node dist/main.js
-```
-
-配套的 `start:dev` 也是 `tsc --watch` 而非 `tsx watch`——Watcher 只重编译、不重跑 Node 进程，DI 元数据同样会丢。
-
-> 判断标准：Nest 报「`undefined` 上读某个方法」而不是「can't resolve dependencies」，先怀疑运行器吃了装饰器元数据。
-
-`npm start` 启动后用 curl 测试：
+工程用 Nest CLI 启动（`npm run dev`，即 `nest start -w`：编译由 CLI 负责，改动源码自动重启）。启动后用 curl 测试：
 
 ```bash
 curl -X POST http://localhost:3000/agent/chat \
@@ -569,6 +547,50 @@ User → LLM → 不需要工具 → Answer
 
 那时才会第一次出现 `LLM → Action → Observation → LLM`。
 
+## 跑起来验证：cmd + curl 调工程接口
+
+本篇工程的验证不用 Postman / Apifox——工程跑起来之后，打开 cmd 把命令整段粘贴、回车即可（Windows 自带 curl，什么都不用装）。
+
+前提（一次性，细节见 `code/agent-basics/README.md`）：工程目录下 `npm install`，`.env` 写好 Key（坑见上文「.env 不会自动进 `process.env`」），然后启动：
+
+```bash
+npm run dev
+```
+
+`npm run dev` 走 Nest CLI（`nest start -w`），先编译再启动、改动源码自动重启，首次启动要十几秒；看到 `Nest application successfully started` 即就绪，默认监听 `http://localhost:3000`。3000 被占用时换个端口：cmd 里先 `set PORT=3011` 再 `npm run dev`（下文 URL 里的端口相应替换）。
+
+另开一个 cmd 窗口发请求。先执行一次 `chcp 65001`（把控制台切到 UTF-8，不切的话请求体里的中文会以 GBK 编码发出，意图识别会乱码）。
+
+**验证接口一：`/agent/chat`——纯对话链路**（User → AgentController → AgentService → LlmService → DeepSeek）：
+
+```bash
+curl -s http://localhost:3000/agent/chat -H "Content-Type: application/json" -d "{\"message\": \"什么是 AI Agent？\"}"
+```
+
+实测响应（`message` 字段是模型回答，此处截断）：
+
+```
+{
+  "message": "**AI Agent（人工智能智能体）** 是指能够**自主感知环境、做出决策并采取行动**以完成特定目标的 AI 系统。……（长回答，略）"
+}
+```
+
+cmd 的转义规则只有一条：JSON 包在双引号里，内部的每个 `"` 都要写成 `\"`（单引号是 bash 的写法，cmd 不认）。
+
+**验证接口二：`/agent/intent`——LLM 参与决策的链路**（`parseIntent` → Zod 校验 → `switch` 分发）：
+
+```bash
+curl -s http://localhost:3000/agent/intent -H "Content-Type: application/json" -d "{\"message\": \"帮我查一下西安今天的天气\"}"
+```
+
+实测响应：
+
+```
+{"action":"getWeather","city":"西安","date":"今天"}
+```
+
+模型把一句自然语言变成了结构化意图，程序按 `action` 分发——这就是「第一次让 LLM 参与程序决策」的运行时证据。你可以把 `message` 换成「帮我算一下 123 * 456」再发一次，观察 `action` 怎么变。
+
 ## 配套代码
 
 本篇正文的所有代码片段来自同一个 NestJS 工程，拼起来即可运行（依赖 DeepSeek API Key，配置见工程 `.env.example`）：
@@ -585,4 +607,4 @@ User → LLM → 不需要工具 → Answer
 | `code/agent-basics/src/agent/agent.service.ts` | 注入 LlmService；handle() 决策 | 第一次让 LLM 参与程序决策 |
 | `code/agent-basics/src/agent/agent.controller.ts` | POST /agent/chat、/agent/intent | 组装 AgentModule 与第一个接口 |
 
-运行方式见 `code/agent-basics/README.md`：`npm install` → 配置 `.env` → `npm start` → curl 测 `/agent/chat` 与 `/agent/intent`。注意 `npm start` 跑的是 `tsc` 产物（`dist/`），不是 `tsx src/main.ts`——原因见上文「用 `tsx` 直接跑，依赖注入会静默失效」。
+运行方式见 `code/agent-basics/README.md`：`npm install` → 配置 `.env` → `npm run dev` → curl 测 `/agent/chat` 与 `/agent/intent`。
