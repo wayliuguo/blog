@@ -2,6 +2,7 @@ const assert = require('node:assert')
 const { scaleLinear, scaleBand } = require('./scale.cjs')
 const { pie, stack } = require('./layout.cjs')
 const { MiniCanvas, buildBars, FrameScheduler, planSample } = require('./render.cjs')
+const { createNode, join, applyJoin } = require('./join.cjs')
 
 // ── 场景一：线性比例尺 + invert + nice 刻度 ─────────────────────
 console.log('场景一 · 线性比例尺')
@@ -71,4 +72,28 @@ const plan = planSample(10000, 0.005)
 assert.equal(plan.strategy, 'downsample')
 assert.equal(plan.count, 3340) // 16.7ms / 0.005ms ≈ 3340 点是预算上限
 console.log(`  ✓ 1 万点超预算 → 降采样到 ${plan.count} 点（保留率 ${(plan.ratio * 100).toFixed(1)}%）`)
+// ── 场景七：mini data-join（enter / update / exit）──────────────
+console.log('场景七 · data join')
+function makeData(ids) {
+    return ids.map(id => ({ id, value: 10 + (id.charCodeAt(0) % 7) }))
+}
+const svg = createNode('svg')
+const render = (n, d) => n.setAttr('height', d.value)
+// 初始 3 条数据 → 3 个节点全部走 enter（新建后并入 update 渲染一次）
+let r = applyJoin(svg, makeData(['a', 'b', 'c']), render)
+assert.deepEqual([r.enterCount, r.updateCount, r.exitCount], [3, 3, 0])
+assert.equal(svg.children.length, 3)
+// 数据 3→5：复用 3 个旧节点（同一对象），只新建 2 个
+r = applyJoin(svg, makeData(['a', 'b', 'c', 'd', 'e']), render)
+assert.deepEqual([r.enterCount, r.updateCount, r.exitCount], [2, 5, 0])
+assert.equal(svg.children.length, 5)
+const reused = svg.children[0] // 'a' 的节点必须是同一个对象——DOM 复用而不重建
+r = applyJoin(svg, makeData(['a', 'b', 'c', 'd', 'e']), render)
+assert.equal(svg.children[0], reused)
+// 数据 5→2：多出的 3 个节点走 exit 被移除
+r = applyJoin(svg, makeData(['a', 'b']), render)
+assert.deepEqual([r.enterCount, r.updateCount, r.exitCount], [0, 2, 3])
+assert.equal(svg.children.length, 2)
+console.log('  ✓ 3→5 复用 3 建 2 · 重复渲染零重建 · 5→2 移除 3，与虚拟列表 diff 同源\n')
+
 console.log('\n全部场景通过 ✓')

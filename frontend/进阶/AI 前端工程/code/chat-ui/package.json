@@ -1,0 +1,9 @@
+{
+  "name": "chat-ui",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AI 前端工程实战：流式对话 UI（SSE + AbortController + 半开代码块守卫 + rAF 合帧）",
+  "scripts": {
+    "start": "node server.cjs"
+  }
+}

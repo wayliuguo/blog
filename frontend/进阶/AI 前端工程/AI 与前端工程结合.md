@@ -1,6 +1,8 @@
 # AI 与前端工程结合
 
-## 一、AI Coding 的三层基建
+> 统一业务场景：智能客服助手（见[全景](./全景.md)）。本篇实战层绑定真实工程 `code/fn-calling/`（真实 DeepSeek 两次 tool_calls 实测）；探针 `code/ai-lab/gen.cjs` 负责结构化输出与上下文装配的机制验证。
+
+## 一、入门：AI Coding 的三层基建
 
 把「AI 生成的东西」接入构建流水线，中间隔着三道闸门：
 
@@ -12,9 +14,11 @@
 
 三层里最容易被忽略的是评测层：prompt 一改，历史上所有生成行为都变了，却没有 diff 可看。没有评测集的 AI 功能，等于没有测试的组件库。
 
-## 二、结构化输出：噪声剥离 → schema 校验 → 错误回喂
+## 二、核心机制：结构化输出四道闸
 
-组件生成、表单填充、接口 mock——凡是「AI 的输出要直接进程序」的场景，都必须走结构化输出。第一道工序是噪声剥离：模型习惯把 JSON 包进围栏、或在前后加客套话：
+组件生成、表单填充、接口 mock——凡是「AI 的输出要直接进程序」的场景，都必须走结构化输出。四道闸门：**噪声剥离 → JSON 解析 → schema 校验 → 错误回喂**。
+
+第一道工序是噪声剥离——模型习惯把 JSON 包进围栏、或在前后加客套话：
 
 > 摘自 `./code/ai-lab/gen.cjs`
 
@@ -30,7 +34,7 @@ function extractJson(raw) {
 }
 ```
 
-第二道工序是 schema 校验——解析成功不代表能用，字段类型错了照样炸在下游。第三道也是最有价值的一道：**失败后带着错误清单回喂重试**，而不是原样重发同一个 prompt：
+第二道 schema 校验 + 第三道最有价值的**错误回喂**——失败后带着错误清单回喂重试，而不是原样重发同一个 prompt：
 
 > 摘自 `./code/ai-lab/gen.cjs`
 
@@ -64,53 +68,34 @@ function generateWithRepair(raws, schema) {
 }
 ```
 
-实测一条包含三类故障的输出序列：围栏缺右括号（解析失败）→ 字段类型错误（校验失败）→ 正确输出，第三轮通过：
-
-> 摘自 `./code/ai-lab/gen.cjs`
-
-```js
-{
-  const raws = [
-    '好的，这是你要的组件定义：\n```json\n{ "name": "Button", "props": ["size", "type"]\n```\n还需要调整吗？',
-    '{ "name": 42, "props": [] }',
-    '```json\n{ "name": "Button", "props": ["size", "type"] }\n```'
-  ]
-  const schema = { name: 'string', props: 'array' }
-  const { obj, attempts } = generateWithRepair(raws, schema)
-  assert.equal(obj.name, 'Button')
-  assert.equal(attempts, 3)
-  console.log('[1] 结构化输出：第 1 次围栏噪声解析失败、第 2 次类型校验失败，第 3 次通过')
-}
-```
+实测一条包含三类故障的输出序列：围栏缺右括号（解析失败）→ 字段类型错误（校验失败）→ 正确输出，第三轮通过（`node run.cjs`）。
 
 生产上还有第四道保险：直接用模型 API 的**结构化输出模式**（JSON Schema 约束解码），让围栏噪声在源头就不存在——但校验和回喂仍然要留，因为「格式对」不等于「内容对」。
 
-## 三、组件生成：约束 DSL，而不是自由代码
+## 三、核心机制：约束 DSL 与上下文装配
+
+### 3.1 组件生成：约束 DSL，而不是自由代码
 
 让模型直接产出 React/Vue 组件代码，得到的是一份**每次都不一样的自由文本**：命名随机、依赖随机、风格随机，没法进设计系统。正确姿势是让模型输出一个**受约束的 DSL**（组件名、props、插槽全部走白名单），渲染由前端已有引擎完成：
 
 > 示意片段（无配套脚本）
 
-```
-// ❌ 自由代码：模型直接写 JSX —— 不可控
-// ✅ 约束 DSL：模型只填白名单结构，渲染器是自己的
+```json
 {
-  "component": "Button",        // 白名单校验：不在注册表内直接拒绝
+  "component": "Button",
   "props": { "size": "md", "type": "primary" },
   "children": [{ "component": "Text", "props": { "value": "提交" } }]
 }
 ```
 
-这样做的收益与边界同样清晰：
-
-- **收益**：输出可控可校验（schema 即文档）、天然适配低代码渲染器、坏结果可以按节点定位回喂。
+- **收益**：输出可控可校验（schema 即文档）、天然适配低代码渲染器、坏结果可以按节点定位回喂；
 - **边界**：表达力被白名单锁死——新组件要先进注册表；复杂交互逻辑塞不进 DSL，仍然要人写。
 
-这与低代码/搭建体系的思路完全同源（见 `低代码与搭建体系` 模块）：**把「生成」限制在受约束的空间里，确定性才有可能超过概率**。
+这与低代码/搭建体系的思路完全同源（见 `低代码与搭建体系` 模块）：**把「生成」限制在受约束的空间里，确定性才有可能超过概率**。Function Calling 的工具白名单（见实战节）就是这个思路在 API 层的形态。
 
-## 四、上下文装配与 token 预算
+### 3.2 上下文装配与 token 预算
 
-prompt 窗口是稀缺资源，也是成本项。装配策略要按优先级贪心装载：system 优先级最高永不动，其次是检索片段、代码上下文，历史对话排在最末位——超预算时最先丢它：
+prompt 窗口是稀缺资源，也是成本项。装配策略要按优先级贪心装载：system 优先级最高永不动，其次是检索片段、代码上下文，历史对话排在最末位——超预算时最先丢：
 
 > 摘自 `./code/ai-lab/gen.cjs`
 
@@ -133,80 +118,71 @@ function assemble(budget, parts) {
     dropped: parts.map(p => p.name).filter(n => !kept.has(n))
   }
 }
-
-{
-  const parts = [
-    { name: 'system', tokens: 120, priority: 0 },
-    { name: 'retrieval', tokens: 800, priority: 1 },
-    { name: 'code-context', tokens: 600, priority: 2 },
-    { name: 'history', tokens: 500, priority: 3 }
-  ]
-  const r = assemble(1600, parts)
-  assert.deepEqual(r.kept, ['system', 'retrieval', 'code-context'])
-  assert.deepEqual(r.dropped, ['history'])
-  assert.equal(r.used, 1520)
-  console.log('[2] 上下文装配：预算 1600，保住 system+检索+代码（1520），丢弃最末位的历史对话')
-}
 ```
 
-注意这个贪心实现的一个特性：**高优先级片段如果塞不进剩余预算，会直接跳过去装载更小的低优先级片段**——先保「装得下的最重要内容」，而不是严格排序后截断。装配前还需要估算 token 数，工程上用不到精确 tokenizer，粗算加余量即可：
+实测：预算 1600 时保住 system + 检索 + 代码上下文（1520），丢弃最末位的历史对话。注意贪心实现的一个特性：**高优先级片段塞不进剩余预算时会直接跳过，装载更小的低优先级片段**——先保「装得下的最重要内容」。装配前的 token 粗算：中文约 1 字/token、英文约 4 字符/token，预算按粗估的 80% 填充兜底 ±20% 误差。
 
-> 摘自 `./code/ai-lab/gen.cjs`
+## 四、实战：fn-calling 工具调用循环
+
+`code/fn-calling/`（零依赖 Node）把「约束 DSL」落到 Function Calling：工具全部走**白名单 schema**（`tools.mjs`），执行循环带**轮次上限**与**结构化错误回喂**（`agent.mjs`）：
+
+> 摘自 `./code/fn-calling/agent.mjs`
 
 ```js
-// 精确计数需要 tokenizer；工程上先用粗估 + 20% 余量兜底：
-// 中文约 1 字/token，英文约 4 字符/token。
-function estimateTokens(text) {
-  const cjk = (text.match(/[\u4e00-\u9fff]/g) || []).length
-  const other = text.length - cjk
-  return Math.ceil(cjk + other / 4)
-}
-
-{
-  assert.equal(estimateTokens('前端面试题'), 5)
-  assert.equal(estimateTokens('const x = 1;'), 3)
-  assert.equal(estimateTokens('用 Vue 开发'), 5)
-  console.log('[3] token 粗算：中文按字、英文按 4 字符，混合场景可预算内兜底')
-}
+    // 执行模型点名的每个工具：白名单校验 → 参数 JSON.parse → run()
+    for (const call of reply.tool_calls) {
+      const tool = findTool(call.function.name)
+      console.log(`[round ${round}] 模型请求调用工具：${call.function.name}(${call.function.arguments})`)
+      let result
+      if (!tool) {
+        // 未注册工具：结构化错误回喂，而不是终止整个会话
+        result = { ok: false, error: `工具 ${call.function.name} 不在白名单内，可用工具：${tools.map(t => t.name).join(', ')}` }
+      } else {
+        try {
+          result = tool.run(JSON.parse(call.function.arguments))
+        } catch (e) {
+          result = { ok: false, error: `参数解析失败：${e.message}` }
+        }
+      }
+      console.log(`[round ${round}] 工具结果：${JSON.stringify(result)}`)
+      messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) })
+    }
 ```
 
-粗估误差通常在 ±20% 以内，预算按 80% 填充就是这个余量的用途。
+**实测读数（2026-10-14，真实 DeepSeek 端点）**：提问「查订单 ORD-2026-1001 + 退款政策」，模型第一轮**自主并列请求两个工具**——`getOrderStatus({"orderId": "ORD-2026-1001"})` 返回 `{ok:true, status:"已发货", carrier:"顺丰", eta:"明天 18:00 前"}`、`queryRefundPolicy({"topic": "refund"})` 返回政策文本；回喂后模型产出结构清晰的最终答复（订单状态 + 政策要点 + 追问建议）。mock 模式（`npm run mock`，不出网）同样走通循环。
 
-## 五、设计稿转代码的边界
+跑工程：
 
-「设计稿直接出可用页面」是宣传语，工程上的真实边界要切开看：
+```
+cd code/fn-calling
+copy .env.example .env   :: 粘 DEEPSEEK_API_KEY（留空则 mock）
+npm start
+```
 
-| 环节 | 自动化程度 | 原因 |
-| --- | --- | --- |
-| 布局骨架 | 高 | 视觉层次 → Flex/Grid 结构有稳定的映射规则 |
-| 样式映射 | 中高 | 颜色/字号/间距可对齐 design token；游离值需人工归一 |
-| 图片与图标资源 | 中 | 切图可自动，语义命名（icon-search）靠约定 |
-| 交互与状态逻辑 | 低 | 跳转、校验、异步依赖业务上下文，稿子里没有 |
-| 可访问性 | 低 | 焦点序、aria 语义、键盘路径需要真实理解用途 |
+三条工程纪律值得写进规范：**工具实现是确定性的**（纯函数 + 自家数据源，模型只决定「调谁、传什么」）；**错误必须结构化回喂**（`{ok:false, error:"..."}` 让模型能向用户澄清，抛异常则整个会话终止）；**循环必须设轮次上限**（防模型连环调用工具打转烧钱）。
 
-结论：把设计稿转代码定位成**「生成第一版布局骨架 + 样式」的加速器**，交互逻辑、状态管理、可访问性仍是人的工作。落点同样是约束 DSL 或受控组件树，而不是整页自由代码——否则生成的代码第一次需求变更就会失控。
+## 五、对比与适用边界
 
-## 工程含义清单
-
-- 结构化输出四道闸：噪声剥离 → JSON 解析 → schema 校验 → 错误回喂重试；能用 API 级 JSON Schema 约束就用。
-- 组件生成走白名单 DSL：渲染器是自己的，模型只填结构；表达力换确定性，值。
-- 上下文装配按优先级贪心：system 不动，历史对话最先丢；预算按粗估的 80% 填充。
-- prompt 是「隐性发版」：改 prompt 必须过评测集，badcase 归档进回归。
-- 设计稿转代码定位为布局加速器：交互逻辑与可访问性仍是人的活。
+- **自由代码 vs 约束 DSL**：自由代码表达力强但每次输出都不同；约束 DSL 用表达力换确定性，值——除非产出只给人看；
+- **JSON Schema 约束解码 vs 事后校验**：能用 API 级结构化输出就用，事后校验回喂永远要留（格式对 ≠ 内容对）；
+- **设计稿转代码的真实边界**：布局骨架自动化程度高、样式映射中高、交互与状态逻辑低、可访问性低——定位为「生成第一版布局骨架 + 样式」的加速器，交互逻辑、状态管理、可访问性仍是人的工作。
 
 ## 配套代码
 
 | 文件 | 作用 | 对应小节 |
 | --- | --- | --- |
-| `./code/ai-lab/gen.cjs` | 结构化输出修复重试 / 上下文装配 / token 粗算 | 二、四 |
+| `./code/ai-lab/gen.cjs` | 结构化输出修复重试 / 上下文装配 / token 粗算 | 二、三 |
 | `./code/ai-lab/sse.cjs` | SSE 分帧 / 半开代码块 / 中断 / 重试（上一篇引用） | — |
 | `./code/ai-lab/wasm.cjs` | 端侧推理探针（下一篇引用） | — |
 | `./code/ai-lab/perf.cjs` | 性能与成本探针（性能篇引用） | — |
 | `./code/ai-lab/run.cjs` | 总入口：依次执行四探针 | 全篇 |
+| `./code/fn-calling/tools.mjs` | 工具白名单 schema + 确定性实现 | 四 |
+| `./code/fn-calling/agent.mjs` | 执行循环 + 错误回喂 + 轮次上限 | 四 |
 
 ## 参考
 
-- 本模块总结：[总结](./总结.md)
+- 本模块地图：[全景](./全景.md)
+- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
 - 上一篇：[LLM 应用前端形态](./LLM%20应用前端形态.md)
 - 下一篇：[端侧推理与 WASM](./端侧推理与%20WASM.md)
 - 参考：[OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs) · [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) · [低代码与搭建体系（本站模块）](../低代码与搭建体系/总结.md)

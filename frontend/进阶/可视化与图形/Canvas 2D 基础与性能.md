@@ -1,8 +1,16 @@
 # Canvas 2D 基础与性能
 
-## 一、Canvas 是什么：位图与即时模式
+> 统一业务场景：实时交易监控大屏（见[全景](./全景.md)）。本篇实战层绑定 `screen-board` 的 QPS 折线高频更新；探针实验台 `code/viz-lab/`。
 
-`<canvas>` 只是一张位图，`getContext('2d')` 拿到的是画笔。它和 SVG 的根本区别在渲染模式：
+## 一、入门：从 DOM 开发者到「画笔指令」的心智迁移
+
+你已经会 Vue/React——操作的是**对象**，改属性浏览器负责重绘。Canvas 把这套前提全部推翻，先完成三个迁移：
+
+| 你熟悉的（保留模式） | Canvas 的（即时模式） | 迁移要点 |
+| --- | --- | --- |
+| 改 `rect.height`，浏览器只重绘它 | 任何变化都要**清屏重画整幅** | 没有「改」这个动作，只有「重新画一遍」 |
+| 事件绑在元素上 | 画布上**没有对象**，只有一个像素矩阵 | hover/click 要自己算几何命中 |
+| 组件树就是场景图 | 需要场景图就**自己建显示列表** | 重绘 = 重放指令清单 |
 
 | | Canvas（即时模式） | SVG（保留模式） |
 | --- | --- | --- |
@@ -13,19 +21,24 @@
 
 > 提示：即时模式意味着 Canvas 没有「场景图」——想移动一个矩形，必须先清屏再按新坐标重画所有东西。理解这一点，性能问题就有了统一的解释框架。
 
-## 二、基础绘制与状态机
+## 二、上手：最小可跑示例
 
-Canvas 的 API 是「状态机 + 指令」：设置状态（颜色、线宽、变换），再执行绘制指令。
+Canvas 不需要构建工具。把下面这段存成 `demo.html` 双击打开，30 秒见效——重点感受「状态机 + 指令」的 API 形态：
 
 > 示意片段（无配套脚本）
 
 ```js
+const canvas = document.querySelector('canvas')
 const ctx = canvas.getContext('2d')
-ctx.fillStyle = 'steelblue'      // 设置状态（不影响已画内容）
-ctx.fillRect(10, 10, 100, 50)    // 执行指令（用当前状态画）
-ctx.save()                       // 保存状态快照
-ctx.translate(50, 0)             // 变换坐标
-ctx.restore()                    // 恢复到快照，避免状态泄漏
+
+ctx.fillStyle = 'steelblue'          // 1. 设置状态（不影响已画内容）
+ctx.fillRect(10, 10, 100, 50)        // 2. 执行指令（用当前状态画）
+
+ctx.save()                           // 3. 保存状态快照
+ctx.translate(50, 0)                 //    变换坐标后继续画
+ctx.fillStyle = 'orange'
+ctx.fillRect(10, 10, 100, 50)
+ctx.restore()                        // 4. 恢复到快照，避免状态泄漏
 ```
 
 三条最容易被忽视的规矩：
@@ -34,7 +47,9 @@ ctx.restore()                    // 恢复到快照，避免状态泄漏
 2. **样式设置本身就是开销**——`fillStyle` 每次赋值都会让状态变化，同色图形应批量画；
 3. **像素级操作用 `getImageData` / `putImageData`**，它们绕过状态机直接读写位图，但也绕过 GPU 加速。
 
-## 三、渲染成本模型：显示列表
+## 三、核心机制：显示列表、帧预算与降级
+
+### 3.1 渲染成本模型：重绘 = 重放
 
 Canvas 没有场景图，但我们可以给应用层自己建一个——**显示列表（display list）**：把「当前画面由哪些指令构成」记下来，重绘就是对它重放。这正好也是 ECharts 内部 ZRender 的思路。用实验台模拟：
 
@@ -98,7 +113,7 @@ console.log('  ✓ 同样改 1 根柱子：全量执行 100 条指令，增量�
 
 **同样改 1 根柱子，全量执行 100 条指令、增量只执行 1 条。** 这就是为什么大屏类项目要做「脏矩形 + 增量重绘」，也是为什么 Canvas 图表在高频更新下需要引擎级的优化而不是调 API。
 
-## 四、帧预算与合并
+### 3.2 帧预算：一帧只画一次
 
 显示器每 16.7ms 刷新一次（60fps），一次重绘必须在这之内完成。应用层的第一个纪律是：**一帧内多次数据变更，只重绘一次**——全部合并到 `requestAnimationFrame` 回调里：
 
@@ -141,25 +156,7 @@ console.log('  ✓ 同一帧 3 次 setData 只触发 1 次重绘\n')
 
 > 提示：WebSocket 推送、轮询、用户拖动可能在一帧内连环触发 setData——不合并的话，同一帧就是画三次白三次，帧预算瞬间爆掉。
 
-## 五、性能手法清单
-
-按「性价比从高到低」排序，都是大屏项目的常规操作：
-
-> 示意片段（无配套脚本）
-
-```
-1. 离屏 canvas 预渲染：把不变的背景/网格画到离屏画布，每帧 drawImage 一次贴上
-2. 分层 canvas：静态层（网格/背景）与动态层（数据）分开，动态层只重绘自己
-3. 帧内合并：一切 setData 只标脏，rAF 回调统一重绘（见上节实测）
-4. 增量重绘：脏矩形裁剪，只重画受影响区域（见上节实测）
-5. 批量绘制：同色 path 合并成一个 beginPath，减少状态切换
-6. 避免亚像素：坐标取整，抗锯齿开销骤降
-7. 长任务切片：数据分片逐帧处理，避免一次 setData 卡死主线程
-```
-
-前两条值得展开：**离屏预渲染**相当于把 Canvas 也做出了「保留模式」——贵的部分画一次存成位图，之后每帧只是一次 `drawImage` 拷贝，GPU 处理极快；**分层 canvas** 则是多个 `<canvas>` 叠放，各自按需重绘，互不拖累。
-
-## 六、降级：数据量超预算怎么办
+### 3.3 降级：数据量超预算怎么办
 
 帧预算 16.7ms 是硬约束。如果每个数据点的绘制成本是固定的，那么「最多能画多少点」就可以直接算出来，超了就降采样：
 
@@ -186,14 +183,79 @@ const plan = planSample(10000, 0.005)
 assert.equal(plan.strategy, 'downsample')
 assert.equal(plan.count, 3340) // 16.7ms / 0.005ms ≈ 3340 点是预算上限
 console.log(`  ✓ 1 万点超预算 → 降采样到 ${plan.count} 点（保留率 ${(plan.ratio * 100).toFixed(1)}%）`)
-console.log('\n全部场景通过 ✓')
 ```
 
 > 提示：ECharts 的 `sampling: 'lttb'`（最大最小三角抽稀）就是生产级的降采样实现——降级不是「画不动就卡着」，而是有策略地丢数据：趋势图用抽稀保形状，监控折线用采样保特征点。
 
-## 七、实测：三路渲染帧率对照
+## 四、性能手法清单
 
-前面几节都是「成本模型」层面的推演——改一次重画多少、帧预算怎么算。这一节用真实浏览器把结论钉死：同一个「N 个随机点逐帧平移」的动画，分别用 Canvas 2D / SVG / WebGL 三种方式实现，在无头 Chrome 里跑 3 秒，收集每帧间隔算出 FPS。
+按「性价比从高到低」排序，都是大屏项目的常规操作：
+
+> 示意片段（无配套脚本）
+
+```
+1. 离屏 canvas 预渲染：把不变的背景/网格画到离屏画布，每帧 drawImage 一次贴上
+2. 分层 canvas：静态层（网格/背景）与动态层（数据）分开，动态层只重绘自己
+3. 帧内合并：一切 setData 只标脏，rAF 回调统一重绘（见 3.2 实测）
+4. 增量重绘：脏矩形裁剪，只重画受影响区域（见 3.1 实测）
+5. 批量绘制：同色 path 合并成一个 beginPath，减少状态切换
+6. 避免亚像素：坐标取整，抗锯齿开销骤降
+7. 长任务切片：数据分片逐帧处理，避免一次 setData 卡死主线程
+```
+
+前两条值得展开：**离屏预渲染**相当于把 Canvas 也做出了「保留模式」——贵的部分画一次存成位图，之后每帧只是一次 `drawImage` 拷贝，GPU 处理极快；**分层 canvas** 则是多个 `<canvas>` 叠放，各自按需重绘，互不拖累。
+
+## 五、实战：监控大屏 QPS 折线的高频更新
+
+大屏的典型负载：服务端每 2 秒推一批数据（60 个点），图表要持续滚动更新。`screen-board` 工程的数据源把 3.2 的帧纪律落进了真实工程——**数据到达只标脏，消费统一在 rAF 回调里**：
+
+> 摘自 `./code/screen-board/src/utils/mock.js`
+
+```js
+// mock 数据源：模拟「服务端每 2s 推一批，前端每帧最多渲染一次」。
+// 核心纪律是帧内合并：数据到达只标脏（pending），真正的消费统一在 rAF 回调里——
+// 推送频率再高，DOM/图表更新频率也不会超过显示器的刷新率。
+export function createFeed(intervalMs = 2000) {
+  const listeners = new Set()
+  let pending = null
+  let running = true
+
+  const timer = setInterval(() => {
+    pending = {
+      qps: genQps(),
+      channels: genChannels(),
+      terminals: genTerminals(),
+      gmv: genGmv(),
+      alert: genAlert(),
+    } // 只标脏，不直接推
+  }, intervalMs)
+
+  function raf() {
+    if (!running) return
+    if (pending) {
+      const p = pending
+      pending = null
+      for (const fn of listeners) fn(p)
+    }
+    requestAnimationFrame(raf)
+  }
+  requestAnimationFrame(raf)
+  // …（subscribe / stop 略）
+```
+
+上游再接时间桶聚合（60 个秒级点 → 12 个 5s 桶，见《大屏与可视化工程》），消费端按 `setOption` 增量更新。整套链路在工程里实测通过：dev server + headless Chrome 起真实页面，6 秒后 DOM 读到 3 个图表 canvas、GMV 数值、2 条告警，无任何异常。
+
+跑工程（需先 `npm install`）：
+
+```
+cd code/screen-board
+npm install
+npm run dev        :: http://127.0.0.1:5199
+```
+
+## 六、对比与适用边界：三路实测
+
+前面几节是「成本模型」层面的推演。这一节用真实浏览器把结论钉死：同一个「N 个随机点逐帧平移」的动画，分别用 Canvas 2D / SVG / WebGL 三种方式实现，在无头 Chrome 里跑 3 秒，收集每帧间隔算出 FPS。
 
 > 摘自 `./code/viz-bench/bench.cjs`
 
@@ -212,7 +274,7 @@ const NS = [2000, 10000, 50000]
 | --- | --- | --- | --- | --- |
 | 2000 | 60.1 | 59.7 | 44.8 | 三者都流畅 |
 | 10000 | 60 | 18.6 | 44.9 | SVG 已明显掉帧 |
-| 50000 | 23.9 | 3.6 | 21.2 | SVG 已明显掉帧 |
+| 50000 | 23.9 | 3.6 | 21.2 | Canvas 也开始顶预算 |
 
 帧时间细节（p95 帧耗时 / 最长帧，单位 ms；>16.7ms 即低于 60fps）：
 
@@ -230,7 +292,7 @@ const NS = [2000, 10000, 50000]
 
 怎么读这张表：
 
-- **SVG 是分水岭**：2000 点还能 59.7fps，到 1 万点掉到 18.6、5 万点只剩 3.6——根因就是「每个点是一个 DOM 节点」，点越多 DOM 规模越失控，重排重绘成本线性炸开。这正好印证了上一篇讲的「几百以内舒适、几千以上失控」边界，且把边界量了出来：**约 1 万点**。
+- **SVG 是分水岭**：2000 点还能 59.7fps，到 1 万点掉到 18.6、5 万点只剩 3.6——根因就是「每个点是一个 DOM 节点」，点越多 DOM 规模越失控，重排重绘成本线性炸开。这条边界量了出来：**约 1 万点**。
 - **Canvas 2D 平稳但到点也会顶**：5 万点掉到 23.9fps，因为即时模式要每帧重画全部点；但它没有 DOM 开销，曲线比 SVG 平缓得多。
 - **WebGL 最稳但有「首帧尖刺」**：5 万点仍 21.2fps，最长帧 716.7ms 出现在第一帧——那是着色器编译 + 缓冲上传，之后平稳。无头环境走 swiftshader 软件渲染，真机有 GPU 会高得多，但「三者相对趋势」一致。
 
@@ -240,15 +302,17 @@ const NS = [2000, 10000, 50000]
 
 | 文件 | 作用 | 对应小节 |
 | --- | --- | --- |
-| `./code/viz-lab/render.cjs` | 虚拟画布 / 帧调度器 / 降级决策 | 三、四、五、六 |
-| `./code/viz-lab/run.cjs` | 六场景自检（四/五/六为本篇实测） | 三、四、六 |
+| `./code/viz-lab/render.cjs` | 虚拟画布 / 帧调度器 / 降级决策 | 三 |
+| `./code/viz-lab/run.cjs` | 七场景自检（四/五/六为本篇实测） | 三 |
 | `./code/viz-lab/scale.cjs` | 比例尺 | （图表引擎篇引用） |
 | `./code/viz-lab/layout.cjs` | 饼图 / 堆叠布局 | （图表引擎篇引用） |
-| `./code/viz-bench/bench.cjs` | 三路渲染帧率基准驱动（index.html 对照页 / server.cjs 静态托管） | 七 |
+| `./code/viz-lab/join.cjs` | mini data-join | （SVG 篇引用） |
+| `./code/viz-bench/bench.cjs` | 三路渲染帧率基准驱动（index.html 对照页 / server.cjs 静态托管） | 六 |
+| `./code/screen-board/src/utils/mock.js` | 帧内合并数据源（真实工程） | 五 |
 
 ## 参考
 
-- 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
-- 下一篇：[图表引擎原理](./图表引擎原理.md)
+- 本模块地图：[全景](./全景.md)
+- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 下一篇：[SVG 与声明式图形](./SVG%20与声明式图形.md)
 - MDN：[Canvas 教程](https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API/Tutorial) · [优化 Canvas](https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API/Optimizing_canvas)

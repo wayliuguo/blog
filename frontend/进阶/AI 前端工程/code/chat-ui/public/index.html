@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>chat-ui · 流式对话最小实现</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    .msg { border-radius: 8px; padding: 10px 14px; margin: 8px 0; white-space: pre-wrap; }
+    .user { background: #e8f0fe; margin-left: 25%; }
+    .assistant { background: #f1f3f4; margin-right: 25%; }
+    .bar { display: flex; gap: 8px; margin-top: 12px; }
+    input { flex: 1; padding: 8px; }
+    button { padding: 8px 18px; }
+    .status { color: #888; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h2>chat-ui <span class="status" id="mode"></span></h2>
+  <div id="log"></div>
+  <div class="bar">
+    <input id="q" placeholder="问点什么…" />
+    <button id="send">发送</button>
+    <button id="stop" disabled>停止</button>
+  </div>
+  <script type="module">
+    const log = document.getElementById('log')
+    const qEl = document.getElementById('q')
+    const sendBtn = document.getElementById('send')
+    const stopBtn = document.getElementById('stop')
+    const modeEl = document.getElementById('mode')
+
+    // ── 半开代码块守卫：奇数个 ``` 围栏意味着代码块未闭合，
+    // 期间把增量按住不发，否则代码语法会被当作正文渲染出去 ──
+    function createFenceGuard() {
+      let text = ''      // 已收到的全部内容
+      let released = ''  // 已确认可渲染的内容
+      return {
+        push(delta) {
+          text += delta
+          const fences = text.split('```').length - 1
+          if (fences % 2 === 1) return // 半开：按住
+          released = text              // 闭合：整体放行
+        },
+        get released() { return released },
+      }
+    }
+
+    // ── rAF 合帧：一帧最多渲染一次，逐 token 改 DOM 是重排灾难 ──
+    let pendingRender = false
+    function scheduleRender(el, getText) {
+      if (pendingRender) return
+      pendingRender = true
+      requestAnimationFrame(() => {
+        pendingRender = false
+        el.textContent = getText()
+      })
+    }
+
+    function addMsg(role) {
+      const div = document.createElement('div')
+      div.className = 'msg ' + role
+      log.appendChild(div)
+      return div
+    }
+
+    let controller = null
+    const messages = []
+
+    async function send(text) {
+      const userMsg = addMsg('user')
+      userMsg.textContent = text
+      messages.push({ role: 'user', content: text })
+      const bubble = addMsg('assistant')
+      const guard = createFenceGuard()
+
+      controller = new AbortController()
+      stopBtn.disabled = false
+      sendBtn.disabled = true
+      try {
+        // ── fetch + ReadableStream 消费 SSE：比 EventSource 多拿到 POST 与中断能力 ──
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages }),
+          signal: controller.signal,
+        })
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+
+        // 网络不会按「事件」分包：一行 data: 可能被切成两半。
+        // 唯一可靠的分帧依据是换行符——攒 buffer，见到 \n 才吐出一行。
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          let idx
+          while ((idx = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, idx)
+            buf = buf.slice(idx + 1)
+            if (!line.startsWith('data:')) continue
+            const payload = line.slice(5).trim()
+            if (payload === '[DONE]') continue // 协议结束信号（与流关闭是两个独立终止条件）
+            try {
+              const delta = JSON.parse(payload).choices[0].delta.content
+              if (delta) {
+                guard.push(delta)
+                scheduleRender(bubble, () => guard.released) // 半开期间显示的是上一次放行的内容
+              }
+            } catch { /* 心跳或非 JSON 行跳过 */ }
+          }
+        }
+        messages.push({ role: 'assistant', content: guard.released })
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          bubble.textContent += '\n[已停止 — 已收内容保留]'
+          messages.push({ role: 'assistant', content: guard.released })
+        } else {
+          bubble.textContent = '出错了：' + e.message
+        }
+      } finally {
+        controller = null
+        stopBtn.disabled = true
+        sendBtn.disabled = false
+      }
+    }
+
+    sendBtn.addEventListener('click', () => {
+      const text = qEl.value.trim()
+      if (!text || controller) return
+      qEl.value = ''
+      send(text)
+    })
+    stopBtn.addEventListener('click', () => controller && controller.abort())
+    // 自动化验证入口：?q=xxx 自动发送
+    const auto = new URLSearchParams(location.search).get('q')
+    modeEl.textContent = '（' + (auto ? 'auto' : 'manual') + '）'
+    if (auto) setTimeout(() => send(auto), 100)
+  </script>
+</body>
+</html>
