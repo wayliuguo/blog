@@ -13,7 +13,10 @@
 > 摘自 `./code/runtime-lab/demos/erase.ts`（运行：`npm run runtime`）
 
 ```typescript
-interface User { id: number; name: string }
+interface User {
+    id: number
+    name: string
+}
 type Point = { x: number; y: number }
 ```
 
@@ -281,13 +284,13 @@ export function add(a: Vec2, b: Vec2): Vec2 {
 
 ```typescript
 export interface Vec2 {
-    x: number;
-    y: number;
+    x: number
+    y: number
 }
 export type Id = string & {
-    readonly __brand: 'Id';
-};
-export declare function add(a: Vec2, b: Vec2): Vec2;
+    readonly __brand: 'Id'
+}
+export declare function add(a: Vec2, b: Vec2): Vec2
 ```
 
 生成声明文件这件事本身也能在运行时完成（演示"类型发布"的本质）：

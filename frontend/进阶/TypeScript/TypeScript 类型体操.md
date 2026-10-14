@@ -8,7 +8,7 @@
 
 ```ts
 export type Equal<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false
 export type Expect<T extends true> = T
 ```
 
@@ -131,10 +131,7 @@ type TupleToUnion<T> = T extends [infer F, ...infer R] ? F | TupleToUnion<R> : n
 
 ```ts
 type ApiResponse<T> = { code: number; data: T; msg: string }
-type LoadingState<T> =
-  | { status: 'loading' }
-  | { status: 'success'; data: T }
-  | { status: 'error'; error: string }
+type LoadingState<T> = { status: 'loading' } | { status: 'success'; data: T } | { status: 'error'; error: string }
 type FormErrors<T> = { [K in keyof T]?: string }
 type Merge<A, B> = { [K in keyof A | keyof B]: K extends keyof B ? B[K] : K extends keyof A ? A[K] : never }
 ```

@@ -1,6 +1,18 @@
 # 协议与 schema 设计
 
-## 一、协议决定能力上限
+## 一、入门：从「写一份 JSON」到「协议即契约」
+
+从业务开发转做低代码平台，最大的心智迁移是：**你交付的第一份东西不是编辑器，是协议**。写业务时 JSON 结构是实现的细节，随时能改；平台里 schema 是与所有存量页面的契约，改一次就要带迁移链陪跑一次。
+
+三个心智切换：
+
+- **配置 → 契约**：schema 不是「存起来能读就行」，它的每个字段都是渲染层、编辑器层、物料层三方共同签字的约定；
+- **能跑 → 合法**：业务代码里「凑合能跑」是常态，协议里非法数据必须在校验期拒绝——校验器、属性面板、物料文档共用同一份 props 描述，一份三用；
+- **一次性 → 可演进**：业务需求改了重发就好，协议变了要让 v1 的老页面活到 v3——迁移链不是可选项。
+
+本篇回答协议设计的三个核心问题：**什么算合法**（校验）、**怎么演进**（迁移）、**怎么定位**（索引），统一绑「运营活动页搭建器」场景。
+
+## 二、协议决定能力上限
 
 低代码系统可以分成四层，越往下越难改：
 
@@ -13,7 +25,7 @@
 
 所以协议设计的核心不是「写一份 JSON 格式」，而是回答三个问题：**什么算合法**（校验）、**怎么演进**（迁移）、**怎么定位**（索引）。下面三个探针各答一个。
 
-## 二、物料协议：组件注册表 + props 描述
+## 三、物料协议：组件注册表 + props 描述
 
 协议的第一件事是「什么算合法」。组件必须注册，props 必须可描述（类型、必填、枚举、默认值），否则渲染层无从下手、编辑器也生成不出属性面板：
 
@@ -26,14 +38,14 @@ const registry = {
     props: {
       text: { type: 'string', required: true },
       size: { type: 'enum', values: ['sm', 'md', 'lg'], default: 'md' }
-    },
+    }
   },
   Image: {
     props: {
       src: { type: 'string', required: true },
       width: { type: 'number' }
-    },
-  },
+    }
+  }
 }
 
 function validateNode(node, reg) {
@@ -64,7 +76,7 @@ function validateNode(node, reg) {
 
 实测四类错误全部命中。这份 props 描述一份三用：**校验器**用它拦非法数据、**属性面板**用它自动生成表单、**文档**用它自动生成物料说明——这就是「协议即契约」的实际收益。
 
-## 三、版本迁移：老页面必须能活到新版本
+## 四、版本迁移：老页面必须能活到新版本
 
 协议一定会变，而变化只有两种处理方式：让老数据全量重写（高风险、需要停机窗口），或者写**迁移链**（每次读老 schema 就顺手升到最新）。后者是唯一可持续的做法：
 
@@ -93,7 +105,7 @@ const migrations = [
         return { ...c, props: rest, when: visible === false ? 'false' : c.when }
       })
     })
-  },
+  }
 ]
 
 function migrate(schema, target = 3) {
@@ -118,7 +130,7 @@ function migrate(schema, target = 3) {
     children: [
       { id: 't1', type: 'Text', props: { text: '你好' } },
       { id: 'b1', type: 'Text', props: { text: '隐藏项', visible: false } }
-    ],
+    ]
   }
   const v3 = migrate(v1)
   assert.equal(v3.version, 3)
@@ -131,7 +143,7 @@ function migrate(schema, target = 3) {
 
 工程约定三条：**schema 必须带 version 字段**（没有它就没有迁移的起点）、**迁移函数只能单步**（v1→v2、v2→v3，不要写 v1→v3 的直通）、**迁移必须可重放**（幂等，重复执行结果一致）。
 
-## 四、索引与合法性：重复 id 与循环引用
+## 五、索引与合法性：重复 id 与循环引用
 
 schema 本质是数据，而数据会出现两种致命形态：**重复 id**（渲染后无法定位节点，属性面板改错地方）和**循环引用**（递归渲染直接爆栈）。两者都必须在校验期挡住，而不是等渲染时崩：
 
@@ -142,8 +154,9 @@ schema 本质是数据，而数据会出现两种致命形态：**重复 id**（
 function buildIndex(root) {
   const index = new Map()
   const errors = []
-  const seen = new Set(); // 按对象身份记录，用于发现环
-  (function walk(node) {
+  const seen = new Set()
+  // 按对象身份记录，用于发现环
+  ;(function walk(node) {
     if (seen.has(node)) {
       errors.push(`循环引用：${node.id}`)
       return
@@ -177,7 +190,7 @@ function buildIndex(root) {
 
 注意循环引用检测用的是**对象身份**（`Set` 存对象引用），不是 id——因为 id 重复是另一类问题，两者要分别报。另外索引本身还有个正经用途：它是下一篇「按脏节点局部更新」的定位基础。
 
-## 五、协议设计的几条硬经验
+## 六、协议设计的几条硬经验
 
 - **id 全局唯一且稳定**：编辑器靠 id 定位，出码靠 id 命名，id 一变所有下游配置（埋点、AB 实验）全废。
 - **表达式只留一条通道**：`when`、`loop`、props 插值统一走同一种表达式语法，别搞三套解析器。
@@ -193,11 +206,20 @@ function buildIndex(root) {
 - 索引校验前置：重复 id 与循环引用必须在渲染前拦住（环检测用对象身份）。
 - id 稳定是下游一切配置的地基。
 
+## 实战：运营活动页的 schema 在 mini-lowcode 里长什么样
+
+统一场景「运营活动页搭建器」的 schema（`mini-lowcode/src/schema.js`）：Banner 带 `when: 'state.vip'` 条件、商品 List 带 `loop: 'state.items'` 循环、报名 Input 带联动字段（`url`/`fileId` 互斥）。真实工程里直接改这一份 schema 就能体会协议的三条约束：
+
+- 物料描述（`engine.js` 的 `REGISTRY`）一份三用：校验器拦非法数据、属性面板自动生成表单、出码器分辨表达式与字面量；
+- 把 `signup` 的 `type` 改成未注册的 `Marquee`，画布顶部立刻出现「未注册组件」红条——校验前置到保存时，非法 schema 不进渲染；
+- 协议演进在本工程里的对应物：`props` 描述里的 `visibleWhen` 就是 v3 协议把 `visible: false` 换成 `when` 表达式后的落点（探针 `schema.cjs` 场景二实测迁移链）。
+
 ## 配套代码
 
 | 文件 | 作用 | 对应小节 |
 | --- | --- | --- |
-| `./code/lowcode-lab/schema.cjs` | 物料协议校验 / 版本迁移 / 索引与环检测 | 二、三、四 |
+| `./code/lowcode-lab/schema.cjs` | 物料协议校验 / 版本迁移 / 索引与环检测 | 三、四、五 |
+| `./code/mini-lowcode/` | 真实工程：协议 → 属性面板 → 出码三方可视化（`npm run dev`，5201） | 实战 |
 | `./code/lowcode-lab/render.cjs` | 表达式沙箱 / 递归渲染 / 更新粒度（下一篇引用） | — |
 | `./code/lowcode-lab/editor.cjs` | 拖拽落点 / 出码 / 手写区锚点 / 属性联动（编辑器篇引用） | — |
 | `./code/lowcode-lab/boundary.cjs` | 适用性打分 / 漂移检测 / 成本盈亏 / 逃逸机制（边界篇引用） | — |

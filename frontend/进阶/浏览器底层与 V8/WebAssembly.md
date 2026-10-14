@@ -33,7 +33,7 @@ const bytes = new Uint8Array([
   0x20, 0x00, 0x41, 0x01, 0x6b, 0x21, 0x00, //   n -= 1
   0x0c, 0x00, //   br 0（回到 loop）
   0x0b, 0x0b, // end loop · end block
-  0x20, 0x01, 0x0b, // local.get 1 · end（返回 s）
+  0x20, 0x01, 0x0b // local.get 1 · end（返回 s）
 ])
 const { sum } = new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports
 ```

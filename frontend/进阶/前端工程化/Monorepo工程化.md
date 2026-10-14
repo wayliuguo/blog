@@ -89,6 +89,7 @@ packages:
   "name": "pnpm-workspace-demo",
   "version": "1.0.0",
   "private": true,
+  "description": "pnpm workspace 最小可运行示例：shared → sdk → ui 依赖链，演示 workspace:* / filter / 拓扑序递归",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "build": "pnpm -r run build",
@@ -108,8 +109,19 @@ packages:
 ```json
 {
   "name": "@scope/sdk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
   "dependencies": {
     "@scope/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
   }
 }
 ```
@@ -218,6 +230,11 @@ pnpm-workspace-demo/
 ```
 
 运行：进入目录后依次 `pnpm install` → `pnpm build` → `pnpm --filter @scope/ui start`。它演示了 `workspace:*` 本地链接、`--filter` 定向、`pnpm -r` 拓扑序，以及"引用未声明包会报错"的幽灵依赖隔离。
+
+| 文件 | 作用 | 对应小节 |
+| --- | --- | --- |
+| `./code/pnpm-workspace-demo/package.json` | workspace 根：private + packageManager + 统一 scripts | 三 |
+| `./code/pnpm-workspace-demo/packages/sdk/package.json` | 子包：`workspace:*` 声明依赖 | 四 |
 
 ## 参考
 
