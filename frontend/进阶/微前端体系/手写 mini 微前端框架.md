@@ -51,12 +51,12 @@ function createAppSandbox(name, sharedGlobal) {
       }
       return target[key]
     },
-    set(target, key, value) {
-      // 写永远落在自己的 fakeWindow，共享全局不动
-      target[key] = value
-      return true
-    },
-  })
+      set(target, key, value) {
+        // 写永远落在自己的 fakeWindow，共享全局不动
+        target[key] = value
+        return true
+      }
+    })
 ```
 
 卸载时 `cleanup` 统一清账：定时器逐个 `clearInterval`，写在沙箱上的属性逐个撤销（只保留应用名标记）：
@@ -101,8 +101,13 @@ function parseHtmlEntry(html) {
 function scopeStyle(css, attr) {
   return css.replace(/([^{}]+)\{/g, (raw, sel) => {
     const s = sel.trim()
-    if (s.startsWith('@')) return raw        // @media / @keyframes 不加前缀
-    return s.split(',').map((p) => `${attr} ${p.trim()}`).join(', ') + ' {'
+    if (s.startsWith('@')) return raw // @media / @keyframes 不加前缀
+    return (
+      s
+        .split(',')
+        .map(p => `${attr} ${p.trim()}`)
+        .join(', ') + ' {'
+    )
   })
 }
 ```
@@ -238,6 +243,21 @@ mini-micro 已实现            生产级框架（qiankun/micro-app）还要补
 ```
 
 最重要的跃迁是**从手动调度到路由驱动**：生产框架监听 popstate/hashchange，把 `start/stop` 变成路由变化后的自动副作用——但内部执行的仍是本篇这几步。
+
+## 七、收束：mini 的每个机制在五方案里的对应物
+
+统一工程 `mf-workspace`（Vue 宿主 + Vue/React 双子应用）把五种方案真实跑通，本篇 mini 的每个部件都能在其中找到工业版对应：
+
+| mini-micro 部件 | qiankun | micro-app | wujie | iframe / WC |
+|---|---|---|---|---|
+| parseHtmlEntry | import-html-entry | 元素内 html 解析 | iframe 原生加载 html | 原生 `<script>` / `<iframe>` |
+| with(proxy) 沙箱 | with(proxy) 沙箱 | with(proxy) 沙箱 | 真 iframe（无沙箱代码） | 独立文档 / 无 |
+| 副作用记账 cleanup | unmount 协议 + 沙箱回收 | disconnectedCallback 回收 | alive 保活或销毁 | unmount 事件清理 |
+| scopeStyle 前缀 | 实验性样式隔离 | scopecss | shadow DOM | shadow DOM |
+| url 级缓存 + preload | import-html-entry 缓存 | prefetchLevel 预加载 | preloadApp | HTTP 缓存 / 浏览器原生 |
+| 手动 start/stop | 路由自动 mount/unmount | 元素生命周期驱动 | alive 保活切换 | 标签天然隔离 |
+
+教学顺序上，本篇是"先造轮子再认轮子"：读完 mini 的沙箱/解析/调度，再读 [qiankun](./qiankun.md) 的 import-html-entry、[micro-app](./micro-app.md) 的元素壳、[wujie](./wujie.md) 的 iframe 桥梁，每一个生产机制都有你亲手写过的原型。mini 模拟场景里的 `orders` 子应用（bootstrap → mount → unmount → 清账），正是统一工程里订单列表 + 详情场景的机制层镜像。
 
 ## 配套代码
 

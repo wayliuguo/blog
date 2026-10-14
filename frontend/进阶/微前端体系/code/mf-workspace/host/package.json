@@ -1,0 +1,24 @@
+{
+    "name": "mf-host",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite --port 3030",
+        "build": "vite build",
+        "preview": "vite preview --port 3130"
+    },
+    "dependencies": {
+        "@micro-zoe/micro-app": "^1.0.0-rc.32",
+        "qiankun": "^2.10.16",
+        "vue": "^3.4.38",
+        "vue-router": "^4.4.5",
+        "wujie": "^2.1.0",
+        "wujie-vue3": "^2.1.0"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^4.6.2",
+        "typescript": "^5.5.4",
+        "vite": "^4.5.14"
+    }
+}

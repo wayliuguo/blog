@@ -1,0 +1,14 @@
+{
+    "name": "electron-app",
+    "version": "1.0.0",
+    "private": true,
+    "description": "跨端板块实战工程：Electron 订单工作台（主/渲染进程、IPC、打包脚本）",
+    "main": "src/main.js",
+    "scripts": {
+        "start": "electron .",
+        "smoke": "electron . --smoke"
+    },
+    "devDependencies": {
+        "electron": "^33.2.0"
+    }
+}

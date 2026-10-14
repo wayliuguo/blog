@@ -1,0 +1,23 @@
+{
+    "name": "rn-app",
+    "version": "1.0.0",
+    "private": true,
+    "description": "跨端板块实战工程：React Native 订单工作台（Metro 编译实跑，设备层需真机/模拟器）",
+    "scripts": {
+        "android": "react-native run-android",
+        "ios": "react-native run-ios",
+        "start": "react-native start",
+        "bundle": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output .build/index.android.bundle --assets-dest .build/assets"
+    },
+    "dependencies": {
+        "react": "18.2.0",
+        "react-native": "0.73.11"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.24.0",
+        "@react-native/babel-preset": "0.73.21",
+        "@react-native-community/cli": "13.2.0",
+        "@react-native/metro-config": "0.73.5",
+        "typescript": "5.4.5"
+    }
+}

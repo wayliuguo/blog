@@ -32,11 +32,11 @@ npm start           # http://localhost:5191/（端口被占自动 +1）
 
 | script | 文件 | 做什么 | 篇目 |
 | ------ | ---- | ------ | ---- |
-| `npm run panorama` | `scenarios/panorama.mjs` | CSR / SSR / SSG / 流式四种交付方式在 `jslag=0` 与 `jslag=300` 两套网络条件下的 TTFB、FCP、内容出现时刻、JS 字节；流式分段到达 | 渲染方案全景 |
-| `npm run ssr` | `scenarios/ssr.mjs` | SSR 连发三次的耗时、SSG 与 ISR 的命中/过期/后台重建；HTML 里结构与注水数据各占多少；`renderToString` 产物样本 | SSR 与同构实现 |
-| `npm run stream` | `scenarios/stream.mjs` | 每段内容的到达时刻；与非流式 SSR 的首字节对照；乱序补位顺序；浏览器侧 FCP 与入口执行时刻 | SSR 与同构实现 |
-| `npm run hydrate` | `scenarios/hydrate.mjs` | 四个变体的复用/新建/丢弃/改写/失配账，叠加 MutationObserver 数到的真实 DOM 突变 | SSR 与同构实现 |
-| `npm run island` | `scenarios/island.mjs` | 全量 hydration 与岛激活的 JS 文件数、字节数、复用节点数、按钮是否点得动；逐个模块列出岛化后不再下载的那些 | 新兴渲染范式 |
+| `npm run panorama` | `scenarios/panorama.mjs` | CSR / SSR / SSG / 流式四种交付方式在 `jslag=0` 与 `jslag=300` 两套网络条件下的 TTFB、FCP、内容出现时刻、JS 字节；流式分段到达 | 全景 |
+| `npm run ssr` | `scenarios/ssr.mjs` | SSR 连发三次的耗时、SSG 与 ISR 的命中/过期/后台重建；HTML 里结构与注水数据各占多少；`renderToString` 产物样本 | 全景 |
+| `npm run stream` | `scenarios/stream.mjs` | 每段内容的到达时刻；与非流式 SSR 的首字节对照；乱序补位顺序；浏览器侧 FCP 与入口执行时刻 | 全景 |
+| `npm run hydrate` | `scenarios/hydrate.mjs` | 四个变体的复用/新建/丢弃/改写/失配账，叠加 MutationObserver 数到的真实 DOM 突变 | Next.js（最小实现/hydration） |
+| `npm run island` | `scenarios/island.mjs` | 全量 hydration 与岛激活的 JS 文件数、字节数、复用节点数、按钮是否点得动；逐个模块列出岛化后不再下载的那些 | 全景 |
 | `npm start` | `server.js` | 手动浏览七种 mode，端口 5191 | 全模块 |
 
 ## 目录结构

@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/orders/layout,_N_T_/orders/new/layout,_N_T_/orders/new/page,_N_T_/orders/new"
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/583c551785df6286a94cb549062353fa01c1fbc559ef0f96f44a8c86075fca65/$/orders/new",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/orders/new/page"
+    },
+    "isFallback": false
+  }
+}

@@ -1,0 +1,19 @@
+name: flutter_app
+description: 跨端板块实战工程：Flutter 订单工作台（完整代码交付；本仓库未实跑，环境配置见 README）
+publish_to: "none"
+version: 1.0.0
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
