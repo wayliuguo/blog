@@ -328,9 +328,9 @@ export default [
                 text: '渲染架构',
                 collapsed: false,
                 items: [
-                    { text: '渲染方案全景', link: '/frontend/进阶/渲染架构/渲染方案全景' },
-                    { text: 'SSR 与同构实现', link: '/frontend/进阶/渲染架构/SSR%20与同构实现' },
-                    { text: '新兴渲染范式', link: '/frontend/进阶/渲染架构/新兴渲染范式' },
+                    { text: '全景', link: '/frontend/进阶/渲染架构/全景' },
+                    { text: 'Next.js', link: '/frontend/进阶/渲染架构/Next.js' },
+                    { text: 'Nuxt', link: '/frontend/进阶/渲染架构/Nuxt' },
                     { text: '模块总结（渲染架构）', link: '/frontend/进阶/渲染架构/总结' },
                     { text: '模块面试题（渲染架构）', link: '/frontend/进阶/渲染架构/面试题' }
                 ]
@@ -340,6 +340,11 @@ export default [
                 collapsed: false,
                 items: [
                     { text: '微前端方案全景与选型', link: '/frontend/进阶/微前端体系/微前端方案全景与选型' },
+                    { text: 'iframe 方案', link: '/frontend/进阶/微前端体系/iframe%20方案' },
+                    { text: 'qiankun', link: '/frontend/进阶/微前端体系/qiankun' },
+                    { text: 'micro-app', link: '/frontend/进阶/微前端体系/micro-app' },
+                    { text: 'wujie', link: '/frontend/进阶/微前端体系/wujie' },
+                    { text: 'Web Components 方案', link: '/frontend/进阶/微前端体系/Web%20Components%20方案' },
                     { text: '沙箱与隔离机制', link: '/frontend/进阶/微前端体系/沙箱与隔离机制' },
                     { text: '应用通信与状态共享', link: '/frontend/进阶/微前端体系/应用通信与状态共享' },
                     { text: '资源加载与依赖共享', link: '/frontend/进阶/微前端体系/资源加载与依赖共享' },
@@ -352,6 +357,7 @@ export default [
                 text: '可视化与图形',
                 collapsed: true,
                 items: [
+                    { text: '可视化与图形全景', link: '/frontend/进阶/可视化与图形/全景' },
                     { text: 'Canvas 2D 基础与性能', link: '/frontend/进阶/可视化与图形/Canvas%202D%20基础与性能' },
                     { text: 'SVG 与声明式图形', link: '/frontend/进阶/可视化与图形/SVG%20与声明式图形' },
                     {
@@ -383,13 +389,11 @@ export default [
                 text: '跨端与桌面深化',
                 collapsed: true,
                 items: [
-                    { text: '跨端框架原理', link: '/frontend/进阶/跨端与桌面深化/跨端框架原理' },
-                    {
-                        text: 'Hybrid 与 WebView 深度优化',
-                        link: '/frontend/进阶/跨端与桌面深化/Hybrid%20与%20WebView%20深度优化'
-                    },
-                    { text: 'JSBridge 设计与演进', link: '/frontend/进阶/跨端与桌面深化/JSBridge%20设计与演进' },
-                    { text: 'Electron 与桌面端', link: '/frontend/进阶/跨端与桌面深化/Electron%20与桌面端' },
+                    { text: '跨端渲染架构全景', link: '/frontend/进阶/跨端与桌面深化/跨端渲染架构全景' },
+                    { text: 'React Native', link: '/frontend/进阶/跨端与桌面深化/React%20Native' },
+                    { text: 'Flutter', link: '/frontend/进阶/跨端与桌面深化/Flutter' },
+                    { text: 'Electron', link: '/frontend/进阶/跨端与桌面深化/Electron' },
+                    { text: 'Hybrid 与 JSBridge', link: '/frontend/进阶/跨端与桌面深化/Hybrid%20与%20JSBridge' },
                     { text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' },
                     { text: '模块面试题（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/面试题' }
                 ]
@@ -398,6 +402,7 @@ export default [
                 text: 'AI 前端工程',
                 collapsed: true,
                 items: [
+                    { text: '全景', link: '/frontend/进阶/AI%20前端工程/全景' },
                     { text: 'LLM 应用前端形态', link: '/frontend/进阶/AI%20前端工程/LLM%20应用前端形态' },
                     { text: 'AI 与前端工程结合', link: '/frontend/进阶/AI%20前端工程/AI%20与前端工程结合' },
                     { text: '端侧推理与 WASM', link: '/frontend/进阶/AI%20前端工程/端侧推理与%20WASM' },
@@ -410,6 +415,7 @@ export default [
                 text: '低代码与搭建体系',
                 collapsed: true,
                 items: [
+                    { text: '全景', link: '/frontend/进阶/低代码与搭建体系/全景' },
                     { text: '协议与 schema 设计', link: '/frontend/进阶/低代码与搭建体系/协议与%20schema%20设计' },
                     { text: '渲染引擎', link: '/frontend/进阶/低代码与搭建体系/渲染引擎' },
                     { text: '编辑器与出码', link: '/frontend/进阶/低代码与搭建体系/编辑器与出码' },
@@ -422,23 +428,13 @@ export default [
                 text: '复杂交互与编辑器',
                 collapsed: true,
                 items: [
+                    { text: '全景', link: '/frontend/进阶/复杂交互与编辑器/全景' },
                     { text: '富文本与编辑器架构', link: '/frontend/进阶/复杂交互与编辑器/富文本与编辑器架构' },
                     { text: '协同编辑', link: '/frontend/进阶/复杂交互与编辑器/协同编辑' },
                     { text: '复杂表单引擎', link: '/frontend/进阶/复杂交互与编辑器/复杂表单引擎' },
                     { text: '状态机与流程编排', link: '/frontend/进阶/复杂交互与编辑器/状态机与流程编排' },
                     { text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' },
                     { text: '模块面试题（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/面试题' }
-                ]
-            },
-            {
-                text: '研发平台与效能工程',
-                collapsed: true,
-                items: [
-                    { text: '构建平台与产物治理', link: '/frontend/进阶/研发平台与效能工程/构建平台与产物治理' },
-                    { text: '实验与增长平台', link: '/frontend/进阶/研发平台与效能工程/实验与增长平台' },
-                    { text: '研发效能度量', link: '/frontend/进阶/研发平台与效能工程/研发效能度量' },
-                    { text: '模块总结（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/总结' },
-                    { text: '模块面试题（研发平台与效能工程）', link: '/frontend/进阶/研发平台与效能工程/面试题' }
                 ]
             },
             {
