@@ -1,426 +1,162 @@
 export default [
     {
-        text: '基础',
+        text: 'HTML',
         collapsed: false,
         items: [
-            {
-                text: 'HTML 基础',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'HTML 语义化与结构',
-                        link: '/frontend/基础/HTML%20基础/HTML%20语义化与结构'
-                    },
-                    {
-                        text: '表单与标签',
-                        link: '/frontend/基础/HTML%20基础/表单与标签'
-                    },
-                    { text: '无障碍与可访问性', link: '/frontend/基础/HTML%20基础/无障碍与可访问性' },
-                    { text: '模块总结（HTML 基础）', link: '/frontend/基础/HTML%20基础/总结' },
-                ]
-            },
-            {
-                text: 'CSS',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'CSS 基础与选择器',
-                        link: '/frontend/基础/CSS/CSS%20基础与选择器'
-                    },
-                    { text: '布局', link: '/frontend/基础/CSS/布局' },
-                    { text: '响应式与移动端', link: '/frontend/基础/CSS/响应式与移动端' },
-                    { text: '动画与变换', link: '/frontend/基础/CSS/动画与变换' },
-                    {
-                        text: 'BEM 与 CSS 规范',
-                        link: '/frontend/基础/CSS/BEM%20与%20CSS%20规范'
-                    },
-                    { text: '现代 CSS', link: '/frontend/基础/CSS/现代%20CSS' },
-                    { text: '综合实战', link: '/frontend/基础/CSS/综合实战' },
-                    { text: '模块总结（CSS）', link: '/frontend/基础/CSS/总结' },
-                ]
-            },
-            {
-                text: 'JavaScript 核心',
-                collapsed: false,
-                items: [
-                    {
-                        text: '数据类型与变量',
-                        link: '/frontend/基础/JavaScript%20核心/数据类型与变量'
-                    },
-                    { text: '作用域与闭包', link: '/frontend/基础/JavaScript%20核心/作用域与闭包' },
-                    { text: '原型与继承', link: '/frontend/基础/JavaScript%20核心/原型与继承' },
-                    {
-                        text: '异步编程与事件循环',
-                        link: '/frontend/基础/JavaScript%20核心/异步编程与事件循环'
-                    },
-                    {
-                        text: '内存管理与垃圾回收',
-                        link: '/frontend/基础/JavaScript%20核心/内存管理与垃圾回收'
-                    },
-                    { text: 'DOM 与浏览器 API', link: '/frontend/基础/JavaScript%20核心/DOM%20与浏览器%20API' },
-                    {
-                        text: '手写实现与源码',
-                        link: '/frontend/基础/JavaScript%20核心/手写实现与源码'
-                    },
-                    { text: '模块总结（JavaScript 核心）', link: '/frontend/基础/JavaScript%20核心/总结' },
-                ]
-            },
-            {
-                text: '网络与浏览器',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'HTTP 与 HTTPS',
-                        link: '/frontend/基础/网络与浏览器/HTTP%20与%20HTTPS'
-                    },
-                    { text: '浏览器渲染原理', link: '/frontend/基础/网络与浏览器/浏览器渲染原理' },
-                    {
-                        text: '浏览器存储与本地缓存',
-                        link: '/frontend/基础/网络与浏览器/浏览器存储与本地缓存'
-                    },
-                    { text: '前端安全', link: '/frontend/基础/网络与浏览器/前端安全' },
-                    { text: '模块总结（网络与浏览器）', link: '/frontend/基础/网络与浏览器/总结' },
-                ]
-            },
-            {
-                text: '前端框架 - React',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'React 核心概念',
-                        link: '/frontend/基础/前端框架-React/React%20核心概念'
-                    },
-                    { text: 'React Hooks', link: '/frontend/基础/前端框架-React/React%20Hooks' },
-                    { text: 'React 路由', link: '/frontend/基础/前端框架-React/React%20路由' },
-                    {
-                        text: 'React 状态管理',
-                        link: '/frontend/基础/前端框架-React/React%20状态管理'
-                    },
-                    {
-                        text: 'React 使用 TS',
-                        link: '/frontend/基础/前端框架-React/React%20使用%20TS'
-                    },
-                    {
-                        text: 'React 使用 CSS',
-                        link: '/frontend/基础/前端框架-React/React%20使用%20CSS'
-                    },
-                    { text: '模块总结（React）', link: '/frontend/基础/前端框架-React/总结' },
-                ]
-            },
-            {
-                text: '前端框架 - Vue',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'Vue 核心基础',
-                        link: '/frontend/基础/前端框架-Vue/Vue%20核心基础'
-                    },
-                    { text: 'Vue 组件', link: '/frontend/基础/前端框架-Vue/Vue%20组件' },
-                    {
-                        text: 'Vue 路由与状态',
-                        link: '/frontend/基础/前端框架-Vue/Vue%20路由与状态'
-                    },
-                    { text: '模块总结（Vue）', link: '/frontend/基础/前端框架-Vue/总结' },
-                ]
-            },
-            {
-                text: '小程序',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'WXML、WXSS 与基础语法',
-                        link: '/frontend/基础/小程序/WXML、WXSS%20与基础语法'
-                    },
-                    {
-                        text: '小程序生命周期与路由',
-                        link: '/frontend/基础/小程序/小程序生命周期与路由'
-                    },
-                    {
-                        text: '双线程架构与渲染机制',
-                        link: '/frontend/基础/小程序/双线程架构与渲染机制'
-                    },
-                    {
-                        text: '启动优化与性能优化',
-                        link: '/frontend/基础/小程序/启动优化与性能优化'
-                    },
-                    {
-                        text: '原生与跨端框架差异',
-                        link: '/frontend/基础/小程序/原生与跨端框架差异'
-                    },
-                    { text: '模块总结（小程序）', link: '/frontend/基础/小程序/总结' },
-                ]
-            },
-            {
-                text: '工程协作',
-                collapsed: false,
-                items: [
-                    { text: 'Git 与协作', link: '/frontend/基础/工程协作/工程协作' },
-                    { text: '模块总结（工程协作）', link: '/frontend/基础/工程协作/总结' },
-                ]
-            }
+            { text: 'HTML 语义化与结构', link: '/frontend/html/HTML%20语义化与结构' },
+            { text: '表单与标签', link: '/frontend/html/表单与标签' },
+            { text: '无障碍与可访问性', link: '/frontend/html/无障碍与可访问性' },
+            { text: '模块总结（HTML 基础）', link: '/frontend/html/总结' }
         ]
     },
     {
-        text: '进阶',
+        text: 'CSS',
         collapsed: false,
         items: [
-            {
-                text: 'TypeScript',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'TypeScript 类型系统',
-                        link: '/frontend/进阶/TypeScript/TypeScript%20类型系统'
-                    },
-                    {
-                        text: 'TypeScript 工程实践',
-                        link: '/frontend/进阶/TypeScript/TypeScript%20工程实践'
-                    },
-                    { text: 'TypeScript 类型体操', link: '/frontend/进阶/TypeScript/TypeScript%20类型体操' },
-                    { text: 'TypeScript 类型与运行时', link: '/frontend/进阶/TypeScript/TypeScript%20类型与运行时' },
-                    { text: '模块总结（TypeScript）', link: '/frontend/进阶/TypeScript/总结' },
-                ]
-            },
-            {
-                text: '前端工程化',
-                collapsed: false,
-                items: [
-                    { text: '前端工程化全景', link: '/frontend/进阶/前端工程化/前端工程化全景' },
-                    { text: '模块化与包管理', link: '/frontend/进阶/前端工程化/模块化与包管理' },
-                    { text: '脚手架的诞生', link: '/frontend/进阶/前端工程化/脚手架的诞生' },
-                    { text: 'Monorepo 工程化', link: '/frontend/进阶/前端工程化/Monorepo工程化' },
-                    { text: '基建实战总串联', link: '/frontend/进阶/前端工程化/基建实战总串联' },
-                    { text: '模块总结（前端工程化）', link: '/frontend/进阶/前端工程化/总结' },
-                ]
-            },
-            {
-                text: '构建体系',
-                collapsed: false,
-                items: [
-                    { text: '构建全景与选型', link: '/frontend/进阶/构建体系/构建全景与选型' },
-                    { text: '编译与 AST', link: '/frontend/进阶/构建体系/编译与%20AST' },
-                    { text: '手写 mini-bundler', link: '/frontend/进阶/构建体系/手写%20mini-bundler' },
-                    { text: 'webpack', link: '/frontend/进阶/构建体系/webpack' },
-                    { text: 'Vite', link: '/frontend/进阶/构建体系/Vite' },
-                    { text: 'Rollup', link: '/frontend/进阶/构建体系/Rollup' },
-                    { text: '模块总结（构建体系）', link: '/frontend/进阶/构建体系/总结' },
-                ]
-            },
-            {
-                text: '交付与质量',
-                collapsed: false,
-                items: [
-                    { text: '代码规范与质量门禁', link: '/frontend/进阶/交付与质量/代码规范与质量门禁' },
-                    { text: '排障方法论', link: '/frontend/进阶/交付与质量/排障方法论' },
-                    { text: 'CI/CD 自动化', link: '/frontend/进阶/交付与质量/CI-CD自动化' },
-                    { text: '质量体系与测试', link: '/frontend/进阶/交付与质量/质量体系与测试' },
-                    { text: '发布、灰度与回滚', link: '/frontend/进阶/交付与质量/发布、灰度与回滚' },
-                    { text: '模块总结（交付与质量）', link: '/frontend/进阶/交付与质量/总结' },
-                ]
-            },
-            {
-                text: '测试体系',
-                collapsed: false,
-                items: [
-                    { text: '测试工具上手', link: '/frontend/进阶/测试体系/测试工具上手' },
-                    { text: '测试策略与分层', link: '/frontend/进阶/测试体系/测试策略与分层' },
-                    { text: '单元测试深入', link: '/frontend/进阶/测试体系/单元测试深入' },
-                    { text: '组件测试', link: '/frontend/进阶/测试体系/组件测试' },
-                    { text: 'E2E 与稳定性', link: '/frontend/进阶/测试体系/E2E%20与稳定性' },
-                    { text: '测试基建与门禁', link: '/frontend/进阶/测试体系/测试基建与门禁' },
-                    { text: '模块总结（测试体系）', link: '/frontend/进阶/测试体系/总结' },
-                ]
-            },
-            {
-                text: '前端框架原理',
-                collapsed: false,
-                items: [
-                    {
-                        text: 'React',
-                        collapsed: false,
-                        items: [
-                            { text: 'React 高级与原理', link: '/frontend/进阶/前端框架原理/react/React%20高级与原理' },
-                            { text: '手写 mini-react', link: '/frontend/进阶/前端框架原理/react/手写%20mini-react' },
-                            {
-                                text: 'React 状态管理原理与实现',
-                                link: '/frontend/进阶/前端框架原理/react/React%20状态管理原理与实现'
-                            }
-                        ]
-                    },
-                    {
-                        text: 'Vue3',
-                        collapsed: false,
-                        items: [
-                            { text: 'Vue3 原理', link: '/frontend/进阶/前端框架原理/vue3/Vue3%20原理' },
-                            { text: '手写 mini-vue', link: '/frontend/进阶/前端框架原理/vue3/手写%20mini-vue' },
-                            {
-                                text: 'Vue3 状态管理原理与实现',
-                                link: '/frontend/进阶/前端框架原理/vue3/Vue3%20状态管理原理与实现'
-                            }
-                        ]
-                    },
-                    { text: '模块总结（前端框架原理）', link: '/frontend/进阶/前端框架原理/总结' },
-                ]
-            },
-            {
-                text: '性能优化',
-                collapsed: false,
-                items: [
-                    { text: '性能优化体系与指标', link: '/frontend/进阶/性能优化/性能优化体系与指标' },
-                    { text: '性能优化实战', link: '/frontend/进阶/性能优化/性能优化实战' },
-                    { text: '模块总结（性能优化）', link: '/frontend/进阶/性能优化/总结' },
-                ]
-            },
-            {
-                text: '监控与稳定性',
-                collapsed: false,
-                items: [
-                    { text: '前端监控体系', link: '/frontend/进阶/监控与稳定性/前端监控体系' },
-                    { text: '前端监控 SDK 实现', link: '/frontend/进阶/监控与稳定性/前端监控 SDK 实现' },
-                    { text: '前端监控实战·单页验证', link: '/frontend/进阶/监控与稳定性/前端监控实战·单页验证' },
-                    { text: '模块总结（监控与稳定性）', link: '/frontend/进阶/监控与稳定性/总结' },
-                ]
-            },
-            {
-                text: '网络与协议进阶',
-                collapsed: false,
-                items: [
-                    { text: 'HTTP2 与 HTTP3', link: '/frontend/进阶/网络与协议进阶/HTTP2%20与%20HTTP3' },
-                    { text: 'CDN 与缓存体系', link: '/frontend/进阶/网络与协议进阶/CDN%20与缓存体系' },
-                    { text: '网络可靠性与弱网', link: '/frontend/进阶/网络与协议进阶/网络可靠性与弱网' },
-                    { text: '前端安全进阶', link: '/frontend/进阶/网络与协议进阶/前端安全进阶' },
-                    { text: '模块总结（网络与协议进阶）', link: '/frontend/进阶/网络与协议进阶/总结' },
-                ]
-            },
-            {
-                text: '工程实践与架构',
-                collapsed: false,
-                items: [
-                    { text: '设计模式在前端', link: '/frontend/进阶/工程实践与架构/设计模式在前端' },
-                    { text: '组件设计', link: '/frontend/进阶/工程实践与架构/组件设计' },
-                    { text: '前端架构与分层', link: '/frontend/进阶/工程实践与架构/前端架构与分层' },
-                    { text: '权限系统设计', link: '/frontend/进阶/工程实践与架构/权限系统设计' },
-                    { text: '请求层与缓存设计', link: '/frontend/进阶/工程实践与架构/请求层与缓存设计' },
-                    { text: '大文件上传与断点续传', link: '/frontend/进阶/工程实践与架构/大文件上传与断点续传' },
-                    { text: '虚拟滚动与大数据渲染', link: '/frontend/进阶/工程实践与架构/虚拟滚动与大数据渲染' },
-                    { text: '模块总结（工程实践与架构）', link: '/frontend/进阶/工程实践与架构/总结' },
-                ]
-            },
-            {
-                text: '渲染架构',
-                collapsed: false,
-                items: [
-                    { text: '全景', link: '/frontend/进阶/渲染架构/全景' },
-                    { text: 'Next.js', link: '/frontend/进阶/渲染架构/Next.js' },
-                    { text: 'Nuxt', link: '/frontend/进阶/渲染架构/Nuxt' },
-                    { text: '模块总结（渲染架构）', link: '/frontend/进阶/渲染架构/总结' },
-                ]
-            },
-            {
-                text: '微前端体系',
-                collapsed: false,
-                items: [
-                    { text: '微前端方案全景与选型', link: '/frontend/进阶/微前端体系/微前端方案全景与选型' },
-                    { text: 'iframe 方案', link: '/frontend/进阶/微前端体系/iframe%20方案' },
-                    { text: 'qiankun', link: '/frontend/进阶/微前端体系/qiankun' },
-                    { text: 'micro-app', link: '/frontend/进阶/微前端体系/micro-app' },
-                    { text: 'wujie', link: '/frontend/进阶/微前端体系/wujie' },
-                    { text: 'Web Components 方案', link: '/frontend/进阶/微前端体系/Web%20Components%20方案' },
-                    { text: '沙箱与隔离机制', link: '/frontend/进阶/微前端体系/沙箱与隔离机制' },
-                    { text: '应用通信与状态共享', link: '/frontend/进阶/微前端体系/应用通信与状态共享' },
-                    { text: '资源加载与依赖共享', link: '/frontend/进阶/微前端体系/资源加载与依赖共享' },
-                    { text: '手写 mini 微前端框架', link: '/frontend/进阶/微前端体系/手写%20mini%20微前端框架' },
-                    { text: '模块总结（微前端体系）', link: '/frontend/进阶/微前端体系/总结' },
-                ]
-            },
-            {
-                text: '可视化与图形',
-                collapsed: true,
-                items: [
-                    { text: '可视化与图形全景', link: '/frontend/进阶/可视化与图形/全景' },
-                    { text: 'Canvas 2D 基础与性能', link: '/frontend/进阶/可视化与图形/Canvas%202D%20基础与性能' },
-                    { text: 'SVG 与声明式图形', link: '/frontend/进阶/可视化与图形/SVG%20与声明式图形' },
-                    {
-                        text: 'WebGL 与 Three.js 入门',
-                        link: '/frontend/进阶/可视化与图形/WebGL%20与%20Three.js%20入门'
-                    },
-                    { text: '图表引擎原理', link: '/frontend/进阶/可视化与图形/图表引擎原理' },
-                    { text: '大屏与可视化工程', link: '/frontend/进阶/可视化与图形/大屏与可视化工程' },
-                    { text: '模块总结（可视化与图形）', link: '/frontend/进阶/可视化与图形/总结' },
-                ]
-            },
-            {
-                text: '浏览器底层与 V8',
-                collapsed: true,
-                items: [
-                    {
-                        text: 'Chrome 多进程与渲染管线',
-                        link: '/frontend/进阶/浏览器底层与%20V8/Chrome%20多进程与渲染管线'
-                    },
-                    { text: 'V8 执行与优化', link: '/frontend/进阶/浏览器底层与%20V8/V8%20执行与优化' },
-                    { text: '内存模型与 GC', link: '/frontend/进阶/浏览器底层与%20V8/内存模型与%20GC' },
-                    { text: 'WebAssembly', link: '/frontend/进阶/浏览器底层与%20V8/WebAssembly' },
-                    { text: '模块总结（浏览器底层与 V8）', link: '/frontend/进阶/浏览器底层与%20V8/总结' },
-                ]
-            },
-            {
-                text: '跨端与桌面深化',
-                collapsed: true,
-                items: [
-                    { text: '跨端渲染架构全景', link: '/frontend/进阶/跨端与桌面深化/跨端渲染架构全景' },
-                    { text: 'React Native', link: '/frontend/进阶/跨端与桌面深化/React%20Native' },
-                    { text: 'Flutter', link: '/frontend/进阶/跨端与桌面深化/Flutter' },
-                    { text: 'Electron', link: '/frontend/进阶/跨端与桌面深化/Electron' },
-                    { text: 'Hybrid 与 JSBridge', link: '/frontend/进阶/跨端与桌面深化/Hybrid%20与%20JSBridge' },
-                    { text: '模块总结（跨端与桌面深化）', link: '/frontend/进阶/跨端与桌面深化/总结' },
-                ]
-            },
-            {
-                text: 'AI 前端工程',
-                collapsed: true,
-                items: [
-                    { text: '全景', link: '/frontend/进阶/AI%20前端工程/全景' },
-                    { text: 'LLM 应用前端形态', link: '/frontend/进阶/AI%20前端工程/LLM%20应用前端形态' },
-                    { text: 'AI 与前端工程结合', link: '/frontend/进阶/AI%20前端工程/AI%20与前端工程结合' },
-                    { text: '端侧推理与 WASM', link: '/frontend/进阶/AI%20前端工程/端侧推理与%20WASM' },
-                    { text: 'AI 应用的性能与体验', link: '/frontend/进阶/AI%20前端工程/AI%20应用的性能与体验' },
-                    { text: '模块总结（AI 前端工程）', link: '/frontend/进阶/AI%20前端工程/总结' },
-                ]
-            },
-            {
-                text: '低代码与搭建体系',
-                collapsed: true,
-                items: [
-                    { text: '全景', link: '/frontend/进阶/低代码与搭建体系/全景' },
-                    { text: '协议与 schema 设计', link: '/frontend/进阶/低代码与搭建体系/协议与%20schema%20设计' },
-                    { text: '渲染引擎', link: '/frontend/进阶/低代码与搭建体系/渲染引擎' },
-                    { text: '编辑器与出码', link: '/frontend/进阶/低代码与搭建体系/编辑器与出码' },
-                    { text: '低代码的边界', link: '/frontend/进阶/低代码与搭建体系/低代码的边界' },
-                    { text: '模块总结（低代码与搭建体系）', link: '/frontend/进阶/低代码与搭建体系/总结' },
-                ]
-            },
-            {
-                text: '复杂交互与编辑器',
-                collapsed: true,
-                items: [
-                    { text: '全景', link: '/frontend/进阶/复杂交互与编辑器/全景' },
-                    { text: '富文本与编辑器架构', link: '/frontend/进阶/复杂交互与编辑器/富文本与编辑器架构' },
-                    { text: '协同编辑', link: '/frontend/进阶/复杂交互与编辑器/协同编辑' },
-                    { text: '复杂表单引擎', link: '/frontend/进阶/复杂交互与编辑器/复杂表单引擎' },
-                    { text: '状态机与流程编排', link: '/frontend/进阶/复杂交互与编辑器/状态机与流程编排' },
-                    { text: '模块总结（复杂交互与编辑器）', link: '/frontend/进阶/复杂交互与编辑器/总结' },
-                ]
-            },
-            {
-                text: '工程素养',
-                collapsed: true,
-                items: [
-                    { text: '技术方案写作与架构评审', link: '/frontend/进阶/工程素养/技术方案写作与架构评审' },
-                    { text: '代码评审与技术债治理', link: '/frontend/进阶/工程素养/代码评审与技术债治理' },
-                    { text: '线上事故复盘与应急响应', link: '/frontend/进阶/工程素养/线上事故复盘与应急响应' },
-                    { text: '模块总结（工程素养）', link: '/frontend/进阶/工程素养/总结' },
-                ]
-            }
+            { text: 'CSS 基础与选择器', link: '/frontend/css/CSS%20基础与选择器' },
+            { text: '布局', link: '/frontend/css/布局' },
+            { text: '响应式与移动端', link: '/frontend/css/响应式与移动端' },
+            { text: '动画与变换', link: '/frontend/css/动画与变换' },
+            { text: 'BEM 与 CSS 规范', link: '/frontend/css/BEM%20与%20CSS%20规范' },
+            { text: '现代 CSS', link: '/frontend/css/现代%20CSS' },
+            { text: '综合实战', link: '/frontend/css/综合实战' },
+            { text: '模块总结（CSS）', link: '/frontend/css/总结' }
+        ]
+    },
+    {
+        text: 'JavaScript 核心',
+        collapsed: false,
+        items: [
+            { text: '数据类型与变量', link: '/frontend/js/数据类型与变量' },
+            { text: '作用域与闭包', link: '/frontend/js/作用域与闭包' },
+            { text: '原型与继承', link: '/frontend/js/原型与继承' },
+            { text: '异步编程与事件循环', link: '/frontend/js/异步编程与事件循环' },
+            { text: '内存管理与垃圾回收', link: '/frontend/js/内存管理与垃圾回收' },
+            { text: 'DOM 与浏览器 API', link: '/frontend/js/DOM%20与浏览器%20API' },
+            { text: '手写实现与源码', link: '/frontend/js/手写实现与源码' },
+            { text: '模块总结（JavaScript 核心）', link: '/frontend/js/总结' }
+        ]
+    },
+    {
+        text: '网络与浏览器',
+        collapsed: false,
+        items: [
+            { text: 'HTTP 与 HTTPS', link: '/frontend/网络与浏览器/HTTP%20与%20HTTPS' },
+            { text: '浏览器渲染原理', link: '/frontend/网络与浏览器/浏览器渲染原理' },
+            { text: '浏览器存储与本地缓存', link: '/frontend/网络与浏览器/浏览器存储与本地缓存' },
+            { text: '前端安全', link: '/frontend/网络与浏览器/前端安全' },
+            { text: '模块总结（网络与浏览器）', link: '/frontend/网络与浏览器/总结' }
+        ]
+    },
+    {
+        text: 'Vue',
+        collapsed: false,
+        items: [
+            { text: 'Vue 核心基础', link: '/frontend/vue/Vue%20核心基础' },
+            { text: 'Vue 组件', link: '/frontend/vue/Vue%20组件' },
+            { text: 'Vue 路由与状态', link: '/frontend/vue/Vue%20路由与状态' },
+            { text: 'Vue3 原理', link: '/frontend/vue/Vue3%20原理' },
+            { text: 'Vue3 状态管理原理与实现', link: '/frontend/vue/Vue3%20状态管理原理与实现' },
+            { text: '手写 mini-vue', link: '/frontend/vue/手写%20mini-vue' },
+            { text: '框架原理总览', link: '/frontend/vue/框架原理总览' },
+            { text: '模块总结（Vue）', link: '/frontend/vue/总结' }
+        ]
+    },
+    {
+        text: 'React',
+        collapsed: false,
+        items: [
+            { text: 'React 核心概念', link: '/frontend/react/React%20核心概念' },
+            { text: 'React Hooks', link: '/frontend/react/React%20Hooks' },
+            { text: 'React 路由', link: '/frontend/react/React%20路由' },
+            { text: 'React 状态管理', link: '/frontend/react/React%20状态管理' },
+            { text: 'React 使用 TS', link: '/frontend/react/React%20使用%20TS' },
+            { text: 'React 使用 CSS', link: '/frontend/react/React%20使用%20CSS' },
+            { text: 'React 高级与原理', link: '/frontend/react/React%20高级与原理' },
+            { text: 'React 状态管理原理与实现', link: '/frontend/react/React%20状态管理原理与实现' },
+            { text: '手写 mini-react', link: '/frontend/react/手写%20mini-react' },
+            { text: '模块总结（React）', link: '/frontend/react/总结' }
+        ]
+    },
+    {
+        text: 'TypeScript',
+        collapsed: false,
+        items: [
+            { text: 'TypeScript 类型系统', link: '/frontend/ts/TypeScript%20类型系统' },
+            { text: 'TypeScript 工程实践', link: '/frontend/ts/TypeScript%20工程实践' },
+            { text: 'TypeScript 类型体操', link: '/frontend/ts/TypeScript%20类型体操' },
+            { text: 'TypeScript 类型与运行时', link: '/frontend/ts/TypeScript%20类型与运行时' },
+            { text: '模块总结（TypeScript）', link: '/frontend/ts/总结' }
+        ]
+    },
+    {
+        text: '构建体系',
+        collapsed: false,
+        items: [
+            { text: '构建全景与选型', link: '/frontend/构建体系/构建全景与选型' },
+            { text: '编译与 AST', link: '/frontend/构建体系/编译与%20AST' },
+            { text: '手写 mini-bundler', link: '/frontend/构建体系/手写%20mini-bundler' },
+            { text: 'webpack', link: '/frontend/构建体系/webpack' },
+            { text: 'Vite', link: '/frontend/构建体系/Vite' },
+            { text: 'Rollup', link: '/frontend/构建体系/Rollup' },
+            { text: '模块总结（构建体系）', link: '/frontend/构建体系/总结' }
+        ]
+    },
+    {
+        text: '测试体系',
+        collapsed: false,
+        items: [
+            { text: '测试工具上手', link: '/frontend/测试体系/测试工具上手' },
+            { text: '测试策略与分层', link: '/frontend/测试体系/测试策略与分层' },
+            { text: '单元测试深入', link: '/frontend/测试体系/单元测试深入' },
+            { text: '组件测试', link: '/frontend/测试体系/组件测试' },
+            { text: 'E2E 与稳定性', link: '/frontend/测试体系/E2E%20与稳定性' },
+            { text: '测试基建与门禁', link: '/frontend/测试体系/测试基建与门禁' },
+            { text: '模块总结（测试体系）', link: '/frontend/测试体系/总结' }
+        ]
+    },
+    {
+        text: '性能优化',
+        collapsed: false,
+        items: [
+            { text: '性能优化体系与指标', link: '/frontend/性能优化/性能优化体系与指标' },
+            { text: '性能优化实战', link: '/frontend/性能优化/性能优化实战' },
+            { text: '模块总结（性能优化）', link: '/frontend/性能优化/总结' }
+        ]
+    },
+    {
+        text: '前端监控',
+        collapsed: false,
+        items: [
+            { text: '前端监控体系', link: '/frontend/前端监控/前端监控体系' },
+            { text: '前端监控 SDK 实现', link: '/frontend/前端监控/前端监控%20SDK%20实现' },
+            { text: '前端监控实战·单页验证', link: '/frontend/前端监控/前端监控实战·单页验证' },
+            { text: '模块总结（前端监控）', link: '/frontend/前端监控/总结' }
+        ]
+    },
+    {
+        text: '工程实践与架构',
+        collapsed: false,
+        items: [
+            { text: '设计模式在前端', link: '/frontend/工程实践与架构/设计模式在前端' },
+            { text: '组件设计', link: '/frontend/工程实践与架构/组件设计' },
+            { text: '前端架构与分层', link: '/frontend/工程实践与架构/前端架构与分层' },
+            { text: '权限系统设计', link: '/frontend/工程实践与架构/权限系统设计' },
+            { text: '请求层与缓存设计', link: '/frontend/工程实践与架构/请求层与缓存设计' },
+            { text: '大文件上传与断点续传', link: '/frontend/工程实践与架构/大文件上传与断点续传' },
+            { text: '虚拟滚动与大数据渲染', link: '/frontend/工程实践与架构/虚拟滚动与大数据渲染' },
+            { text: '模块总结（工程实践与架构）', link: '/frontend/工程实践与架构/总结' }
+        ]
+    },
+    {
+        text: '网络与协议进阶',
+        collapsed: false,
+        items: [
+            { text: 'HTTP2 与 HTTP3', link: '/frontend/网络与协议进阶/HTTP2%20与%20HTTP3' },
+            { text: 'CDN 与缓存体系', link: '/frontend/网络与协议进阶/CDN%20与缓存体系' },
+            { text: '网络可靠性与弱网', link: '/frontend/网络与协议进阶/网络可靠性与弱网' },
+            { text: '前端安全进阶', link: '/frontend/网络与协议进阶/前端安全进阶' },
+            { text: '模块总结（网络与协议进阶）', link: '/frontend/网络与协议进阶/总结' }
         ]
     }
 ]
