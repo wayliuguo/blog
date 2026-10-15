@@ -38,14 +38,25 @@ export default [
         ]
     },
     {
-        text: '网络与浏览器',
+        text: '网络',
         collapsed: false,
         items: [
-            { text: 'HTTP 与 HTTPS', link: '/frontend/网络与浏览器/HTTP%20与%20HTTPS' },
-            { text: '浏览器渲染原理', link: '/frontend/网络与浏览器/浏览器渲染原理' },
-            { text: '浏览器存储与本地缓存', link: '/frontend/网络与浏览器/浏览器存储与本地缓存' },
-            { text: '前端安全', link: '/frontend/网络与浏览器/前端安全' },
-            { text: '模块总结（网络与浏览器）', link: '/frontend/网络与浏览器/总结' }
+            { text: 'HTTP 与 HTTPS', link: '/frontend/网络/HTTP%20与%20HTTPS' },
+            { text: 'HTTP2 与 HTTP3', link: '/frontend/网络/HTTP2%20与%20HTTP3' },
+            { text: 'CDN 与缓存体系', link: '/frontend/网络/CDN%20与缓存体系' },
+            { text: '网络可靠性与弱网', link: '/frontend/网络/网络可靠性与弱网' },
+            { text: '前端安全', link: '/frontend/网络/前端安全' },
+            { text: '前端安全进阶', link: '/frontend/网络/前端安全进阶' },
+            { text: '模块总结（网络）', link: '/frontend/网络/总结' }
+        ]
+    },
+    {
+        text: '浏览器原理',
+        collapsed: false,
+        items: [
+            { text: '浏览器渲染原理', link: '/frontend/浏览器原理/浏览器渲染原理' },
+            { text: '浏览器存储与本地缓存', link: '/frontend/浏览器原理/浏览器存储与本地缓存' },
+            { text: '模块总结（浏览器原理）', link: '/frontend/浏览器原理/总结' }
         ]
     },
     {
@@ -148,15 +159,4 @@ export default [
             { text: '模块总结（工程实践与架构）', link: '/frontend/工程实践与架构/总结' }
         ]
     },
-    {
-        text: '网络与协议进阶',
-        collapsed: false,
-        items: [
-            { text: 'HTTP2 与 HTTP3', link: '/frontend/网络与协议进阶/HTTP2%20与%20HTTP3' },
-            { text: 'CDN 与缓存体系', link: '/frontend/网络与协议进阶/CDN%20与缓存体系' },
-            { text: '网络可靠性与弱网', link: '/frontend/网络与协议进阶/网络可靠性与弱网' },
-            { text: '前端安全进阶', link: '/frontend/网络与协议进阶/前端安全进阶' },
-            { text: '模块总结（网络与协议进阶）', link: '/frontend/网络与协议进阶/总结' }
-        ]
-    }
 ]
