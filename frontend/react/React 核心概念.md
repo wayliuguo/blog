@@ -338,5 +338,5 @@ npm create vite@latest react-demo -- --template react-ts
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 上一篇：[前端安全](../网络与浏览器/前端安全.md)
+- 上一篇：[前端安全](../网络/前端安全.md)
 - 下一篇：[React Hooks](./React%20Hooks.md)

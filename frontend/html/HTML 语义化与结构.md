@@ -240,7 +240,7 @@ viewport 字段逐个说清楚：
 
 记忆要点：`defer` 的脚本"排在解析后面"，所以 `DOMContentLoaded` 要等它执行完才触发；`async` 是"下载完插队即走"，`DOMContentLoaded` 不等它。这也是业务脚本用 `defer`、统计脚本用 `async` 的原因。
 
-> 预加载指令 `dns-prefetch` / `preconnect` / `preload` / `prefetch` 的选型，详见 `网络与浏览器` 模块。
+> 预加载指令 `dns-prefetch` / `preconnect` / `preload` / `prefetch` 的选型，详见 `网络` 模块。
 
 ## HTML5 新增了什么
 
@@ -248,7 +248,7 @@ viewport 字段逐个说清楚：
 - **媒体标签**：`<video>`、`<audio>` 原生播放音视频，配 `controls`/`autoplay`/`muted` 等属性。
 - **表单增强**：新类型（`email`/`url`/`number`/`search`/`range`/`color`/`date`/`time`…）、新属性（`placeholder`/`autofocus`/`required`/`pattern`…）、原生约束校验——细节见 `表单与标签`。
 - **进度条与度量器**：`<progress>`（任务进度，不确定值不加 `value`）与 `<meter>`（度量，如磁盘用量）。
-- **Web 存储**：`localStorage`（持久）与 `sessionStorage`（会话级）——详见 `网络与浏览器`。
+- **Web 存储**：`localStorage`（持久）与 `sessionStorage`（会话级）——详见 `浏览器原理`。
 - **DOM 查询**：`document.querySelector()` / `querySelectorAll()`——详见 `JavaScript 核心`。
 - **拖放**：`draggable` + `dragstart`/`dragover`/`drop` 事件实现拖拽。
 - **画布**：`<canvas>` 提供 2D/3D 绘图 API。

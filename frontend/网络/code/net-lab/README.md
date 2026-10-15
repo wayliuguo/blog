@@ -1,11 +1,11 @@
-# net-lab · 网络与协议进阶配套实验台
+# net-lab · 网络 配套实验台
 
 零依赖，只要有 Node 22 就能跑，不需要 `npm install`、不需要 Docker、不需要外网。
 
 ## 怎么跑
 
 ```bash
-cd frontend/进阶/网络与协议进阶/code/net-lab
+cd frontend/网络/code/net-lab
 npm run list        # 看有哪些场景
 npm run http2       # HTTP/2 多路复用与队头阻塞
 npm run cache       # 缓存决策
