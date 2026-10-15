@@ -1,4 +1,0 @@
-<view class="card">
-    <text>{{ var total = item.price * item.count; }}</text>
-    <text>{{ total }}</text>
-</view>

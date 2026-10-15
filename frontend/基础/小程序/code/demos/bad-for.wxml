@@ -1,3 +1,0 @@
-<view class="card">
-    <view class="item" wx:for="{{ summary }}" wx:key="id">{{ item }}</view>
-</view>
