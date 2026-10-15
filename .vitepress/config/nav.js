@@ -6,7 +6,7 @@ export default [
     },
     {
         text: '前端',
-        link: '/frontend/基础/HTML%20基础/HTML%20语义化与结构',
+        link: '/frontend/html/HTML%20语义化与结构',
         activeMatch: '/frontend/'
     },
     {
