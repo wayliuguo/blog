@@ -492,6 +492,5 @@ function App() {
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[React Hooks](./React%20Hooks.md)
 - 下一篇：[React 状态管理](./React%20状态管理.md)

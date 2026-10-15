@@ -218,6 +218,5 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Docker 容器化](./Docker%20容器化)
 - 下一篇：[Nginx 反向代理与网关](./Nginx%20反向代理与网关)

@@ -461,7 +461,6 @@ export function b() {
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[编译与 AST](./编译与%20AST.md)
 - 下一篇：[webpack](./webpack.md)
 - [acorn 文档](https://github.com/acornjs/acorn)

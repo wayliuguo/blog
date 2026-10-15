@@ -313,6 +313,6 @@ const NS = [2000, 10000, 50000]
 ## 参考
 
 - 本模块地图：[全景](./全景.md)
-- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 本模块总结：[总结](./总结.md)
 - 下一篇：[SVG 与声明式图形](./SVG%20与声明式图形.md)
 - MDN：[Canvas 教程](https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API/Tutorial) · [优化 Canvas](https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API/Optimizing_canvas)

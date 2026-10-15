@@ -335,7 +335,6 @@ const dts = emitDts(src)
 ## 参考
 
 - [TypeScript 模块总结](./总结)
-- [TypeScript 面试题](./面试题)
 - [TypeScript 类型系统](./TypeScript%20类型系统)（结构类型 / 可赋值性 / 收窄的基础）
 - [TypeScript 类型体操](./TypeScript%20类型体操)（复杂类型为 schema 做类型推导）
 - [TypeScript 官方 Handbook：Type Compatibility](https://www.typescriptlang.org/docs/handbook/type-compatibility.html)

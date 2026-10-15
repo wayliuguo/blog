@@ -415,7 +415,6 @@ File                                ← parse() 的返回值，代表「一个�
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[构建全景与选型](./构建全景与选型.md)
 - 下一篇：[手写 mini-bundler](./手写%20mini-bundler.md)
 - [Babel 插件手册](https://github.com/jamiebuilds/babel-handbook/blob/master/translations/zh-Hans/plugin-handbook.md)

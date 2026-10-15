@@ -163,7 +163,6 @@ Node 侧的等价工具：`v8.getHeapStatistics()`（本次实验台所用）、
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[V8 执行与优化](./V8%20执行与优化.md)
 - 下一篇：[WebAssembly](./WebAssembly.md)
 - 参考：[Trash talk: the Orinoco garbage collector](https://v8.dev/blog/trash-talk) · [DevTools Memory](https://developer.chrome.com/docs/devtools/memory-problems/)

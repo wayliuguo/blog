@@ -112,6 +112,5 @@ console.log('\n探针三通过 ✓')
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[内存模型与 GC](./内存模型与%20GC.md)
 - 官方资料：[WebAssembly 官网](https://webassembly.org/) · [MDN WebAssembly](https://developer.mozilla.org/zh-CN/docs/WebAssembly)

@@ -350,6 +350,5 @@ executeMiddlewareChain(req, res, middlewares, callback)
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Express 项目模板](./Express%20项目模板)
 - 下一篇：[Koa 项目模板](./Koa%20项目模板)

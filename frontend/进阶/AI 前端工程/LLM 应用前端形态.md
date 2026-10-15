@@ -200,6 +200,6 @@ npm start                :: http://127.0.0.1:3121
 ## 参考
 
 - 本模块地图：[全景](./全景.md)
-- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 本模块总结：[总结](./总结.md)
 - 下一篇：[AI 与前端工程结合](./AI%20与前端工程结合.md)
 - 参考：[MDN: Server-sent events](https://developer.mozilla.org/zh-CN/docs/Web/API/Server-sent_events) · [MDN: AbortController](https://developer.mozilla.org/zh-CN/docs/Web/API/AbortController) · [OpenAI Streaming 指南](https://platform.openai.com/docs/guides/streaming)

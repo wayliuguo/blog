@@ -106,6 +106,6 @@ full（正常）→ lite（排队久，切小模型先出结论）→ short（�
 ## 参考
 
 - 本模块地图：[全景](./全景.md)
-- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 本模块总结：[总结](./总结.md)
 - 上一篇：[端侧推理与 WASM](./端侧推理与%20WASM.md)
 - 参考：[MDN: Performance API](https://developer.mozilla.org/zh-CN/docs/Web/API/Performance_API) · [OpenAI Prompt caching](https://platform.openai.com/docs/guides/prompt-caching) · [监控与稳定性（本站模块）](../监控与稳定性/总结.md)

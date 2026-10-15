@@ -452,6 +452,5 @@ const increase = useBearStore((s) => s.increase)
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[React 路由](./React%20路由.md)
 - 下一篇：[React 使用 TS](./React%20使用%20TS.md)

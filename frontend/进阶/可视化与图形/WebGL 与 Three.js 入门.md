@@ -208,7 +208,7 @@ function drawWebGL(t) {
 ## 参考
 
 - 本模块地图：[全景](./全景.md)
-- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 本模块总结：[总结](./总结.md)
 - 上一篇：[SVG 与声明式图形](./SVG%20与声明式图形.md)
 - 下一篇：[大屏与可视化工程](./大屏与可视化工程.md)
 - Three.js 官方：[Getting Started](https://threejs.org/docs/index.html#manual/en/introduction/Creating-a-scene) · [WebGL 基础概念](https://webglfundamentals.org/webgl/lessons/zh_cn/webgl-fundamentals.html)

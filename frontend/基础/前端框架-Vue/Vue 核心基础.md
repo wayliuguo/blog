@@ -531,6 +531,5 @@ const formatPrice = (val) => '¥ ' + Number(val).toFixed(2)
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[React 使用 CSS](../前端框架-React/React%20使用%20CSS.md)
 - 下一篇：[Vue 组件](./Vue%20组件.md)

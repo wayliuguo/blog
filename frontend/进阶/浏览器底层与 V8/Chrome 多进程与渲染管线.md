@@ -134,6 +134,5 @@ JS 执行（改了 DOM/样式）
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 下一篇：[V8 执行与优化](./V8%20执行与优化.md)
 - 官方资料：[Inside look at modern web browser](https://developer.chrome.com/blog/inside-browser-part1)

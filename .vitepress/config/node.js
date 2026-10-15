@@ -12,7 +12,6 @@ export default [
             { text: '运行机制收束', link: '/node/运行环境/运行机制收束' },
             { text: 'VSCode 调试 Node：inspect 协议、launch 配置与断点绑定', link: '/node/运行环境/VSCode 调试 Node：inspect 协议、launch 配置与断点绑定' },
             { text: '模块总结（运行环境）', link: '/node/运行环境/总结' },
-            { text: '模块面试题（运行环境）', link: '/node/运行环境/面试题' }
         ]
     },
     {
@@ -24,7 +23,6 @@ export default [
             { text: 'WebSocket 与 SSE 实时通信', link: '/node/网络编程与实时通信/WebSocket 与 SSE 实时通信' },
             { text: '一次请求完整经历了什么', link: '/node/网络编程与实时通信/一次请求完整经历了什么' },
             { text: '模块总结（网络底层）', link: '/node/网络编程与实时通信/总结' },
-            { text: '模块面试题（网络底层）', link: '/node/网络编程与实时通信/面试题' }
         ]
     },
     {
@@ -38,7 +36,6 @@ export default [
             { text: 'Koa 项目模板', link: '/node/Express 与 Koa/Koa 项目模板' },
             { text: 'Koa 源码分析', link: '/node/Express 与 Koa/Koa 源码分析' },
             { text: '模块总结（Web 框架基础）', link: '/node/Express 与 Koa/总结' },
-            { text: '模块面试题（Web 框架基础）', link: '/node/Express 与 Koa/面试题' }
         ]
     },
     {
@@ -70,7 +67,6 @@ export default [
                 ]
             },
             { text: '模块总结（数据与缓存）', link: '/node/数据库/总结' },
-            { text: '模块面试题（数据与缓存）', link: '/node/数据库/面试题' }
         ]
     },
     {
@@ -112,7 +108,6 @@ export default [
                 ]
             },
             { text: '模块总结（后端架构）', link: '/node/NestJS 入门/总结' },
-            { text: '模块面试题（后端架构）', link: '/node/NestJS 入门/面试题' }
         ]
     },
     {
@@ -153,7 +148,6 @@ export default [
                 ]
             },
             { text: '模块总结（工程化与拓展）', link: '/node/部署与工程化/总结' },
-            { text: '模块面试题（工程化与拓展）', link: '/node/部署与工程化/面试题' }
         ]
     }
 ]

@@ -483,7 +483,6 @@ setState 赋同值                  0       0       逐键 Object.is → 连通�
 ## 参考
 
 - 本模块总结：[总结](../总结.md)
-- 本模块面试题：[面试题](../面试题.md)
 - 上一篇：[手写 mini-react](./手写%20mini-react.md)
 - 下一篇：[Vue3 原理](../vue3/Vue3%20原理.md)
 - 本模块另三篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](../vue3/Vue3%20原理.md) · [手写 mini-vue](../vue3/手写%20mini-vue.md)

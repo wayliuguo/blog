@@ -176,6 +176,5 @@ type Merge<A, B> = { [K in keyof A | keyof B]: K extends keyof B ? B[K] : K exte
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[TypeScript 类型系统](./TypeScript%20类型系统.md)（类型即集合、收窄、泛型、推断）
 - 下一篇：[TypeScript 工程实践](./TypeScript%20工程实践.md)（配置、声明文件、构建集成、JS 迁移）

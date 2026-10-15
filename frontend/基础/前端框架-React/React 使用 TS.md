@@ -230,6 +230,5 @@ const { value, toggle } = useToggle({ initial: true })
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[React 状态管理](./React%20状态管理.md)
 - 下一篇：[React 使用 CSS](./React%20使用%20CSS.md)

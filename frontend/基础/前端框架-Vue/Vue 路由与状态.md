@@ -590,6 +590,5 @@ const cartStore = useCartStore()
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Vue 组件](./Vue%20组件.md)
 - 下一篇：[WXML、WXSS 与基础语法](../小程序/WXML、WXSS%20与基础语法.md)

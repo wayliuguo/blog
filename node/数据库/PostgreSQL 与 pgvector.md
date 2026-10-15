@@ -420,6 +420,5 @@ async function search(queryVector: number[], topK = 5) {
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MongoDB 进阶](./MongoDB%20进阶)
 - 下一篇：[Redis 基础与数据类型](../Redis/Redis%20基础与数据类型)

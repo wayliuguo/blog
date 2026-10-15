@@ -182,7 +182,7 @@ npm start
 ## 参考
 
 - 本模块地图：[全景](./全景.md)
-- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 本模块总结：[总结](./总结.md)
 - 上一篇：[LLM 应用前端形态](./LLM%20应用前端形态.md)
 - 下一篇：[端侧推理与 WASM](./端侧推理与%20WASM.md)
 - 参考：[OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs) · [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) · [低代码与搭建体系（本站模块）](../低代码与搭建体系/总结.md)

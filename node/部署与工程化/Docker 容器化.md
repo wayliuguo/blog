@@ -265,6 +265,5 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[PM2 进程管理](./PM2%20进程管理)
 - 下一篇：[Docker Compose 编排](./Docker%20Compose%20编排)

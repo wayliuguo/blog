@@ -217,7 +217,7 @@ function prepend(alert) {
 ## 参考
 
 - 本模块地图：[全景](./全景.md)
-- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 本模块总结：[总结](./总结.md)
 - 上一篇：[Canvas 2D 基础与性能](./Canvas%202D%20基础与性能.md)
 - 下一篇：[WebGL 与 Three.js 入门](./WebGL%20与%20Three.js%20入门.md)
 - MDN：[SVG 教程](https://developer.mozilla.org/zh-CN/docs/Web/SVG/Tutorial) · [D3-selection](https://d3js.org/d3-selection/joining)

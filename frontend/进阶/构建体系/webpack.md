@@ -702,7 +702,6 @@ const runtime = `(function () {
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[手写 mini-bundler](./手写%20mini-bundler.md)
 - 下一篇：[Vite](./Vite.md)
 - [webpack 官方文档](https://webpack.js.org/concepts/)

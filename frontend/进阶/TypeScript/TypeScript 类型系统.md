@@ -883,6 +883,5 @@ declare const maybeStr: string | undefined
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[原生与跨端框架差异](../../基础/小程序/原生与跨端框架差异.md)
 - 下一篇：[TypeScript 工程实践](./TypeScript%20工程实践.md)

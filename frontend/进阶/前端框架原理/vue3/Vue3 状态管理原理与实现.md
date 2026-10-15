@@ -410,7 +410,6 @@ Vuex：mutation 只是规定"谁能改"，通知机制与 reactive 完全一致
 ## 参考
 
 - 本模块总结：[总结](../总结.md)
-- 本模块面试题：[面试题](../面试题.md)
 - 上一篇：[手写 mini-vue](./手写%20mini-vue.md)
 - 下一篇：[性能优化体系与指标](../../性能优化/性能优化体系与指标.md)
 - 本模块另三篇：[React 高级与原理](../react/React%20高级与原理.md) · [Vue3 原理](./Vue3%20原理.md) · [手写 mini-react](../react/手写%20mini-react.md)

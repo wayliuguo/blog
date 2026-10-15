@@ -180,7 +180,7 @@ function predict(features) {
 ## 参考
 
 - 本模块地图：[全景](./全景.md)
-- 本模块总结：[总结](./总结.md) · 面试题：[面试题](./面试题.md)
+- 本模块总结：[总结](./总结.md)
 - 上一篇：[AI 与前端工程结合](./AI%20与前端工程结合.md)
 - 下一篇：[AI 应用的性能与体验](./AI%20应用的性能与体验.md)
 - 参考：[ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) · [transformers.js](https://huggingface.co/docs/transformers.js) · [WebAssembly 核心规范](https://webassembly.github.io/spec/core/)

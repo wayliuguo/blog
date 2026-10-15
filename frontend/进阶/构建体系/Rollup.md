@@ -517,7 +517,6 @@ module.exports = { name: 'rollup-lab', greet }
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Vite](./Vite.md)
 - [Rollup 官方文档](https://rollupjs.org/)
 - [Rollup 插件钩子](https://rollupjs.org/plugin-development/)

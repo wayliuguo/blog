@@ -404,6 +404,5 @@ const pendingPlan = await orders.find({ status: 'pending' }).explain('executionS
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MongoDB 入门](./MongoDB%20入门)
 - 下一篇：[PostgreSQL 与 pgvector](./PostgreSQL%20与%20pgvector)

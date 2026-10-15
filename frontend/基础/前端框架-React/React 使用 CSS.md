@@ -279,6 +279,5 @@ export default function Demo() {
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[React 使用 TS](./React%20使用%20TS.md)
 - 下一篇：[Vue 核心基础](../前端框架-Vue/Vue%20核心基础.md)

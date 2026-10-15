@@ -629,6 +629,5 @@ const AsyncComp = defineAsyncComponent({
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[Vue 核心基础](./Vue%20核心基础.md)
 - 下一篇：[Vue 路由与状态](./Vue%20路由与状态.md)

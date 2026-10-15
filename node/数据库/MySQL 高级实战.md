@@ -515,6 +515,5 @@ mysqlbinlog \
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 本模块面试题：[面试题](./面试题.md)
 - 上一篇：[MySQL 进阶](./MySQL%20进阶)
 - 下一篇：[Node.js 操作 MySQL](./Node.js%20操作%20MySQL)

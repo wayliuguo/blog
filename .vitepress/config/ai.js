@@ -98,10 +98,6 @@ export default [
                         text: 'Agent 模块总结',
                         link: '/ai/agent-development/总结'
                     },
-                    {
-                        text: 'Agent 模块面试题',
-                        link: '/ai/agent-development/面试题'
-                    }
                 ]
             }
         ]
