@@ -11,20 +11,27 @@ export default [
         text: '前端',
         collapsed: false,
         items: [
-            { text: 'JS 与 TS 基础', link: '/interview/前端/面试题-JS与TS基础' },
-            { text: '浏览器与网络', link: '/interview/前端/面试题-浏览器与网络' },
+            { text: 'HTML', link: '/interview/前端/面试题-HTML' },
+            { text: 'CSS', link: '/interview/前端/面试题-CSS' },
+            { text: 'JS', link: '/interview/前端/面试题-JS' },
+            { text: 'TS', link: '/interview/前端/面试题-TS' },
+            { text: '计算机网络', link: '/interview/前端/面试题-计算机网络' },
+            { text: '浏览器原理', link: '/interview/前端/面试题-浏览器原理' },
             { text: 'Vue', link: '/interview/前端/面试题-Vue' },
+            { text: 'React', link: '/interview/前端/面试题-React' },
+            { text: '监控系统', link: '/interview/前端/面试题-监控系统' },
             { text: '性能优化', link: '/interview/前端/面试题-性能优化' },
             { text: '自动化测试', link: '/interview/前端/面试题-自动化测试' },
-            { text: '监控系统', link: '/interview/前端/面试题-监控系统' },
-            { text: '工程构建', link: '/interview/前端/面试题-工程构建' }
+            { text: 'Vite 与 Rollup', link: '/interview/前端/面试题-Vite' }
         ]
     },
     {
         text: '后端',
         collapsed: false,
         items: [
-            { text: 'Node.js 服务端', link: '/interview/后端/面试题-Node.js服务端' }
+            { text: 'Node 核心与运行环境', link: '/interview/后端/面试题-Node核心与运行环境' },
+            { text: 'NestJS 与 Web 框架', link: '/interview/后端/面试题-NestJS与Web框架' },
+            { text: '数据库缓存与部署', link: '/interview/后端/面试题-数据库缓存与部署' }
         ]
     },
     {
