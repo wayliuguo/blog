@@ -1,6 +1,6 @@
 # Vite
 
-> 本篇讲**两套引擎的插件**：dev 侧（`configureServer` / `hotUpdate`）与 build 侧（虚拟模块 / 剔除 / HTML 收尾 / 压缩 / 体积门禁）。示例是一个真实的 Vue 3 应用——单文件组件（SFC）+ `vue-router` 多路由 + 路由级懒加载；SFC 的编译交给官方 `@vitejs/plugin-vue`，其余插件全部手写。组织方式与 [webpack](./webpack.md) 篇对齐：一份配置 + 手写插件 + 断点调试。差别在两处——Vite 有 dev / build **两套引擎**，且插件排序不靠 `stage` 数值。第三节先给**两张钩子全貌速查表**（通用 / Vite 专有），后面每一章都对应表里的某几行。
+> 本篇讲**两套引擎的插件**：dev 侧（`configureServer` / `hotUpdate`）与 build 侧（虚拟模块 / 剔除 / HTML 收尾 / 压缩 / 体积门禁）。示例是一个真实的 Vue 3 应用——单文件组件（SFC）+ `vue-router` 多路由 + 路由级懒加载；SFC 的编译交给官方 `@vitejs/plugin-vue`，其余插件全部手写。组织方式：一份配置 + 手写插件 + 断点调试。有两处特点——Vite 有 dev / build **两套引擎**，且插件排序不靠 `stage` 数值。第三节先给**两张钩子全貌速查表**（通用 / Vite 专有），后面每一章都对应表里的某几行。
 
 ## 一、双引擎：dev 不打包，build 才打包
 
@@ -831,11 +831,11 @@ CSS 由 `cssCodeSplit: true` 单独成文件，与 webpack 篇抽离 CSS 的目�
 
 前面的原理是"纸上结论"，`mini-vite` 把它变成能跑的代码。它是**独立项目**（`code/mini-vite/`，与 vite-lab 平级；只有一个 devDependency `acorn`，用来解析 import/export），`npm run mini` 跑一段 build，不需要浏览器、也不需要真实项目。
 
-它复刻的不是"另一个打包器"，而是**插件容器如何按钩子语义调用插件**：从入口全量建图 → 拓扑排序 → 拼成一个文件。定位与 `mini-webpack` 对齐——一次构建、一个产物。
+它复刻的不是"另一个打包器"，而是**插件容器如何按钩子语义调用插件**：从入口全量建图 → 拓扑排序 → 拼成一个文件。定位是「一次构建、一个产物」的最小可跑模型。
 
 dev 侧「按需转换、不打包」的原理见 §一，由 `vite-lab` 的真实 dev server 演示；本节只讲 build 侧。
 
-**读法（由内向外）**：先看 `lib/hook.mjs`（钩子怎么被调用）与 `lib/plugin-container.mjs`（插件怎么被过滤、排序、注册）——这两份把插件机制讲完；再看 `lib/build.mjs`，它只是"在什么时机调用容器"。文件按职责拆开，一个文件一件事，与 `mini-webpack` 的 `lib/` 粒度对齐：
+**读法（由内向外）**：先看 `lib/hook.mjs`（钩子怎么被调用）与 `lib/plugin-container.mjs`（插件怎么被过滤、排序、注册）——这两份把插件机制讲完；再看 `lib/build.mjs`，它只是"在什么时机调用容器"。文件按职责拆开，一个文件一件事：
 
 | 文件 | 承担的概念 | 对应真实 Vite |
 | --- | --- | --- |
@@ -1132,7 +1132,6 @@ function flatten(code, id) {
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 上一篇：[webpack](./webpack.md)
 - 下一篇：[Rollup](./Rollup.md)
 - [Vite 官方文档](https://vite.dev/)
 - [Vite 插件 API](https://vite.dev/guide/api-plugin.html)

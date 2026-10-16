@@ -104,10 +104,6 @@ export default [
         text: '构建体系',
         collapsed: false,
         items: [
-            { text: '构建全景与选型', link: '/frontend/构建体系/构建全景与选型' },
-            { text: '编译与 AST', link: '/frontend/构建体系/编译与%20AST' },
-            { text: '手写 mini-bundler', link: '/frontend/构建体系/手写%20mini-bundler' },
-            { text: 'webpack', link: '/frontend/构建体系/webpack' },
             { text: 'Vite', link: '/frontend/构建体系/Vite' },
             { text: 'Rollup', link: '/frontend/构建体系/Rollup' },
             { text: '模块总结（构建体系）', link: '/frontend/构建体系/总结' }
