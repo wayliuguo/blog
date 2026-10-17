@@ -22,7 +22,8 @@ export default [
             { text: '监控系统', link: '/interview/前端/面试题-监控系统' },
             { text: '性能优化', link: '/interview/前端/面试题-性能优化' },
             { text: '自动化测试', link: '/interview/前端/面试题-自动化测试' },
-            { text: 'Vite 与 Rollup', link: '/interview/前端/面试题-Vite' }
+            { text: 'Vite', link: '/interview/前端/面试题-Vite' },
+            { text: 'Rollup', link: '/interview/前端/面试题-Rollup' }
         ]
     },
     {
