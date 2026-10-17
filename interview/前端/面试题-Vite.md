@@ -1,7 +1,7 @@
 # 面试题 · Vite 与 Rollup（全覆盖版）
 
 > 对齐知识体系 frontend/构建体系/（Vite、Rollup）。
-> 简历构建口径：熟悉 Vite 项目构建与优化；【项目】借钱 H5 是 Vite 7 工程。Webpack 专属概念（loader/plugin 事件流）不在本篇范围，被问就答「生产实践以 Vite/Rollup 为主，webpack 概念层了解」。
+> 简历构建口径：熟悉 Vite 项目构建与优化。Webpack 专属概念（loader/plugin 事件流）不在本篇范围，被问就答「生产实践以 Vite/Rollup 为主，webpack 概念层了解」。
 
 ## 一、Vite（核心）
 
@@ -14,7 +14,6 @@
 **Q2：Vite 插件机制？钩子怎么分？**
 - 钩子分两类：构建类（resolveId → load → transform，改模块内容）、服务类（config / configureServer / handleHotUpdate）
 - 兼容大部分 Rollup 插件钩子（enforce: 'pre'/'post' 控制顺序）
-- 【项目】Vite 7 工程：统一构建配置 + 分层目录约定；插件实践可讲一个「解决什么问题 → 钩子选在哪 → 产物形态」（纸面已删，口述保留——红线见项目面试题）
 
 **Q3：HMR 热更新原理？**
 - dev server 与浏览器建 WebSocket；文件变化推送模块路径
@@ -32,7 +31,6 @@
 - 依赖 ESM 静态结构（Rollup 首创）：编译期分析导出引用关系，未引用的导出在压缩阶段删除
 - sideEffects 字段标记无副作用模块，防止「有副作用的 import 被误删」；CJS 动态特性摇不动
 - 验证方法：analyze-lab 式对照——同一模块改 ESM/CJS 写法看产物体积差
-- 【项目】组件库按需引入 = tree-shaking（ESM 产物）+ babel 插件样式按需两条腿
 
 **Q6：Rollup 和 Vite 什么关系？什么时候直接用 Rollup？**
 - Vite 生产构建内嵌 Rollup（新版本 Rolldown）；插件钩子互通
@@ -49,7 +47,6 @@
 - 分包：路由动态 import + manualChunks（advancedChunks）拆第三方，利用长缓存（内容 hash）
 - 按需引入组件库；压缩（esbuild/terser）；小图内联、图片压缩
 - 分析工具：rollup-plugin-visualizer 看体积构成再动手
-- 【项目】Vite 7 + 分层目录 + 路由分包；构建速度靠预构建缓存与缩小处理范围
 
 **Q9：构建产物怎么保证质量？**
 - 类型检查拆出构建链（dev 不全量 tsc，IDE + 独立 lint 阶段）；体积门禁（插件在生成阶段比对预算超限报错）
@@ -57,4 +54,3 @@
 
 **Q10：Vite 配置里工程规范怎么落地？**
 - alias 收敛路径引用；ESLint/Prettier 协作（eslint-config-prettier 防冲突）+ lint-staged + husky pre-commit 卡点
-- 【项目】迁移时统一规范：ESLint + TS 严格模式，避免多人多风格（详见项目面试题）

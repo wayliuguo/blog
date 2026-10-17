@@ -227,7 +227,6 @@
   - **伪元素 + scale（主流）**：`::after` 画 1px 边框再 `transform: scaleY(0.5)`（或整体 scale(0.5)），物理像素级精度，推荐；
   - 直接写 `0.5px`：Safari/Firefox 支持度参差，低版本浏览器直接忽略（变无边框）；
   - **viewport 缩放**：`initial-scale = 1/DPR` 整页缩放——1px 精确了，但文字图片也被无差别缩小，副作用大（老项目 rem 方案里常见，新项目少用）。
-- 【项目】结合点：借钱 H5（Vant 4 内置 1px 方案底层即伪元素缩放）。
 
 ## 17. 如何判断元素进入可视区域
 
@@ -238,7 +237,6 @@
   - 异步观察交叉状态，不阻塞主线程、不监听 scroll；
   - `new IntersectionObserver(entries => {...}).observe(el)`，`entry.isIntersecting` 判断可见；
   - 应用：图片懒加载、曝光埋点、无限滚动。
-- 【项目】结合点：借钱 H5 营销页图片懒加载用 IntersectionObserver 实现。
 
 ## 18. width: 100% 与 auto 的区别
 

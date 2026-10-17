@@ -47,15 +47,12 @@
 **Q8：内存泄漏怎么排查？**
 - 常见原因：意外的全局变量、闭包持有大对象、未清理的定时器/监听器、缓存无上限
 - 排查：process.memoryUsage 观测 → heap snapshot 对比（devtools/clinic）→ 定位持有链
-- 【项目】排行榜/热搜缓存设过期与容量上限，避免无界增长
 
 ## 四、网络底层
 
 **Q9：TCP 粘包/拆包？Node 怎么处理？**
 - TCP 是字节流无消息边界，粘包是应用层要解决的问题
 - 方案：定长、分隔符、长度前缀（header 声明 body 长度）；HTTP 协议自带边界（Content-Length / chunked）
-- 【项目】WebSocket 收发有帧边界（协议层已解决），自定义 TCP 场景才需要手动封帧
 
 **Q10：keep-alive 与连接复用？**
 - HTTP keep-alive 复用 TCP 连接省握手；axios/undici 连接池默认开启——并发高时连接池上限要配
-- 【项目】脚手架批量调用监控平台接口走 axios 复用连接，几十个请求不重建握手

@@ -13,12 +13,10 @@
 **Q2：NestJS 为什么选它？核心概念？**
 - 模块化分层（Module/Controller/Provider）+ 装饰器路由 + 依赖注入，大项目可维护
 - 底层默认 Express（可切 Fastify 适配器），Nest 的价值在架构约束与生态整合（TypeORM/校验/文档开箱即用）
-- 【项目】统一响应/异常结构用过滤器+拦截器；DTO + class-validator 做参数校验
 
 **Q3：一个请求在 NestJS 里经过什么？**
 - 中间件 → 守卫（鉴权/权限）→ 拦截器（前置：包装响应/计时）→ 管道（转换+校验 DTO）→ 控制器 → 拦截器（后置：映射/日志）→ 异常过滤器（兜底）
 - 顺序考点：守卫在拦截器之前（未授权请求不浪费业务处理）；管道在控制器方法参数阶段
-- 【项目】JWT 守卫统一鉴权；全局异常过滤器返回统一错误结构 + 状态码
 
 **Q4：依赖注入的原理？**
 - 启动时扫描装饰器元数据（reflect-metadata + emitDecoratorMetadata 编译出的类型信息）构建依赖图
@@ -30,12 +28,10 @@
 **Q5：DTO 校验怎么做？**
 - class-validator 装饰器声明规则 + ValidationPipe 全局启用（whitelist 剔除多余字段、transform 自动类型转换）
 - 校验失败统一 400 返回字段级错误信息——错误信息结构也是契约的一部分
-- 【项目】解析类接口的 URL 参数、分页参数都有 DTO 约束，非法输入进不到 Service
 
 **Q6：RESTful 设计规范？**
 - 资源名词化 + HTTP 动词语义（GET/POST/PUT/DELETE）；状态码正确使用（200/201/400/401/403/404/409/429/500）
 - 版本化（/v1）、分页与过滤参数规范、错误响应统一结构
-- 【项目】接口文档自动生成（Swagger 装饰器），前后端契约明确
 
 ## 三、认证与会话（对齐「认证进阶-双Token」）
 
@@ -43,7 +39,6 @@
 - 登录 → 签发 token（header.payload.signature，签名防篡改）→ 客户端 Authorization 携带 → 服务端验签
 - JWT 无状态适合分布式；难主动撤销 → 短过期 + refresh token，敏感操作二次校验
 - session 有状态可随时失效；集群要共享存储（Redis）
-- 【项目】JWT + 守卫统一鉴权；密码 bcrypt 加盐存储
 
 **Q8：双 Token（access + refresh）机制？**
 - access token 短生命周期（分钟级）随请求携带；refresh token 长生命周期（天级）只用于换新 access
@@ -54,7 +49,6 @@
 **Q9：WebSocket 怎么做？**
 - 升级握手后全双工；心跳保活、断线重连、按房间/用户定向推送
 - NestJS 里 @WebSocketGateway 网关统一管理连接与事件；鉴权在握手阶段（token 随握手传）
-- 【项目】解析任务异步执行，进度实时推送，替代前端轮询；断线重连后按任务状态补拉兜底
 
 ## 四、异常与可观测
 
