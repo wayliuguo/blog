@@ -1,35 +1,6 @@
 # 面试题 · CSS
 
-## 1. CSS 选择器及优先级
-
-**优先级从高到低**：
-
-| 优先级 | 选择器 |
-| --- | --- |
-| 最高 | `!important` |
-| 行内样式 | `style="..."` |
-| 100 | id 选择器 `#id` |
-| 10 | 类 / 伪类 / 属性选择器 `.class` `:hover` `[type]` |
-| 1 | 标签 / 伪元素 `div` `::before` |
-| 0 | 通配符 `*`、组合符、继承值 |
-
-- **计算规则**：按 (a, b, c) 三元组逐级比较——a=行内、b=id 个数、c=类/伪类/属性个数、d=标签/伪元素个数；**不能进位**（11 个 class 压不过 1 个 id）。
-- 同级冲突看**源码顺序**，后者覆盖。
-- **追问**：解析顺序是**从右往左**——先命中最右侧节点再向上验证，缩小匹配范围（`.box a` 先找所有 a 再筛祖先）；所以选择器不宜写过长。
-- 继承属性（color/font）优先级最低，`*` 和 `!important` 都能覆盖继承值。
-
-## 2. display 的 block / inline / inline-block
-
-| | 换行 | 设置宽高 | 默认宽度 |
-| --- | --- | --- | --- |
-| `block` | 独占一行 | 可以 | 撑满父容器 |
-| `inline` | 不换行 | **无效**（水平 margin/padding 部分生效，垂直不生效） | 由内容决定 |
-| `inline-block` | 不换行 | 可以 | 由内容决定 |
-
-- 典型行内：`a span strong em`；典型行内块：`img input button`。
-- **追问**：inline 设置垂直 padding/margin 视觉上不撑开行盒、会溢出父容器；行内元素间换行产生**空白间隙**（font-size: 0 或去掉标签间换行可解）。
-
-## 3. 隐藏元素的方法有哪些
+## 1. 隐藏元素的方法有哪些
 
 | 方式 | 占据空间 | 响应事件 | 是否触发重排 |
 | --- | --- | --- | --- |
@@ -43,7 +14,7 @@
 - 记忆主线：**display none 彻底消失；visibility 占位但不可交互；opacity 占位且可交互**（透明但还在）。
 - 追问：`visibility: hidden` 的子元素设 `visibility: visible` 可单独显示，display/opacity 做不到；读屏（无障碍）对三者的可访问性表现也不同——display none 读屏跳过，opacity: 0 仍可被读到并可聚焦。
 
-## 4. 对盒模型的理解
+## 2. 对盒模型的理解
 
 - **组成**：content → padding → border → margin。
 - **两种模型**（width/height 包含范围不同）：
@@ -55,7 +26,7 @@
 
 - **实践**：项目统一 `* { box-sizing: border-box }`——写 width 时所见即所得，不必心算 padding/border 加成。
 
-## 5. 对 BFC 的理解，如何创建 BFC
+## 3. 对 BFC 的理解，如何创建 BFC
 
 - **定义**：块级格式化上下文——一块独立的布局区域，内部元素按规则布局，**不影响外部**。
 - **触发条件**（满足其一）：
@@ -70,7 +41,7 @@
   - **自适应两栏布局**：BFC 区域不与浮动元素重叠。
 - 追问：`overflow: hidden` 触发 BFC 有副作用（裁掉溢出内容、无法做下拉溢出菜单），**`display: flow-root` 是无副作用的现代首选**。
 
-## 6. 清除浮动的方案
+## 4. 清除浮动的方案
 
 浮动导致的问题：父元素**高度塌陷**、后续元素环绕。
 
@@ -88,7 +59,7 @@
   - 父元素 `display: flow-root`：现代首选，无副作用；
   - 直接不用浮动：flex/grid 布局替代（浮动本为文字环绕设计，做布局是历史用法）。
 
-## 7. position 的属性有哪些，区别是什么
+## 5. position 的属性有哪些，区别是什么
 
 | 值 | 定位基准 | 是否脱离文档流 |
 | --- | --- | --- |
@@ -102,7 +73,7 @@
 - `fixed` 的坑：祖先带 `transform` / `filter` / `will-change` 时，fixed 会改为相对该祖先定位（层叠上下文改变包含块）——移动端弹窗内 fixed 失灵的常见根因。
 - `sticky` 必须指定 `top/right/bottom/left` 之一才生效；父容器 overflow: hidden 会让其失效。
 
-## 8. 如何实现水平垂直居中
+## 6. 如何实现水平垂直居中
 
 - **结论：flex 一行搞定，是默认答案**：
 
@@ -130,7 +101,7 @@
   - 文本类：`text-align: center` + `line-height` 等于高度（仅单行文本）。
 - 追问：absolute+transform 不需知道宽高（translate 百分比相对自身）；transform 触发合成不重排，动画场景更优。
 
-## 9. Flex 布局了解过吗
+## 7. Flex 布局了解过吗
 
 - **容器属性**：
   - `justify-content`：主轴对齐（center / space-between / space-around）；
@@ -149,7 +120,7 @@
   - `flex: 1` 与 `flex: auto` 的区别：前者 basis=0 各项**等分**容器，后者 basis=auto 先按内容再分剩余；
   - 三属性简写省略的默认值：grow=1、shrink=1、basis=0%（`flex: 2` 即 2 1 0%）。
 
-## 10. 两栏 / 三栏布局（左右固定、中间自适应）
+## 8. 两栏 / 三栏布局（左右固定、中间自适应）
 
 - **Flex（现代默认解）**：
   ```css
@@ -164,21 +135,7 @@
   - 区别：中间内容防遮挡的处理——圣杯用父容器 padding + 左右 relative 回位；双飞翼在中间栏内再套一层 div 用 margin 腾空间；
   - 追问价值：为什么中间栏 DOM 要写在前面——**重要内容优先加载/渲染**（也是圣杯双飞翼存在的初衷）。
 
-## 11. 对层叠上下文的理解
-
-- **定义**：决定元素在 z 轴上的渲染顺序的三维概念。同一层叠上下文内按规则比较，不同上下文之间**整体比较**（内部 z-index 再大也翻不出父上下文）。
-- **形成条件**（常用）：
-  - 根元素（html）；
-  - `position` 为 absolute/fixed/sticky **且 z-index ≠ auto**；
-  - `z-index` ≠ auto 的 flex/grid 子项；
-  - `opacity` < 1、`transform` / `filter` / `will-change` / `isolation: isolate` 等。
-- **同一上下文内的比较顺序**：z-index 正数 → 按出现顺序 → 普通流内块级 → 浮动 → inline → z-index: 0/auto → 负数 → 背景边框（自上而下，先绘制在下层）。
-- **高频追问（z-index 为什么"失灵"）**：
-  - 父元素形成层叠上下文，子元素 z-index 再大也只在父上下文内比较；
-  - 对方元素也形成上下文且父级 z-index 更高/更靠后；
-  - `opacity: 0.99`、`transform` 这类"隐形"触发条件——排查时先看祖先是否意外创建了上下文。
-
-## 12. 回流与重绘
+## 9. 回流与重绘
 
 - **回流（reflow / re-layout）**：几何属性变化（宽高、位置、增删节点、读 offsetTop 等）→ 重新计算布局，**开销大**，且可能级联（父变子变）。
 - **重绘（repaint）**：仅视觉属性变化（color、background、visibility）→ 重新绘制，不重排，开销较小。
@@ -192,7 +149,7 @@
   - 频繁动画的元素 `position: absolute` / `fixed` 脱离文档流，缩小回流范围；
   - 复杂动画用 transform/opacity；必要时 `will-change` 提前建层（别滥用，图层多了反而吃内存）。
 
-## 13. transition 与 animation 的区别
+## 10. transition 与 animation 的区别
 
 | | transition | animation |
 | --- | --- | --- |
@@ -204,7 +161,7 @@
 
 - 选型：交互反馈（hover、展开收起）用 transition；自动播放、多帧编排、循环动效用 animation。
 
-## 14. 常见的 CSS 布局单位
+## 11. 常见的 CSS 布局单位
 
 - **px**：固定像素（CSS 像素，受 DPR 影响映射物理像素）。
 - **%**：相对**祖先元素**（个别相对自身：translate、border-radius）。
@@ -213,14 +170,14 @@
 - **vw / vh**：相对**视口**宽/高（100vw = 满宽）；vmin/vm 取小/大边。
 - 追问：vw 与 % 的区别——% 相对祖先，vw 恒相对视口（父级多窄都不影响）；100vh 在移动端地址栏收展时会跳变，可用 `100dvh`（dynamic viewport height）。
 
-## 15. 物理像素、逻辑像素与像素密度（DPR）
+## 12. 物理像素、逻辑像素与像素密度（DPR）
 
 - **物理像素**：设备出厂即固定的发光单元数（iPhone 6/7/8 为 750×1334）。
 - **逻辑像素（CSS 像素）**：开发时写的 px（同机型为 375×667）——`window.innerWidth` / 设计稿视角。
 - **DPR（devicePixelRatio）**= 物理像素 / 逻辑像素（该机型 = 2）。
 - **为什么需要 @2x/@3x 图**：1 个 CSS 像素对应 2~3 个物理像素，1x 图被拉伸到多倍屏会模糊——提供 2x/3x 资源保证一个图片像素至少对应一个物理像素。
 
-## 16. 如何解决 1px 问题
+## 13. 如何解决 1px 问题
 
 - **原因**：CSS 的 1px 在 DPR=2 的屏上用 2 个物理像素渲染，视觉偏粗——CSS 像素 ≠ 物理像素。
 - **方案**：
@@ -228,7 +185,7 @@
   - 直接写 `0.5px`：Safari/Firefox 支持度参差，低版本浏览器直接忽略（变无边框）；
   - **viewport 缩放**：`initial-scale = 1/DPR` 整页缩放——1px 精确了，但文字图片也被无差别缩小，副作用大（老项目 rem 方案里常见，新项目少用）。
 
-## 17. 如何判断元素进入可视区域
+## 14. 如何判断元素进入可视区域
 
 - **传统方案（getBoundingClientRect / 偏移量计算）**：
   - `rect.top < window.innerHeight && rect.bottom > 0` 即在视口内（比 offsetTop+scrollTop 组合更直接）；
@@ -237,9 +194,3 @@
   - 异步观察交叉状态，不阻塞主线程、不监听 scroll；
   - `new IntersectionObserver(entries => {...}).observe(el)`，`entry.isIntersecting` 判断可见；
   - 应用：图片懒加载、曝光埋点、无限滚动。
-
-## 18. width: 100% 与 auto 的区别
-
-- **width: 100%**：子元素 content 恒等于父元素 content——加 padding/border 后**总宽溢出**（content-box 下）。
-- **width: auto**：块级元素的默认值——margin/padding/border 占完后**自动收缩 content**，总宽不溢出（"充满但不超出"）。
-- 一句话：**100% 定死 content，auto 让 content 适配剩余空间**；统一 border-box 后两者差异缩小，但 auto 的语义（让出 margin 空间）仍不可替代（如绝对定位下 `left:0; right:0; margin:auto` 居中就依赖 auto）。
