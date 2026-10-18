@@ -15,6 +15,10 @@
   - 引用类型：栈中存引用地址，实体在堆中，赋值/传参传递的是地址
 - 追问：为什么这样设计？
   - 栈内存由引擎管理、分配回收快，适合小而频繁的数据；堆适合大小不定的大对象，由 GC 管理
+- 高频追问：**为什么 `0.1 + 0.2 !== 0.3`？怎么解决？**
+  - JS 数字用 IEEE 754 双精度（64 位）存储：0.1、0.2 的二进制是无限循环小数，尾数 52 位处截断，两边各带误差，相加后误差显现
+  - 判断相等：`Math.abs(a - b) < Number.EPSILON`
+  - 计算：小数先乘 10 的幂转整数再算（`Math.round((0.1*10 + 0.2*10)) / 10`）；大数用 `BigInt`；金额计算用 decimal 类库，不要拿 `toFixed` 当精度方案（它有舍入坑）
 
 ### 2. 类型检测的方式有哪些？各自的问题？
 
@@ -52,6 +56,7 @@
 
 - 浅拷贝方式
   - `Object.assign({}, obj)`、`{ ...obj }`、`Array.prototype.slice()/concat()`
+  - 注意：`Object.assign` 和扩展运算符都是**浅拷贝**——只复制第一层，嵌套对象仍是共享引用
 - 深拷贝方式对比
 
 | 方案 | 优点 | 缺陷 |
@@ -80,9 +85,35 @@
   - 追问为什么用 WeakMap：弱引用，拷贝完成后不阻止原对象被 GC
   - Date/RegExp、Symbol 键等边界按需补
 
+### 5. 隐式类型转换的规则是什么？`==` 发生什么？为什么推荐 `===`？
+
+**结论：`==` 触发抽象相等算法（ToPrimitive → 转数字比较），规则复杂难预测；`===` 不转换、类型不同直接 false，生产一律 `===`，`==` 唯一合理用法是 `x == null`。**
+
+- 转换核心规则
+  - 对象参与比较先走 ToPrimitive：`Symbol.toPrimitive` 优先，再 `valueOf`，最后 `toString`
+  - 布尔参与比较先转数字（`true → 1`、`false → 0`）
+  - 数字与字符串比较：字符串转数字
+  - `NaN` 与任何值都不相等（包括自身）
+  - `null == undefined` 为 true（规范特例），但它们与其他任何值比较都是 false
+- 必会输出题
+
+  ```js
+  [] == false          // true：[] → '' → 0，false → 0
+  '1' == true          // true：'1' → 1，true → 1
+  null == 0            // false：null 只与 undefined 宽松相等
+  [] + {}              // '[object Object]'：[] → ''，{} → '[object Object]'
+  {} + []              // 0：语句开头的 {} 被解析为块，剩 +[] → 0
+  ```
+
+- 为什么推荐 `===`
+  - 不触发隐式转换，行为可预测；`==` 的规则链几乎没有人在 review 时能心算全
+  - `x == null` 是唯一惯用例外（同时判 null 和 undefined）
+- 追问：`[] == ![]` 为什么是 true？
+  - `![]` 先求值为 false → 0；`[]` → `''` → 0；0 == 0
+
 ## 二、作用域、闭包与内存
 
-### 5. let、const、var 的区别？
+### 6. let、const、var 的区别？
 
 **结论：var 函数作用域 + 变量提升 + 可重复声明；let/const 块级作用域 + 暂时性死区；const 锁绑定不锁值。**
 
@@ -101,7 +132,7 @@
   - 要不可变用 `Object.freeze()`（浅冻结；深层需递归）
 - 实践：默认 const，需要重赋值才 let，禁用 var
 
-### 6. 对作用域与作用域链的理解？
+### 7. 对作用域与作用域链的理解？
 
 **结论：作用域在「定义时」确定（词法作用域），查找变量沿作用域链由内向外。**
 
@@ -115,7 +146,7 @@
 - 高频追问：**作用域是定义时确定还是调用时确定？**
   - 定义时（静态/词法作用域）——闭包能访问定义处变量的根源
 
-### 7. 对执行上下文的理解？
+### 8. 对执行上下文的理解？
 
 **结论：执行上下文是代码运行前的准备工作（变量环境 + this + 作用域链），用栈管理。**
 
@@ -129,7 +160,7 @@
 - 调用栈
   - 压栈 → 执行 → 弹栈；栈溢出即递归过深（`Maximum call stack size exceeded`）
 
-### 8. 对闭包的理解？有什么应用与风险？
+### 9. 对闭包的理解？有什么应用与风险？
 
 **结论：闭包 = 函数 + 其定义时的词法作用域；本质是内层函数持有外层变量的引用，使外层变量 escaping 后无法回收。**
 
@@ -153,7 +184,7 @@
   - 闭包引用的变量常驻内存 → 不再使用的闭包置 null 释放
   - 无脑说「闭包导致内存泄漏」不准确：是闭包延长了生命周期，泄漏指「不再需要却回收不掉」
 
-### 9. JS 的垃圾回收机制？常见内存泄漏有哪些？
+### 10. JS 的垃圾回收机制？常见内存泄漏有哪些？
 
 **结论：V8 分代回收——新生代 Scavenge 复制算法、老生代标记清除 + 标记整理；泄漏几乎都是「该断的引用没断」。**
 
@@ -174,7 +205,7 @@
 
 ## 三、this 与函数
 
-### 10. this 的绑定规则？
+### 11. this 的绑定规则？
 
 **结论：this 由「调用方式」决定，不是定义位置；优先级 new > 显式 > 隐式 > 默认。**
 
@@ -191,7 +222,7 @@
   - 显式绑 null/undefined → 实际指向 window（bind 传 null 常用于只借参数）
 - 追问：箭头函数呢？——没有自己的 this，沿用词法外层，不受四条规则影响
 
-### 11. call、apply、bind 的区别？手写思路？
+### 12. call、apply、bind 的区别？手写思路？
 
 **结论：call/apply 立即调用（仅传参形式不同），bind 返回绑定了 this 的新函数。**
 
@@ -250,7 +281,7 @@
   - 返回的函数再 new：this 失效、指向新实例（new 优先级更高）
   - 要保留原型：中间桥接 `function F(){}; F.prototype = this.prototype`
 
-### 12. 箭头函数与普通函数的区别？
+### 13. 箭头函数与普通函数的区别？
 
 **结论：箭头函数没有自己的 this/arguments/prototype，不可 new，this 沿词法继承且永不可改。**
 
@@ -274,9 +305,39 @@
   - 适合：回调、需要沿用外层 this 的场景（定时器、数组方法）
   - 不适合：对象方法（this 会指向全局）、原型方法、需要动态 this 的 DOM 回调
 
+### 14. 什么是柯里化与偏函数？手写 curry？
+
+**结论：柯里化把多参函数转成逐个收参的函数链，偏函数一次预设部分参数；实现核心都是闭包缓存参数，凑够原函数参数个数才执行。**
+
+- 手写 curry（高频）
+
+  ```js
+  function curry(fn) {
+    return function curried(...args) {
+      if (args.length >= fn.length) return fn.apply(this, args)
+      return (...rest) => curried.apply(this, [...args, ...rest])
+    }
+  }
+  const add3 = (a, b, c) => a + b + c
+  curry(add3)(1)(2)(3)  // 6
+  curry(add3)(1, 2)(3)  // 6，支持一次传多个
+  ```
+
+  - 判据：`fn.length` 决定「收够没有」；不够就返回继续收参的新函数
+  - 追问：`fn.length` 的坑——有默认参数/剩余参数的形参不计入 length
+- 偏函数
+  - 固定一部分参数、留一部分待传，`bind` 的预设参数就是典型偏函数
+  - 柯里化是「逐个收」，偏函数是「一次收一部分」，不必凑满
+- 使用场景
+  - 参数复用：用柯里化定制不同前缀的日志函数、不同正则的校验函数
+  - 延迟执行与函数组合（配合 compose/pipe）
+- 子层级：**纯函数与副作用**
+  - 纯函数：相同输入恒得相同输出，且不修改外部状态——可缓存（memoize）、可测试、并发安全
+  - 副作用：修改外部变量、IO 操作、原地改入参；对照：`map/filter` 是纯的，`sort/splice` 原地改数组就不是
+
 ## 四、原型与继承
 
-### 13. 对原型与原型链的理解？
+### 15. 对原型与原型链的理解？
 
 **结论：函数有 prototype，对象有隐式原型 __proto__ 指向构造函数的 prototype；属性查找沿链向上，终点是 null。**
 
@@ -294,7 +355,7 @@
 - 追问：为什么用原型？
   - 方法共享一份，省内存；class 本质就是原型链的语法糖
 
-### 14. new 操作符做了什么？手写实现？
+### 16. new 操作符做了什么？手写实现？
 
 **结论：建空对象挂原型 → 绑 this 执行构造函数 → 返回值为对象则用它，否则返回新对象。**
 
@@ -316,7 +377,7 @@
 - 追问：ES6 `new.target`？
   - 构造函数内拿到被 new 的类，可用于防误调用（直接调用时 new.target 为 undefined）
 
-### 15. JS 有哪几种继承方式？哪种最好？
+### 17. JS 有哪几种继承方式？哪种最好？
 
 **结论：寄生组合式继承是 ES5 的最优解；ES6 的 class extends 本质就是它。**
 
@@ -341,7 +402,7 @@
 
 ## 五、ES6+ 核心
 
-### 16. Proxy 与 Reflect 的作用？和 defineProperty 的区别？
+### 18. Proxy 与 Reflect 的作用？和 defineProperty 的区别？
 
 **结论：Proxy 代理整个对象的所有底层操作（13 种 trap），Reflect 收拢语言内部方法保持操作原子性。**
 
@@ -362,7 +423,7 @@
   - 返回布尔/结果值，配合 Proxy 避免手动 try/catch
 - 关联：Vue3 响应式 = Proxy + Reflect（lazy 依赖收集）；追问可延伸到「Proxy 嵌套对象要递归代理、访问时才代理」
 
-### 17. Map/Set 与 WeakMap/WeakSet 的区别？
+### 19. Map/Set 与 WeakMap/WeakSet 的区别？
 
 **结论：Map/Set 强引用可遍历；Weak 系列键/值必须是对象且弱引用、不可遍历，用于不阻止 GC 的关联存储。**
 
@@ -385,7 +446,7 @@
   - 私有属性（早期 class 私有字段方案）
 - 追问：WeakMap 怎么「遍历」？——不能用，需要遍历就说明该用 Map
 
-### 18. ES Module 与 CommonJS 的区别？
+### 20. ES Module 与 CommonJS 的区别？
 
 **结论：ESM 静态（编译期确定依赖、可 tree-shaking、值引用），CJS 动态（运行时加载、值拷贝）。**
 
@@ -405,7 +466,7 @@
 
 ## 六、数组与对象
 
-### 19. 数组去重与扁平化怎么做？
+### 21. 数组去重与扁平化怎么做？
 
 **结论：去重首选 Set；扁平化首选 flat(Infinity)，手写用递归或 reduce。**
 
@@ -431,7 +492,7 @@
 
 ## 七、异步编程
 
-### 20. 事件循环（Event Loop）是什么？宏任务与微任务？
+### 22. 事件循环（Event Loop）是什么？宏任务与微任务？
 
 **结论：单线程 + 任务队列；每轮循环先清空全部微任务，再取一个宏任务；微任务优先级恒高于宏任务。**
 
@@ -468,13 +529,14 @@
 - 追问：为什么微任务要在渲染前清空？——微任务属于当前任务的一部分，保证状态一致后才到渲染机会
 - 提醒：浏览器与 Node 的事件循环阶段不同（Node 有阶段+process.nextTick），被问 Node 再展开
 
-### 21. Promise 的状态与静态方法？
+### 23. Promise 的状态与静态方法？
 
 **结论：三种状态单向不可逆；四个静态方法按「何时落定、失败如何传播」记。**
 
 - 状态
   - `pending → fulfilled / rejected`，一旦落定不可变更
   - then 返回**新 Promise**，支撑链式；值穿透：then 传非函数时透传上一结果
+  - 背景：链式调用解决的就是回调地狱——嵌套回调的横向缩进、每层各自处理错误，改为纵向链式 + 末端统一 catch
 - 静态方法对比
 
 | 方法 | 落定时机 | 失败行为 |
@@ -489,7 +551,7 @@
 - 缺点（追问）
   - 无法取消、pending 时无进度信息、错误要显式捕获（未处理的 rejection 静默）
 
-### 22. async/await 的原理与执行顺序？
+### 24. async/await 的原理与执行顺序？
 
 **结论：async 函数是 Generator + Promise 自动执行的语法糖；await 把后面的代码挂成微任务，函数在此暂停让出线程。**
 
@@ -519,7 +581,7 @@
 - 原理追问：Generator 怎么变成 async？
   - 手动反复调 `next()` + 把 Promise 结果传回（co 库的老思路），现在由引擎自动化
 
-### 23. Promise 的错误处理与并发控制怎么做？
+### 25. Promise 的错误处理与并发控制怎么做？
 
 **结论：错误用 try/catch 或 .catch 就地捕获；竞态用「标记最新请求」或 AbortController 作废旧请求。**
 
@@ -543,7 +605,7 @@
 - 并发控制（追问：100 个请求限流 5 个怎么发？）
   - 思路：固定大小的工作池——队列 + 完成一个补一个；说清「请求Promise存起来，某个完成时从队列取下一个」
 
-### 24. setTimeout / setInterval 有哪些陷阱？
+### 26. setTimeout / setInterval 有哪些陷阱？
 
 **结论：定时器不精确（受任务队列阻塞）、this 指向全局、setInterval 可能堆叠执行。**
 
@@ -556,9 +618,66 @@
   - 动画/帧同步用 `requestAnimationFrame`（跟随渲染帧，标签页隐藏自动暂停）
   - 长任务切片用 `requestIdleCallback` / `scheduler.postTask`
 
-## 八、其他高频
+### 27. 手写一个简易 Promise？
 
-### 25. 防抖与节流的区别与实现？
+**结论：核心是状态机（三态单向不可逆）+ 回调队列（pending 期收集、落定后冲刷）+ then 返回新 Promise 支撑链式。**
+
+- 最小可用实现
+
+  ```js
+  class MyPromise {
+    constructor(executor) {
+      this.state = 'pending'
+      this.value = undefined
+      this.callbacks = []                       // pending 期收集 {onFulfilled, onRejected}
+      const resolve = (value) => {
+        if (this.state !== 'pending') return    // 状态单向不可逆
+        this.state = 'fulfilled'
+        this.value = value
+        this.callbacks.forEach(cb => cb.onFulfilled(value))
+      }
+      const reject = (reason) => {
+        if (this.state !== 'pending') return
+        this.state = 'rejected'
+        this.value = reason
+        this.callbacks.forEach(cb => cb.onRejected(reason))
+      }
+      try { executor(resolve, reject) }         // 执行器同步执行
+      catch (e) { reject(e) }                   // 抛错也要转成 reject
+    }
+    then(onFulfilled, onRejected) {
+      // 返回新 Promise → 链式的根基
+      return new MyPromise((resolve, reject) => {
+        const run = (cb, val) => queueMicrotask(() => {   // 回调必须异步执行
+          try {
+            const res = cb(val)
+            res instanceof MyPromise ? res.then(resolve, reject) : resolve(res)
+          } catch (e) { reject(e) }
+        })
+        if (this.state === 'fulfilled') run(onFulfilled, this.value)
+        else if (this.state === 'rejected') run(onRejected, this.value)
+        else this.callbacks.push({
+          onFulfilled: v => run(onFulfilled, v),
+          onRejected: v => run(onRejected, v),
+        })
+      })
+    }
+  }
+  ```
+
+- 五个得分点（面试官在听什么）
+  - 状态机：三态 + 单向不可逆，resolve/reject 里先判 pending
+  - executor 同步执行，内部抛错要 `try/catch` 转 reject
+  - then **返回新 Promise**——链式调用的根基；返回值是 Promise 要等它落定（解包）
+  - 回调异步执行：规范要求，用 `queueMicrotask` 模拟（不能用 setTimeout，那会变成宏任务时序）
+  - pending 期回调先进队列、落定后统一冲刷——这就是「then 先于 resolve 注册也能收到结果」的原因
+- 追问：catch 怎么实现？——`catch(fn)` 就是 `then(null, fn)` 的语法糖
+- 追问：值穿透怎么来的？——then 的参数传非函数时给默认透传回调
+- 追问：all/race 怎么加？——all：计数器 + 逐个 resolve、一个 reject 全 reject；race：第一个落定者定胜负
+
+## 八、高频手写与进阶
+
+### 28. 防抖与节流的区别与实现？
 
 **结论：防抖「停手后才执行一次」，节流「按频率均匀执行」；搜索输入用防抖，滚动/按钮用节流。**
 
@@ -588,3 +707,74 @@
 
 - 追问：防抖要不要「立即执行」版本？——要，首次点击立即响应（按钮防重复提交场景），实现上加 firstCall 分支
 - 追问：`this` 和参数怎么保住？——返回函数里 `fn.apply(this, args)`，不能写成箭头函数丢 this
+
+### 29. DOM 事件流是什么？事件委托的原理与优缺点？
+
+**结论：事件流三阶段 = 捕获 → 目标 → 冒泡；事件委托利用冒泡把子元素的监听收拢到父级，一次注册管一片。**
+
+- 三阶段
+  - 捕获：window → document → … → 目标父级（由外向内）
+  - 目标：到达 target，按**注册顺序**执行（此阶段不分捕获/冒泡）
+  - 冒泡：由内向外逐层上抛
+- `addEventListener` 第三个参数
+  - 布尔：`true` 挂捕获阶段，`false`（默认）挂冒泡阶段
+  - 对象形式：`{ capture, once, passive }`
+    - `once`：触发一次后自动移除
+    - `passive`：承诺不调 `preventDefault`——滚动类事件加它能解锁合成器线程滚动，Chrome 对 document 级 wheel/touch 默认 passive
+- 事件委托
+
+  ```js
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest('button')
+    if (!btn) return
+    handle(btn.dataset.id)
+  })
+  ```
+
+- 委托的优点
+  - 监听器数量骤减（100 个 item → 1 个监听）
+  - **动态子元素自动生效**——新增节点无需重新绑定
+- 委托的缺点/边界
+  - `e.target`（实际点击的）与 `e.currentTarget`（挂监听的）要分清，需 `closest` 向上找
+  - 不冒泡的事件不可委托：`focus/blur`（用 `focusin/focusout` 替代）、`scroll`（可在捕获阶段委托）
+- 追问：`stopPropagation` 与 `stopImmediatePropagation` 区别？
+  - 前者阻止继续传播；后者连**同一元素上后注册的监听**也一起停
+- 追问：`preventDefault` 会阻止冒泡吗？——不会，它只取消默认行为（如链接跳转），传播照常
+
+### 30. 什么是 JS 沙箱？实现思路有哪些？
+
+**结论：沙箱 = 给不可信代码一个受控的全局执行环境，写不出去、读可控制；从 with+Proxy 到快照到 iframe/Worker，隔离强度递增。**
+
+- 为什么需要
+  - 微前端子应用共用一个 window（qiankun 的核心问题）
+  - 在线代码运行器（playground / 低代码表达式）
+  - 第三方脚本 / 插件系统
+- 方案梯度
+
+| 方案 | 思路 | 局限 |
+| --- | --- | --- |
+| `with` + `Proxy` 假 window | 标识符解析进沙箱对象 | 需要 `new Function`，逃逸口多 |
+| Proxy 单/多实例沙箱 | 拦截读写、记录增量、卸载还原 | 同上；qiankun proxySandbox 主方案 |
+| 快照沙箱 | 激活时拍 window 快照、卸载时 diff 还原 | 不支持 Proxy 的降级方案；全量 diff 慢 |
+| iframe | 真 window，天然隔离 | 通信/路由/样式割裂，成本高 |
+| Web Worker | 独立线程，无 DOM | 通信要序列化，场景受限 |
+
+- Proxy 沙箱核心（面试写出这段就够）
+
+  ```js
+  function createSandbox() {
+    const fakeWindow = new Proxy({}, {
+      has: () => true,                              // 让 with 认为所有标识符都在沙箱内
+      get: (t, k) => (k in t ? t[k] : window[k]),   // 沙箱没有的读，受控回退真 window
+      set: (t, k, v) => { t[k] = v; return true },  // 写只进沙箱，不污染全局
+    })
+    return (code) =>
+      new Function('window', `with (window) { ${code} }`)(fakeWindow)
+  }
+  ```
+
+- 关键点（追问区）
+  - `has` 恒返回 true 是 `with` 生效的前提：所有裸标识符都先查 fakeWindow
+  - 多实例沙箱：每个子应用一份 fakeWindow 互不可见；卸载时把增量改动还原，再激活时恢复
+  - 逃逸口要心里有数：`setTimeout`、事件回调、`Date`、动态 script——严格沙箱要连这些一起代理
+  - 加分：`ShadowRealm` 提案是未来的语言级隔离方案；真正安全级的不可信代码只信 iframe/Worker/服务端
