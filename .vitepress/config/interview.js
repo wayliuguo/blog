@@ -22,24 +22,21 @@ export default [
             { text: '监控系统', link: '/interview/前端/面试题-监控系统' },
             { text: '性能优化', link: '/interview/前端/面试题-性能优化' },
             { text: '自动化测试', link: '/interview/前端/面试题-自动化测试' },
-            { text: 'Vite', link: '/interview/前端/面试题-Vite' },
-            { text: 'Rollup', link: '/interview/前端/面试题-Rollup' }
+            { text: 'Rollup', link: '/interview/前端/面试题-Rollup' },
+            { text: 'Vite', link: '/interview/前端/面试题-Vite' }
         ]
     },
     {
         text: '后端',
         collapsed: false,
         items: [
-            { text: 'Node 核心与运行环境', link: '/interview/后端/面试题-Node核心与运行环境' },
-            { text: 'NestJS 与 Web 框架', link: '/interview/后端/面试题-NestJS与Web框架' },
-            { text: '数据库缓存与部署', link: '/interview/后端/面试题-数据库缓存与部署' }
-        ]
-    },
-    {
-        text: 'AI',
-        collapsed: false,
-        items: [
-            { text: 'Agent 开发', link: '/interview/ai/面试题' }
+            { text: 'Node 核心', link: '/interview/后端/面试题-Node核心' },
+            { text: 'Express 与 Koa', link: '/interview/后端/面试题-Express与Koa' },
+            { text: 'NestJS', link: '/interview/后端/面试题-NestJS' },
+            { text: 'MySQL', link: '/interview/后端/面试题-MySQL' },
+            { text: 'MongoDB', link: '/interview/后端/面试题-MongoDB' },
+            { text: 'Redis', link: '/interview/后端/面试题-Redis' },
+            { text: 'Docker 与部署', link: '/interview/后端/面试题-Docker与部署' }
         ]
     }
 ]

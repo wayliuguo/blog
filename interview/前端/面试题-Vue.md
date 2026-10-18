@@ -84,26 +84,7 @@
 - Vue2 对比（追问）
   - Vue2 只有 `value + @input` 一个绑定，靠 `model` 选项改 prop/event 名，且用 `.sync` 修饰符实现多属性双向——Vue3 把 `.sync` 合并进了参数化 v-model
 
-### 6. :class 和 :style 动态绑定有几种写法？
-
-**结论：class 有对象、数组、数组嵌套对象三种；style 有对象、数组两种；本质都是「表达式最终算成字符串/对象交给 Vue 拼接」。**
-
-- class 三种写法
-
-| 写法 | 示例 | 场景 |
-| --- | --- | --- |
-| 对象 | `:class="{ active: isActive, disabled: !ok }"` | 按条件开关固定类名 |
-| 数组 | `:class="[baseClass, errorClass]"` | 组合多个变量类名 |
-| 数组嵌套对象 | `:class="[{ active: isActive }, baseClass]"` | 混合「条件类」和「固定类」 |
-
-- style 两种写法
-  - 对象：`:style="{ color: activeColor, fontSize: size + 'px' }"`（camelCase 或 kebab-case 都行）
-  - 数组：`:style="[baseStyle, overrideStyle]"`——后面的覆盖前面的
-- 细节（追问）
-  - style 对象属性会自动加浏览器前缀（transform 等）
-  - class 数组里的假值（null/undefined/false）会被忽略——常用来做条件清除
-
-### 7. nextTick 的作用与原理？什么时候必须用？
+### 6. nextTick 的作用与原理？什么时候必须用？
 
 **结论：Vue 的更新是异步批量的——nextTick 把回调放进微任务队列，保证在「本轮 DOM 更新完成后」执行；场景是「改完数据立刻要读最新 DOM」。**
 
@@ -119,7 +100,7 @@
 - 追问：nextTick 和 setTimeout(fn, 0) 的区别？
   - 微任务 vs 宏任务：nextTick 在本轮就执行且保证排在 DOM 更新之后、渲染之前；setTimeout 要等下一轮，中间可能已经绘制了旧画面
 
-### 8. 模板编译流程：模板如何变成真实 DOM？
+### 7. 模板编译流程：模板如何变成真实 DOM？
 
 **结论：三步——parse 把模板字符串解析成 AST，transform 遍历 AST 做转换与静态优化标记，generate 把 AST 拼成 render 函数；运行时执行 render 生成 vnode，再 patch 成真实 DOM。**
 
