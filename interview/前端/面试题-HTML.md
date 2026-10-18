@@ -73,13 +73,7 @@
 - **Web API**：Web Workers、WebSocket、Geolocation、拖放 API、`querySelector(All)`。
 - 其他：`progress/meter` 进度条、历史管理 `history.pushState`。
 
-## 7. 行内元素、块级元素
-
-- **块级**：独占一行、可设宽高——`div p ul ol li h1~h6 dl dt dd`。
-- **行内**：不换行、宽高由内容决定——`a span b strong em`。
-- **行内块**：外部不换行、内部可设宽高——`img input button select textarea`。
-
-## 8. iframe 的优点和缺点
+## 7. iframe 的优点和缺点
 
 iframe：在当前页面内嵌另一个文档的行内框架。
 
@@ -95,28 +89,7 @@ iframe：在当前页面内嵌另一个文档的行内框架。
   - `allow`：按需授予权限；
   - SEO 敏感页慎用（爬虫不索引其内容）。
 
-## 9. 语义化进阶：landmark、标题层级与无障碍
-- **landmark 地标**：
-  - header/nav/main/aside/footer 是原生地标，读屏可按地标跳转；
-  - `main` 每页一个；
-  - 用了原生标签**不必再堆** `role="navigation"` 这类冗余 ARIA。
-- **标题层级**：h1~h6 构成文档大纲——不跳级、一页一个 h1；纯视觉加粗的 div 充当标题会让大纲断裂。
-- **img 必有 alt**：
-  - 内容图：alt 写清含义（利于 SEO 与读屏）；
-  - 装饰图：写空 `alt=""`（读屏跳过，比不写 alt 好）。
-- **表单 label**：
-  - `<label for>` 关联 input，还能扩大点击热区；
-  - **placeholder 不是 label**——输入后消失，读屏与自动填充都不认。
-- **ARIA 第一原则**：能用原生就不用 ARIA：
-  - 原生 `<button>` 自带键盘（空格/回车）、role、disabled 语义；
-  - div+click 模拟按钮这些全要手补——ARIA 只在原生能力不够时用（自定义 tabs/slider）。
-- **tabindex**：
-  - `0`：进自然 Tab 序；
-  - `-1`：仅编程聚焦；
-  - 正数别用——打乱焦点顺序，a11y 审查红旗。
-- **lang**：`<html lang="zh-CN">` 影响读屏发音与翻译行为。
-
-## 10. 资源提示：preload / prefetch / preconnect / dns-prefetch
+## 8. 资源提示：preload / prefetch / preconnect / dns-prefetch
 
 考察点在「什么时候用哪个」：
 
@@ -132,7 +105,7 @@ iframe：在当前页面内嵌另一个文档的行内框架。
   - preload 字体必须带 `crossorigin`（同源也要），否则走 CORS 模式会**二次下载**；
   - preload 滥用会挤占关键资源带宽，反而拖慢 LCP。
 
-## 11. 跨标签页通信有哪些方式
+## 9. 跨标签页通信有哪些方式
 
 | 方式 | 适用面 |
 | --- | --- |
@@ -143,12 +116,3 @@ iframe：在当前页面内嵌另一个文档的行内框架。
 | WebSocket / SSE | 需服务端中转（多端同步） |
 
 - Cookie + setInterval 轮询：过时方案，提及用于对比。
-
-## 12. data-* 自定义属性
-
-- **用途**：在 DOM 上挂业务数据供 JS 读，替代用 class/id 夹带数据。
-- **读写**：
-  - JS 侧：`el.dataset.userId`（驼峰映射 `data-user-id`）；
-  - CSS 侧：`attr(data-xxx)`（用于 content）。
-- **场景**：埋点参数、列表行带 id、纯 CSS 组件状态开关。
-- **边界**：只能存字符串、序列化进 HTML 增加体积——大数据量/复杂状态走 JS 内存（WeakMap 等）。
