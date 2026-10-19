@@ -161,7 +161,7 @@ list.addEventListener('click', (e) => {
 const ac = new AbortController()
 window.addEventListener('scroll', onScroll, { signal: ac.signal })
 window.addEventListener('resize', onResize, { signal: ac.signal })
-ac.abort() // 组件卸载时一次清理，还能顺带取消 fetch（见第七节）
+ac.abort() // 组件卸载时一次清理，还能顺带取消 fetch（见第八节）
 ```
 
 常见疑问：**移除元素会自动解绑吗？** 元素没有其他引用时会被 GC、监听器一起消失；但节点被变量或闭包持有（分离 DOM）时引用链还在——问题不在"要不要解绑"，而在"为什么还留着引用"。
@@ -316,18 +316,16 @@ const data = await res.json()
 > 示意片段（无配套脚本）
 
 ```js
-// 超时：最省事的写法，抛出的错误 name 是 TimeoutError
+// 超时：最省事的写法
 await fetch(url, { signal: AbortSignal.timeout(5000) })
 
-// 主动取消：用户点关闭、切路由时调用，抛出的错误 name 是 AbortError
+// 主动取消：用户点关闭、切路由时调用
 const ctrl = new AbortController()
 fetch(url, { signal: ctrl.signal })
 ctrl.abort()
 ```
 
-- 两者都是"被我方取消"，**不是网络故障**——把 `AbortError` 当异常上报，用户每点一次取消就产生一条假告警。
-- `abort()` 是**真的掐断请求**（连接取消、响应体停止下载）；"请求照发只是不处理结果"照样消耗带宽与后端资源。
-- 需要既超时又能手动取消时，用 `AbortSignal.any([userSignal, AbortSignal.timeout(5000)])` 合并信号。
+需要既超时又能手动取消时，用 `AbortSignal.any([userSignal, AbortSignal.timeout(5000)])` 合并信号。`abort()` 是**真的掐断请求**（连接取消、响应体停止下载），"请求照发只是不处理结果"照样消耗带宽与后端资源。错误类型与统一模型见下一节。
 
 ### 竞态：别让旧结果覆盖新结果
 
@@ -375,6 +373,45 @@ async function searchAbort(q) {
 | 流式响应 | 支持（`ReadableStream`） | 不支持 |
 
 结论：**新代码一律用 `fetch`**；只有需要**上传进度**或维护老代码时才碰 XHR。（`axios` 浏览器端长期默认走 XHR，所以 Network 面板看到 XHR 类型，不代表业务代码直接调了 `XMLHttpRequest`。）
+
+## 八、AbortController 与 AbortSignal：一套统一的中断标记
+
+前文几处出现的 `AbortController` / `AbortSignal` 是同一套机制：**controller 是控制端，signal 是信号端**。controller 调 `abort()`，所有持有对应 signal 的 API 同时被中断——一次生成、多处分发，这是它比"逐个取消"好的根本原因：
+
+> 示意片段（无配套脚本）
+
+```js
+const controller = new AbortController()
+const { signal } = controller
+
+signal.addEventListener('abort', () => {
+  console.log('被中断了，原因：', signal.reason)
+})
+
+// 同一个 signal 可以分发给任意多个支持中断的 API：
+fetch('/api/user', { signal })
+window.addEventListener('scroll', onScroll, { signal })
+const reader = response.body.getReader()
+reader.cancel(signal.reason) // 读流也能带上中断原因
+
+controller.abort('用户离开页面') // 一处调用，fetch 取消 + 监听器移除
+```
+
+支持 signal 的 API：`fetch` / `Request`、`addEventListener`、`ReadableStream` 取消、以及各类封装了 fetch 的库。
+
+### 两个静态工具
+
+- **`AbortSignal.timeout(ms)`**：超时工厂，不需要手动建 controller，到点自动中断。
+- **`AbortSignal.any([signalA, signalB])`**：合并多个信号，任一触发即触发——"既超时又能手动取消"就靠它组合。
+
+### 错误语义：中断不是网络故障
+
+| 中断方式 | 抛出的错误 `name` | 典型场景 |
+| --- | --- | --- |
+| `controller.abort()` | `AbortError` | 用户主动取消（点关闭、切路由） |
+| `AbortSignal.timeout(ms)` | `TimeoutError` | 超时 |
+
+两者都表示"**被我方取消**"，不是网络故障：把 `AbortError` 当异常上报，用户每点一次取消就产生一条假告警。正确做法是按 `error.name` 分型——`AbortError` 静默处理（属于预期），`TimeoutError` 才值得提示用户或重试。
 
 ## 参考
 
