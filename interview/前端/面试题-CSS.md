@@ -39,6 +39,36 @@
   - **清除浮动/高度塌陷**：父元素触发 BFC 后计算高度会包含浮动子元素；
   - **解决 margin 重叠**：相邻元素 margin 会折叠，包一层 BFC 容器即隔开；
   - **自适应两栏布局**：BFC 区域不与浮动元素重叠。
+
+三个场景对应的例子（都可实际跑通）：
+
+```html
+<!-- 例 1：清除浮动 / 高度塌陷 —— 父元素加 flow-root，高度恢复正常 -->
+<style>
+  .parent { display: flow-root; } /* BFC 会把浮动子元素算进高度 */
+  .float-box { float: left; width: 100px; height: 100px; background: #f80; }
+</style>
+<div class="parent">
+  <div class="float-box"></div>
+</div>
+
+<!-- 例 2：解决 margin 重叠 —— 包一层 BFC 容器，上下间距变成 40px 而不是折叠成 20px -->
+<style>
+  .bfc-wrap { display: flow-root; }
+  .box { margin: 20px 0; background: #eee; }
+</style>
+<div class="box">上面</div>
+<div class="bfc-wrap"><div class="box">下面（被 BFC 隔开，margin 不再折叠）</div></div>
+
+<!-- 例 3：自适应两栏布局 —— 左栏浮动固定宽，右栏触发 BFC 不与浮动重叠 -->
+<style>
+  .left { float: left; width: 200px; height: 200px; background: #08f; }
+  .right { display: flow-root; /* BFC 不与浮动元素重叠，自动占据剩余宽度 */ background: #eee; }
+</style>
+<div class="left"></div>
+<div class="right">右侧自适应文字……</div>
+```
+
 - 追问：`overflow: hidden` 触发 BFC 有副作用（裁掉溢出内容、无法做下拉溢出菜单），**`display: flow-root` 是无副作用的现代首选**。
 
 ## 4. 清除浮动的方案

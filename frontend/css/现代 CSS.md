@@ -547,28 +547,6 @@ prefers-reduced-motion: reduce = true  → .pulse animation-name = none
 
 `@supports selector(...)` 可以直接把选择器能力当条件，比"靠 UA 判断"可靠得多。查基线用 caniuse 或 MDN 页脚的兼容表；构建侧可以用 Browserslist 把目标浏览器的范围固化成配置。
 
-## 配套代码
-
-四个页面都在仓库 `frontend/基础/CSS/code/site/`，各自把探针结果打在页面末尾——打开就能看到本文引用的那些计算值。
-
-| 文件 | 演示什么 | 对应小节 |
-| --- | --- | --- |
-| `./code/site/modern-css-layer.css` | 层序压过源码顺序、层压过特异性、`!important` 反转层序、同层内源码顺序，四组用同一选择器对照（页面 `modern-css-layer.html`） | 层叠层：把覆盖顺序写成显式声明 |
-| `./code/site/modern-css-tokens.css` | 令牌与 `var()` 兜底、子树重定义、`data-theme` 换肤、`@property` 的继承开关、`color-mix()` 与 `oklch()` 颜色算式（页面 `modern-css-tokens.html`） | 自定义属性：把「值」抽成令牌 |
-| `./code/site/modern-css-container.css` | `container-type` + `@container` 让同一组件在 280px / 520px 容器里换形；同页的媒体查询对两个容器给出同一答案（页面 `modern-css-container.html`，可拖动改宽度） | 容器查询：媒体查询管页面，容器查询管组件 |
-| `./code/site/modern-css-selectors.css` | `:is()` 带权 / `:where()` 清零、`clamp()` 三档、`aspect-ratio` 锁比例、`:has()` 表单状态、`prefers-reduced-motion` 降级（页面 `modern-css-selectors.html`） | 现代选择器与函数 |
-
-启动方式：在 `code` 目录执行 `npm start`（即 `node server.js`），打开 `http://localhost:5175/`，从示例目录进入四个新页面。
-
-本文引用的实测值来自页面内的 `getComputedStyle` 探针，复现命令（在仓库根执行，`--force-prefers-reduced-motion` 用于看动效降级分支）：
-
-> 示意片段（无配套脚本）
-
-```
-chrome --headless=new --dump-dom --window-size=1200,900 \
-  "file:///.../frontend/基础/CSS/code/site/modern-css-layer.html"
-```
-
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
