@@ -215,15 +215,33 @@ document.querySelectorAll('img[data-src]').forEach((img) => io.observe(img))
 
 ### ResizeObserver：元素自己的尺寸变了
 
-盯的是**被观察元素自己的内容盒尺寸**，比 `window.resize` 精确——窗口没变但被 flex 挤窄、侧边栏折叠、字体加载撑高都能感知：
+盯的是**被观察元素自己的内容盒尺寸**，比 `window.resize` 精确——窗口没变但被 flex 挤窄、侧边栏折叠、字体加载撑高都能感知。
+
+场景：一个图表容器，宽度由 flex 布局决定。侧边栏折叠时它变宽了，但窗口尺寸没变，`window.resize` 不会触发——这时就该观察元素本身：
+
+> 示意片段（无配套脚本）
+
+```html
+<div id="chart" style="width: 100%; height: 200px;"></div>
+```
 
 > 示意片段（无配套脚本）
 
 ```js
-new ResizeObserver((entries) => {
+const box = document.getElementById('chart')
+
+// 按新尺寸重画图表（这里简化为输出文本）
+function render(width, height) {
+  box.textContent = `当前尺寸：${Math.round(width)} × ${Math.round(height)}`
+}
+
+const ro = new ResizeObserver((entries) => {
   const { width, height } = entries[0].contentRect
   render(width, height)
-}).observe(box)
+})
+
+ro.observe(box) // 开始观察；此后每次尺寸变化（侧边栏折叠等）回调自动执行
+// ro.disconnect() // 组件卸载时停止观察
 ```
 
 坑：**在回调里改被观察元素自身的尺寸**会形成"改尺寸 → 回调 → 再改"循环，浏览器跳过通知并打 `ResizeObserver loop completed` 警告。把写操作放 `requestAnimationFrame`，或临时 `unobserve` 再恢复。
