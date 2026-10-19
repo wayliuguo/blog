@@ -248,7 +248,40 @@ ro.observe(box) // 开始观察；此后每次尺寸变化（侧边栏折叠等�
 
 ### MutationObserver：DOM 被改了
 
-订阅子节点增删、属性与文本变化，回调还能读出"改之前是什么"（`attributeOldValue`）。用途：检测第三方脚本插了什么、富文本编辑器改了什么、DOM 变更当埋点。`takeRecords()` 主动取走未投递记录，`disconnect()` 停止观察。
+订阅子节点增删、属性与文本变化，回调还能读出"改之前是什么"（`attributeOldValue`）。用途：检测第三方脚本插了什么、富文本编辑器改了什么、DOM 变更当埋点。
+
+场景：页面里有个容器，第三方脚本或编辑器会往里改东西，想知道"谁在什么时候改了什么"：
+
+> 示意片段（无配套脚本）
+
+```html
+<div id="editor"></div>
+```
+
+> 示意片段（无配套脚本）
+
+```js
+const host = document.getElementById('editor')
+
+const mo = new MutationObserver((mutations) => {
+  mutations.forEach((m) => {
+    if (m.type === 'childList') console.log('节点增删：', m.addedNodes, m.removedNodes)
+    if (m.type === 'attributes') {
+      console.log(`属性 ${m.attributeName} 从 "${m.oldValue}" 改为 "${m.target.getAttribute(m.attributeName)}"`)
+    }
+  })
+})
+
+mo.observe(host, {
+  childList: true,       // 子节点增删
+  subtree: true,         // 连同所有后代
+  attributes: true,      // 属性变化
+  attributeOldValue: true, // 回调里能拿到改之前的值
+})
+
+mo.takeRecords()   // 主动取走尚未投递的记录（可选）
+// mo.disconnect() // 停止观察
+```
 
 关键差异：**`MutationObserver` 回调走微任务队列**（与 `Promise.then` 同类），不依赖渲染帧；IO / RO 的回调依赖渲染帧。
 
