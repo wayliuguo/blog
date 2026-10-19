@@ -28,13 +28,7 @@
   - `aside`：侧边栏；
   - `footer`：底部。
 
-## 3. DOCTYPE 的作用
-
-- **告诉浏览器以哪种规范模式解析文档**（不写或写错会落入怪异模式）。
-- `CSS1Compat`：**标准模式**（Strict）——按 W3C 规范解析，盒模型 width=内容宽。
-- `BackCompat`：**怪异模式**（Quirks）——兼容旧页面，盒模型 width 含 padding/border，行高、图片底部空隙等行为也差异。
-
-## 4. script 标签中 defer 和 async 的区别
+## 3. script 标签中 defer 和 async 的区别
 
 | 加载方式 | 加载阶段 | 执行时机 | 多脚本顺序 |
 | --- | --- | --- | --- |
@@ -44,7 +38,7 @@
 
 - 一句话：**defer = 并行加载、延后按序执行；async = 并行加载、立即乱序执行**。
 
-## 5. 常用的 meta 标签
+## 4. 常用的 meta 标签
 
 | meta | 作用 |
 | --- | --- |
@@ -60,7 +54,7 @@
   - `<link rel="canonical">`：多 URL 同内容时指定权威地址，避免 SEO 权重分散；
   - `theme-color`：PWA 浏览器 UI 配色。
 
-## 6. HTML5 有哪些更新
+## 5. HTML5 有哪些更新
 
 - **语义化标签**：header/nav/main/article/section/aside/footer。
 - **媒体**：`video` / `audio`（+ `source` 多格式兜底）。
@@ -73,7 +67,7 @@
 - **Web API**：Web Workers、WebSocket、Geolocation、拖放 API、`querySelector(All)`。
 - 其他：`progress/meter` 进度条、历史管理 `history.pushState`。
 
-## 7. iframe 的优点和缺点
+## 6. iframe 的优点和缺点
 
 iframe：在当前页面内嵌另一个文档的行内框架。
 
@@ -89,7 +83,7 @@ iframe：在当前页面内嵌另一个文档的行内框架。
   - `allow`：按需授予权限；
   - SEO 敏感页慎用（爬虫不索引其内容）。
 
-## 8. 资源提示：preload / prefetch / preconnect / dns-prefetch
+## 7. 资源提示：preload / prefetch / preconnect / dns-prefetch
 
 考察点在「什么时候用哪个」：
 
@@ -105,7 +99,7 @@ iframe：在当前页面内嵌另一个文档的行内框架。
   - preload 字体必须带 `crossorigin`（同源也要），否则走 CORS 模式会**二次下载**；
   - preload 滥用会挤占关键资源带宽，反而拖慢 LCP。
 
-## 9. 跨标签页通信有哪些方式
+## 8. 跨标签页通信有哪些方式
 
 | 方式 | 适用面 |
 | --- | --- |
