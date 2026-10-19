@@ -79,6 +79,18 @@ els.forEach((el, i) => { el.style.width = widths[i] + 1 + 'px' })
 
 ### target 与 currentTarget
 
+先看场景：监听器挂在外层卡片上，点的是里面的内层小标签——
+
+> 示意片段（无配套脚本）
+
+```html
+<div id="card">
+  <div class="chip">小标签</div>
+</div>
+```
+
+点击的是内层的 `.chip`，事件冒泡到 `#card` 触发监听器：
+
 > 示意片段（无配套脚本）
 
 ```js
