@@ -593,13 +593,15 @@ const AsyncComp = defineAsyncComponent(() => import('./BigChart.vue'))
 
 ```vue
 <script setup>
-import { ref } from 'vue'
-import AsyncBigChart from './components/BigChart' // defineAsyncComponent 的返回值
+import { ref, defineAsyncComponent } from 'vue'
+
+// defineAsyncComponent 的返回值是一个"包裹组件"，在模板里当普通组件使用
+const AsyncBigChart = defineAsyncComponent(() => import('./components/BigChart.vue'))
 const show = ref(false)
 </script>
 
 <template>
-  <!-- 场景1：直接写在首屏模板里 → 首次渲染（进入页面）就加载 -->
+  <!-- 场景1：直接写在首屏模板里 → 首次渲染（进入页面）就加载 BigChart -->
   <AsyncBigChart />
 
   <!-- 场景2：包在 v-if / 弹窗里 → 点击"打开报表"那一刻才加载 -->
