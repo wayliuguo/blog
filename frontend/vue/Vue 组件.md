@@ -585,6 +585,43 @@ import { defineAsyncComponent } from 'vue'
 const AsyncComp = defineAsyncComponent(() => import('./BigChart.vue'))
 ```
 
+### 触发时机：第一次被渲染时，不是定义时
+
+`defineAsyncComponent(...)` 执行时 `import()` **并不会发起**——loader 只是一个"要用到组件时才调用"的函数。真正的加载时机是**这个组件第一次被渲染到页面上**的那一刻，所以"什么时候加载"完全由它在模板里的位置决定：
+
+> 示意片段（无配套脚本）
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import AsyncBigChart from './components/BigChart' // defineAsyncComponent 的返回值
+const show = ref(false)
+</script>
+
+<template>
+  <!-- 场景1：直接写在首屏模板里 → 首次渲染（进入页面）就加载 -->
+  <AsyncBigChart />
+
+  <!-- 场景2：包在 v-if / 弹窗里 → 点击"打开报表"那一刻才加载 -->
+  <button @click="show = true">打开报表</button>
+  <AsyncBigChart v-if="show" />
+</template>
+```
+
+- **路由懒加载**同理：代码被切到独立 chunk，但只有**跳转到该路由**时才真正下载（见下）。
+- 想再提前一点（点击瞬间也不想看到 loading），有两个常用手段：
+  - **浏览器空闲预加载**：`requestIdleCallback` 里再执行一遍同一个 `import()`——动态导入按 URL 缓存，空闲时下载完，用户真点到按钮时 loader 秒回：
+
+    > 示意片段（无配套脚本）
+
+    ```js
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => import('./components/BigChart.vue'))
+    }
+    ```
+
+  - **悬停预加载**：按钮的 `mouseenter` 时触发同一个 `import()`——用户从悬停到点击的几百毫秒里，chunk 已经在下载了。
+
 在路由中也可以配合动态导入实现路由级懒加载：
 
 > 示意片段（无配套脚本）
