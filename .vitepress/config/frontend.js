@@ -43,7 +43,6 @@ export default [
         items: [
             { text: 'HTTP 协议与缓存体系', link: '/frontend/网络/HTTP%20协议与缓存体系' },
             { text: '前端安全', link: '/frontend/网络/前端安全' },
-            { text: '前端安全进阶', link: '/frontend/网络/前端安全进阶' },
             { text: '模块总结（网络）', link: '/frontend/网络/总结' }
         ]
     },
