@@ -1,6 +1,6 @@
 # Vue Router 原理
 
-> 本篇所有 `摘自` 代码块来自配套的最小实现 `code/vue3/mini-router`（零依赖、可运行、12 个单测）——正文每讲一个机制，就落到对应源码上解析一次；运行方式见篇末「配套代码」。应用层的用法（`createRouter` 配置、守卫怎么写、懒加载）见《Vue 路由与状态》，本篇回答"它内部是怎么做到的"。
+> 本篇所有 `摘自` 代码块来自配套的可断点实现 `code/vue3/mini-router.html`（零依赖，浏览器直接打开，F12 断点调试）——正文每讲一个机制，就落到对应源码分区上解析一次；断点建议与 demo 对照见篇末「配套代码」。应用层的用法（`createRouter` 配置、守卫怎么写、懒加载）见《Vue 路由与状态》，本篇回答"它内部是怎么做到的"。
 
 ## 一、路由在解决什么
 
@@ -10,13 +10,14 @@
 2. **URL 怎么变**：改地址栏但不刷新页面，前进/后退还能跟上？（history 抽象）
 3. **跳转怎么管**：没登录不让进、跳转前确认、跳转后埋点——在哪个时机拦？（守卫流程）
 
-配套实现里，这三件事各归一个文件：
+配套实现里，这三件事各归一个分区：
 
 ```
-src/
-├── matcher.js   问题1：路径 → matched 组件链 + params/query
-├── history.js   问题2：URL 在哪 / 怎么改 / 变了通知谁（memory / hash / web 三模式同接口）
-└── router.js    问题3：守卫流程 → 改 URL → 改 currentRoute → 视图 effect 重跑
+code/vue3/mini-router.html 内的分区（自上而下）
+├── ① reactivity  问题0：最小 ref + effect，撑起 currentRoute → 视图重跑
+├── ② matcher     问题1：路径 → matched 组件链 + params/query
+├── ③ history     问题2：URL 在哪 / 怎么改 / 变了通知谁（memory / hash / web 三模式同接口）
+└── ④ router      问题3：守卫流程 → 改 URL → 改 currentRoute → 视图 effect 重跑
 ```
 
 ## 二、matcher：路径怎么变成组件链
@@ -25,7 +26,7 @@ src/
 
 `createRouterMatcher` 把嵌套的 routes 配置**扁平化**成一张 `path → record` 的 Map，每个 record 上带着自己的路径正则与 `matched` 链（祖先 record + 自身）：
 
-> 摘自 `./code/vue3/mini-router/src/matcher.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
 function insert(routeList, parentPath = '', parentMatched = []) {
@@ -55,7 +56,7 @@ function insert(routeList, parentPath = '', parentMatched = []) {
 
 动态段在编译期被转成捕获组：`/user/:id` → `/^\/user\/([^/]+)\/?$/` + 参数名表。`resolve` 先查精确表，未命中再逐条跑正则，捕获组填进 `params`：
 
-> 摘自 `./code/vue3/mini-router/src/matcher.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
 function compilePath(path) {
@@ -69,7 +70,7 @@ function compilePath(path) {
 }
 ```
 
-> 摘自 `./code/vue3/mini-router/src/matcher.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
         const exact = records.get(normalize(rawPath))
@@ -114,7 +115,7 @@ matched = []   <- RouterView 渲染为空
 
 运行时往 record 表里再 `insert` 一条，就是权限路由的底层机制——登录后根据角色"补登记"路由，而不是一开始就全量注册：
 
-> 摘自 `./code/vue3/mini-router/src/matcher.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
     // 动态路由：运行时追加（权限路由的底层机制）
@@ -134,7 +135,7 @@ resolve("/docs/mini-router") = { slug: 'mini-router' }
 
 三种模式的差异只在"URL 存在哪、怎么改"，对外是同一个接口：`location` / `push` / `replace` / `go` / `listen`。路由器只依赖这个接口：
 
-> 摘自 `./code/vue3/mini-router/src/history.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
 function createMemoryHistory() {
@@ -182,7 +183,7 @@ web 模式把栈换成 History API：`push` 是 `history.pushState`（**不触�
 
 路由器内部只有一个响应式状态 `currentRoute`（一个 ref），存的是 `resolve` 后的完整路由对象（含 `matched` 链）。视图层的 `RouterView` 订阅它——**currentRoute 一变，视图 effect 重跑**，这就是"路由切换 = 组件切换"的全部：
 
-> 摘自 `./code/vue3/mini-router/src/router.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
 function createRouter({ history, routes }) {
@@ -201,7 +202,7 @@ function createRouter({ history, routes }) {
 
 `navigate` 是路由器的主干，守卫按"全局 → 记录级"的顺序执行，每种守卫都有三种表态：通过（返回 undefined）、取消（返回 false）、重定向（返回新地址，递归重新走一遍流程）：
 
-> 摘自 `./code/vue3/mini-router/src/router.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
     function navigate(to, method) {
@@ -264,7 +265,7 @@ location 是否未变 = true | currentRoute 是否未变 = true
 
 `RouterView` 的本质是一个"按渲染深度查 matched 链"的纯函数——第几层 `RouterView` 就取 `matched[depth]` 的组件，渲染交给宿主框架：
 
-> 摘自 `./code/vue3/mini-router/src/router.js`
+> 摘自 `./code/vue3/mini-router.html`
 
 ```js
     // RouterView 的选择逻辑：按渲染深度取 matched 链上的组件（真实渲染交给宿主框架）
@@ -297,25 +298,18 @@ back 后 location = /user/7?tab=info | 视图重跑次数 = 4
 
 ## 配套代码
 
-本篇示例来自 `code/vue3/mini-router`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
+本篇配套是一个自包含的调试入口 `./code/vue3/mini-router.html`：零依赖，浏览器直接打开，F12 断点调试；打开时控制台自动跑完 3 个 demo，页面顶部列了建议断点位置。文件内按分区组织：
 
-| 文件 | 作用 | 对应小节 |
+| 文件 / 分区 | 内容 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/vue3/mini-router/src/matcher.js` | `compilePath`（:id → 正则）/ 嵌套路由扁平化（matched 链）/ `resolve` / `addRoute` | 二、matcher |
-| `./code/vue3/mini-router/src/history.js` | memory / hash / web 三模式统一接口 | 三、history 抽象 |
-| `./code/vue3/mini-router/src/router.js` | `createRouter`：守卫流程 → 改 URL → 改 `currentRoute` / `resolveView` | 四、路由器主体 |
-| `./code/vue3/mini-router/src/reactivity.js` | 最小 ref + effect（撑起 currentRoute → 视图重跑） | 4.1 · 4.3 |
-| `./code/vue3/mini-router/steps/01-matcher.js` | 静态/动态/嵌套路由、未匹配、动态追加 | 二、matcher |
-| `./code/vue3/mini-router/steps/02-history.js` | 内存栈前进后退、重复导航忽略、视图 effect 重跑计数 | 3.2 · 4.3 |
-| `./code/vue3/mini-router/steps/03-guard.js` | 守卫三场景：重定向、取消、顺序 | 4.2 守卫流程 |
-| `./code/vue3/mini-router/test/matcher.test.js` | 匹配 5 条断言 | 二、matcher |
-| `./code/vue3/mini-router/test/router.test.js` | 导航与视图 4 条断言 | 4.1 · 4.3 |
-| `./code/vue3/mini-router/test/guard.test.js` | 守卫 3 条断言 | 4.2 守卫流程 |
-
-运行：`cd code/vue3/mini-router`，然后
-
-- `npm run step:matcher` / `step:history` / `step:guard` —— 三个观察脚本
-- `npm test` —— 12 个单测
+| `./code/vue3/mini-router.html` | 自包含调试入口：全部实现 + 3 个控制台 demo，浏览器打开即断点 | 全篇 |
+| ↳ ① 最小响应式 | 最小 ref + effect（撑起 currentRoute → 视图重跑） | 4.1 · 4.3 |
+| ↳ ② matcher | `compilePath`（:id → 正则）/ 嵌套路由扁平化（matched 链）/ `resolve` / `addRoute` | 二、matcher |
+| ↳ ③ history | memory / hash / web 三模式统一接口 | 三、history 抽象 |
+| ↳ ④ router | `createRouter`：守卫流程 → 改 URL → 改 `currentRoute` / `resolveView` | 四、路由器主体 |
+| ↳ demo 1 | 静态/动态/嵌套路由、未匹配、动态追加 | 二、matcher |
+| ↳ demo 2 | 内存栈前进后退、重复导航忽略、视图 effect 重跑计数 | 3.2 · 4.3 |
+| ↳ demo 3 | 守卫三场景：重定向、取消、顺序 | 4.2 守卫流程 |
 
 ## 参考
 

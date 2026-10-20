@@ -20,7 +20,7 @@ signal（依赖追踪）        判断放在 store 内部（依赖表记着"谁�
 
 这也让 React 篇里那句"被唤醒 ≠ 重渲染"在这里变了味道：依赖表已经把判断下沉到了字段级，**被唤醒的基本就是真的要重渲染的**——多出来的空跑在选择器那一路，这里没有。
 
-全部代码在 `./code/vue3/mini-pinia/`，零依赖、约 200 行，三个观察脚本 + 11 条断言。
+全部代码在 `./code/vue3/mini-pinia.html`，零依赖，浏览器直接打开即断点调试（实现 + 3 个控制台 demo，数字与正文实测一一对应）。
 
 ## 二、响应式底座：判断放在 store 内部
 
@@ -28,7 +28,7 @@ signal（依赖追踪）        判断放在 store 内部（依赖表记着"谁�
 
 前两条路线的订阅单位是"一个组件对一个切片"。响应式把订阅单位下沉到**字段**：谁读了这个字段，字段变化时就唤醒谁。
 
-> 摘自 `./code/vue3/mini-pinia/src/reactivity.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 function track(target, key) {
@@ -44,7 +44,7 @@ function track(target, key) {
 
 三层依赖表：`target（对象）→ key（字段）→ dep（effect 集合）`。触发时只取这个字段的集合：
 
-> 摘自 `./code/vue3/mini-pinia/src/reactivity.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 function trigger(target, key) {
@@ -64,7 +64,7 @@ function trigger(target, key) {
 
 状态的读写由一层惰性深度代理接管——**判断（track / trigger）发生在 store 内部，订阅者完全不知情**：
 
-> 摘自 `./code/vue3/mini-pinia/src/reactivity.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
         get(obj, key, receiver) {
@@ -83,7 +83,7 @@ function trigger(target, key) {
 
 于是"改一个字段唤醒几个订阅者"变成了可以数出来的量：
 
-> 摘自 `./code/vue3/mini-pinia/steps/01-reactivity.js`（运行：`npm run step:reactivity`）
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 const state = reactive({ user: { name: 'Ada' }, cart: { items: 0 }, theme: 'light' })
@@ -119,7 +119,7 @@ effect(() => {
 
 派生值不该跟着源数据一起算——它应该等到"有人来读"才算，而且依赖没变就复用缓存：
 
-> 摘自 `./code/vue3/mini-pinia/src/reactivity.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 function computed(getter) {
@@ -139,7 +139,7 @@ function computed(getter) {
 
 `scheduler` 就是"依赖变了但不立刻算"的挂点。实测：
 
-> 摘自 `./code/vue3/mini-pinia/steps/01-reactivity.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 const nums = reactive({ price: 10, qty: 2, noise: 0 })
@@ -161,7 +161,7 @@ const total = computed(() => nums.price * nums.qty)
 
 Pinia 的 store 是"state + getters + actions"三件事，而 setup store 把三件事统一成**一个 setup 函数**：state 是 `ref`，getter 是 `computed`，action 是普通函数，全部从 setup 的返回值来：
 
-> 摘自 `./code/vue3/mini-pinia/steps/02-pinia.js`（运行：`npm run step:pinia`）
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 const useCartStore = defineStore('cart', () => {
@@ -181,7 +181,7 @@ const useCartStore = defineStore('cart', () => {
 
 `defineStore` 的第一个参数是 id。同一个 id 的 `useStore` 只实例化一次——这就是"跨组件共享同一份 state"的机制来源：
 
-> 摘自 `./code/vue3/mini-pinia/src/pinia.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 function defineStore(id, setup) {
@@ -200,7 +200,7 @@ function defineStore(id, setup) {
 
 setup 返回的是 ref，但模板和组件里不应该写 `.value`。store 外面包的这层 Proxy 负责**自动解包第一层**，同时把 action 绑定到 store 上：
 
-> 摘自 `./code/vue3/mini-pinia/src/pinia.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
     const store = new Proxy(target, {
@@ -243,7 +243,7 @@ add(3) 后 cart.items = 3 | cart.double = 6
 
 解构 store 时有个经典坑：`const { count } = store` 拿到的是解包后的**值**，解构之后就不再响应式。`storeToRefs` 专门处理这件事——它从 `$state`（setup 的原始返回值）遍历，**ref 字段保持 ref 形态**（解构出来还有 `.value`，仍然是响应式的），action 原样保留：
 
-> 摘自 `./code/vue3/mini-pinia/src/pinia.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 function storeToRefs(store) {
@@ -258,7 +258,7 @@ function storeToRefs(store) {
 }
 ```
 
-> 摘自 `./code/vue3/mini-pinia/steps/02-pinia.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 const { items, user, add } = storeToRefs(cart)
@@ -282,7 +282,7 @@ items.value = 3
 
 多个字段要一起改时，`$patch` 把"怎么改"收成一个入口，并且逐键 `Object.is`——赋同值的键直接跳过，不触发依赖：
 
-> 摘自 `./code/vue3/mini-pinia/src/pinia.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
     store.$patch = partial => {
@@ -294,7 +294,7 @@ items.value = 3
     }
 ```
 
-> 摘自 `./code/vue3/mini-pinia/steps/02-pinia.js`
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 cart.$patch({ items: 6 })
@@ -336,7 +336,7 @@ const useOrderStore = defineStore('order', () => {
 
 同一份"计数 +1"，三条路线各用自己的入口跑三轮，数每个 effect 被唤醒的次数：
 
-> 摘自 `./code/vue3/mini-pinia/steps/03-compare.js`（运行：`npm run step:compare`）
+> 摘自 `./code/vue3/mini-pinia.html`
 
 ```js
 const run = label => {
@@ -390,22 +390,16 @@ Vuex：mutation 只是规定"谁能改"，通知机制与 reactive 完全一致
 
 ## 配套代码
 
-本篇示例来自 `./code/vue3/mini-pinia/`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
+本篇配套是一个自包含的调试入口 `./code/vue3/mini-pinia.html`：零依赖，浏览器直接打开，F12 断点调试；打开时控制台自动跑完 3 个 demo，页面顶部列了建议断点位置。文件内按分区组织：
 
-| 文件 | 作用 | 对应小节 |
+| 文件 / 分区 | 内容 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/vue3/mini-pinia/src/reactivity.js` | 三层依赖表（target → key → dep）/ `effect` / `reactive` / `computed` | 二、响应式底座 |
-| `./code/vue3/mini-pinia/src/pinia.js` | `createPinia` / `defineStore`（id 即命名空间）/ `storeToRefs` / `$patch` / `ref` | 三 · 四 |
-| `./code/vue3/mini-pinia/steps/01-reactivity.js` | 字段级唤醒计数、`computed` 惰性与缓存 | 二、响应式底座 |
-| `./code/vue3/mini-pinia/steps/02-pinia.js` | `defineStore` / ref 解包 / `storeToRefs` / `$patch` 实测 | 三 · 四 |
-| `./code/vue3/mini-pinia/steps/03-compare.js` | Pinia vs 直接 reactive vs Vuex 式 mutation 对照 | 五、三条路线对照 |
-| `./code/vue3/mini-pinia/test/reactivity.test.js` | 依赖收集 / 触发 / computed 缓存的 5 条断言 | 二、响应式底座 |
-| `./code/vue3/mini-pinia/test/pinia.test.js` | `defineStore` / `storeToRefs` / `$patch` 的 6 条断言 | 三 · 四 |
-
-运行：`cd code/vue3/mini-pinia`，然后
-
-- `npm run step:reactivity` / `step:pinia` / `step:compare` —— 三个观察脚本
-- `npm test` —— 11 个单测
+| `./code/vue3/mini-pinia.html` | 自包含调试入口：全部实现 + 3 个控制台 demo，浏览器打开即断点 | 全篇 |
+| ↳ ① 响应式底座 | 三层依赖表（target → key → dep）/ `effect` / `reactive` / `computed` | 二、响应式底座 |
+| ↳ ② store 本体 | `createPinia` / `defineStore`（id 即命名空间）/ `storeToRefs` / `$patch` / `ref` | 三 · 四 |
+| ↳ demo 1 | 字段级唤醒计数、`computed` 惰性与缓存 | 二、响应式底座 |
+| ↳ demo 2 | `defineStore` / ref 解包 / `storeToRefs` / `$patch` 实测 | 三 · 四 |
+| ↳ demo 3 | Pinia vs 直接 reactive vs Vuex 式 mutation 对照 | 五、三条路线对照 |
 
 ## 参考
 

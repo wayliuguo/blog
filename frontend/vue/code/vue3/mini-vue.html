@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>mini-vue · 断点调试入口（Vue3 原理配套）</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; } h2 { font-size: 16px; margin-top: 28px; }
+    code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+    pre { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px 12px; font-size: 12.5px; overflow-x: auto; }
+    button { margin-right: 8px; padding: 5px 12px; cursor: pointer; }
+    #app { border: 1px dashed #ced4da; border-radius: 6px; padding: 12px; margin: 10px 0; }
+    .tip { color: #868e96; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>mini-vue · 断点调试入口</h1>
+<p>零依赖，浏览器直接打开本文件，<code>F12</code> 打开控制台 + Sources 面板即可断点。<b>打开时控制台会自动跑完 6 个 demo</b>，覆盖正文全部主线：编译（模板 → AST → transform → render）、响应式（收集依赖 / 触发更新 / computed / stop）、运行时（初始化 / 虚拟 DOM / diff / 批处理 / 生命周期）、平台无关（双宿主）、列表 diff（有 key / 无 key）。</p>
+
+<h2>页面小应用（配合断点最直观）</h2>
+<p>
+    <button id="btn-inc">+1（看 componentUpdateFn 重跑）</button>
+    <button id="btn-batch">连改三次（看 queueJob 批处理）</button>
+    <button id="btn-unmount">卸载 / 重挂（看生命周期与 stop）</button>
+</p>
+<div id="app"></div>
+<p class="tip">建议断点（Sources 面板按分区注释搜索）：<code>track</code> / <code>trigger</code>（依赖表建立与唤醒）· <code>ReactiveEffect.run</code>（effect 栈与 cleanup）· <code>createGetter</code>（惰性深度代理）· <code>ComputedRefImpl.get value</code>（脏标记）· <code>parse / transform / generate</code>（编译三阶段）· <code>createBaseVNode</code>（shapeFlag）· <code>patch</code> / <code>patchKeyedChildren</code>（diff）· <code>setupRenderEffect</code> 的 <code>componentUpdateFn</code>（挂载 / 更新）· <code>queueJob</code> / <code>flushJobs</code>（批处理）· <code>mountComponent</code> / <code>unmount</code>（生命周期）。</p>
+
+<div id="script-1"></div>
+<script>
+// ============================================================
+// ① shared：类型判断与 ShapeFlags（源码 src/shared/index.js）
+// ============================================================
+const ShapeFlags = {
+    ELEMENT: 1, // 0001
+    STATEFUL_COMPONENT: 1 << 1, // 0010
+    TEXT_CHILDREN: 1 << 2, // 0100
+    ARRAY_CHILDREN: 1 << 3, // 1000
+    SLOTS_CHILDREN: 1 << 4
+}
+
+const isObject = val => val !== null && typeof val === 'object'
+const isArray = Array.isArray
+const isString = val => typeof val === 'string'
+const isFunction = val => typeof val === 'function'
+const hasChanged = (value, oldValue) => !Object.is(value, oldValue)
+
+const EMPTY_OBJ = {}
+const extend = Object.assign
+</script>
+
+<div id="script-2"></div>
+<script>
+// ============================================================
+// ② 响应式核心：依赖收集与触发（源码 src/reactivity/effect.js）
+//    ★ 断点：track（建表）、trigger（唤醒）、ReactiveEffect.run（栈与 cleanup）
+// ============================================================
+const targetMap = new WeakMap()
+const effectStack = []
+let activeEffect = null
+
+// 教学用：WeakMap 无法遍历，另存一份强引用只为了把依赖关系打印出来（生产实现不需要）
+const debugRegistry = []
+
+class ReactiveEffect {
+    constructor(fn, scheduler) {
+        this.fn = fn
+        this.scheduler = scheduler
+        this.deps = [] // 反向记录：我依赖了哪些 dep（stop 时要清理）
+        this.active = true
+    }
+
+    run() {
+        if (!this.active) return this.fn()
+        try {
+            effectStack.push(this)
+            activeEffect = this
+            cleanupEffect(this) // 先清掉旧依赖：分支切换时才不会漏掉旧分支
+            return this.fn()
+        } finally {
+            effectStack.pop()
+            activeEffect = effectStack[effectStack.length - 1] || null
+        }
+    }
+
+    stop() {
+        if (!this.active) return
+        cleanupEffect(this)
+        this.active = false
+    }
+}
+
+function cleanupEffect(effect) {
+    for (const dep of effect.deps) dep.delete(effect)
+    effect.deps.length = 0
+}
+
+function effect(fn, options = {}) {
+    const _effect = new ReactiveEffect(fn, options.scheduler)
+    _effect.run()
+
+    // 返回一个 runner：既能手动触发，也能通过 runner.effect.stop() 解除所有依赖
+    const runner = _effect.run.bind(_effect)
+    runner.effect = _effect
+    return runner
+}
+
+function track(target, key) {
+    if (!activeEffect) return // 不在任何 effect 里读属性，不需要收集
+
+    if (!debugRegistry.includes(target)) debugRegistry.push(target)
+
+    let depsMap = targetMap.get(target)
+    if (!depsMap) targetMap.set(target, (depsMap = new Map()))
+
+    let dep = depsMap.get(key)
+    if (!dep) depsMap.set(key, (dep = new Set()))
+
+    if (!dep.has(activeEffect)) {
+        dep.add(activeEffect)
+        activeEffect.deps.push(dep)
+    }
+}
+
+function trigger(target, key) {
+    const depsMap = targetMap.get(target)
+    if (!depsMap) return
+    const dep = depsMap.get(key)
+    if (!dep) return
+
+    // 复制一份再遍历：effect 执行过程中可能修改集合
+    for (const _effect of [...dep]) {
+        if (_effect === activeEffect) continue // 别把自己叫醒（真实 Vue 是 allowRecurse 控制）
+        if (_effect.scheduler) _effect.scheduler()
+        else _effect.run()
+    }
+}
+
+function stop(runner) {
+    runner.effect.stop()
+}
+
+// 把"哪个对象的哪个属性被谁依赖"打出来，demo 里用来观察收集结果
+function describeDeps() {
+    const lines = []
+    for (const target of debugRegistry) {
+        const depsMap = targetMap.get(target)
+        if (!depsMap) continue
+        const label = JSON.stringify(target)
+        const keys = []
+        for (const [key, dep] of depsMap) {
+            if (!dep.size) continue
+            keys.push(`${String(key)} → ${dep.size} 个 effect`)
+        }
+        if (keys.length) lines.push(`  ${label}  ${keys.join('，')}`)
+    }
+    return lines.length ? lines.join('\n') : '  （空）'
+}
+</script>
+
+<div id="script-3"></div>
+<script>
+// ============================================================
+// ③ reactive / readonly（源码 src/reactivity/reactive.js）
+//    ★ 断点：createGetter（track + 惰性深度代理）、createSetter（值变了才 trigger）
+// ============================================================
+const ReactiveFlags = {
+    IS_REACTIVE: '__v_isReactive',
+    IS_READONLY: '__v_isReadonly'
+}
+
+// 同一个对象只代理一次，否则每次访问都新建 Proxy，依赖就收集不上了
+const reactiveMap = new WeakMap()
+const readonlyMap = new WeakMap()
+
+function createGetter(isReadonly = false, isShallow = false) {
+    return function get(target, key, receiver) {
+        if (key === ReactiveFlags.IS_REACTIVE) return !isReadonly
+        if (key === ReactiveFlags.IS_READONLY) return isReadonly
+
+        const result = Reflect.get(target, key, receiver)
+
+        // readonly 的对象永远不会被 set，收集依赖没有意义
+        if (!isReadonly) track(target, key)
+
+        if (isShallow) return result
+        // 深度响应式：遇到对象才继续代理（惰性）
+        if (isObject(result)) return isReadonly ? readonly(result) : reactive(result)
+        return result
+    }
+}
+
+function createSetter() {
+    return function set(target, key, value, receiver) {
+        const oldValue = target[key]
+        const result = Reflect.set(target, key, value, receiver)
+        if (!Object.is(oldValue, value)) trigger(target, key)
+        return result
+    }
+}
+
+const mutableHandlers = { get: createGetter(), set: createSetter() }
+const readonlyHandlers = {
+    get: createGetter(true),
+    set(target, key) {
+        console.warn(`Set operation on key "${String(key)}" failed: target is readonly.`)
+        return true
+    }
+}
+
+function reactive(target) {
+    if (!isObject(target)) return target
+    if (target[ReactiveFlags.IS_READONLY]) return target
+    if (target[ReactiveFlags.IS_REACTIVE]) return target
+
+    const existing = reactiveMap.get(target)
+    if (existing) return existing
+
+    const proxy = new Proxy(target, mutableHandlers)
+    reactiveMap.set(target, proxy)
+    return proxy
+}
+
+function readonly(target) {
+    if (!isObject(target)) return target
+    const existing = readonlyMap.get(target)
+    if (existing) return existing
+
+    const proxy = new Proxy(target, readonlyHandlers)
+    readonlyMap.set(target, proxy)
+    return proxy
+}
+
+// 只读第一层：props 用它——不能替换整个 prop，但 prop 值本身可能是对象且要能响应
+const shallowReadonlyHandlers = {
+    get: createGetter(true, true),
+    set: readonlyHandlers.set
+}
+
+function shallowReadonly(target) {
+    if (!isObject(target)) return target
+    return new Proxy(target, shallowReadonlyHandlers)
+}
+
+const isReactive = value => !!(value && value[ReactiveFlags.IS_REACTIVE])
+const isReadonly = value => !!(value && value[ReactiveFlags.IS_READONLY])
+const isProxy = value => isReactive(value) || isReadonly(value)
+</script>
+
+<div id="script-4"></div>
+<script>
+// ============================================================
+// ④ ref / proxyRefs（源码 src/reactivity/ref.js）
+// ============================================================
+class RefImpl {
+    constructor(value) {
+        this._value = isObject(value) ? reactive(value) : value
+        this.__v_isRef = true
+    }
+
+    get value() {
+        track(this, 'value') // 把 ref 实例自身当作 target，'value' 当作 key
+        return this._value
+    }
+
+    set value(newValue) {
+        if (!hasChanged(newValue, this._value)) return
+        this._value = isObject(newValue) ? reactive(newValue) : newValue
+        trigger(this, 'value')
+    }
+}
+
+function ref(value) {
+    if (isRef(value)) return value
+    return new RefImpl(value)
+}
+
+const isRef = value => !!(value && value.__v_isRef)
+
+function unref(value) {
+    return isRef(value) ? value.value : value
+}
+
+// 只解包第一层：obj.count 等价于 typeof obj.count === 'ref' ? obj.count.value : obj.count
+function proxyRefs(objectWithRefs) {
+    return new Proxy(objectWithRefs, {
+        get(target, key, receiver) {
+            return unref(Reflect.get(target, key, receiver))
+        },
+        set(target, key, value, receiver) {
+            const oldValue = target[key]
+            // 原来是 ref、新值不是 ref -> 写进 ref.value（保持引用不变）
+            if (isRef(oldValue) && !isRef(value)) {
+                oldValue.value = value
+                return true
+            }
+            return Reflect.set(target, key, value, receiver)
+        }
+    })
+}
+</script>
+
+<div id="script-5"></div>
+<script>
+// ============================================================
+// ⑤ computed：惰性求值 + 缓存（源码 src/reactivity/computed.js）
+//    ★ 断点：scheduler（依赖变化只置脏）、get value（有人来读才重算）
+// ============================================================
+class ComputedRefImpl {
+    constructor(getter) {
+        this._dirty = true
+        this._value = undefined
+        this.__v_isRef = true
+        this.effect = new ReactiveEffect(getter, () => {
+            if (this._dirty) return // 已经是脏的，不用再通知一遍
+            this._dirty = true
+            trigger(this, 'value') // 叫醒依赖方，它们会在读 value 时触发重算
+        })
+    }
+
+    get value() {
+        if (this._dirty) {
+            this._value = this.effect.run() // 重算时才真正执行 getter
+            this._dirty = false
+        }
+        track(this, 'value')
+        return this._value
+    }
+}
+
+function computed(getter) {
+    return new ComputedRefImpl(getter)
+}
+</script>
+
+<div id="script-6"></div>
+<script>
+// ============================================================
+// ⑥ 编译模块：模板 → AST → transform → render 代码（正文第二章的最小实现）
+//    ★ 断点：parse（逐段扫描）、transform（静态标记）、generate（代码生成）
+// ============================================================
+const toDisplayString = value =>
+    value == null ? '' : isObject(value) ? JSON.stringify(value, null, 2) : String(value)
+
+// —— 1. parse：模板字符串 → AST ——
+function parse(template) {
+    const root = { type: 'Root', tag: null, children: [] }
+    const stack = [root]
+    let rest = template.trim()
+
+    while (rest) {
+        const parent = stack[stack.length - 1]
+        let m
+        if ((m = /^{{\s*([^}]+?)\s*}}/.exec(rest))) {
+            // 插值：动态内容
+            parent.children.push({ type: 'Interpolation', expression: m[1] })
+            rest = rest.slice(m[0].length)
+            continue
+        }
+        if ((m = /^<\/([a-z0-9-]+)\s*>/.exec(rest))) {
+            // 结束标签：当前元素出栈
+            const open = stack.pop()
+            if (open.tag !== m[1]) throw new Error(`标签不匹配：<${open.tag}> vs </${m[1]}>`)
+            rest = rest.slice(m[0].length)
+            continue
+        }
+        if ((m = /^<([a-z0-9-]+)([^>]*)\/?>/.exec(rest))) {
+            // 开始标签（支持自闭合）
+            const selfClosing = /\/>$/.test(m[0])
+            const node = { type: 'Element', tag: m[1], attrs: parseAttrs(m[2]), children: [] }
+            parent.children.push(node)
+            if (!selfClosing) stack.push(node)
+            rest = rest.slice(m[0].length)
+            continue
+        }
+        // 文本：取到下一个 {{ 或 < 为止
+        const next = rest.search(/{{|</)
+        const text = next === -1 ? rest : rest.slice(0, next)
+        if (text) parent.children.push({ type: 'Text', content: text })
+        rest = next === -1 ? '' : rest.slice(next)
+    }
+    if (stack.length > 1) throw new Error('有标签未闭合：' + stack.map(n => n.tag).join(' <'))
+    return root
+}
+
+function parseAttrs(str) {
+    const attrs = {}
+    for (const m of str.matchAll(/([a-zA-Z-]+)(?:="([^"]*)")?/g)) {
+        if (m[1]) attrs[m[1]] = m[2] !== undefined ? m[2] : true
+    }
+    return Object.keys(attrs).length ? attrs : null
+}
+
+// —— 2. transform：标记静态 / 动态节点 ——
+function transform(ast) {
+    // 子树里含插值的节点是动态节点；patchFlag 位 1 = TEXT（同 template-explorer 的 PatchFlags.TEXT）
+    function walk(node) {
+        if (node.type === 'Interpolation') return true
+        if (node.type !== 'Element') return false
+        const dynamic = node.children.some(walk)
+        node.isStatic = !dynamic
+        node.patchFlag = dynamic ? 1 : 0
+        return dynamic
+    }
+    walk(ast)
+    return ast
+}
+
+// —— 3. generate：AST → render 代码字符串 ——
+function generate(ast) {
+    function genNode(node) {
+        if (node.type === 'Text') return JSON.stringify(node.content)
+        if (node.type === 'Interpolation') return `toDisplayString(ctx.${node.expression})`
+        const flag = node.patchFlag ? `, ${node.patchFlag}` : ''
+        const props = node.attrs ? JSON.stringify(node.attrs) : 'null'
+        const children = node.children
+        // 单文本 / 单插值孩子：生成字符串 children（运行时 shapeFlag 会标 TEXT_CHILDREN）
+        if (children.length === 1 && children[0].type !== 'Element') {
+            return `h("${node.tag}", ${props}, ${genNode(children[0])}${flag})`
+        }
+        // 孩子全是文本 / 插值的混合：拼成一个字符串表达式（同真实 Vue 的文本拼接产物）
+        if (children.length && children.every(c => c.type === 'Text' || c.type === 'Interpolation')) {
+            const expr = children
+                .map(c => (c.type === 'Text' ? JSON.stringify(c.content) : `toDisplayString(ctx.${c.expression})`))
+                .join(' + ')
+            return `h("${node.tag}", ${props}, ${expr}${flag})`
+        }
+        return `h("${node.tag}", ${props}, [${children.map(genNode).join(', ')}]${flag})`
+    }
+    return `[${ast.children.map(genNode).join(', ')}]`
+}
+
+// —— compile：串起三阶段，new Function 得到真正可执行的 render ——
+function compile(template) {
+    const ast = parse(template)
+    transform(ast)
+    const code = generate(ast)
+    const render = new Function('h', 'toDisplayString', 'ctx', `return ${code}`)
+    return { ast, code, render }
+}
+</script>
+
+<div id="script-7"></div>
+<script>
+// ============================================================
+// ⑦ VNode 与 shapeFlag（源码 src/runtime-core/vnode.js）
+//    ★ 断点：createBaseVNode（看 type/children 如何落到位标记上）
+// ============================================================
+const Text = Symbol('Text')
+const Fragment = Symbol('Fragment')
+const Comment = Symbol('Comment')
+
+function createBaseVNode(type, props, children) {
+    const vnode = {
+        type,
+        props,
+        key: props && props.key != null ? props.key : null,
+        children,
+        shapeFlag: 0,
+        el: null, // 对应的真实节点
+        component: null // 组件 VNode 上挂的实例
+    }
+    // 1. 是元素还是组件
+    if (isString(type)) vnode.shapeFlag |= ShapeFlags.ELEMENT
+    else if (isObject(type)) vnode.shapeFlag |= ShapeFlags.STATEFUL_COMPONENT
+
+    // 2. 孩子是文本还是数组
+    if (isString(children)) vnode.shapeFlag |= ShapeFlags.TEXT_CHILDREN
+    else if (isArray(children)) vnode.shapeFlag |= ShapeFlags.ARRAY_CHILDREN
+    else if (isObject(children)) vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
+
+    return vnode
+}
+
+function createVNode(type, props = null, children = null) {
+    return createBaseVNode(type, props, children)
+}
+
+function createTextVNode(text = '') {
+    const vnode = createBaseVNode(Text, null, String(text))
+    vnode.shapeFlag = ShapeFlags.TEXT_CHILDREN
+    return vnode
+}
+
+function createCommentVNode(text = '') {
+    return createBaseVNode(Comment, null, text)
+}
+
+// 属性写法：h('div', { id: 'a' }, [ ... ]) 或 h(Component, { msg: 'hi' }, { default: () => ... })
+const h = (type, props, children) => createVNode(type, props, children)
+
+// 组件的 render 可能返回文本 / 数组 / null，统一成 VNode 再进 patch
+function normalizeVNode(child) {
+    if (child === null || child === undefined || typeof child === 'boolean') {
+        return createCommentVNode('')
+    }
+    if (isArray(child)) return createVNode(Fragment, null, child.map(normalizeVNode))
+    if (isObject(child)) return child
+    return createTextVNode(child)
+}
+
+const isSameVNodeType = (n1, n2) => n1.type === n2.type && n1.key === n2.key
+</script>
+
+<div id="script-8"></div>
+<script>
+// ============================================================
+// ⑧ 调度器：微任务批处理（源码 src/runtime-core/scheduler.js）
+//    ★ 断点：queueJob（三次触发只入队一次）、flushJobs（微任务里统一执行）
+// ============================================================
+const queue = []
+let isFlushPending = false
+let currentFlushPromise = null
+
+const resolvedPromise = Promise.resolve()
+
+function queueJob(job) {
+    if (!queue.includes(job)) queue.push(job) // 同一个 job 只排一次
+    queueFlush()
+}
+
+function queueFlush() {
+    if (isFlushPending) return
+    isFlushPending = true
+    currentFlushPromise = resolvedPromise.then(flushJobs)
+}
+
+function flushJobs() {
+    isFlushPending = false
+    const jobs = queue.splice(0, queue.length) // 先取出快照，flush 过程中新加的留到下一轮
+    for (const job of jobs) job()
+    if (queue.length) flushJobs() // 组件有父子依赖时，执行中可能又推入新 job
+}
+
+// 等这轮更新做完（DOM 已经是最新的）再执行回调
+function nextTick(fn) {
+    const promise = currentFlushPromise || resolvedPromise
+    return fn ? promise.then(fn) : promise
+}
+</script>
+
+<div id="script-9"></div>
+<script>
+// ============================================================
+// ⑨ 组件的 props 与 slots（源码 src/runtime-core/componentProps.js）
+//    ★ 断点：initProps（声明过的进 props、没声明的进 attrs）
+// ============================================================
+function initProps(instance, rawProps) {
+    const props = {}
+    const attrs = {}
+    const options = instance.type.props
+    const raw = rawProps || {}
+
+    // 声明过的进 props，没声明的进 attrs——这决定了它会不会出现在 $attrs 里
+    for (const key of Object.keys(raw)) {
+        if (options && key in options) props[key] = raw[key]
+        else attrs[key] = raw[key]
+    }
+
+    instance.props = options ? shallowReadonly(props) : attrs
+    // 留一份原始对象的引用：更新 props 时直接改它，代理会自动读到新值
+    instance.propsRaw = options ? props : attrs
+    instance.attrs = options ? attrs : {}
+}
+
+function initSlots(instance, children) {
+    const { shapeFlag } = instance.vnode
+    if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+        instance.slots = normalizeObjectSlots(children)
+    } else {
+        instance.slots = {}
+    }
+}
+
+// 把 { default: () => [...] } 里的每项都包成"一定返回数组"的函数
+function normalizeObjectSlots(rawSlots) {
+    const slots = {}
+    for (const [name, slot] of Object.entries(rawSlots)) {
+        slots[name] = isFunction(slot) ? slot : () => slot
+    }
+    return slots
+}
+</script>
+
+<div id="script-10"></div>
+<script>
+// ============================================================
+// ⑩ 组件实例与渲染 effect（源码 src/runtime-core/component.js）
+//    ★ 断点：componentUpdateFn（isMounted 区分挂载 / 更新）、setupComponent（setup 执行）
+// ============================================================
+let currentInstance = null // 生命周期注册的依据：setup 执行期间的当前实例
+const onMounted = fn => currentInstance && currentInstance.mounted.push(fn)
+const onUnmounted = fn => currentInstance && currentInstance.unmounted.push(fn)
+
+function createComponentInstance(vnode) {
+    const instance = {
+        vnode,
+        type: vnode.type,
+        props: {},
+        propsRaw: {},
+        attrs: {},
+        slots: {},
+        setupState: {},
+        ctx: {},
+        isMounted: false,
+        subTree: null,
+        update: null,
+        proxy: null,
+        mounted: [], // 生命周期：onMounted 注册的回调，挂载完成后统一执行
+        unmounted: [] // 生命周期：onUnmounted 注册的回调，卸载时统一执行
+    }
+    instance.ctx = { _: instance }
+    // emit：把子组件的 this.$emit('change', 1) 转成父组件传下来的 onChange
+    instance.emit = (event, ...args) => {
+        const handler = (instance.vnode.props || {})[`on${event[0].toUpperCase()}${event.slice(1)}`]
+        if (handler) handler(...args)
+    }
+    return instance
+}
+
+function setupComponent(instance) {
+    initProps(instance, instance.vnode.props)
+    initSlots(instance, instance.vnode.children)
+    setupStatefulComponent(instance)
+}
+
+function setupStatefulComponent(instance) {
+    // 先建代理：render 里的 this.xxx 就是从这里取的
+    instance.proxy = new Proxy(instance.ctx, publicInstanceProxyHandlers(instance))
+
+    const { setup } = instance.type
+    if (setup) {
+        currentInstance = instance
+        try {
+            const setupResult = setup(shallowReadonly(instance.props), {
+                emit: instance.emit,
+                slots: instance.slots
+            })
+            handleSetupResult(instance, setupResult)
+        } finally {
+            currentInstance = null
+        }
+    }
+    finishComponentSetup(instance)
+}
+
+const publicInstanceProxyHandlers = instance => ({
+    get(target, key) {
+        const { setupState, props } = instance
+        if (key in setupState) return setupState[key] // setup 返回的（ref 已被解包）
+        if (key === '$slots') return instance.slots
+        if (key === '$el') return instance.vnode.el
+        if (key in props) return props[key] // props 其次
+        return target[key]
+    },
+    set(target, key, value) {
+        const { setupState } = instance
+        if (key in setupState) {
+            setupState[key] = value // 写回 setup 的 ref.value
+            return true
+        }
+        target[key] = value
+        return true
+    }
+})
+
+function handleSetupResult(instance, setupResult) {
+    if (isFunction(setupResult)) {
+        instance.render = setupResult // setup 直接返回 render 函数
+    } else if (isObject(setupResult)) {
+        instance.setupState = proxyRefs(setupResult) // 解包 ref，模板里不用写 .value
+    }
+}
+
+function finishComponentSetup(instance) {
+    if (!instance.render) instance.render = instance.type.render
+}
+
+function renderComponentRoot(instance) {
+    const { render, proxy } = instance
+    return normalizeVNode(render.call(proxy, proxy))
+}
+
+// 父组件重新渲染后发现 props / slots 变了，才需要通知子组件重渲染
+function hasPropsChanged(prevProps = {}, nextProps = {}) {
+    const nextKeys = Object.keys(nextProps)
+    if (nextKeys.length !== Object.keys(prevProps).length) return true
+    return nextKeys.some(key => nextProps[key] !== prevProps[key])
+}
+
+function updateProps(instance, nextProps) {
+    const raw = instance.propsRaw
+    for (const key of Object.keys(nextProps)) raw[key] = nextProps[key]
+    for (const key of Object.keys(raw)) {
+        if (!(key in nextProps)) delete raw[key]
+    }
+}
+
+function setupRenderEffect(instance, initialVNode, container, anchor, patch) {
+    const componentUpdateFn = () => {
+        if (!instance.isMounted) {
+            const subTree = (instance.subTree = renderComponentRoot(instance))
+            patch(null, subTree, container, anchor)
+            initialVNode.el = subTree.el
+            instance.isMounted = true
+        } else {
+            const prevSubTree = instance.subTree
+            const nextSubTree = (instance.subTree = renderComponentRoot(instance))
+            patch(prevSubTree, nextSubTree, container, anchor)
+        }
+    }
+
+    // scheduler 是关键：数据变化不会立刻渲染，只把 update 排进微任务队列
+    instance.update = effect(componentUpdateFn, { scheduler: () => queueJob(instance.update) })
+}
+</script>
+
+<div id="script-11"></div>
+<script>
+// ============================================================
+// ⑪ renderer：patch 分发 / 挂载更新卸载 / 列表 diff（源码 src/runtime-core/renderer.js）
+//    ★ 断点：patch（shapeFlag 分发）、patchKeyedChildren（头尾同步 + key 配对）、
+//            mountComponent / unmount（生命周期）
+// ============================================================
+function createRenderer(options) {
+    const {
+        createElement: hostCreateElement,
+        createText: hostCreateText,
+        createComment: hostCreateComment,
+        setText: hostSetText,
+        setElementText: hostSetElementText,
+        insert: hostInsert,
+        remove: hostRemove,
+        nextSibling: hostNextSibling,
+        patchProp: hostPatchProp
+    } = options
+
+    // ---------- 入口 ----------
+    function render(vnode, container) {
+        if (vnode == null) {
+            if (container._vnode) unmount(container._vnode, true)
+        } else {
+            // 顶层也允许直接给数组 / 字符串：统一成 VNode 再进 patch
+            vnode = normalizeVNode(vnode)
+            patch(container._vnode || null, vnode, container, null)
+        }
+        container._vnode = vnode
+    }
+
+    function patch(n1, n2, container, anchor) {
+        if (n1 === n2) return
+
+        // 类型或 key 变了：没有复用的余地，拆掉重建
+        if (n1 && !isSameVNodeType(n1, n2)) {
+            anchor = hostNextSibling(n1.el)
+            unmount(n1, true)
+            n1 = null
+        }
+
+        const { type, shapeFlag } = n2
+        switch (type) {
+            case Text:
+                processText(n1, n2, container, anchor)
+                break
+            case Comment:
+                processComment(n1, n2, container, anchor)
+                break
+            case Fragment:
+                processFragment(n1, n2, container, anchor)
+                break
+            default:
+                if (shapeFlag & ShapeFlags.ELEMENT) processElement(n1, n2, container, anchor)
+                else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+                    processComponent(n1, n2, container, anchor)
+                }
+        }
+    }
+
+    // ---------- 文本 / 注释 / Fragment ----------
+    function processText(n1, n2, container, anchor) {
+        if (!n1) {
+            n2.el = hostCreateText(n2.children)
+            hostInsert(n2.el, container, anchor)
+        } else {
+            const el = (n2.el = n1.el)
+            if (n1.children !== n2.children) hostSetText(el, n2.children)
+        }
+    }
+
+    function processComment(n1, n2, container, anchor) {
+        if (!n1) {
+            n2.el = hostCreateComment(n2.children || '')
+            hostInsert(n2.el, container, anchor)
+        } else {
+            n2.el = n1.el
+        }
+    }
+
+    function processFragment(n1, n2, container, anchor) {
+        // Fragment 没有自己的节点，用两个空文本节点夹住自己这一段，作为插入锚点
+        const startAnchor = n1 ? n1.el : hostCreateText('')
+        const endAnchor = n1 ? n1.anchor : hostCreateText('')
+        n2.el = startAnchor
+        n2.anchor = endAnchor
+
+        if (!n1) {
+            hostInsert(startAnchor, container, anchor)
+            hostInsert(endAnchor, container, anchor)
+            mountChildren(n2.children, container, endAnchor)
+        } else {
+            patchChildren(n1, n2, container, endAnchor)
+        }
+    }
+
+    // ---------- 元素 ----------
+    function processElement(n1, n2, container, anchor) {
+        if (!n1) mountElement(n2, container, anchor)
+        else patchElement(n1, n2, container, anchor)
+    }
+
+    function mountElement(vnode, container, anchor) {
+        vnode.el = hostCreateElement(vnode.type)
+
+        for (const [key, value] of Object.entries(vnode.props || {})) {
+            if (key === 'key') continue
+            hostPatchProp(vnode.el, key, null, value)
+        }
+
+        // 位运算分发孩子：文本 / 数组
+        const { shapeFlag, children } = vnode
+        if (shapeFlag & ShapeFlags.TEXT_CHILDREN) hostSetElementText(vnode.el, children)
+        else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) mountChildren(children, vnode.el, null)
+
+        hostInsert(vnode.el, container, anchor)
+    }
+
+    function mountChildren(children, container, anchor) {
+        // 数组孩子逐个归一：允许混入字符串（真实 Vue 的 normalizeChildren 也做这一步）
+        for (const child of children) patch(null, normalizeVNode(child), container, anchor)
+    }
+
+    function patchElement(n1, n2, container, anchor) {
+        const el = (n2.el = n1.el)
+        const oldProps = n1.props || {}
+        const newProps = n2.props || {}
+
+        for (const [key, next] of Object.entries(newProps)) {
+            if (key === 'key') continue
+            const prev = oldProps[key]
+            if (prev !== next) hostPatchProp(el, key, prev, next)
+        }
+        // 新 props 里没有的旧属性要摘掉
+        for (const key of Object.keys(oldProps)) {
+            if (key === 'key') continue
+            if (!(key in newProps)) hostPatchProp(el, key, oldProps[key], null)
+        }
+
+        patchChildren(n1, n2, el, anchor)
+    }
+
+    function patchChildren(n1, n2, container, anchor) {
+        const c1 = n1.children
+        const c2 = n2.children
+        const prevShapeFlag = n1.shapeFlag
+        const { shapeFlag } = n2
+
+        if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+            if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) unmountChildren(c1, true)
+            if (c1 !== c2) hostSetElementText(container, c2)
+            return
+        }
+
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+            if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+                hostSetElementText(container, '') // 文本换数组：先清空
+                mountChildren(c2, container, anchor)
+            } else {
+                patchKeyedChildren(c1, c2, container, anchor)
+            }
+        }
+    }
+
+    // ---------- 列表 diff：先对齐头尾，再处理中间的乱序部分 ----------
+    function patchKeyedChildren(c1, c2, container, parentAnchor) {
+        let i = 0
+        const l2 = c2.length
+        let e1 = c1.length - 1
+        let e2 = l2 - 1
+
+        // 1. 从头同步：能对上的直接复用，一个属性都不多改
+        while (i <= e1 && i <= e2) {
+            const n1 = c1[i]
+            const n2 = c2[i]
+            if (!isSameVNodeType(n1, n2)) break
+            patch(n1, n2, container, parentAnchor)
+            i++
+        }
+
+        // 2. 从尾同步
+        while (i <= e1 && i <= e2) {
+            const n1 = c1[e1]
+            const n2 = c2[e2]
+            if (!isSameVNodeType(n1, n2)) break
+            patch(n1, n2, container, parentAnchor)
+            e1--
+            e2--
+        }
+
+        // 3. 新列表更长：中间这一段全部是新增
+        if (i > e1 && i <= e2) {
+            const anchor = e2 + 1 < l2 ? c2[e2 + 1].el : parentAnchor
+            while (i <= e2) {
+                patch(null, c2[i], container, anchor)
+                i++
+            }
+            return
+        }
+
+        // 4. 旧列表更长：中间这一段全部要删除
+        if (i > e2 && i <= e1) {
+            while (i <= e1) {
+                unmount(c1[i], true)
+                i++
+            }
+            return
+        }
+
+        // 5. 中间乱序：按 key 建索引，找出"哪些还在、哪些新增"
+        const s1 = i
+        const s2 = i
+        const keyToNewIndex = new Map()
+        for (let j = s2; j <= e2; j++) {
+            if (c2[j].key !== null) keyToNewIndex.set(c2[j].key, j)
+        }
+
+        for (let j = s1; j <= e1; j++) {
+            const prevChild = c1[j]
+            // 没 key 的退化成按下标对应 —— 这正是"用 index 当 key"会出现的行为
+            const newIndex = prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
+
+            if (newIndex === undefined || newIndex > e2) {
+                unmount(prevChild, true)
+            } else {
+                patch(prevChild, c2[newIndex], container, parentAnchor)
+            }
+        }
+
+        // 从后往前把节点挪到正确位置
+        // （真实 Vue 会先算最长递增子序列，跳过本来就在正确位置的那些，这里简化为逐个插）
+        for (let j = e2; j >= s2; j--) {
+            const nextChild = c2[j]
+            const anchor = j + 1 < l2 ? c2[j + 1].el : parentAnchor
+            if (nextChild.el === null) patch(null, nextChild, container, anchor)
+            else hostInsert(nextChild.el, container, anchor)
+        }
+    }
+
+    // ---------- 组件 ----------
+    function processComponent(n1, n2, container, anchor) {
+        if (!n1) mountComponent(n2, container, anchor)
+        else updateComponent(n1, n2)
+    }
+
+    function mountComponent(initialVNode, container, anchor) {
+        const instance = (initialVNode.component = createComponentInstance(initialVNode))
+        setupComponent(instance)
+        setupRenderEffect(instance, initialVNode, container, anchor, patch)
+        // 生命周期：首次渲染 effect 是同步执行的，走到这里子树已挂载完，统一调用挂载钩子
+        if (instance.isMounted) instance.mounted.forEach(hook => hook())
+    }
+
+    function updateComponent(n1, n2) {
+        const instance = (n2.component = n1.component)
+        instance.vnode = n2
+        // props 与 slots 都没变就不必重渲染子组件
+        if (!hasPropsChanged(n1.props, n2.props) && n1.children === n2.children) return
+        updateProps(instance, n2.props)
+        initSlots(instance, n2.children)
+        instance.update()
+    }
+
+    // ---------- 卸载 ----------
+    function unmount(vnode, doRemove) {
+        const { type, shapeFlag } = vnode
+
+        if (type === Fragment) {
+            unmountChildren(vnode.children, doRemove)
+            if (doRemove) {
+                hostRemove(vnode.el)
+                hostRemove(vnode.anchor)
+            }
+            return
+        }
+
+        if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+            if (vnode.component && vnode.component.update) {
+                // 生命周期：先执行卸载钩子，再停掉渲染 effect（否则依赖还在、更新还会来——内存泄漏）
+                vnode.component.unmounted.forEach(hook => hook())
+                vnode.component.update.effect.stop()
+            }
+            unmount(vnode.component.subTree, doRemove)
+            return
+        }
+
+        if (doRemove) hostRemove(vnode.el)
+    }
+
+    function unmountChildren(children, doRemove) {
+        for (const child of children) unmount(child, doRemove)
+    }
+
+    function createAppAPI() {
+        return function createApp(rootComponent, rootProps = null) {
+            return {
+                mount(rootContainer) {
+                    const vnode = createVNode(rootComponent, rootProps)
+                    render(vnode, rootContainer)
+                    return vnode.component.proxy
+                }
+            }
+        }
+    }
+
+    return { render, createApp: createAppAPI(), patch, unmount }
+}
+</script>
+
+<div id="script-12"></div>
+<script>
+// ============================================================
+// ⑫ 浏览器宿主操作（源码 src/runtime-dom/nodeOps.js + patchProp.js）
+// ============================================================
+const nodeOps = {
+    createElement: tag => document.createElement(tag),
+    createText: text => document.createTextNode(text),
+    createComment: text => document.createComment(text),
+    setText: (node, text) => {
+        node.nodeValue = text
+    },
+    setElementText: (el, text) => {
+        el.textContent = text
+    },
+    insert: (child, parent, anchor) => {
+        parent.insertBefore(child, anchor || null)
+    },
+    remove: child => {
+        const parent = child.parentNode
+        if (parent) parent.removeChild(child)
+    },
+    nextSibling: node => node.nextSibling
+}
+
+const isOn = key => /^on[A-Z]/.test(key)
+
+// 应该写成 property 而不是 attribute 的几个
+const SHOULD_USE_PROPERTY = /^(value|checked|selected|disabled|muted)$/
+
+function patchProp(el, key, prevValue, nextValue) {
+    if (isOn(key)) {
+        const name = key.slice(2).toLowerCase()
+        if (prevValue) el.removeEventListener(name, prevValue)
+        if (nextValue) el.addEventListener(name, nextValue)
+        return
+    }
+
+    if (key === 'class') {
+        el.className = nextValue || ''
+        return
+    }
+
+    if (key === 'style' && isObject(nextValue)) {
+        for (const [prop, value] of Object.entries(nextValue)) el.style[prop] = value
+        return
+    }
+
+    if (SHOULD_USE_PROPERTY.test(key)) {
+        el[key] = nextValue
+        return
+    }
+
+    if (nextValue === null || nextValue === undefined || nextValue === false) {
+        el.removeAttribute(key)
+    } else {
+        el.setAttribute(key, nextValue)
+    }
+}
+</script>
+
+<div id="script-13"></div>
+<script>
+// ============================================================
+// ⑬ runtime-dom：把核心与浏览器宿主装到一起（源码 src/runtime-dom/index.js）
+//    Node 源码由 CommonJS 导出；浏览器里准备一个 module 替身，让同一行代码原样可跑
+// ============================================================
+const module = { exports: {} }
+
+const { render, createApp } = createRenderer({ ...nodeOps, patchProp })
+
+// 让 h 在浏览器侧也可以直接用（模板编译产物也是调它）
+module.exports = { createApp, render, h, createVNode, nextTick, nodeOps, patchProp }
+</script>
+
+<div id="script-14"></div>
+<script>
+// ============================================================
+// demo 1：响应式 —— 收集依赖 / 触发更新 / computed / stop
+// ============================================================
+(() => {
+    console.log('%c==== demo 1：响应式（对应正文第三章） ====', 'font-weight:bold')
+
+    // 1.1 track / trigger：三层依赖表
+    const state = reactive({ count: 0, flag: 'a' })
+    let runs = 0
+    effect(() => {
+        runs++
+        return `count = ${state.count}, flag = ${state.flag}`
+    })
+    console.log('首次执行后依赖表（WeakMap → Map → Set）：')
+    console.log(describeDeps())
+    state.count = 1 // ★ 断点 trigger：只唤醒读过 count 的 effect
+    console.log('state.count = 1 后 effect 重跑次数 =', runs)
+
+    // 1.2 惰性深度代理：读到对象才继续代理
+    console.log('state 嵌套对象读出来是响应式代理 =', isReactive(reactive({ nested: { n: 1 } }).nested))
+
+    // 1.3 cleanupEffect：分支切换后旧依赖不再触发
+    const branch = reactive({ ok: true, a: 'A', b: 'B' })
+    let branchRuns = 0
+    effect(() => {
+        branchRuns++
+        return branch.ok ? branch.a : branch.b
+    })
+    branch.ok = false // 切分支：cleanup 后只收集 b
+    console.log('切分支后重跑次数 =', branchRuns, '（初次 + 切分支各 1）')
+    branch.a = 'A2' // 旧分支的依赖已被清理，不应触发
+    console.log('改旧分支的 a 后重跑次数 =', branchRuns, '（cleanup 生效）')
+
+    // 1.4 computed：惰性 + 缓存（★ 断点 ComputedRefImpl 的 scheduler 与 get value）
+    let getterCalls = 0
+    const count = ref(10)
+    const total = computed(() => {
+        getterCalls++
+        return count.value * 2
+    })
+    console.log('第一次读 total =', total.value, '，getter 调用', getterCalls, '次')
+    void total.value
+    console.log('再读一次 total =', total.value, '，getter 调用', getterCalls, '次（命中缓存）')
+    count.value = 15
+    console.log('改了依赖但没读：getter 调用', getterCalls, '次（只置脏，不重算）')
+    console.log('读的时候才算 total =', total.value, '，getter 调用', getterCalls, '次')
+
+    // 1.5 stop：解除依赖
+    const target = reactive({ n: 0 })
+    let stopRuns = 0
+    const runner = effect(() => {
+        stopRuns++
+        return target.n
+    })
+    target.n = 1
+    stop(runner) // ★ 断点 cleanupEffect：effect.deps 反向索引在这里派上用场
+    target.n = 2
+    console.log('stop 前 effect 跑了', stopRuns, '次；stop 后再改 n 不再触发（仍是', stopRuns, '次）')
+})()
+</script>
+
+<div id="script-15"></div>
+<script>
+// ============================================================
+// demo 2：编译模块 —— 模板 → AST → transform → render（对应正文第二章）
+// ============================================================
+(() => {
+    console.log('%c==== demo 2：编译模块（对应正文第二章） ====', 'font-weight:bold')
+    const tpl = '<div class="box"><p>count: {{ count }}</p><span>静态节点：更新时不参与对比</span></div>'
+    const { ast, code, render } = compile(tpl)
+    // ★ 断点 parse / transform / generate，逐步观察三阶段产物
+    console.log('AST =', ast)
+    console.log('生成的 render 代码 =', code)
+    console.log('render({ count: 3 }) 的 VNode =', render(h, toDisplayString, { count: 3 }))
+})()
+</script>
+
+<div id="script-16"></div>
+<script>
+// ============================================================
+// demo 3：运行时 · 平台无关 —— 两个宿主跑同一份 render（对应正文 4.1）
+// ============================================================
+(() => {
+    console.log('%c==== demo 3：平台无关：两个宿主（对应正文 4.1） ====', 'font-weight:bold')
+
+    const Comp = {
+        setup() {
+            return { msg: 'mini-vue' }
+        },
+        render(ctx) {
+            return h('div', { class: 'host-test' }, [h('p', null, 'hello '), h('span', null, String(ctx.msg))])
+        }
+    }
+
+    // 统计宿主操作次数
+    const makeCounted = (host, ops) => {
+        const out = {}
+        for (const [k, fn] of Object.entries(host)) {
+            out[k] = (...a) => {
+                ops[k] = (ops[k] || 0) + 1
+                return fn(...a)
+            }
+        }
+        return out
+    }
+
+    // 宿主 A：真实 DOM
+    const opsA = {}
+    const domHost = makeCounted(nodeOps, opsA)
+    domHost.patchProp = (...a) => {
+        opsA.patchProp = (opsA.patchProp || 0) + 1
+        return patchProp(...a)
+    }
+    const domBox = document.createElement('div')
+    createRenderer(domHost).render(h(Comp), domBox)
+
+    // 宿主 B：字符串宿主（服务端渲染的雏形）
+    const stringNodeOps = {
+        createElement: tag => ({ tag, children: [], text: '' }),
+        createText: text => ({ text }),
+        createComment: text => ({ comment: text }),
+        setText: (node, text) => {
+            node.text = text
+        },
+        setElementText: (el, text) => {
+            el.text = text
+            el.children = []
+        },
+        insert: (child, parent, anchor) => {
+            child._parent = parent
+            const i = anchor ? parent.children.indexOf(anchor) : -1
+            if (i === -1) parent.children.push(child)
+            else parent.children.splice(i, 0, child)
+        },
+        remove: child => {
+            const p = child._parent
+            if (p) p.children.splice(p.children.indexOf(child), 1)
+        },
+        nextSibling: node => {
+            const p = node._parent
+            return p ? p.children[p.children.indexOf(node) + 1] || null : null
+        }
+    }
+    const stringPatchProp = (el, key, prev, next) => {
+        el.props = el.props || {}
+        el.props[key] = next
+    }
+    const opsB = {}
+    const strHost = makeCounted(stringNodeOps, opsB)
+    strHost.patchProp = (...a) => {
+        opsB.patchProp = (opsB.patchProp || 0) + 1
+        return stringPatchProp(...a)
+    }
+    const strBox = { children: [] }
+    createRenderer(strHost).render(h(Comp), strBox)
+
+    const nodeToStr = n =>
+        n.tag
+            ? `<${n.tag}${n.props ? ' ' + Object.entries(n.props).map(([k, v]) => `${k}="${v}"`).join(' ') : ''}>${n.text || ''}${(n.children || []).map(nodeToStr).join('')}</${n.tag}>`
+            : n.text !== undefined ? n.text : ''
+    console.log('字符串宿主输出：', strBox.children.map(nodeToStr).join(''))
+    console.log('宿主操作次数（真实 DOM vs 字符串）：')
+    console.log('  DOM    ：', JSON.stringify(opsA))
+    console.log('  字符串 ：', JSON.stringify(opsB))
+})()
+</script>
+
+<div id="script-17"></div>
+<script>
+// ============================================================
+// demo 4：运行时 · 批处理 / nextTick / 生命周期（对应正文 4.5 · 4.7）
+// ============================================================
+(() => {
+    console.log('%c==== demo 4：批处理 / nextTick / 生命周期（对应正文 4.5 · 4.7） ====', 'font-weight:bold')
+    const box = document.createElement('div')
+    let renderRuns = 0
+    const n = ref(0)
+    const Batch = {
+        setup() {
+            onMounted(() => console.log('  [生命周期] onMounted 触发'))
+            return { n }
+        },
+        render(ctx) {
+            renderRuns++
+            return h('p', null, 'n = ' + ctx.n)
+        }
+    }
+    createApp(Batch).mount(box) // ★ 断点 mountComponent → setupRenderEffect
+    console.log('挂载完成：渲染次数 =', renderRuns)
+
+    n.value++
+    n.value++
+    n.value++ // ★ 断点 queueJob：三次触发只入队一次；此刻 DOM 还是旧的
+    console.log('同步改三次后（还没 flush）：渲染次数 =', renderRuns, '| DOM =', JSON.stringify(box.textContent))
+    nextTick(() => {
+        console.log('nextTick 后：渲染次数 =', renderRuns, '| DOM =', JSON.stringify(box.textContent))
+    })
+})()
+</script>
+
+<div id="script-18"></div>
+<script>
+// ============================================================
+// demo 5：列表 diff —— 有 key / 无 key 的宿主操作对照（对应正文 4.6）
+// ============================================================
+(() => {
+    console.log('%c==== demo 5：列表 diff，数宿主操作（对应正文 4.6） ====', 'font-weight:bold')
+
+    const makeCountedHost = ops => {
+        const out = {}
+        for (const [k, fn] of Object.entries(nodeOps)) {
+            out[k] = (...a) => {
+                ops[k] = (ops[k] || 0) + 1
+                return fn(...a)
+            }
+        }
+        out.patchProp = (...a) => {
+            ops.patchProp = (ops.patchProp || 0) + 1
+            return patchProp(...a)
+        }
+        return out
+    }
+
+    const run = (label, keysA, keysB, keyed) => {
+        const ops = {}
+        const box = document.createElement('div')
+        const { render } = createRenderer(makeCountedHost(ops))
+        const list = keys =>
+            h('ul', null, keys.map(k => h('li', keyed ? { key: k, 'data-id': k } : { 'data-id': k }, 'item ' + k)))
+        render(list(keysA), box)
+        for (const k of Object.keys(ops)) delete ops[k] // 挂载计数清零，只统计更新这一次
+        render(list(keysB), box) // ★ 断点 patchKeyedChildren：对照两条路径
+        const total = Object.values(ops).reduce((s, n) => s + n, 0)
+        console.log(`  ${label} [${keyed ? '有 key' : '无 key'}] 宿主操作 ${total} 次：`, JSON.stringify(ops))
+    }
+
+    run('删掉第一项      ', ['a', 'b', 'c'], ['b', 'c'], true)
+    run('删掉第一项      ', ['a', 'b', 'c'], ['b', 'c'], false)
+    run('最后一项移到最前', ['a', 'b', 'c'], ['c', 'a', 'b'], true)
+    run('最后一项移到最前', ['a', 'b', 'c'], ['c', 'a', 'b'], false)
+})()
+</script>
+
+<div id="script-19"></div>
+<script>
+// ============================================================
+// demo 6：页面小应用 —— 编译产物 + 响应式 + 运行时串成一条链
+// ============================================================
+(() => {
+    // 模板经「编译模块」生成 render；组件的 render effect 读 count；改 count → 批处理 → patch
+    const { render: compiledRender } = compile('<div class="counter"><p>count = {{ count }}</p><button>+1</button></div>')
+    const Counter = {
+        setup() {
+            const count = ref(0)
+            onMounted(() => console.log('[页面应用] Counter onMounted'))
+            return { count }
+        },
+        render(ctx) {
+            return compiledRender(h, toDisplayString, ctx)
+        }
+    }
+    const root = document.getElementById('app')
+    let app = createApp(Counter).mount(root) // mount 返回组件实例代理
+    const wireButton = () => root.querySelector('button').addEventListener('click', () => {
+        app.count++ // 走 publicInstanceProxyHandlers.set → ref.value → trigger
+    })
+    wireButton()
+
+    let unmounted = false
+    document.getElementById('btn-inc').addEventListener('click', () => app.count++)
+    document.getElementById('btn-batch').addEventListener('click', () => {
+        app.count++
+        app.count++
+        app.count++
+        console.log('[页面应用] 同一 tick 改了三次，看下一条日志只重渲染一次')
+        nextTick(() => console.log('[页面应用] flush 完成，count =', app.count))
+    })
+    document.getElementById('btn-unmount').addEventListener('click', function () {
+        if (!unmounted) {
+            render(null, root) // 卸载：触发 onUnmounted + stop 渲染 effect
+            this.textContent = '重新挂载'
+        } else {
+            app = createApp(Counter).mount(root)
+            wireButton()
+            this.textContent = '卸载 / 重挂（看生命周期与 stop）'
+        }
+        unmounted = !unmounted
+    })
+})()
+</script>
+</body>
+</html>
