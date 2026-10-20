@@ -1,5 +1,7 @@
 # Vue3 原理
 
+> 本篇所有 `摘自` 代码块来自配套的最小实现 `code/vue3/mini-vue`（零依赖、可运行、26 个单测）——正文每讲一个机制，就落到对应源码上解析一次；运行方式见篇末「配套代码」。
+
 ## 一、Vue3 整体架构
 
 Vue3 采用**模块化 + 分层**设计，核心包按职责可以划分为三大类地图：
@@ -209,32 +211,19 @@ targetMap (WeakMap)
 - **集合类型支持**：Map、Set 等也支持响应式。
 - **属性检测全面**：可检测属性添加 / 删除。
 
-核心实现分两层：
+核心实现分两层。
 
-一是 `reactive.ts`，用 WeakMap 做缓存优化 + Proxy 代理创建：
+一是代理创建与**缓存**（`reactive.ts`）。缓存那三行是必须的：同一对象每次访问都新建 Proxy，依赖就会收集到不同的 dep 上，触发时自然对不上号。
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/reactivity/reactive.js`
 
 ```js
-// 用于收集依赖 / 做代理缓存的 WeakMap
-export const reactiveMap = new WeakMap();
+    const existing = reactiveMap.get(target)
+    if (existing) return existing
 
-export function reactive(target) {
-  return createReactiveObject(target, reactiveMap, mutableHandlers);
-}
-
-function createReactiveObject(target, proxyMap, baseHandlers) {
-  // 命中缓存：同一个对象只代理一次，直接返回已有代理，这是性能优化点
-  const existingProxy = proxyMap.get(target);
-  if (existingProxy) {
-    return existingProxy;
-  }
-  // 核心：用 Proxy 侦听 get / set 动作
-  const proxy = new Proxy(target, baseHandlers);
-  proxyMap.set(target, proxy);
-  // 存起来，后续复用
-  return proxy;
-}
+    const proxy = new Proxy(target, mutableHandlers)
+    reactiveMap.set(target, proxy)
+    return proxy
 ```
 
 **为什么用 WeakMap 存依赖？**
@@ -254,53 +243,35 @@ weakMap.set(target, { deps: new Set() });
 target = null; // 解除引用后，键值对会被 GC 自动清理
 ```
 
-二是 `baseHandlers.ts`，定义 get / set 拦截逻辑（`mutableHandlers`）：
+二是 `baseHandlers.ts`，定义 get / set 拦截逻辑（`mutableHandlers`）。getter 里做了两件事：收集依赖、把"值是对象"的属性继续代理——后一件事是**惰性**的，不是一开始就递归遍历整棵树：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/reactivity/reactive.js`
 
 ```js
-const get = createGetter();
-const set = createSetter();
+function createGetter(isReadonly = false, isShallow = false) {
+    return function get(target, key, receiver) {
+        if (key === ReactiveFlags.IS_REACTIVE) return !isReadonly
+        if (key === ReactiveFlags.IS_READONLY) return isReadonly
 
-export const mutableHandlers = {
-  get,
-  set,
-};
+        const result = Reflect.get(target, key, receiver)
 
-// createGetter 通过闭包区分 readonly / shallow 两种情况
-function createGetter(isReadonly = false, shallow = false) {
-  return function get(target, key, receiver) {
-    // 处理特征属性（isReactive / isReadonly / raw），后面小节详述
-    const res = Reflect.get(target, key, receiver);
+        // readonly 的对象永远不会被 set，收集依赖没有意义
+        if (!isReadonly) track(target, key)
 
-    // 关键点 1：为什么 readonly 不做依赖收集？
-    // 因为 readonly 不可 set，不可 set 就永远不会触发 trigger，
-    // 收集依赖没有任何意义，所以只对非只读做依赖收集
-    if (!isReadonly) {
-      // get 时进行依赖收集
-      track(target, "get", key);
+        if (isShallow) return result
+        // 深度响应式：遇到对象才继续代理（惰性）
+        if (isObject(result)) return isReadonly ? readonly(result) : reactive(result)
+        return result
     }
-
-    if (shallow) {
-      // 浅响应：直接返回原值，不递归代理
-      return res;
-    }
-
-    if (isObject(res)) {
-      // 深度响应：对取到的对象再次代理
-      return isReadonly ? readonly(res) : reactive(res);
-    }
-    return res;
-  };
 }
 
 function createSetter() {
-  return function set(target, key, value, receiver) {
-    const result = Reflect.set(target, key, value, receiver);
-    // set 时触发依赖更新
-    trigger(target, "set", key);
-    return result;
-  };
+    return function set(target, key, value, receiver) {
+        const oldValue = target[key]
+        const result = Reflect.set(target, key, value, receiver)
+        if (!Object.is(oldValue, value)) trigger(target, key)
+        return result
+    }
 }
 ```
 
@@ -333,80 +304,54 @@ const handlers = {
 
 ### 3.2 依赖收集 track
 
-`track` 做的事情就是"把当前的 effect 塞进依赖数据结构里"。
+`track` 做的事情就是"建表"——`targetMap`（对象）→ `depsMap`（属性）→ `dep`（effect 集合），三层逐级补空：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
-export function track(target, type, key) {
-  if (!isTracking()) {
-    return; // 没有 effect 在运行 / 关闭了收集开关，直接返回
-  }
-  // 1. 基于 target 找到 depsMap，第一次访问需要初始化
-  let depsMap = targetMap.get(target);
-  if (!depsMap) {
-    depsMap = new Map();
-    targetMap.set(target, depsMap);
-  }
-  // 2. 基于 key 找到 dep（Set），第一次访问需要初始化
-  let dep = depsMap.get(key);
-  if (!dep) {
-    dep = createDep();
-    depsMap.set(key, dep);
-  }
-  // 3. 把当前 effect 收集进去
-  trackEffects(dep);
-}
+function track(target, key) {
+    if (!activeEffect) return // 不在任何 effect 里读属性，不需要收集
 
-export function trackEffects(dep) {
-  // 避免重复收集：如果已经收集过就不再收集
-  if (!dep.has(activeEffect)) {
-    dep.add(activeEffect);
-    // effect 也记录自己依赖了哪些 dep，用于 stop 能力
-    (activeEffect).deps.push(dep);
-  }
+    if (!debugRegistry.includes(target)) debugRegistry.push(target)
+
+    let depsMap = targetMap.get(target)
+    if (!depsMap) targetMap.set(target, (depsMap = new Map()))
+
+    let dep = depsMap.get(key)
+    if (!dep) depsMap.set(key, (dep = new Set()))
+
+    if (!dep.has(activeEffect)) {
+        dep.add(activeEffect)
+        activeEffect.deps.push(dep) // 反向索引：effect 记下自己进过哪些 dep，stop 时要清理
+    }
 }
 ```
 
-其中 `activeEffect` 是**全局"进行中"的副作用函数实例**，在 `effect` 执行时被关联，`isTracking()` 表示"当前是否可以收集依赖"。
+两个容易忽略的设计：**`deps` 是反向索引**——每个 effect 记下自己进过哪些 dep，`stop()` 时才知道要退订哪些；**依赖收集只认"读过"**——一个属性被改了两次都没人理，只要那一刻它还没被任何 effect 读到（配合惰性代理，等 `state.nested` 被读一次才建立联系）。
 
 ### 3.3 触发更新 trigger
 
-`trigger` 把之前收集到的 effect 全部取出来依次执行：
+`trigger` 把之前收集到的 effect 全部取出来依次执行。只有几行，但有两个细节值钱：**遍历前先复制一份**，因为 effect 执行过程中可能增删集合；**跳过自己**，避免"在 effect 里改自己依赖的数据"导致死循环：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
-export function trigger(target, type, key) {
-  const depsMap = targetMap.get(target);
-  if (!depsMap) return;
+function trigger(target, key) {
+    const depsMap = targetMap.get(target)
+    if (!depsMap) return
+    const dep = depsMap.get(key)
+    if (!dep) return
 
-  let deps = [];
-  const dep = depsMap.get(key);
-  deps.push(dep);
-
-  // 把 dep 里的所有 effect 收集起来统一触发
-  const effects = [];
-  deps.forEach((dep) => {
-    effects.push(...dep);
-  });
-  triggerEffects(createDep(effects));
-}
-
-export function triggerEffects(dep) {
-  for (const effect of dep) {
-    if (effect.scheduler) {
-      // 有 scheduler 就交给用户自定义调度时机
-      // （runtime-core 用它实现了 nextTick 的异步批量更新）
-      effect.scheduler();
-    } else {
-      effect.run();
+    // 复制一份再遍历：effect 执行过程中可能修改集合
+    for (const _effect of [...dep]) {
+        if (_effect === activeEffect) continue // 别把自己叫醒（真实 Vue 是 allowRecurse 控制）
+        if (_effect.scheduler) _effect.scheduler()
+        else _effect.run()
     }
-  }
 }
 ```
 
-注意 `scheduler` 的意义：**它让用户（框架）可以自己决定副作用何时执行**。Vue 内部正是借助 `scheduler` 把多次更新合并到下一个微任务中执行，实现异步批量渲染。
+注意 `scheduler` 的意义：**它让用户（框架）可以自己决定副作用何时执行**。Vue 内部正是借助 `scheduler` 把多次更新合并到下一个微任务中执行，实现异步批量渲染（见四.5 的 `queueJob`）。
 
 ### 3.4 effect：副作用函数
 
@@ -422,62 +367,53 @@ export function triggerEffects(dep) {
 6. **返回运行器函数**：可手动强制触发一次。
 7. **停止侦听**：运行器上的 `.stop()` 可清除依赖关系，防止内存泄漏（组件卸载时 Vue 会自动停止相关 effect）。
 
-核心实现：
+核心实现（`effect.ts`）。`effect` 负责"把函数包成可被追踪的东西"，做三件事：入栈、**先清掉旧依赖再执行**、出栈：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/reactivity/effect.js`
 
 ```js
-let activeEffect = void 0;
-let shouldTrack = false;
+const targetMap = new WeakMap()
+const effectStack = []
+let activeEffect = null
 
-export function effect(fn, options = {}) {
-  const _effect = new ReactiveEffect(fn);
-  Object.assign(_effect, options);
-  _effect.run();
+// 教学用：WeakMap 无法遍历，另存一份强引用只为了把依赖关系打印出来（生产实现不需要）
+const debugRegistry = []
 
-  // 把 run 方法返回给用户，让用户自己决定调用时机
-  const runner = _effect.run.bind(_effect);
-  runner.effect = _effect;
-  return runner;
-}
-
-export class ReactiveEffect {
-  active = true;
-  deps = [];
-
-  constructor(public fn, public scheduler) {}
-
-  run() {
-    if (!this.active) {
-      return this.fn(); // 已停止的 effect 仅执行，不收集依赖
+class ReactiveEffect {
+    constructor(fn, scheduler) {
+        this.fn = fn
+        this.scheduler = scheduler
+        this.deps = [] // 反向记录：我依赖了哪些 dep（stop 时要清理）
+        this.active = true
     }
-    // 开关打开：允许收集依赖
-    shouldTrack = true;
-    // 用全局属性记录"本次运行中的 effect"
-    activeEffect = this;
-    const result = this.fn();
-    // 运行结束复位
-    shouldTrack = false;
-    activeEffect = undefined;
-    return result;
-  }
 
-  stop() {
-    if (this.active) {
-      cleanupEffect(this); // 从所有依赖集合中把自己移除
-      if (this.onStop) this.onStop();
-      this.active = false;
+    run() {
+        if (!this.active) return this.fn() // 已停止的 effect 仅执行，不收集依赖
+        try {
+            effectStack.push(this)
+            activeEffect = this
+            cleanupEffect(this) // 先清掉旧依赖：分支切换时才不会漏掉旧分支
+            return this.fn()
+        } finally {
+            effectStack.pop()
+            activeEffect = effectStack[effectStack.length - 1] || null
+        }
     }
-  }
+
+    stop() {
+        if (!this.active) return
+        cleanupEffect(this)
+        this.active = false
+    }
 }
 
 function cleanupEffect(effect) {
-  effect.deps.forEach((dep) => {
-    dep.delete(effect); // 让属性不再"记住"自己
-  });
-  effect.deps.length = 0;
+    for (const dep of effect.deps) dep.delete(effect)
+    effect.deps.length = 0
 }
 ```
+
+两个容易忽略的设计：**用栈而不是单个变量**——effect 里可能再跑 effect（computed 的 getter、子组件渲染），栈才能恢复外层；**`cleanupEffect` 决定的是正确性而非优化**——effect 里写 `flag ? a : b`，切到 `b` 分支后如果 `a` 的依赖还在，改 `a` 会触发一次结果完全没变的渲染。清理后重新收集，依赖表才始终等于"这次真正读了什么"。
 
 **stop 的实现思路**：`track` 时 `effect.deps.push(dep)` 保存了它关联的所有依赖集合，`stop` 时遍历这些集合把 `effect` 删除，于是属性变化不再触发它。这就是 `onMounted` 中创建的 effect 在组件卸载后被释放的原理。
 
@@ -581,53 +517,47 @@ const shallowUnwrapHandlers = {
 
 ### 3.7 computed：惰性计算与缓存
 
-`computed` 基于 `lazy` 的 `ReactiveEffect` 实现，核心是 `ComputedRefImpl`，由三个关键成员协作：
+`computed` 基于 `lazy` 的 `ReactiveEffect` 实现，核心是"一个布尔值 + 一处调度"——**依赖变化时不重算，只置脏 + 通知；真正算什么时候算，由"有人来读"决定**：
 
-- `effect`：内置副作用，负责计算。
-- `_dirty`：脏标记，控制**该不该重新计算**（缓存的核心）。
-- `dep`：收集依赖它的外部 effect（如渲染 effect）。
-
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/reactivity/computed.js`
 
 ```js
-export class ComputedRefImpl {
-  public dep;
-  public effect;
-  private _dirty;
-  private _value;
+        this.effect = new ReactiveEffect(getter, () => {
+            if (this._dirty) return // 已经是脏的，不用再通知一遍
+            this._dirty = true
+            trigger(this, 'value') // 叫醒依赖方，它们会在读 value 时触发重算
+        })
+```
 
-  constructor(getter) {
-    this._dirty = true;
-    this.dep = createDep();
-    this.effect = new ReactiveEffect(getter, () => {
-      // scheduler：依赖变化时被调用
-      if (this._dirty) return;
-      // 解锁：下次 get 会重新计算
-      this._dirty = true;
-      // 通知依赖它的 effect（如渲染 effect）重新运行
-      triggerRefValue(this);
-    });
-  }
+> 摘自 `./code/vue3/mini-vue/src/reactivity/computed.js`
 
-  get value() {
-    // 收集依赖（让渲染 effect 被记录到 computed.dep）
-    trackRefValue(this);
-    if (this._dirty) {
-      this._dirty = false;
-      // 首次 / 解锁后执行 getter 计算并缓存
-      this._value = this.effect.run();
+```js
+    get value() {
+        if (this._dirty) {
+            this._value = this.effect.run() // 重算时才真正执行 getter
+            this._dirty = false
+        }
+        track(this, 'value')
+        return this._value
     }
-    return this._value;
-  }
-}
 ```
 
 工作流程：
 
-1. **首次访问**：`_dirty` 为 true，执行 getter 计算并缓存，同时把 computed 的 effect 收集进响应式依赖，并让当前运行的渲染 effect 被收集进 computed.dep；随后 `_dirty` 置 false。
+1. **首次访问**：`_dirty` 为 true，执行 getter 计算并缓存；随后 `_dirty` 置 false。
 2. **依赖未变**：`_dirty` 仍为 false，直接返回缓存值，getter 不重复执行。
-3. **依赖变化**：getter 内部的响应式数据触发 computed 的 scheduler，`_dirty` 置 true 并触发 computed.dep 中的渲染 effect。
+3. **依赖变化**：getter 内部的响应式数据触发 computed 的 scheduler，`_dirty` 置 true 并叫醒依赖 computed 的 effect。
 4. **再次访问**：`_dirty` 为 true 则重新计算，否则继续用缓存。
+
+观察脚本里的 `getterCalls` 计数器把"惰性"看得最清楚：
+
+```
+==== 4. computed：惰性求值 + 缓存 ====
+  第一次读 total = 20，getter 调用 1 次
+  再读一次   total = 20，getter 调用 1 次（命中缓存）
+  改了依赖但没读：getter 调用 1 次（不立刻重算，只置脏）
+  读的时候才算   total = 30，getter 调用 2 次
+```
 
 这就是 computed 的**依赖追踪 + 缓存 + 惰性**三大特性的来源。
 
@@ -754,57 +684,68 @@ export function toRaw(value) {
 
 ### 4.1 runtime-dom / runtime-core 的分工
 
-`runtime-dom` 提供**宿主操作函数**，通过 `createRenderer` 注入 `runtime-core`：
+运行时核心**不认识 DOM**。所有平台相关的动作都由调用方注入，核心只负责"什么时候该调用哪个"：
 
-> 示意片段（无配套脚本）
-
-```js
-// runtime-dom
-function ensureRenderer() {
-  // 缓存 renderer，避免重复初始化
-  return (
-    renderer ||
-    (renderer = createRenderer({
-      createElement,
-      createText,
-      setText,
-      setElementText,
-      patchProp,
-      insert,
-      remove,
-    }))
-  );
-}
-
-export const createApp = (...args) => ensureRenderer().createApp(...args);
-export * from "@vue/runtime-core"; // 二次导出核心 API
-```
-
-`runtime-core` 的 `createRenderer` 接收这些宿主操作，返回 `render` 与 `createApp`：
-
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/renderer.js`
 
 ```js
-export function createRenderer(options) {
-  const {
-    createElement: hostCreateElement,
-    insert: hostInsert,
-    remove: hostRemove,
-    // ...
-  } = options;
-
-  const render = (vnode, container) => {
-    patch(null, vnode, container); // 首次挂载
-  };
-
-  return {
-    render,
-    createApp: createAppAPI(render),
-  };
-}
+function createRenderer(options) {
+    const {
+        createElement: hostCreateElement,
+        createText: hostCreateText,
+        createComment: hostCreateComment,
+        setText: hostSetText,
+        setElementText: hostSetElementText,
+        insert: hostInsert,
+        remove: hostRemove,
+        nextSibling: hostNextSibling,
+        patchProp: hostPatchProp
+    } = options
 ```
 
-`createAppAPI` 返回 `createApp`，其 `mount` 方法先创建 VNode 再调用 `render`：
+浏览器那份实现就是标准的 DOM API，只有 `insert` 的一个细节值得留意——**anchor 为 null 时 `insertBefore` 就是 append**，所以九个操作里不需要单独来一个 `appendChild`：
+
+> 摘自 `./code/vue3/mini-vue/src/runtime-dom/nodeOps.js`
+
+```js
+    insert: (child, parent, anchor) => {
+        parent.insertBefore(child, anchor || null)
+    },
+    remove: child => {
+        const parent = child.parentNode
+        if (parent) parent.removeChild(child)
+    },
+```
+
+`runtime-dom` 这一层的全部职责就是"把两样东西装到一起"：
+
+> 摘自 `./code/vue3/mini-vue/src/runtime-dom/index.js`
+
+```js
+const { render, createApp } = createRenderer({ ...nodeOps, patchProp })
+
+// 让 h 在浏览器侧也可以直接用（模板编译产物也是调它）
+module.exports = { createApp, render, h, createVNode, nextTick, nodeOps, patchProp }
+```
+
+**"平台无关"可以直接实测**：宿主 A 用真实 DOM 的替身（假 DOM），宿主 B 干脆把界面拼成字符串——相当于服务端渲染的雏形。两边跑的是同一个组件定义、同一份 runtime-core，宿主操作次数逐项相同：
+
+```
+==== 两个宿主的操作次数 ====
+  操作               假 DOM   字符串
+  createElement        3        3
+  setElementText       2        2
+  insert               3        3
+  patchProp            1        1
+
+---- 结论 ----
+renderer 全程只调用注入进来的那 9 个函数，所以：
+  · 换成假 DOM 就是单测环境（不用 jsdom）
+  · 换成字符串拼接就是服务端渲染的雏形
+  · 官方把 runtime-core 与 runtime-dom 拆成两个包，原因就在这里
+```
+
+`createRenderer` 返回的 `createApp` 由 `createAppAPI` 生成，其 `mount` 方法先创建 VNode 再调用 `render`：
 
 > 示意片段（无配套脚本）
 
@@ -854,49 +795,47 @@ export const h = (type, props = null, children = []) => {
 - `props`：属性对象。
 - `children`：数组（子节点列表）或字符串（文本）。
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/vnode.js`
 
 ```js
-export const createVNode = function (type, props, children) {
-  const vnode = {
-    el: null,     // 对应真实 DOM
-    component: null,
-    key: props?.key,
-    type,
-    props: props || {},
-    children,
-    shapeFlag: getShapeFlag(type), // 节点的形状标记
-  };
+function createBaseVNode(type, props, children) {
+    const vnode = {
+        type,
+        props,
+        key: props && props.key != null ? props.key : null,
+        children,
+        shapeFlag: 0,
+        el: null, // 对应的真实节点
+        component: null // 组件 VNode 上挂的实例
+    }
+    // 1. 是元素还是组件
+    if (isString(type)) vnode.shapeFlag |= ShapeFlags.ELEMENT
+    else if (isObject(type)) vnode.shapeFlag |= ShapeFlags.STATEFUL_COMPONENT
 
-  // 根据 children 的类型再次扩展 shapeFlag
-  if (Array.isArray(children)) {
-    vnode.shapeFlag |= ShapeFlags.ARRAY_CHILDREN;
-  } else if (typeof children === "string") {
-    vnode.shapeFlag |= ShapeFlags.TEXT_CHILDREN;
-  }
-  return vnode;
-};
+    // 2. 孩子是文本还是数组
+    if (isString(children)) vnode.shapeFlag |= ShapeFlags.TEXT_CHILDREN
+    else if (isArray(children)) vnode.shapeFlag |= ShapeFlags.ARRAY_CHILDREN
+    else if (isObject(children)) vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
+
+    return vnode
+}
 ```
+
+注意 `key` 那一行的写法：`props.key != null ? props.key : null`——**有 props 却没有 key 的节点，`props.key` 是 `undefined` 而不是 `null`**，而 `null !== undefined`，diff 的同类型判断会把它判成"类型变了"，每次更新都整棵重建。归一成 `null` 就是修这个坑。
 
 ### 4.3 shapeFlag：VNode 形状标记
 
 `shapeFlag` 是一个位运算枚举，用来表示 VNode 的"长什么样"，渲染器据此选择对应的处理分支：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/shared/index.js`
 
 ```js
-export const enum ShapeFlags {
-  ELEMENT = 1,              // 普通 DOM 元素
-  FUNCTIONAL_COMPONENT = 1 << 1, // 函数式组件
-  STATEFUL_COMPONENT = 1 << 2,   // 有状态组件
-  TEXT_CHILDREN = 1 << 3,   // 子节点是文本
-  ARRAY_CHILDREN = 1 << 4,  // 子节点是数组
-  SLOTS_CHILDREN = 1 << 5,  // 子节点是插槽
-  TELEPORT = 1 << 6,
-  SUSPENSE = 1 << 7,
-  COMPONENT_SHOULD_KEEP_ALIVE = 1 << 8,
-  COMPONENT_KEPT_ALIVE = 1 << 9,
-  COMPONENT = STComp | FuncComp, // = 有状态 | 函数式
+const ShapeFlags = {
+    ELEMENT: 1, // 0001
+    STATEFUL_COMPONENT: 1 << 1, // 0010
+    TEXT_CHILDREN: 1 << 2, // 0100
+    ARRAY_CHILDREN: 1 << 3, // 1000
+    SLOTS_CHILDREN: 1 << 4
 }
 ```
 
@@ -913,24 +852,31 @@ if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) { /* 是 */ }
 if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) { /* 是 */ }
 ```
 
-渲染器 `patch` 根据 `shapeFlag` 分发到不同处理函数：
+渲染器 `patch` 根据 `shapeFlag` 分发到不同处理函数，位运算把两层判断压成了一次：
 
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/renderer.js`
 
 ```js
-function patch(n1, n2, container, anchor) {
-  const { shapeFlag } = n2;
-
-  if (shapeFlag & ShapeFlags.ELEMENT) {
-    processElement(n1, n2, container, anchor); // 处理元素
-  } else if (shapeFlag & ShapeFlags.COMPONENT) {
-    processComponent(n1, n2, container, anchor); // 处理组件
-  } else if (shapeFlag & ShapeFlags.TEXT) {
-    processText(n1, n2, container, anchor); // 处理文本
-  }
-  // ... Fragment / Teleport 等
-}
+        const { type, shapeFlag } = n2
+        switch (type) {
+            case Text:
+                processText(n1, n2, container, anchor)
+                break
+            case Comment:
+                processComment(n1, n2, container, anchor)
+                break
+            case Fragment:
+                processFragment(n1, n2, container, anchor)
+                break
+            default:
+                if (shapeFlag & ShapeFlags.ELEMENT) processElement(n1, n2, container, anchor)
+                else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+                    processComponent(n1, n2, container, anchor)
+                }
+        }
 ```
+
+`Fragment` 没有自己的节点，所以它用**两个空文本节点夹住自己这一段**当锚点——这也是为什么"顶层直接渲染一个数组"不会多出包裹节点。
 
 ### 4.4 组件实例化与 setup
 
@@ -945,6 +891,24 @@ setup 阶段的流程大致为：
 
 `<script setup>` 编译后等价于普通 `setup` 返回 setupState 的形式，这就是 1. 中提到的 SFC 编译与运行时在此"握手"。
 
+props 那层解决的是"子组件改父组件传下来的值必须被拦住，但 props 还得跟着父组件更新"：
+
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/componentProps.js`
+
+```js
+    // 声明过的进 props，没声明的进 attrs——这决定了它会不会出现在 $attrs 里
+    for (const key of Object.keys(raw)) {
+        if (options && key in options) props[key] = raw[key]
+        else attrs[key] = raw[key]
+    }
+
+    instance.props = options ? shallowReadonly(props) : attrs
+    // 留一份原始对象的引用：更新 props 时直接改它，代理会自动读到新值
+    instance.propsRaw = options ? props : attrs
+```
+
+`shallowReadonly` 是关键选型：**浅**只读，能拦住"子组件替换整个 prop"，又不妨碍 prop 内部的对象继续响应式。至于 `propsRaw`，是因为只读代理挡不住框架自己更新 props——框架拿着一份原始引用直接改，代理自动读到新值。
+
 ### 4.5 虚拟 DOM：挂载 / 更新 / 卸载
 
 | 阶段 | 说明 |
@@ -953,34 +917,126 @@ setup 阶段的流程大致为：
 | **更新（update）** | `patch` 对比新旧 VNode：文本不同则更新文本，元素走 `diff`，组件重新执行 render |
 | **卸载（unmount）** | 移除真实 DOM、清理组件 effect 与事件、触发 `onUnmounted`，防止内存泄漏 |
 
-核心入口 `patch(n1, n2, container)`：
+前三层在这一节合上：**组件的 render 被包成一个 effect**，它读到的响应式数据就是它的依赖。`isMounted` 那一个布尔值区分了"挂载"和"更新"两种 patch 签名——`patch(null, subTree)` 与 `patch(prevSubTree, nextSubTree)`，正是新旧对比的入口：
 
-- `n1` 为旧 VNode（首次为 `null` → 走挂载），`n2` 为新 VNode。
-- 按 `shapeFlag` 分发：元素走 `processElement`，组件走 `processComponent`。
-
-组件更新时，`patch` 的分支流程示例：
-
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/component.js`
 
 ```js
-// processComponent 大致流程
-const processComponent = (n1, n2, container) => {
-  if (n1) {
-    // 更新：调用 instance.update（其内部 scheduler 调度重新渲染）
-    n2.component = n1.component;
-    n1.component.update();
-  } else {
-    // 挂载：实例化组件
-    const instance = createComponentInstance(n2);
-    setupComponent(instance);
-    // ...
-  }
-};
+function setupRenderEffect(instance, initialVNode, container, anchor, patch) {
+    const componentUpdateFn = () => {
+        if (!instance.isMounted) {
+            const subTree = (instance.subTree = renderComponentRoot(instance))
+            patch(null, subTree, container, anchor)
+            initialVNode.el = subTree.el
+            instance.isMounted = true
+        } else {
+            const prevSubTree = instance.subTree
+            const nextSubTree = (instance.subTree = renderComponentRoot(instance))
+            patch(prevSubTree, nextSubTree, container, anchor)
+        }
+    }
+
+    // scheduler 是关键：数据变化不会立刻渲染，只把 update 排进微任务队列
+    instance.update = effect(componentUpdateFn, { scheduler: () => queueJob(instance.update) })
+}
 ```
 
-**异步批量更新**的关键：渲染 effect 被包上 `scheduler`，数据变化后不立即同步渲染，而是把更新推进队列、在下一微任务统一执行（即 `nextTick` 的机制）。
+"改三次只渲染一次"就发生在 scheduler 里。它用的是**微任务**，所以整块同步代码跑完、DOM 还是旧的，`nextTick()` 之后才能读到新值：
 
-### 4.6 生命周期钩子
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/scheduler.js`
+
+```js
+function queueJob(job) {
+    if (!queue.includes(job)) queue.push(job) // 同一个 job 只排一次
+    queueFlush()
+}
+
+function queueFlush() {
+    if (isFlushPending) return
+    isFlushPending = true
+    currentFlushPromise = resolvedPromise.then(flushJobs)
+}
+
+function flushJobs() {
+    isFlushPending = false
+    const jobs = queue.splice(0, queue.length) // 先取出快照，flush 过程中新加的留到下一轮
+    for (const job of jobs) job()
+    if (queue.length) flushJobs() // 组件有父子依赖时，执行中可能又推入新 job
+}
+```
+
+`queue.includes(job)` 这一句就是批处理的全部——**同一个组件的 update 在队列里只会出现一次**。实测：同一个 tick 改三次状态，渲染次数只 +1，DOM 在 `nextTick` 后才变成最终值：
+
+```
+==== 3. 同一个 tick 改三次，只渲染一次（批处理）====
+  三次赋值后立刻看：渲染次数 +0，DOM 仍是旧文案
+  await nextTick() 之后：渲染次数 +1
+  DOM 变成「count=3，double=6」
+```
+
+由此得出四个能直接下判断的结论：**`this.count` 里没有 `.value`**（setup 返回的 ref 被 `proxyRefs` 包过）；**批处理不是额外实现**（渲染交给调度器的自然结果）；**props 是浅只读**（子组件改被告警，父组件传新值照常生效）；**卸载必须 stop 渲染 effect**（否则组件不在了更新还一直来，就是内存泄漏）。
+
+### 4.6 列表 diff：头尾同步 + 按 key 配对
+
+列表 diff 是**先对齐头尾、再处理中间乱序**（双端比较）。头尾两步便宜且常见——能对上的直接复用，一个属性都不多改：
+
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/renderer.js`
+
+```js
+        // 1. 从头同步：能对上的直接复用，一个属性都不多改
+        while (i <= e1 && i <= e2) {
+            const n1 = c1[i]
+            const n2 = c2[i]
+            if (!isSameVNodeType(n1, n2)) break
+            patch(n1, n2, container, parentAnchor)
+            i++
+        }
+
+        // 2. 从尾同步
+        while (i <= e1 && i <= e2) {
+            const n1 = c1[e1]
+            const n2 = c2[e2]
+            if (!isSameVNodeType(n1, n2)) break
+            patch(n1, n2, container, parentAnchor)
+            e1--
+            e2--
+        }
+```
+
+头尾都没对上时才走"中间乱序"：按 key 建索引，找出哪些还能复用、哪些是新增，再统一搬移。**没 key 的退化成按下标对应——这正是"用 index 当 key"会出现的行为**：
+
+> 摘自 `./code/vue3/mini-vue/src/runtime-core/renderer.js`
+
+```js
+        const s1 = i
+        const s2 = i
+        const keyToNewIndex = new Map()
+        for (let j = s2; j <= e2; j++) {
+            if (c2[j].key !== null) keyToNewIndex.set(c2[j].key, j)
+        }
+
+        for (let j = s1; j <= e1; j++) {
+            const prevChild = c1[j]
+            // 没 key 的退化成按下标对应 —— 这正是"用 index 当 key"会出现的行为
+            const newIndex =
+                prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
+```
+
+断言 diff 最直接的办法是数宿主操作。两个结构完全相同的列表，只差有没有 key：
+
+```
+==== 场景一：删掉列表第一项 ====
+---- 无 key ----  宿主操作 5 次（改 data-id、改文本 ×2 + remove）
+---- 有 key ----  宿主操作 1 次（remove）
+
+==== 场景二：把最后一项移到最前（纯重排）====
+---- 无 key ----  宿主操作 6 次，全是"就地改写内容"，一个节点都没搬
+---- 有 key ----  宿主操作 3 次，全是搬移（insert），一次内容都没改
+```
+
+两种写法的 DOM 结果看起来完全一样，差别只在过程——而"就地改写"意味着节点被复用、内容被换掉，节点上的输入框内容、焦点、组件内部状态都会串位。同时要清楚：**有 key 的重排不是零成本**，真实 Vue 会先算最长递增子序列，跳过本来就在正确位置的节点。
+
+### 4.7 生命周期钩子
 
 生命周期钩子本质是"**在特定时机调用的用户函数集合**"。以 `onMounted` 为例：
 
@@ -1003,7 +1059,7 @@ instance.mounted.forEach((hook) => hook());
 
 `watch` / `computed` 的清理（stop）也会在生命周期卸载阶段统一触发，确保数据变化不再影响已销毁的组件（防止内存泄漏）。
 
-### 4.7 props 与插槽
+### 4.8 props 与插槽
 
 **props**
 
@@ -1017,7 +1073,7 @@ instance.mounted.forEach((hook) => hook());
 - 子组件通过 `slots` 拿到这些函数并渲染（`useSlots` / `this.$slots`）。
 - 对应 `shapeFlag` 的 `SLOTS_CHILDREN`。作用域插槽与普通插槽的区别在于：插槽函数接收 props 参数，从而实现"子传父"的数据渲染。
 
-### 4.8 provide / inject：依赖注入
+### 4.9 provide / inject：依赖注入
 
 `provide/inject` 用于跨层级传递数据，跳过中间组件。
 
@@ -1054,96 +1110,38 @@ export function inject(key) {
 
 借用 JS 原型链（`Object.create`），实现了 `inject` 沿祖先链查找且支持同名覆盖的效果，这也是 Vue 依赖注入"就近覆盖、向上穿透"的原理。
 
-## 五、mini-vue 手写思路
-
-手写 mini-vue 建议按"自底向上、先响应式后运行时"的顺序推进，每层都可用 `vitest` 写单测验证。
-
-### 5.1 第一层：响应式（reactivity）
-
-> 示意片段（无配套脚本）
-
-```
-reactivity/
-├── reactive.ts     reactive / isReactive / toRaw / readonly / shallowReadonly
-├── baseHandlers.ts createGetter / createSetter 拦截器
-├── effect.ts       ReactiveEffect / track / trigger
-├── ref.ts          ref / isRef / unref / proxyRefs
-├── computed.ts     ComputedRefImpl
-└── __tests__       各模块单测
-```
-
-验证点（对着单测逐条过）：
-
-- `reactive` 返回值 ≠ 原对象；嵌套对象、数组、`toRaw` 正确。
-- `effect` 首次执行、依赖追踪、scheduler 调度、stop、onStop。
-- `ref` 的深层响应、同一值不触发。
-- `computed` 的惰性 + 缓存。
-
-### 5.2 第二层：运行时（runtime-core + runtime-dom）
-
-> 示意片段（无配套脚本）
-
-```
-runtime-core/
-├── vnode.ts         createVNode / shapeFlag
-├── h.ts             h 封装
-├── renderer.ts      createRenderer（patch 中枢）
-├── component.ts     组件实例与 setup 处理
-├── createApp.ts     createAppAPI
-runtime-dom/
-└── index.ts         宿主操作 + 默认 createApp
-```
-
-从"入口挂载"入手串起整条链路：
-
-1. `createApp(App).mount(root)`。
-2. `mount` → `createVNode(App)` 拿到根 VNode → `render(vnode, root)`。
-3. `render` → `renderer` 里的 `patch(null, vnode, container)`。
-4. `patch` 按 `shapeFlag` 分发 → `processComponent` → 实例化组件 → 调用 `setup` → 得到子树 VNode → `patch` 递归处理元素 → 落到真实 DOM。
-
-### 5.3 第三层：在运行时接入响应式
-
-让组件 `render` 的每次执行都被一个渲染 effect 包裹，借助 `scheduler` 实现异步更新：
-
-> 示意片段（无配套脚本）
-
-```js
-// 示意：组件更新函数
-const componentUpdateFn = () => {
-  const subTree = instance.render.call(instance, instance.proxy);
-  patch(instance.subTree, subTree, container); // diff 新旧子树
-  instance.subTree = subTree;
-};
-
-// 用渲染 effect 包裹，依赖变化后经 scheduler 批量更新
-instance.update = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update));
-```
-
-到此，一个具备"响应式数据 → 自动重新渲染"能力的 mini-vue 就已经成型。
-
-### 5.4 可选拓展
-
-- 生命周期钩子（`onMounted` / `onUpdated` / `onUnmounted`）。
-- props 的 `shallowReadonly` 处理与校验。
-- 插槽 / 作用域插槽。
-- `provide` / `inject`（基于原型链）。
-- 编译模块独立项目（模板 → AST → render），可作为最终进阶。
-
 ## 配套代码
 
-本篇的可运行示例在仓库 `frontend/进阶/前端框架原理/code/vue3/site/`。
+本篇示例来自 `code/vue3/mini-vue`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
 
-| 文件 | 演示什么 | 对应小节 |
-| --- | --- | --- |
-| `./code/vue3/site/compiler-demo.html` | 模板编译：把模板字符串解析成插值占位结构，再包装成渲染函数，渲染函数接收数据返回 HTML | 二、编译原理 |
-| `./code/vue3/site/mini-reactive.html` | 响应式原理：Proxy 拦截 get/set，读取时 track 收集依赖、修改时 trigger 触发更新，数据驱动视图的最小内核 | 三、响应式系统 |
-| `./code/vue3/site/vdom-vue-diff.html` | 虚拟 DOM diff：轻量 VNode 树 diff 生成 patch，按补丁只更新真正变化的地方 | 四、运行时原理 |
+| 文件 | 作用 | 对应小节 |
+| ---- | ---- | ---- |
+| `./code/vue3/mini-vue/src/shared/index.js` | 类型判断与 `ShapeFlags` | 4.3 shapeFlag |
+| `./code/vue3/mini-vue/src/reactivity/effect.js` | `ReactiveEffect`（effect 栈 / cleanup）/ `track` / `trigger` / `stop` | 3.2 · 3.3 · 3.4 |
+| `./code/vue3/mini-vue/src/reactivity/reactive.js` | `reactive` / `readonly` / `shallowReadonly` 与代理缓存 | 3.1 reactive |
+| `./code/vue3/mini-vue/src/reactivity/ref.js` | `RefImpl` / `proxyRefs` / `unref` | 3.5 ref |
+| `./code/vue3/mini-vue/src/reactivity/computed.js` | 脏标记 + scheduler 实现的惰性 `computed` | 3.7 computed |
+| `./code/vue3/mini-vue/src/runtime-core/vnode.js` | `createVNode` / `h` / `shapeFlag` / `normalizeVNode` | 4.2 h 函数 |
+| `./code/vue3/mini-vue/src/runtime-core/scheduler.js` | `queueJob` / `flushJobs` / `nextTick`（微任务批处理） | 4.5 挂载更新卸载 |
+| `./code/vue3/mini-vue/src/runtime-core/renderer.js` | `createRenderer`：patch 分发、列表 diff、组件挂载与卸载 | 4.1 · 4.3 · 4.6 |
+| `./code/vue3/mini-vue/src/runtime-core/component.js` | 组件实例、`setup` 代理、渲染 effect | 4.4 · 4.5 |
+| `./code/vue3/mini-vue/src/runtime-core/componentProps.js` | `props` 浅只读、`attrs` 分流、`slots` 归一 | 4.4 · 4.8 |
+| `./code/vue3/mini-vue/src/runtime-dom/nodeOps.js` | 浏览器宿主操作（真实 DOM） | 4.1 分工 |
+| `./code/vue3/mini-vue/src/runtime-dom/patchProp.js` | 事件 / property / attribute 三种属性写法 | 4.6 列表 diff |
+| `./code/vue3/mini-vue/src/runtime-dom/index.js` | `createRenderer({ ...nodeOps, patchProp })` 与 `createApp` | 4.1 分工 |
+| `./code/vue3/mini-vue/steps/01-reactivity.js` | 依赖收集与触发、惰性深度代理、增删属性 | 3.2 · 3.3 |
+| `./code/vue3/mini-vue/steps/02-effect-scheduler.js` | scheduler、分支清理、`stop`、`computed` 惰性 | 3.4 · 3.7 |
+| `./code/vue3/mini-vue/steps/03-renderer.js` | 两个宿主跑同一份 render，对调用次数 | 4.1 分工 |
+| `./code/vue3/mini-vue/steps/04-dom-diff.js` | 有 / 无 key 的宿主操作次数对照 | 4.6 列表 diff |
+| `./code/vue3/mini-vue/steps/05-component.js` | 挂载、批处理、只读 props、跳过子渲染、卸载 | 4.4 · 4.5 |
 
-启动方式：浏览器直接打开 `./code/vue3/site/` 下的 html 即可。
+运行：`cd code/vue3/mini-vue`，然后
+
+- `npm run step:reactivity` / `step:effect` / `step:renderer` / `step:diff` / `step:component` —— 五个观察脚本
+- `npm test` —— 26 个单测
 
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 上一篇：[React 状态管理原理与实现](../react/React%20状态管理原理与实现.md)
-- 下一篇：[手写 mini-vue](./手写%20mini-vue.md)
-- 本模块另五篇：[React 高级与原理](../react/React%20高级与原理.md) · [手写 mini-react](../react/手写%20mini-react.md) · [React 状态管理原理与实现](../react/React%20状态管理原理与实现.md) · [手写 mini-vue](./手写%20mini-vue.md) · [Vue3 状态管理原理与实现](./Vue3%20状态管理原理与实现.md)
+- 上一篇：[React 高级与原理](../react/React%20高级与原理.md)
+- 下一篇：[Vue3 状态管理原理与实现](./Vue3%20状态管理原理与实现.md)

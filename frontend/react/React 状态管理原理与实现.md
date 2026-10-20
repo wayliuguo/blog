@@ -20,7 +20,7 @@ signal（依赖追踪）        判断放在 store 内部（依赖表记着"谁�
 
 先立住一个贯穿全篇的区分：**被唤醒 ≠ 重渲染**。订阅回调被 store 叫醒，和组件真的重渲染，是两件事——前者可以被选择器拦下来，后者才是你感知到的卡顿。后面所有的对照都绕着这两个数字转。
 
-全部代码在 `../code/react/mini-state/`，零依赖、约 200 行，三个观察脚本 + 14 条断言。
+全部代码在 `./code/react/mini-state/`，零依赖、约 200 行，三个观察脚本 + 14 条断言。
 
 ## 二、路线一：reducer 与不可变更新（mini-redux）
 
@@ -28,7 +28,7 @@ signal（依赖追踪）        判断放在 store 内部（依赖表记着"谁�
 
 路线一把"谁能改状态"收成一个入口：**只能通过 dispatch 一个 action，让 reducer 算出新状态**。
 
-> 摘自 `../code/react/mini-state/src/redux-like.js`
+> 摘自 `./code/react/mini-state/src/redux-like.js`
 
 ```js
 function createStore(reducer, preloadedState) {
@@ -50,7 +50,7 @@ function createStore(reducer, preloadedState) {
 
 reducer 必须是纯函数，所以它只能"返回一个新对象"，不能改入参——这不是风格偏好，而是这套机制成立的前提：状态是不可变的，新旧状态才可以用**引用比较**来回答"变没变"。
 
-> 摘自 `../code/react/mini-state/steps/01-reducer.js`（运行：`npm run step:reducer`）
+> 摘自 `./code/react/mini-state/steps/01-reducer.js`（运行：`npm run step:reducer`）
 
 ```js
 const cartState = { items: 0 }
@@ -74,7 +74,7 @@ console.log('不认领的 action → 返回原引用 =', untouched === cartState
 
 真实 Redux 里状态是一棵切片树，`combineReducers` 负责逐片比较：
 
-> 摘自 `../code/react/mini-state/src/redux-like.js`
+> 摘自 `./code/react/mini-state/src/redux-like.js`
 
 ```js
 function combineReducers(reducers) {
@@ -145,7 +145,7 @@ cart 切片换了新引用 = true
 
 路线二保留"订阅切片"的机制，但去掉了 action 这层仪式：直接告诉 store 要改哪几个键，默认浅合并。
 
-> 摘自 `../code/react/mini-state/src/zustand-like.js`
+> 摘自 `./code/react/mini-state/src/zustand-like.js`
 
 ```js
     function setState(partial, replace = false) {
@@ -182,7 +182,7 @@ store 层的订阅回调被调用 = 0 次 <- 逐键 Object.is 之后连通知都
 
 组件不应该关心整棵状态树。它订阅的是"我用到的那一片"：
 
-> 摘自 `../code/react/mini-state/src/harness.js`
+> 摘自 `./code/react/mini-state/src/harness.js`
 
 ```js
 function subscribeWithSelector(store, selector, onChange, isEqual = Object.is) {
@@ -201,7 +201,7 @@ function subscribeWithSelector(store, selector, onChange, isEqual = Object.is) {
 
 `mount` 是一个"假组件"：只有订阅、选择器、渲染计数三件事，用来把重渲染次数数出来。
 
-> 摘自 `../code/react/mini-state/src/harness.js`
+> 摘自 `./code/react/mini-state/src/harness.js`
 
 ```js
 function mount(store, selector, view, isEqual = Object.is) {
@@ -217,7 +217,7 @@ function mount(store, selector, view, isEqual = Object.is) {
 }
 ```
 
-> 摘自 `../code/react/mini-state/steps/02-selector.js`（运行：`npm run step:selector`）
+> 摘自 `./code/react/mini-state/steps/02-selector.js`（运行：`npm run step:selector`）
 
 ```js
 const comps = {
@@ -247,7 +247,7 @@ const comps = {
 
 `Object.is` 这一关很容易被自己弄丢：
 
-> 摘自 `../code/react/mini-state/steps/02-selector.js`
+> 摘自 `./code/react/mini-state/steps/02-selector.js`
 
 ```js
 const toObject = state => ({ name: state.user.name })
@@ -267,7 +267,7 @@ shallowEqual：字段逐个比 → 无关更新被拦下
 
 一个跟着无关更新重渲染了 3 次，另一个 1 次都没多。这就是 `useSelector` 那条著名的告警的由来（选择器返回值不稳定会造成多余渲染）。两条解法：**让选择器返回扁平的基本类型**，或者**换一个相等判断**：
 
-> 摘自 `../code/react/mini-state/src/harness.js`
+> 摘自 `./code/react/mini-state/src/harness.js`
 
 ```js
 function shallowEqual(a, b) {
@@ -287,7 +287,7 @@ function shallowEqual(a, b) {
 
 还有一笔开销容易被忘记：**选择器每次通知都会跑一遍**，跑完才决定要不要渲染。
 
-> 摘自 `../code/react/mini-state/steps/02-selector.js`
+> 摘自 `./code/react/mini-state/steps/02-selector.js`
 
 ```js
 const emptyState = create(() => ({ ...initialState }))
@@ -317,7 +317,7 @@ const counted = mount(
 
 ### Redux 绑定：Provider + useSelector + useDispatch
 
-> 摘自 `../code/react/mini-state/src/binding.js`
+> 摘自 `./code/react/mini-state/src/binding.js`
 
 ```js
 function createReduxBinding(store) {
@@ -342,7 +342,7 @@ function createReduxBinding(store) {
 
 真实 react-redux 的 `Provider` 用 context 把 store 传下去，假渲染器里 store 由闭包提供——语义等价，省掉的只是 React 渲染树。组件的写法不变：
 
-> 摘自 `../code/react/mini-state/steps/03-binding.js`
+> 摘自 `./code/react/mini-state/steps/03-binding.js`
 
 ```js
 const header = Provider(() => useSelector(selectors.header))
@@ -353,7 +353,7 @@ const renders = () => `${header.renders} / ${badge.renders} / ${toggle.renders}`
 
 ### Zustand 绑定：useStore
 
-> 摘自 `../code/react/mini-state/src/binding.js`
+> 摘自 `./code/react/mini-state/src/binding.js`
 
 ```js
 function createZustandBinding(store) {
@@ -373,7 +373,7 @@ function createZustandBinding(store) {
 
 ### 可跑可计数：一次真实的重渲染计数
 
-> 摘自 `../code/react/mini-state/steps/03-binding.js`（运行：`npm run step:binding`）
+> 摘自 `./code/react/mini-state/steps/03-binding.js`（运行：`npm run step:binding`）
 
 ```js
 const dispatch = useDispatch()
@@ -458,22 +458,22 @@ setState 赋同值                  0       0       逐键 Object.is → 连通�
 
 ## 配套代码
 
-本篇示例来自 `../code/react/mini-state/`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
+本篇示例来自 `./code/react/mini-state/`（零依赖，不需要 `npm install`；单测用 Node 内置的 `node:test`）。
 
 | 文件 | 作用 | 对应小节 |
 | ---- | ---- | ---- |
-| `../code/react/mini-state/src/redux-like.js` | `createStore`（dispatch + subscribe）与 `combineReducers`（逐片比较后短路） | 二、reducer 与不可变更新 |
-| `../code/react/mini-state/src/zustand-like.js` | `create`：`setState` 浅合并 + 逐键 `Object.is` | 三、setState 与订阅切片 |
-| `../code/react/mini-state/src/harness.js` | `subscribeWithSelector` / `mount` / `shallowEqual`（订阅式渲染器） | 三、setState 与订阅切片 |
-| `../code/react/mini-state/src/binding.js` | Redux 绑定（`Provider` / `useSelector` / `useDispatch`）与 Zustand 绑定（`useStore`） | 四、绑定层 |
-| `../code/react/mini-state/src/demo.js` | 两条路线共用的状态、reducer 与三个订阅切片 | 五、两条路线对照 |
-| `../code/react/mini-state/src/index.js` | 对外出口 | 二 · 三 · 四 |
-| `../code/react/mini-state/steps/01-reducer.js` | reducer 纯函数、引用短路、原地改的后果 | 二、reducer 与不可变更新 |
-| `../code/react/mini-state/steps/02-selector.js` | 选择器 + 引用相等，数重渲染次数 | 三、setState 与订阅切片 |
-| `../code/react/mini-state/steps/03-binding.js` | 绑定层重渲染计数（可跑可计数的主脚本） | 四、绑定层 |
-| `../code/react/mini-state/test/redux.test.js` | `createStore` / `combineReducers` 的 4 条断言 | 二、reducer 与不可变更新 |
-| `../code/react/mini-state/test/zustand.test.js` | `setState` 浅合并与逐键比较的 5 条断言 | 三、setState 与订阅切片 |
-| `../code/react/mini-state/test/binding.test.js` | `useSelector` / `useStore` 重渲染计数的 5 条断言 | 四、绑定层 |
+| `./code/react/mini-state/src/redux-like.js` | `createStore`（dispatch + subscribe）与 `combineReducers`（逐片比较后短路） | 二、reducer 与不可变更新 |
+| `./code/react/mini-state/src/zustand-like.js` | `create`：`setState` 浅合并 + 逐键 `Object.is` | 三、setState 与订阅切片 |
+| `./code/react/mini-state/src/harness.js` | `subscribeWithSelector` / `mount` / `shallowEqual`（订阅式渲染器） | 三、setState 与订阅切片 |
+| `./code/react/mini-state/src/binding.js` | Redux 绑定（`Provider` / `useSelector` / `useDispatch`）与 Zustand 绑定（`useStore`） | 四、绑定层 |
+| `./code/react/mini-state/src/demo.js` | 两条路线共用的状态、reducer 与三个订阅切片 | 五、两条路线对照 |
+| `./code/react/mini-state/src/index.js` | 对外出口 | 二 · 三 · 四 |
+| `./code/react/mini-state/steps/01-reducer.js` | reducer 纯函数、引用短路、原地改的后果 | 二、reducer 与不可变更新 |
+| `./code/react/mini-state/steps/02-selector.js` | 选择器 + 引用相等，数重渲染次数 | 三、setState 与订阅切片 |
+| `./code/react/mini-state/steps/03-binding.js` | 绑定层重渲染计数（可跑可计数的主脚本） | 四、绑定层 |
+| `./code/react/mini-state/test/redux.test.js` | `createStore` / `combineReducers` 的 4 条断言 | 二、reducer 与不可变更新 |
+| `./code/react/mini-state/test/zustand.test.js` | `setState` 浅合并与逐键比较的 5 条断言 | 三、setState 与订阅切片 |
+| `./code/react/mini-state/test/binding.test.js` | `useSelector` / `useStore` 重渲染计数的 5 条断言 | 四、绑定层 |
 
 运行：`cd code/react/mini-state`，然后
 
@@ -485,5 +485,5 @@ setState 赋同值                  0       0       逐键 Object.is → 连通�
 - 本模块总结：[总结](./总结.md)
 - 上一篇：[手写 mini-react](./手写%20mini-react.md)
 - 下一篇：[Vue3 原理](../vue/Vue3%20原理.md)
-- 本模块另三篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](../vue/Vue3%20原理.md) · [手写 mini-vue](../vue/手写%20mini-vue.md)
+- 本模块另三篇：[React 高级与原理](./React%20高级与原理.md) · [Vue3 原理](../vue/Vue3%20原理.md)
 - 依赖追踪路线（signal 归 Vue3）：[Vue3 状态管理原理与实现](../vue/Vue3%20状态管理原理与实现.md)

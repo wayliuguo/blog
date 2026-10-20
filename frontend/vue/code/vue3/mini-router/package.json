@@ -1,0 +1,12 @@
+{
+    "name": "mini-router",
+    "version": "1.0.0",
+    "private": true,
+    "description": "手写 mini-router：matcher（动态段/嵌套 matched 链）+ history 抽象（memory/hash/web）+ 守卫流程，零依赖可运行 + 单测",
+    "scripts": {
+        "step:matcher": "node steps/01-matcher.js",
+        "step:history": "node steps/02-history.js",
+        "step:guard": "node steps/03-guard.js",
+        "test": "node --test test/*.test.js"
+    }
+}
