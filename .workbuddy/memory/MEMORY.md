@@ -31,6 +31,9 @@ safe-delete shim 按 turn 累计删除计数，超阈值（count>50）后 vite �
 用户定规：① 每个框架/选型章四层 = 入门（心智模型迁移，非扫盲）/进阶/实战（绑板块统一业务场景）/最小实现；② **最小实现按选型各自承担、不板块统一**（mini-next 与 mini-nuxt 是两套独立实现）；③ 侧边栏平铺（渲染架构→微前端→跨端）；④ 研发平台与效能工程板块整删；⑤ 旧篇目允许删改同步改链接。设计稿：.workbuddy/docs/2026-10-13-进阶模块实操化改造方案.md。批次：1 渲染架构✅ → 2 微前端 → 3 跨端 → 4 可视化+AI → 5 低代码+交互+删板块收尾。
 **批次1 渲染架构已落地**：全景.md/Next.js.md/Nuxt.md + 总结面试题重写；code 四工程 next-app(Next15, 3021)/nuxt-app(Nuxt3, 3022)/mini-next(3013)/mini-nuxt(3014) 全实跑；render-lab 保留（实测基线引用）。新坑：next-app build 要 eslint.ignoreDuringBuilds（仓库根 eslint 配置被继承）；Next15 params 是 Promise；流式下 notFound() 状态码 200；esbuild 打 JSX 要 jsx:'automatic'；nuxt build 也要 CODEBUDDY_SAFE_DELETE_ENABLED=0（@nuxt/cli 清 .nuxt 会中招）。
 
+## Vue 模块配套代码 = 单 HTML 断点入口（2026-10-20 用户定规）
+原理三篇（Vue3 原理/状态管理/Router 原理）的配套代码是 `code/vue3/{mini-vue,mini-pinia,mini-router}.html` 三个自包含文件：浏览器直接打开、F12 断点，打开即自动跑控制台 demo；**不再用 Node 工程（steps/test/package.json 已删）**。md 摘自路径指向 html；check-code-sync 对 HTML 文本同样生效（module.exports 用 const module 替身原样承接；被摘自锁定的函数不可改，如 mini-router navigate 只认对象重定向）。新写原理篇配套时照此形态：分区注释 + 建议断点表 + demo 数字与正文实测一致。
+
 ## Git / 本机
 提交一律 --no-verify；origin=gitee.com/wayliuhaha/blog、master；大批量提交分桶、信息写 .git/COMMIT_MSG_TMP.txt 再 -F；**本机 git 在 /mingw64/bin/git（裸 `git` 可用），记忆里旧的 "E:\Program Files\Git\cmd\git.EXE" 已不存在**；bash PATH 坏→Python 全路径；临时脚本放 C:\Users\10855\.workbuddy\tmp\。
 分桶铁律：先 `git reset HEAD -- <非本桶路径>` 清掉上一轮会话遗留的旧暂存（前一轮 `git add` 留下的条目会整批并进新提交，2026-10-01 首次提交就误吞了 200 个 frontend 文件），再 `git add -A -- <本桶路径>`；提交后 `git show --name-only --format=""` 反查有无混入别的板块（中文路径必须加 `-c core.quotepath=false`，否则名字被转义成 `\350\277...` 查不到）。
