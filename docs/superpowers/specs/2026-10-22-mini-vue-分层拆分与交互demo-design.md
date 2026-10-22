@@ -64,12 +64,36 @@ frontend/vue/code/vue3/
 
 1. 篇首声明改写：从「自包含调试入口」改为「分层实现 `mini-vue/` + 交互 `demos/`」，附文件依赖关系
 2. 全部「摘自 mini-vue.html」引用按新路径更新（`> 摘自 ./code/vue3/mini-vue/reactivity.js` 等，按机制归属文件）
-3. **关键函数 I/O 表（新增核心诉求）**：每个机制节在摘自代码后补三列表——函数 / 输入 / 输出 / 处理过程；示例：
+3. **关键函数流水线呈现（新增核心诉求，替代 I/O 表）**：每个模块章（编译 / 响应式 / 运行时）开头给一张 **ASCII 数据流总纲图**——展示「输入 ⇒ 关键函数链 ⇒ 中间产物 ⇒ … ⇒ 最终输出」，图上标注每一步进出的数据形态；正文各机制节保留「摘自」代码，代码后用紧凑注释块（非表格）标注该函数的输入 / 输出 / 过程。编译章示例：
 
-   | 函数 | 输入 | 输出 | 处理过程 |
-   | --- | --- | --- | --- |
-   | track(target, key) | 目标对象、属性名 | void | 取 targetMap 中该 target 的 depsMap，把当前 activeEffect 加入 dep 并反向记录到 effect.deps |
-   | patch(n1, n2, container) | 旧 vnode（可 null）、新 vnode、容器 | void | 类型不同卸旧挂新；同类型分派 processElement / processComponent；children 按 shapeFlag 三策略 |
+   ```
+   '<div>{{ msg }}</div>'            模板字符串（编译输入）
+           │
+           ▼
+       parse(template) ──────────► AST
+           │                       { type: 'Element', tag: 'div',
+           │                         children: [ { type: 'Interpolation', ... } ] }
+           ▼
+       transform(ast) ───────────► 标记后的 AST
+           │                       静态节点提升、动态插值打 patchFlag
+           ▼
+       generate(ast) ────────────► render 代码字符串
+           │                       "const { toDisplayString: ... } = ..."
+           ▼
+       new Function(code) ───────► 可执行 render 函数
+           │
+           ▼
+       render() ─────────────────► VNode 树（交给运行时 patch）
+   ```
+
+   正文函数注释块示例：
+
+   ```
+   track(target, key)
+     输入: target 目标对象、key 属性名
+     输出: void（副作用：activeEffect 进入该 key 的 dep）
+     过程: targetMap → depsMap → dep.add(activeEffect)，并反向记录到 effect.deps（供 cleanup）
+   ```
 
 4. 篇末「配套代码」节重写：文件清单表 + demo ↔ 章节对照表
 5. 「总结.md」第 4 节配套路径同步更新
