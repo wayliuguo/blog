@@ -21,7 +21,6 @@ export default [
             { text: 'React', link: '/interview/前端/面试题-React' },
             { text: '监控系统', link: '/interview/前端/面试题-监控系统' },
             { text: '性能优化', link: '/interview/前端/面试题-性能优化' },
-            { text: '自动化测试', link: '/interview/前端/面试题-自动化测试' },
             { text: 'Rollup', link: '/interview/前端/面试题-Rollup' },
             { text: 'Vite', link: '/interview/前端/面试题-Vite' }
         ]
