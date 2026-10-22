@@ -70,21 +70,23 @@ frontend/vue/code/vue3/
    '<div>{{ msg }}</div>'            模板字符串（编译输入）
            │
            ▼
-       parse(template) ──────────► AST
+       parse(template) ──────────► AST                    〔详见 2.2〕
            │                       { type: 'Element', tag: 'div',
            │                         children: [ { type: 'Interpolation', ... } ] }
            ▼
-       transform(ast) ───────────► 标记后的 AST
+       transform(ast) ───────────► 标记后的 AST            〔详见 2.3〕
            │                       静态节点提升、动态插值打 patchFlag
            ▼
-       generate(ast) ────────────► render 代码字符串
-           │                       "const { toDisplayString: ... } = ..."
+       generate(ast) ────────────► render 代码字符串        〔详见 2.2〕
+           │
            ▼
        new Function(code) ───────► 可执行 render 函数
            │
            ▼
-       render() ─────────────────► VNode 树（交给运行时 patch）
+       render() ─────────────────► VNode 树（交给运行时 patch）  〔详见 4.5〕
    ```
+
+   **图与节一一对应（硬性要求）**：总纲图上每个关键函数节点标注其对应的正文小节号（`〔详见 N.N〕`），正文的对应小节必须配有「摘自 mini-vue 拆分文件」的代码块 + 原理讲解——图中每个环节都要能下钻到代码级讲解，不允许出现「图上有节点、正文没有配套代码」的悬空环节；若现有正文小节缺讲解（如 transform 内部如何提升静态节点），实施时补齐该小节内容。
 
    正文函数注释块示例：
 
