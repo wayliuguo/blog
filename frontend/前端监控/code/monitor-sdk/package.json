@@ -1,0 +1,13 @@
+{
+  "name": "monitor-sdk",
+  "version": "3.0.0",
+  "description": "自建前端监控 SDK：初始化 / 异常 / 性能 / 声明上报 / 批量与节流上报，零依赖纯浏览器 JS",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ]
+}

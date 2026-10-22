@@ -122,7 +122,7 @@ export default [
         collapsed: false,
         items: [
             { text: '性能优化体系与指标', link: '/frontend/性能优化/性能优化体系与指标' },
-            { text: '性能优化实战', link: '/frontend/性能优化/性能优化实战' },
+            { text: '性能优化手段与落地', link: '/frontend/性能优化/性能优化手段与落地' },
             { text: '模块总结（性能优化）', link: '/frontend/性能优化/总结' }
         ]
     },
@@ -130,9 +130,7 @@ export default [
         text: '前端监控',
         collapsed: false,
         items: [
-            { text: '前端监控体系', link: '/frontend/前端监控/前端监控体系' },
-            { text: '前端监控 SDK 实现', link: '/frontend/前端监控/前端监控%20SDK%20实现' },
-            { text: '前端监控实战·单页验证', link: '/frontend/前端监控/前端监控实战·单页验证' },
+            { text: '监控SDK', link: '/frontend/前端监控/监控SDK' },
             { text: '模块总结（前端监控）', link: '/frontend/前端监控/总结' }
         ]
     },

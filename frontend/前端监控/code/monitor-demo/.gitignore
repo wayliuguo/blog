@@ -1,0 +1,5 @@
+# collector.js 运行时落盘的上报数据（POST /api/report 追加写入）
+data/
+
+# vite 构建产物
+dist/
