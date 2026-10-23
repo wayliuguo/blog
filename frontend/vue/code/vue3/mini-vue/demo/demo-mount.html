@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · 挂载链路：createApp().mount → VNode 树 → 真实 DOM</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; }
+    .intro { font-size: 13.5px; color: #495057; }
+    .intro code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; }
+    .panel { border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; background: #fff; margin-top: 14px; }
+    .panel-head { font-size: 13px; color: #868e96; margin-bottom: 8px; font-weight: 600; }
+    pre { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 6px 0; }
+    .cols { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+    .cols > div { flex: 1; min-width: 260px; }
+    .cols h3 { font-size: 13px; margin: 0 0 6px; color: #868e96; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+    #app { min-height: 160px; border: 1px dashed #dbe4ff; background: #f8f9ff; border-radius: 6px; padding: 10px 12px; font-size: 13px; color: #868e96; }
+    #app .app { color: #213547; }
+    #app h3 { margin: 2px 0 8px; font-size: 14px; }
+    #app p { margin: 4px 0; }
+    #app .list-block { margin-top: 10px; border-top: 1px dashed #e9ecef; padding-top: 8px; }
+    #app h4 { font-size: 12.5px; color: #868e96; margin: 0 0 4px; }
+    #app ul { margin: 0; padding-left: 20px; }
+    #app li { font-size: 13px; }
+    #app .theme-bar { margin-top: 12px; padding: 8px 10px; border: 1px solid #d3f9d8; background: #ebfbee; border-radius: 6px; font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #app .theme-bar button { padding: 3px 8px; cursor: pointer; }
+    #lifeMark { font-size: 13px; color: #0b7285; padding: 4px 0; }
+</style>
+</head>
+<body>
+<h1>demo · 挂载链路</h1>
+<p class="intro">进页面即执行 <code>createApp(App).mount(container)</code>：setup 建状态 → render 产出 VNode 树 → patch(null, subTree) 递归 mountElement 生成真实 DOM。左栏是挂载后的 VNode 树（<code>container._vnode.component.subTree</code>），右栏是对应的真实 DOM——每个 <code>h(...)</code> 节点都对应一段 DOM。模板已在进页面时预编译。</p>
+
+<div class="panel">
+    <div class="panel-head">挂载状态</div>
+    <span id="lifeMark"></span>
+</div>
+
+<div class="panel">
+    <div class="panel-head">渲染区：VNode 树 ↔ 真实 DOM</div>
+    <div class="cols">
+        <div><h3>VNode 树（组件 subTree）</h3><pre id="vTree">（加载即挂载）</pre></div>
+        <div><h3>真实 DOM（挂载容器 &lt;div id="app"&gt;）</h3><div id="app">（加载即挂载）</div></div>
+    </div>
+</div>
+
+<script src="../lib/shared.js"></script>
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/compiler-core.js"></script>
+<script src="../lib/runtime-core.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+const M = window.MiniVue
+
+// 进页面先编译预置模板（编译产物展示是 demo-compiler 的职责，这里只取 render）
+// 编译产物是「根节点数组」：必须展开成一等孩子，直接嵌 children 会复现「更新跳过 / 卸载崩溃」bug
+const compiled = M.compile(`<section class="app-head">
+  <h3>任务列表（静态标题：编译时提升）</h3>
+  <p data-role="count">count = {{ count }}，double = {{ double }}，title = {{ title }}</p>
+</section>`)
+
+// 组件树：编译产物（订阅 count/double/title）+ 有/无 key 双列表 + provide/inject 主题条
+const KeyedList = {
+    setup: () => () => M.h('section', { class: 'list-block' }, [
+        M.h('h4', null, '有 key 列表（key = id，按 key 配对）'),
+        M.h('ul', null, todos.map(x => M.h('li', { key: x.id }, `#${x.id} ${x.t}`)))
+    ])
+}
+const NokeyList = {
+    setup: () => () => M.h('section', { class: 'list-block' }, [
+        M.h('h4', null, '无 key 列表（退化成按下标对应）'),
+        M.h('ul', null, todos.map(x => M.h('li', { key: null }, `#${x.id} ${x.t}`)))
+    ])
+}
+const Mid = { setup: () => () => M.h(Leaf) } // 中转层：不 provide 也不 inject，只渲染子组件
+const Leaf = {
+    setup() {
+        const t = M.inject('theme') // 沿 provides 原型链向上查找
+        M.onMounted(() => { document.getElementById('lifeMark').textContent = 'onMounted 已触发（子树挂载完后统一执行）' })
+        return () => M.h('div', { class: 'theme-bar' }, [
+            M.h('span', null, `theme = ${t.value}（Leaf 读 .value 建立依赖）`),
+            M.h('button', { onClick: () => { t.value = t.value === '亮色' ? '暗色' : '亮色' } }, '切换主题')
+        ])
+    }
+}
+
+const box = document.getElementById('app')
+const nextId = { n: 1 }
+const todos = M.reactive([
+    { id: nextId.n++, t: 'a' },
+    { id: nextId.n++, t: 'b' },
+    { id: nextId.n++, t: 'c' }
+])
+const themeRef = M.ref('亮色')
+
+const App = {
+    setup() {
+        M.provide('theme', themeRef) // 首次 provide 才建原型链副本：Object.create(parent.provides)
+        const count = M.ref(0)
+        return {
+            count,
+            // 真实依赖 count：模板读 double 才触发 getter 建依赖（渲染时读 .value → track）
+            double: M.computed(() => count.value * 2),
+            title: M.ref('标题 A')
+        }
+    },
+    // 编译产物需要 h / toDisplayString / ctx 三个入参，组件 render 只拿 ctx —— 显式注入是「编译层 × 运行时层」的握手点
+    render(ctx) {
+        const roots = compiled.render(M.h, M.toDisplayString, ctx)
+        return M.h('div', { class: 'app' }, [
+            ...roots, // 数组展开：见页面顶部说明
+            M.h(KeyedList),
+            M.h(NokeyList),
+            M.h(Mid)
+        ])
+    }
+}
+
+function refreshTree() {
+    const out = []
+    ;(function walk(vnode, depth) {
+        const pad = '  '.repeat(depth)
+        if (!vnode || !vnode.type) return
+        if (typeof vnode.type === 'symbol') {
+            out.push(`${pad}<${vnode.anchor ? 'Fragment' : 'Text'}>`)
+            if (Array.isArray(vnode.children)) vnode.children.forEach(c => walk(c, depth + 1))
+            return
+        }
+        if (typeof vnode.type === 'string') {
+            out.push(`${pad}<${vnode.type}> key=${JSON.stringify(vnode.key)} patchFlag=${vnode.patchFlag || 0}`)
+        } else {
+            out.push(`${pad}<Component>`)
+        }
+        const { children, shapeFlag } = vnode
+        if (shapeFlag & 8 && Array.isArray(children)) children.forEach(c => walk(c, depth + 1))
+        else if (shapeFlag & 4 && typeof children === 'string') out.push(`${pad}  "${children}"`)
+        else if (shapeFlag & 2 && vnode.component) walk(vnode.component.subTree, depth + 1)
+    })(box._vnode && box._vnode.component ? box._vnode.component.subTree : null, 0)
+    document.getElementById('vTree').textContent = out.join('\n') || '（未挂载）'
+}
+
+// 切换主题按钮：只有订阅 theme 的 Leaf 重渲染，挂载后可对照 VNode 树观察
+box.addEventListener('click', e => {
+    const btn = e.target.closest('button')
+    if (btn && btn.textContent === '切换主题') M.nextTick(refreshTree)
+})
+
+// 加载即挂载：setup → render → patch(null, subTree) → 真实 DOM（先清掉容器占位文本）
+box.innerHTML = ''
+M.createApp(App).mount(box)
+refreshTree()
+</script>
+</body>
+</html>

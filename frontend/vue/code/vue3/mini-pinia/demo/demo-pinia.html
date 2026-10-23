@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · mini-pinia（状态管理原理配套）</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; } h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #e9ecef; padding-bottom: 6px; }
+    code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+    .bp { background: #fff9db; border: 1px solid #ffe066; border-radius: 6px; padding: 8px 12px; font-size: 13px; margin: 10px 0 4px; }
+    .bp b { color: #e67700; }
+    .chain { background: #fff9db; border: 1px solid #ffe066; border-radius: 6px; padding: 10px 16px; font-size: 13px; line-height: 1.9; margin: 10px 0; }
+    .chain ol { margin: 6px 0 0; padding-left: 22px; }
+    .panel { border: 1px dashed #ced4da; border-radius: 6px; padding: 12px; margin: 10px 0; display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .panel .view { min-width: 280px; flex: 1; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+    .log { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 8px 10px; font-size: 12.5px; max-height: 220px; overflow-y: auto; min-height: 40px; width: 100%; }
+    .log div { padding: 1px 0; font-family: ui-monospace, Consolas, monospace; }
+    .t-track { color: #1971c2; } .t-trigger { color: #e8590c; } .t-effect { color: #2f9e44; }
+    .t-computed { color: #9c36b5; } .t-store { color: #0b7285; } .t-patch { color: #d9480f; }
+    .t-refs { color: #5f3dc4; } .t-route { color: #2b8a3e; } .t-info { color: #868e96; }
+    .num { color: #e8590c; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>demo · mini-pinia</h1>
+<p>对应《Vue3 状态管理原理与实现》二~五章。实现见 <code>code/vue3/mini-pinia/lib/</code>（reactivity.js → pinia.js → index.js，全局暴露 <code>window.MiniPinia</code>）。操作下面各面板，观察视图联动、执行计数与日志；<code>F12 → Sources</code> 可随时断点。</p>
+
+<div class="chain">
+    <b>全链路断点导览</b>（按一条「读 → 改 → 唤醒」链路的顺序）：
+    <ol>
+        <li><code>lib/reactivity.js</code> → <code>track</code>：effect 首跑读到字段，建三层依赖表（对象 → 字段 → effect 集合）。断住看 <code>depsMap</code> / <code>dep</code> 何时被建出来；放行后各面板日志出现"收集"类记录。</li>
+        <li><code>lib/reactivity.js</code> → <code>reactive</code> 的 get：先 track 再取值，嵌套对象读到才代理。断住看返回值是不是代理。</li>
+        <li><code>lib/reactivity.js</code> → <code>trigger</code>：改字段只唤醒读过它的 effect。断住看 <code>dep</code> 里有几个 effect、<code>woken</code> 返回几；放行后对应面板数字 +1、其余不动。</li>
+        <li><code>lib/reactivity.js</code> → <code>computed</code> 的 scheduler / get value：依赖变化只置脏，有人读才重算。放行后"计算次数"不变、视图标"待重算"。</li>
+        <li><code>lib/pinia.js</code> → <code>defineStore</code> 返回的 useStore：首次调用才实例化（id 即命名空间）。断住看 <code>stores.set</code> 只走一次；放行后面板显示"两次是同一实例"。</li>
+        <li><code>lib/pinia.js</code> → <code>createSetupStore</code> 的 Proxy get / set：ref 解包第一层、action bind、写走 ref setter。断住看 key 怎么分流。</li>
+        <li><code>lib/pinia.js</code> → <code>store.$patch</code>：逐键 Object.is。断住看同值短路；放行后第二次赋同值订阅计数不动。</li>
+        <li><code>lib/pinia.js</code> → <code>storeToRefs</code>：从 $state 取 ref 形态。放行后面板显示"items 是 ref = true"。</li>
+    </ol>
+</div>
+
+<h2>1. 响应式底座：改一个字段只唤醒读过它的 effect（二章）</h2>
+<div class="bp"><b>断点提示：</b><code>lib/reactivity.js</code> → <code>track</code> / <code>trigger</code>。断在 <code>track</code>：看三层依赖表怎么长出来；断在 <code>trigger</code>：看 <code>dep</code> 集合里有几个 effect。放行后：只有"读过被改字段"的那行执行次数 +1，其余两行不动，日志标出被唤醒者。</div>
+<div class="panel">
+    <div class="view">
+        <button id="btn1-items">state.cart.items + 1</button>
+        <button id="btn1-name">state.user.name = 'Grace'</button>
+        <button id="btn1-theme">state.theme = 'dark'</button>
+        <p>header（读 user.name）执行 <span class="num" id="v1-header-runs">0</span> 次 · 值 <b id="v1-name"></b></p>
+        <p>badge（读 cart.items）执行 <span class="num" id="v1-badge-runs">0</span> 次 · 值 <b id="v1-items"></b></p>
+        <p>toggle（读 theme）执行 <span class="num" id="v1-toggle-runs">0</span> 次 · 值 <b id="v1-theme"></b></p>
+    </div>
+    <div class="log" id="log1"></div>
+</div>
+
+<h2>2. computed：惰性 + 缓存，无关字段不算（二章）</h2>
+<div class="bp"><b>断点提示：</b><code>lib/reactivity.js</code> → <code>computed</code> 的 <code>scheduler</code> 与 <code>get value</code>。断在 <code>scheduler</code>：只看到 <code>dirty = true</code>，没有重算；断在 <code>get value</code> 的 <code>if (dirty)</code>：看缓存命中与重算的分岔。放行后：改依赖时"计算次数"不变、视图标"待重算"；读 <code>total.value</code> 才 +1。</div>
+<div class="panel">
+    <div class="view">
+        <button id="btn2-read">读 total.value</button>
+        <button id="btn2-price">改 price（不读）</button>
+        <button id="btn2-noise">改 noise（无关字段）</button>
+        <p>price = <b id="v2-price">10</b> · noise = <b id="v2-noise">0</b> · total = <b id="v2-total">（尚未读取）</b></p>
+        <p>计算次数 <span class="num" id="v2-evals">0</span> 次</p>
+    </div>
+    <div class="log" id="log2"></div>
+</div>
+
+<h2>3. store 创建：id 即命名空间 + ref 自动解包第一层（三章）</h2>
+<div class="bp"><b>断点提示：</b><code>lib/pinia.js</code> → <code>defineStore</code> 返回的 useStore / <code>createSetupStore</code> 的 Proxy get。断在 <code>useStore</code>：第二次调用直接命中 <code>stores.get</code>，setup 不重跑；断在 Proxy get：看 <code>isRef</code> 分支怎么把 <code>cart.items</code> 变成 <code>items.value</code>。放行后：视图直接显示出解包后的值。</div>
+<div class="panel">
+    <div class="view">
+        <button id="btn3-again">再调一次 useCartStore()</button>
+        <p>两次 useStore 是同一个实例 = <b id="v3-same"></b> · store.$id = <b id="v3-id"></b></p>
+        <p>cart.items = <b id="v3-items"></b> · cart.double = <b id="v3-double"></b> · cart.user = <b id="v3-user"></b></p>
+    </div>
+    <div class="log" id="log3"></div>
+</div>
+
+<h2>4. action：直接改字段，谁在依赖里谁被唤醒（三章）</h2>
+<div class="bp"><b>断点提示：</b><code>lib/pinia.js</code> → Proxy get 的 <code>value.bind(store)</code>（action 的 this 指向 store）。断在 <code>add</code> 内的 <code>items.value += step</code>：单步走进 ref setter → <code>trigger</code>。放行后：items / double 联动更新，订阅 effect 计数 +1。</div>
+<div class="panel">
+    <div class="view">
+        <button id="btn4-add">cart.add(3)</button>
+        <button id="btn4-assign">cart.items = cart.items + 1（直接赋值）</button>
+        <p>cart.items = <b id="v4-items"></b> · cart.double = <b id="v4-double"></b></p>
+        <p>订阅 cart.double 的 effect 执行 <span class="num" id="v4-runs">0</span> 次</p>
+    </div>
+    <div class="log" id="log4"></div>
+</div>
+
+<h2>5. storeToRefs：只解包第一层，action 不解包（三章）</h2>
+<div class="bp"><b>断点提示：</b><code>lib/pinia.js</code> → <code>storeToRefs</code>。断在 <code>if (isRef(value))</code>：看 ref 字段原样进结果、函数原样保留。放行后：面板显示"items 是 ref = true"，解构出来的 <code>items.value</code> 仍随 store 更新。</div>
+<div class="panel">
+    <div class="view">
+        <button id="btn5-refs">const { items, user, add } = storeToRefs(cart)</button>
+        <p>items 是 ref = <b id="v5-isref"></b> · add 被保留为函数 = <b id="v5-add"></b> · items.value = <b id="v5-items"></b></p>
+    </div>
+    <div class="log" id="log5"></div>
+</div>
+
+<h2>6. $patch：批量更新 + 逐键 Object.is（四章）</h2>
+<div class="bp"><b>断点提示：</b><code>lib/pinia.js</code> → <code>store.$patch</code>。断在 <code>!Object.is(...)</code>：第一次 items 真的从旧值变 6、订阅计数 +1；第二次赋同值 6 直接短路、连通知都没有。放行后对比两次"订阅 effect 执行次数"。</div>
+<div class="panel">
+    <div class="view">
+        <button id="btn6-patch">cart.$patch({ items: 6 })</button>
+        <button id="btn6-same">cart.$patch({ items: 6 }) 再来一次（赋同值）</button>
+        <p>cart.items = <b id="v6-items"></b> · 订阅 effect 执行 <span class="num" id="v6-runs">0</span> 次</p>
+    </div>
+    <div class="log" id="log6"></div>
+</div>
+
+<h2>7. 三条路线对照：Pinia / 直接 reactive / Vuex 式 mutation（五章）</h2>
+<div class="bp"><b>断点提示：</b><code>lib/pinia.js</code> → <code>defineStore</code> 内的 <code>increment</code>（action）与 <code>lib/reactivity.js</code> → <code>trigger</code>。三条路线各改各的入口，但都汇到同一个 <code>trigger</code>。放行后：三行数字一模一样——差别在约定不在机制。</div>
+<div class="panel">
+    <div class="view">
+        <button id="btn7-run">计数 +1 × 3（每条路线自己的入口）</button>
+        <p>Pinia count = <b id="v7-pinia"></b>（effect 执行 <span class="num" id="v7-pinia-runs">0</span>）</p>
+        <p>reactive count = <b id="v7-raw"></b>（effect 执行 <span class="num" id="v7-raw-runs">0</span>）</p>
+        <p>Vuex count = <b id="v7-vuex"></b>（effect 执行 <span class="num" id="v7-vuex-runs">0</span>）</p>
+    </div>
+    <div class="log" id="log7"></div>
+</div>
+
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/pinia.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+function log(target, type, msg) {
+    const line = document.createElement('div')
+    line.className = 't-' + type
+    line.textContent = msg
+    target.appendChild(line)
+    target.scrollTop = target.scrollHeight
+}
+const $ = id => document.getElementById(id)
+
+// ---------- 公共：激活 pinia + 定义 store（正文三） ----------
+setActivePinia(createPinia())
+
+const useCartStore = defineStore('cart', () => {
+    const items = ref(0)
+    const user = ref({ name: 'Ada' })
+    const double = computed(() => items.value * 2)
+
+    function add(step = 1) {
+        items.value += step
+    }
+
+    return { items, user, double, add }
+})
+const cart = useCartStore() // ★ 断点 defineStore 内的 useStore：stores.set 只走一次
+const cartAgain = useCartStore(); // 分号不能省：下一行以 ( 开头的 IIFE 会被解析成对 store 的调用（ASI 陷阱）
+
+// ---------- 面板 1：字段级唤醒 ----------
+(() => {
+    const state = reactive({ user: { name: 'Ada' }, cart: { items: 0 }, theme: 'light' })
+    const runs = { header: 0, badge: 0, toggle: 0 }
+    effect(() => {
+        runs.header++
+        return state.user.name
+    })
+    effect(() => {
+        runs.badge++
+        return state.cart.items
+    })
+    effect(() => {
+        runs.toggle++
+        return state.theme
+    })
+
+    const render = () => {
+        $('v1-header-runs').textContent = String(runs.header)
+        $('v1-name').textContent = state.user.name
+        $('v1-badge-runs').textContent = String(runs.badge)
+        $('v1-items').textContent = String(state.cart.items)
+        $('v1-toggle-runs').textContent = String(runs.toggle)
+        $('v1-theme').textContent = state.theme
+    }
+    render()
+    log(log1, 'track', `三个 effect 首跑：分别读 user.name / cart.items / theme，各建一条依赖 → 执行次数 ${runs.header} / ${runs.badge} / ${runs.toggle}`)
+
+    $('btn1-items').addEventListener('click', () => {
+        state.cart.items++ // ★ 断点 trigger：只有"读过 cart.items"的那个被唤醒
+        log(log1, 'trigger', `state.cart.items = ${state.cart.items} → trigger 只命中 badge（次数 ${runs.header} / ${runs.badge} / ${runs.toggle}）`)
+        render()
+    })
+    $('btn1-name').addEventListener('click', () => {
+        state.user.name = 'Grace'
+        log(log1, 'trigger', `state.user.name = '${state.user.name}' → trigger 只命中 header（次数 ${runs.header} / ${runs.badge} / ${runs.toggle}）`)
+        render()
+    })
+    $('btn1-theme').addEventListener('click', () => {
+        state.theme = 'dark'
+        log(log1, 'trigger', `state.theme = '${state.theme}' → trigger 只命中 toggle（次数 ${runs.header} / ${runs.badge} / ${runs.toggle}）`)
+        render()
+    })
+})();
+
+// ---------- 面板 2：computed 惰性与缓存 ----------
+(() => {
+    const nums = reactive({ price: 10, qty: 2, noise: 0 })
+    const total = computed(() => nums.price * nums.qty) // ★ 断点 scheduler：改 price 只置脏
+
+    let shown = '（尚未读取）'
+    const render = () => {
+        $('v2-price').textContent = String(nums.price)
+        $('v2-noise').textContent = String(nums.noise)
+        $('v2-total').textContent = shown
+        $('v2-evals').textContent = String(total.evaluations)
+    }
+    render()
+    log(log2, 'computed', 'computed(() => nums.price * nums.qty) 建好：lazy，还没算过（计算次数 0）')
+
+    $('btn2-read').addEventListener('click', () => {
+        const before = total.evaluations
+        const v = total.value // 读 value：脏则重算，干净则命中缓存
+        shown = String(v)
+        render()
+        log(log2, 'computed', `读 total.value = ${v} → 计算次数 ${before} → ${total.evaluations}（${before === total.evaluations ? '依赖没变，命中缓存' : '脏了，重算'}）`)
+    })
+    $('btn2-price').addEventListener('click', () => {
+        nums.price += 10
+        if (shown !== '（尚未读取）') shown = shown.replace('（待重算）', '') + '（待重算）'
+        render()
+        log(log2, 'computed', `nums.price = ${nums.price} → scheduler 只把 dirty 置 true，计算次数仍 ${total.evaluations}（没人读就不算）`)
+    })
+    $('btn2-noise').addEventListener('click', () => {
+        nums.noise++
+        render()
+        log(log2, 'computed', `nums.noise = ${nums.noise} → 不在 total 的依赖里，连置脏都不会发生（计算次数 ${total.evaluations}）`)
+    })
+})();
+
+// ---------- 面板 3：store 创建与解包 ----------
+(() => {
+    const render = () => {
+        $('v3-same').textContent = String(cart === cartAgain)
+        $('v3-id').textContent = cart.$id
+        $('v3-items').textContent = String(cart.items) // store.items 即 items.value：ref 已解包
+        $('v3-double').textContent = String(cart.double)
+        $('v3-user').textContent = JSON.stringify(cart.user)
+    }
+    render()
+    log(log3, 'store', `两次 useStore 是同一个实例 = ${cart === cartAgain}（id 即命名空间：stores.set 只走一次，setup 不重跑）`)
+    log(log3, 'store', `cart.items = ${cart.items} | cart.double = ${cart.double} | cart.user = ${JSON.stringify(cart.user)} ← ref 字段自动解包第一层`)
+
+    $('btn3-again').addEventListener('click', () => {
+        const third = useCartStore()
+        log(log3, 'store', `再调一次 useCartStore()：${third === cart ? '还是同一实例（stores.get 命中）' : '出现了新实例！'}`)
+    })
+})();
+
+// ---------- 面板 4：action 与依赖唤醒 ----------
+(() => {
+    let effectRuns = 0
+    effect(() => {
+        effectRuns++
+        return cart.double
+    })
+
+    const render = () => {
+        $('v4-items').textContent = String(cart.items)
+        $('v4-double').textContent = String(cart.double)
+        $('v4-runs').textContent = String(effectRuns)
+    }
+    render()
+    log(log4, 'effect', `订阅 cart.double 的 effect 首跑（执行次数 ${effectRuns}）：顺带建立 items → double → 订阅者的两级依赖`)
+
+    $('btn4-add').addEventListener('click', () => {
+        cart.add(3) // action 里 this 指向 store（Proxy get 里 bind）
+        log(log4, 'store', `add(3) 后 cart.items = ${cart.items} | cart.double = ${cart.double}`)
+        log(log4, 'effect', `订阅 cart.double 的 effect 执行次数 = ${effectRuns}（items 变 → double 置脏 → 重算 → 唤醒订阅者）`)
+        render()
+    })
+    $('btn4-assign').addEventListener('click', () => {
+        cart.items = cart.items + 1 // 直接赋值走同一条触发路径：Proxy set → ref setter → trigger
+        log(log4, 'store', `cart.items = ${cart.items}（直接赋值，与 action 同一条触发路径）| effect 执行次数 = ${effectRuns}`)
+        render()
+    })
+})();
+
+// ---------- 面板 5：storeToRefs ----------
+(() => {
+    $('btn5-refs').addEventListener('click', () => {
+        const { items, user, add } = storeToRefs(cart) // ★ 断点 storeToRefs：从 $state 取 ref 形态
+        console.log('items 是 ref =', items.__v_isRef === true, '| user 是 ref =', user.__v_isRef === true, '| add 被保留为函数 =', typeof add === 'function')
+        console.log('items.value =', items.value)
+        log(log5, 'refs', `items 是 ref = ${items.__v_isRef === true} | user 是 ref = ${user.__v_isRef === true} | add 被保留为函数 = ${typeof add === 'function'}`)
+        log(log5, 'refs', `items.value = ${items.value}（ref 形态还在：解构不丢响应式；F12 控制台有同样的输出）`)
+        $('v5-isref').textContent = String(items.__v_isRef === true)
+        $('v5-add').textContent = String(typeof add === 'function')
+        $('v5-items').textContent = String(items.value)
+    })
+})();
+
+// ---------- 面板 6：$patch 逐键 Object.is ----------
+(() => {
+    let patchRuns = 0
+    effect(() => {
+        patchRuns++
+        return cart.items
+    })
+
+    const render = () => {
+        $('v6-items').textContent = String(cart.items)
+        $('v6-runs').textContent = String(patchRuns)
+    }
+    render()
+    log(log6, 'effect', `订阅 cart.items 的 effect 首跑（执行次数 ${patchRuns}）`)
+
+    $('btn6-patch').addEventListener('click', () => {
+        cart.$patch({ items: 6 }) // ★ 断点 $patch：逐键比较
+        log(log6, 'patch', `$patch({ items: 6 }) 后 items = ${cart.items} | 订阅 effect 执行次数 = ${patchRuns}`)
+        render()
+    })
+    $('btn6-same').addEventListener('click', () => {
+        const before = patchRuns
+        cart.$patch({ items: 6 }) // 赋同值：Object.is 短路，连通知都没有
+        log(log6, 'patch', `$patch({ items: 6 }) 赋同值后 items = ${cart.items} | 订阅 effect 执行次数 = ${patchRuns}${patchRuns === before ? '  <- 逐键 Object.is 跳过，不触发依赖' : '（items 还不是 6，这次真的变了）'}`)
+        render()
+    })
+})();
+
+// ---------- 面板 7：三条路线对照 ----------
+(() => {
+    // 方式一：Pinia（defineStore + action / $patch）
+    const useCountStore = defineStore('count', () => {
+        const count = ref(0)
+        function increment() {
+            count.value += 1
+        }
+        return { count, increment }
+    })
+    const piniaStore = useCountStore()
+    let piniaRuns = 0
+    effect(() => {
+        piniaRuns++
+        return piniaStore.count
+    })
+
+    // 方式二：直接 reactive（同构于 setup store 里裸用响应式对象）
+    const raw = reactive({ count: 0 })
+    let rawRuns = 0
+    effect(() => {
+        rawRuns++
+        return raw.count
+    })
+
+    // 方式三：Vuex 式 mutation（改走一个统一的同步入口）
+    let committed = 0
+    function commit() {
+        committed++
+    }
+    let vuexRuns = 0
+    const vuexState = reactive({ count: 0 })
+    effect(() => {
+        vuexRuns++
+        return vuexState.count
+    })
+
+    const run = label => {
+        console.log('')
+        console.log('----', label, '----')
+        piniaStore.increment()
+        raw.count += 1
+        committed++
+        vuexState.count = committed
+        console.log('Pinia count =', piniaStore.count, '| effect 执行 =', piniaRuns)
+        console.log('reactive count =', raw.count, '| effect 执行 =', rawRuns)
+        console.log('Vuex count =', vuexState.count, '| effect 执行 =', vuexRuns)
+    }
+
+    let clicks = 0
+    const render = () => {
+        $('v7-pinia').textContent = String(piniaStore.count)
+        $('v7-pinia-runs').textContent = String(piniaRuns)
+        $('v7-raw').textContent = String(raw.count)
+        $('v7-raw-runs').textContent = String(rawRuns)
+        $('v7-vuex').textContent = String(vuexState.count)
+        $('v7-vuex-runs').textContent = String(vuexRuns)
+    }
+    render()
+    log(log7, 'info', '三条路线各挂一个订阅 effect；点击跑一轮，逐行明细同时打在 F12 控制台')
+
+    $('btn7-run').addEventListener('click', () => {
+        const label = clicks++ === 0 ? '计数 +1 × 3（每条路线自己的入口）' : '计数 +1 × 3'
+        run(label)
+        log(log7, 'route', `第 ${clicks} 轮：Pinia count = ${piniaStore.count} | reactive count = ${raw.count} | Vuex count = ${vuexState.count}（effect 执行 ${piniaRuns} / ${rawRuns} / ${vuexRuns}）——三行数字一模一样`)
+        render()
+    })
+})();
+</script>
+</body>
+</html>

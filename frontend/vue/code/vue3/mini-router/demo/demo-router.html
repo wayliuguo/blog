@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · mini-router（Vue Router 原理配套）</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; } h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #e9ecef; padding-bottom: 6px; }
+    code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+    .bp { background: #fff9db; border: 1px solid #ffe066; border-radius: 6px; padding: 8px 12px; font-size: 13px; margin: 8px 0; }
+    .panel { border: 1px dashed #ced4da; border-radius: 6px; padding: 12px; margin: 10px 0; display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .panel .view { min-width: 280px; flex: 1; }
+    .panel .bp { width: 100%; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+    input { padding: 5px 8px; border: 1px solid #ced4da; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; width: 200px; }
+    .viewbox { border: 1px solid #dee2e6; border-radius: 6px; padding: 8px 12px; margin: 8px 0; background: #fff; font-size: 13px; }
+    .viewbox .tag { color: #868e96; font-size: 12px; }
+    .viewbox .name { color: #1971c2; font-weight: bold; }
+    .num { color: #e8590c; font-weight: bold; }
+    .log { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 8px 10px; font-size: 12.5px; max-height: 250px; overflow-y: auto; min-height: 40px; width: 100%; }
+    .log div { padding: 1px 0; font-family: ui-monospace, Consolas, monospace; }
+    .t-resolve { color: #1971c2; } .t-render { color: #2f9e44; } .t-nav { color: #5c7cfa; }
+    .t-history { color: #0ca678; } .t-global { color: #e8590c; } .t-record { color: #d9480f; }
+    .t-after { color: #2f9e44; } .t-redirect { color: #9c36b5; } .t-cancel { color: #c92a2a; }
+    .t-info { color: #868e96; }
+</style>
+</head>
+<body>
+<h1>demo · mini-router</h1>
+<p>对应《Vue Router 原理》。实现拆在 <code>code/vue3/mini-router/lib/</code>（<code>&lt;script&gt;</code> 按依赖顺序加载，全局入口 <code>window.MiniRouter</code>），操作下面的面板，观察实时视图与日志联动；<code>F12 → Sources</code> 可随时断点。</p>
+<p class="bp"><b>全链路断点导览</b>（一次导航的完整路径）：<code>matcher.js</code> 的 <code>compilePath</code>（:id → 正则）→ <code>insert</code>（matched 链成形）→ <code>resolve</code>（精确表 → 正则回退）→ <code>router.js</code> 的 <code>navigate</code>（守卫主干：beforeEach → beforeEnter → 先改 URL → 再改状态 → afterEach）→ <code>reactivity.js</code> ref 的 <code>set</code>（trigger 唤醒视图 effect）→ RouterView 重渲染；按返回键则改走 <code>history.js</code> 的 <code>go</code> → <code>fire</code> → <code>listen</code>（直接同步 currentRoute，不经过守卫）。</p>
+
+<h2>1. matcher：路径 → matched 组件链 + params/query（正文二）</h2>
+<div class="panel">
+    <div class="view">
+        <input id="p1-path" value="/user/42?tab=posts" spellcheck="false">
+        <button id="p1-resolve">resolve</button>
+        <button id="p1-nested">预置 /settings/notifications</button>
+        <button id="p1-nope">预置 /nope（未匹配）</button>
+        <button id="p1-addroute">addRoute /docs/:slug</button>
+        <div class="viewbox">
+            <span class="tag">resolve 结果：</span>
+            fullPath = <b id="p1-full">—</b><br>
+            params = <b id="p1-params">—</b> · query = <b id="p1-query">—</b> · name = <b id="p1-name">—</b><br>
+            matched 链 = <b id="p1-matched">—</b><br>
+            <span class="tag">RouterView 取组件：</span>
+            depth0 = <span class="name" id="p1-d0">—</span> · depth1 = <span class="name" id="p1-d1">—</span>
+        </div>
+    </div>
+    <div class="log" id="log1"></div>
+    <div class="bp"><b>断点提示</b>：lib/matcher.js → <code>resolve</code> / <code>insert</code> / <code>compilePath</code> → 断住时看 rawPath 怎么拆、records 精确表命中与否、正则回退怎么填 params → 放行后返回对象填进左侧实时视图；<code>addRoute</code> 放行后，再 resolve <code>/docs/mini-router</code> 就能匹配上运行时追加的路由。</div>
+</div>
+
+<h2>2. 路由器主体：currentRoute 唯一状态源，一次导航视图恰好重跑一次（正文 4.1 · 4.3）</h2>
+<div class="panel">
+    <div class="view">
+        <button id="p2-about">push /about</button>
+        <button id="p2-user">push /user/7?tab=info</button>
+        <button id="p2-dup">重复 push /user/7?tab=info</button>
+        <button id="p2-back">back()</button>
+        <div class="viewbox">
+            <span class="tag">模拟 RouterView（effect 订阅 currentRoute）渲染：</span><span class="name" id="p2-view">—</span><br>
+            视图重跑次数 = <span class="num" id="p2-runs">0</span> / 共 push <span class="num" id="p2-pushes">0</span> 次 · 重复被忽略 <span class="num" id="p2-dups">0</span> 次<br>
+            memory 栈 location = <b id="p2-loc">/</b> · resolveView(0) = <span class="name" id="p2-rv">—</span>
+        </div>
+    </div>
+    <div class="log" id="log2"></div>
+    <div class="bp"><b>断点提示</b>：lib/router.js → <code>navigate</code> → 断住时看 <code>target.fullPath === from.fullPath</code> 的重复导航分支与「先改 URL 再改状态」两行 → 放行后 RouterView 重跑次数 +1、重复 push 则 +0；back 走 lib/history.js → <code>go</code> → <code>fire</code> → <code>listen</code> 回调（不经过守卫，看日志里没有 beforeEach）。</div>
+</div>
+
+<h2>3. 守卫流程：重定向 / 取消 / 执行顺序（正文 4.2）</h2>
+<div class="panel">
+    <div class="view">
+        <button id="p3-s1">场景1 · 未登录 push /admin/profile（重定向）</button>
+        <button id="p3-s2">场景2 · push /forbidden（取消）</button>
+        <button id="p3-s3">场景3 · 登录后 push /admin/profile（顺序）</button>
+        <button id="p3-reset">重置面板</button>
+        <div class="viewbox">
+            <span class="tag">守卫状态：</span>logged = <b id="p3-logged">false</b><br>
+            当前路由 fullPath = <b id="p3-cur">/</b> · matched = <b id="p3-matched">Home</b>
+        </div>
+        <p style="font-size:12.5px; color:#868e96; margin:4px 0;">日志编号：[1] 全局 beforeEach · [3] 记录级 beforeEnter · [4] afterEach —— 重定向会递归重新走一遍守卫流程。</p>
+    </div>
+    <div class="log" id="log3"></div>
+    <div class="bp"><b>断点提示</b>：lib/router.js → <code>navigate</code> 的两个守卫循环 → 断住时看 <code>verdict</code> 的三种取值（undefined 通过 / false 取消 / 对象重定向）→ 放行后：场景1 日志出现两次 [1]（重定向递归）且最终落在 /login；场景2 无任何后续日志、URL 与状态都不动；场景3 按 [1] → [3] → [4] 顺序出现。</div>
+</div>
+
+<script src="../lib/shared.js"></script>
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/matcher.js"></script>
+<script src="../lib/history.js"></script>
+<script src="../lib/router.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+function log(target, type, msg) {
+    const line = document.createElement('div')
+    line.className = 't-' + type
+    line.textContent = msg
+    target.appendChild(line)
+    target.scrollTop = target.scrollHeight
+}
+const names = (matched) => matched.map((r) => r.component.name).join(' → '); // 分号不能省：下方以 ( 开头的 IIFE 会被解析成对返回值的调用（ASI 陷阱）
+
+// ---------- 面板 1：matcher ----------
+(() => {
+    const routes = [
+        { path: '/', name: 'home', component: { name: 'Home' } },
+        { path: '/user/:id', name: 'user', component: { name: 'User' } },
+        {
+            path: '/settings',
+            name: 'settings',
+            component: { name: 'Settings' },
+            children: [{ path: 'notifications', name: 'notifications', component: { name: 'Notifications' } }],
+        },
+    ]
+    const matcher = MiniRouter.createRouterMatcher(routes) // ★ 断点 insert：看 matched 链怎么一层层长出来
+    let docsAdded = false
+
+    const doResolve = (to) => {
+        const r = matcher.resolve(to) // ★ 断点 resolve：精确表 → 正则回退
+        log(log1, 'resolve', `resolve("${to}")`)
+        log(log1, 'resolve', `  → fullPath = ${r.fullPath} | params = ${JSON.stringify(r.params)} | query = ${JSON.stringify(r.query)} | name = ${r.name ?? '(无)'}`)
+        log(log1, r.matched.length ? 'resolve' : 'cancel', `  → matched 链 = ${r.matched.length ? names(r.matched) : '（空链 → RouterView 渲染为空）'}`)
+        p1full.textContent = r.fullPath
+        p1params.textContent = JSON.stringify(r.params)
+        p1query.textContent = JSON.stringify(r.query)
+        p1name.textContent = r.name ?? '(无)'
+        p1matched.textContent = r.matched.length ? names(r.matched) : '（空）'
+        p1d0.textContent = r.matched[0]?.component?.name ?? 'null'
+        p1d1.textContent = r.matched[1]?.component?.name ?? 'null'
+    }
+    const p1full = document.getElementById('p1-full')
+    const p1params = document.getElementById('p1-params')
+    const p1query = document.getElementById('p1-query')
+    const p1name = document.getElementById('p1-name')
+    const p1matched = document.getElementById('p1-matched')
+    const p1d0 = document.getElementById('p1-d0')
+    const p1d1 = document.getElementById('p1-d1')
+
+    document.getElementById('p1-resolve').addEventListener('click', () => doResolve(p1path.value.trim() || '/'))
+    document.getElementById('p1-nested').addEventListener('click', () => { p1path.value = '/settings/notifications'; doResolve('/settings/notifications') })
+    document.getElementById('p1-nope').addEventListener('click', () => { p1path.value = '/nope'; doResolve('/nope') })
+    document.getElementById('p1-addroute').addEventListener('click', () => {
+        if (docsAdded) { log(log1, 'info', '/docs/:slug 已追加过（重复 addRoute 会覆盖同路径 record）'); return }
+        matcher.addRoute({ path: '/docs/:slug', name: 'docs', component: { name: 'Docs' } }) // ★ 断点 addRoute
+        docsAdded = true
+        log(log1, 'info', `addRoute({ path: '/docs/:slug' }) 完成 → 已登记路径：${matcher.getPaths().join('、')}`)
+        p1path.value = '/docs/mini-router'
+        doResolve('/docs/mini-router')
+    })
+    const p1path = document.getElementById('p1-path')
+    doResolve('/user/42?tab=posts')
+})();
+
+// ---------- 面板 2：路由器主体 ----------
+(() => {
+    const routes = [
+        { path: '/', name: 'home', component: { name: 'Home' } },
+        { path: '/about', name: 'about', component: { name: 'About' } },
+        { path: '/user/:id', name: 'user', component: { name: 'User' } },
+    ]
+    const history = MiniRouter.createMemoryHistory()
+    const router = MiniRouter.createRouter({ history, routes })
+    let runs = 0, pushes = 0, dups = 0
+    const elView = document.getElementById('p2-view')
+    const elRuns = document.getElementById('p2-runs')
+    const elPushes = document.getElementById('p2-pushes')
+    const elDups = document.getElementById('p2-dups')
+    const elLoc = document.getElementById('p2-loc')
+    const elRv = document.getElementById('p2-rv')
+    const refresh = () => {
+        elLoc.textContent = history.location
+        elRv.textContent = router.resolveView(0)?.name ?? 'null'
+    }
+
+    // 模拟 RouterView：订阅 currentRoute 的 effect（★ 断点 reactivity.js 的 ref set → trigger）
+    MiniRouter.effect(() => {
+        runs++
+        elView.textContent = router.currentRoute.value.matched[0]?.component?.name ?? '(空)'
+        elRuns.textContent = String(runs)
+    })
+    refresh()
+    log(log2, 'render', `初始渲染 = Home | effect 执行次数 = ${runs}`)
+
+    const doPush = (to, repeat = false) => {
+        const from = router.currentRoute.value.fullPath
+        const r = router.push(to) // ★ 断点 navigate：先 history.push 再 currentRoute.value = target
+        Promise.resolve(r).then((ok) => {
+            if (repeat) dups++
+            else pushes++
+            elPushes.textContent = String(pushes)
+            elDups.textContent = String(dups)
+            refresh()
+            if (ok) {
+                log(log2, 'nav', `push("${to}") 落地：${from} → ${router.currentRoute.value.fullPath} | 视图重跑次数 = ${runs}`)
+            } else {
+                log(log2, 'cancel', `push("${to}") 被忽略：与当前路由相同（重复导航），视图重跑次数仍 = ${runs}`)
+            }
+        })
+    }
+    document.getElementById('p2-about').addEventListener('click', () => doPush('/about'))
+    document.getElementById('p2-user').addEventListener('click', () => doPush('/user/7?tab=info'))
+    document.getElementById('p2-dup').addEventListener('click', () => doPush('/user/7?tab=info', true))
+    document.getElementById('p2-back').addEventListener('click', () => {
+        const from = router.currentRoute.value.fullPath
+        router.back() // 前进/后退走 history.listen，不经过守卫（★ 断点 history.js 的 go → fire → listen 回调）
+        refresh()
+        log(log2, 'history', `back()：${from} → ${router.currentRoute.value.fullPath} | 视图重跑次数 = ${runs}（日志里没有 beforeEach —— 后退不走守卫）`)
+    })
+})();
+
+// ---------- 面板 3：守卫流程 ----------
+(() => {
+    let logged = false
+    const routes = [
+        { path: '/', name: 'home', component: { name: 'Home' } },
+        { path: '/login', name: 'login', component: { name: 'Login' } },
+        { path: '/forbidden', name: 'forbidden', component: { name: 'Forbidden' } },
+        {
+            path: '/admin',
+            name: 'admin',
+            component: { name: 'Admin' },
+            beforeEnter: () => log(log3, 'record', '  [3] beforeEnter（记录级守卫）'),
+            children: [{ path: 'profile', name: 'profile', component: { name: 'Profile' } }],
+        },
+    ]
+    const router = MiniRouter.createRouter({ history: MiniRouter.createMemoryHistory(), routes })
+    const elLogged = document.getElementById('p3-logged')
+    const elCur = document.getElementById('p3-cur')
+    const elMatched = document.getElementById('p3-matched')
+    const refresh = () => {
+        elLogged.textContent = String(logged)
+        elCur.textContent = router.currentRoute.value.fullPath
+        elMatched.textContent = names(router.currentRoute.value.matched)
+    }
+
+    router.beforeEach((to, from) => {
+        log(log3, 'global', `  [1] beforeEach ${from.path} → ${to.path}`)
+        if (to.path.startsWith('/admin') && !logged) {
+            log(log3, 'redirect', '      ↳ 未登录，重定向到 /login')
+            return { path: '/login' } // 返回对象 = 重定向，递归重新走一遍守卫流程
+        }
+        if (to.path === '/forbidden') return false // 返回 false → 取消，URL 与状态都不动
+    })
+    router.afterEach((to, from) => log(log3, 'after', `  [4] afterEach ${from.path} → ${to.path}`))
+    refresh()
+
+    const show = (msg) => {
+        refresh()
+        log(log3, 'info', msg)
+    }
+    document.getElementById('p3-s1').addEventListener('click', () => {
+        log(log3, 'info', '---- 场景1：未登录访问 /admin/profile → 重定向 ----')
+        router.push('/admin/profile').then(() => show(`最终 location = ${router.currentRoute.value.fullPath}（afterEach 只记最终落地的 /login）`))
+    })
+    document.getElementById('p3-s2').addEventListener('click', () => {
+        const locBefore = router.currentRoute.value.fullPath
+        log(log3, 'info', '---- 场景2：beforeEach 返回 false → 取消 ----')
+        router.push('/forbidden').then(() => show(`location 是否未变 = ${router.currentRoute.value.fullPath === locBefore}（取消 = URL 与状态都不动，无 afterEach）`))
+    })
+    document.getElementById('p3-s3').addEventListener('click', () => {
+        logged = true
+        log(log3, 'info', '---- 场景3：登录后 → 守卫顺序 [1] beforeEach → [3] beforeEnter → [4] afterEach ----')
+        router.push('/admin/profile').then(() => show(`最终 matched = ${names(router.currentRoute.value.matched)}`))
+    })
+    document.getElementById('p3-reset').addEventListener('click', () => {
+        logged = false
+        log3.textContent = ''
+        refresh()
+        log(log3, 'info', '面板已重置（logged = false，回到 /；守卫注册保留）')
+    })
+})();
+</script>
+</body>
+</html>

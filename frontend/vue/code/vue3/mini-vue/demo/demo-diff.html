@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · 更新链路：批处理（queueJob/flushJobs）+ 列表 diff（patchKeyedChildren）</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; }
+    .intro { font-size: 13.5px; color: #495057; }
+    .intro code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; }
+    .panel { border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; background: #fff; margin-top: 14px; }
+    .panel-head { font-size: 13px; color: #868e96; margin-bottom: 8px; font-weight: 600; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+    #app { min-height: 120px; border: 1px dashed #dbe4ff; background: #f8f9ff; border-radius: 6px; padding: 10px 12px; font-size: 13px; color: #213547; }
+    #app .list-block { margin-top: 0; }
+    #app h4 { font-size: 12.5px; color: #868e96; margin: 0 0 4px; }
+    #app ul { margin: 0; padding-left: 20px; }
+    #app li { font-size: 13px; }
+    #countLine { font-size: 14px; padding: 4px 0; }
+    #countLine b { font-family: ui-monospace, Consolas, monospace; color: #1971c2; }
+</style>
+</head>
+<body>
+<h1>demo · 更新链路（批处理 + 列表 diff）</h1>
+<p class="intro">改数据不直接渲染：trigger 把渲染 job 排进队列（<code>queue.includes</code> 去重），微任务里 <code>flushJobs</code> 统一执行——「同一 tick 连删 3 项」只重渲染 1 次，下方列表直接是最终结果。列表订阅同一份 <code>todos</code>（key = id）：删首项时按 key 精确配对——复用的节点原地补丁、消失的节点被精确卸载，没有按下标错位这回事。</p>
+
+<div class="panel">
+    <div class="panel-head">操作</div>
+    <button id="btnDelFirst">删首项</button>
+    <button id="btnDelMid">删中间项</button>
+    <button id="btnAppend">尾部追加</button>
+    <button id="btnReset">重置为 [a, b, c]</button>
+    <button id="btnBurst">同一 tick 连删 3 项（批处理）</button>
+    <div id="countLine">批处理计数：连删后列表长度 <b id="vLen">3</b>（微任务 flush 后才更新）</div>
+</div>
+
+<div class="panel">
+    <div class="panel-head">渲染区：有 key 列表（key = id）</div>
+    <div id="app">（加载即挂载）</div>
+</div>
+
+<script src="../lib/shared.js"></script>
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/compiler-core.js"></script>
+<script src="../lib/runtime-core.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+const M = window.MiniVue
+
+let nextId = 1
+const todos = M.reactive([
+    { id: nextId++, t: 'a' },
+    { id: nextId++, t: 'b' },
+    { id: nextId++, t: 'c' }
+])
+
+// 列表组件：todos 变化只重渲染订阅它的组件（渲染 effect 带 scheduler → 微任务异步）
+const KeyedList = {
+    setup: () => () => M.h('section', { class: 'list-block' }, [
+        M.h('h4', null, '有 key 列表（key = id，按 key 配对：最小化移动 / 精确卸载）'),
+        M.h('ul', null, todos.map(x => M.h('li', { key: x.id }, `#${x.id} ${x.t}`)))
+    ])
+}
+const Root = {
+    setup: () => () => M.h('div', { class: 'app' }, [M.h(KeyedList)])
+}
+const box = document.getElementById('app')
+box.innerHTML = '' // 清掉占位提示（mount 不会清容器）
+M.createApp(Root).mount(box)
+
+const elLen = document.getElementById('vLen')
+M.effect(() => { elLen.textContent = String(todos.length) }) // 批处理演示的读数：flush 后才变
+
+document.getElementById('btnDelFirst').addEventListener('click', () => { todos.shift() })
+document.getElementById('btnDelMid').addEventListener('click', () => { todos.splice(Math.min(1, todos.length - 1), 1) })
+document.getElementById('btnAppend').addEventListener('click', () => { todos.push({ id: nextId++, t: String.fromCharCode(97 + (todos.length % 26)) }) })
+document.getElementById('btnReset').addEventListener('click', () => {
+    todos.splice(0, todos.length, { id: nextId++, t: 'a' }, { id: nextId++, t: 'b' }, { id: nextId++, t: 'c' })
+})
+// 同一 tick 连改 3 次：3 次 trigger → queueJob 去重 → 1 次渲染出最终结果（同步读 length 还是旧值）
+document.getElementById('btnBurst').addEventListener('click', () => {
+    const before = todos.length
+    todos.shift()
+    todos.shift()
+    todos.shift()
+    const now = todos.length // 同步读：已是新值（数据层即时），但列表 DOM 还是旧的
+    console.log(`[批处理] 同步阶段：todos.length ${before} → ${now}（数据已变），列表 DOM 将在微任务 flush 后一次性更新为 ${now} 项`)
+})
+</script>
+</body>
+</html>

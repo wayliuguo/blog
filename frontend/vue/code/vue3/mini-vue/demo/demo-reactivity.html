@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · 响应式链路：track → trigger → effect 重跑（含 computed / watch）</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; }
+    .intro { font-size: 13.5px; color: #495057; }
+    .intro code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; }
+    .panel { border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; background: #fff; margin-top: 14px; }
+    .panel-head { font-size: 13px; color: #868e96; margin-bottom: 8px; font-weight: 600; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+    .kv { font-size: 14px; padding: 5px 0; border-bottom: 1px dashed #e9ecef; }
+    .kv:last-child { border-bottom: none; }
+    .kv b { font-family: ui-monospace, Consolas, monospace; color: #1971c2; }
+</style>
+</head>
+<body>
+<h1>demo · 响应式链路</h1>
+<p class="intro">effect 首跑读数据时 <code>track</code> 建依赖，改数据时 <code>trigger</code> 唤醒依赖重跑；<code>computed</code> 依赖变化只置脏、读了才算；<code>watch</code> 是独立 effect，回调经 scheduler 执行。下面每行数值都由 effect / computed / watch 回调驱动刷新。</p>
+
+<div class="panel">
+    <div class="panel-head">操作</div>
+    <button id="btnInc">count + 1</button>
+    <button id="btnDeep">改嵌套属性 nested.msg</button>
+    <button id="btnTitle">改 title</button>
+    <button id="btnRead">读 double.value（看缓存）</button>
+    <button id="btnStop">停止 watch 侦听（stop）</button>
+</div>
+
+<div class="panel">
+    <div class="panel-head">渲染区（每行由各自的 effect / computed / watch 驱动）</div>
+    <div class="kv">ref：count = <b id="vCount">0</b>（effect 渲染）</div>
+    <div class="kv">reactive：nested.msg = <b id="vMsg">hello</b> · title = <b id="vTitle">标题 A</b>（深层属性也被代理拦截）</div>
+    <div class="kv">computed：double = <b id="vDouble">0</b> · getter 调用 <b id="vCalls">0</b> 次（依赖变了不读就不算）</div>
+    <div class="kv">watch 回调最近一次：新值 <b id="vWatch">—</b> ← 旧值 <b id="vWatchOld">—</b>（停止侦听后这里不再更新，但上面的 count 还在变）</div>
+</div>
+
+<script src="../lib/shared.js"></script>
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/compiler-core.js"></script>
+<script src="../lib/runtime-core.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+const M = window.MiniVue
+
+// ref + effect：改 count → trigger → 这个 effect 重跑，重写渲染区
+const count = M.ref(0)
+const elCount = document.getElementById('vCount')
+M.effect(() => { elCount.textContent = String(count.value) })
+
+// reactive 深层：嵌套对象也被 Proxy 包一层，深属性读写同样走 track / trigger
+const obj = M.reactive({ nested: { msg: 'hello' }, title: '标题 A' })
+const elMsg = document.getElementById('vMsg')
+const elTitle = document.getElementById('vTitle')
+let deepVer = 0
+let titleAlt = false
+M.effect(() => { elMsg.textContent = obj.nested.msg })
+M.effect(() => { elTitle.textContent = obj.title })
+
+// computed：scheduler 只置脏；读 .value 才真正调 getter
+let getterCalls = 0
+const double = M.computed(() => { getterCalls++; return count.value * 2 })
+const elDouble = document.getElementById('vDouble')
+const elCalls = document.getElementById('vCalls')
+function showDouble() {
+    elDouble.textContent = String(double.value) // 读 value：脏则重算，否则命中缓存
+    elCalls.textContent = String(getterCalls)
+}
+showDouble() // 初始读一次：getter 调用 1 次
+
+// watch：独立 effect + 回调（回调写入的行是渲染区的一部分，不是日志）
+const elWatch = document.getElementById('vWatch')
+const elWatchOld = document.getElementById('vWatchOld')
+const stopWatch = M.watch(count, (nv, ov) => {
+    elWatch.textContent = JSON.stringify(nv)
+    elWatchOld.textContent = JSON.stringify(ov)
+})
+
+document.getElementById('btnInc').addEventListener('click', () => { count.value++ })
+document.getElementById('btnDeep').addEventListener('click', () => { obj.nested.msg = 'world' + (++deepVer) })
+document.getElementById('btnTitle').addEventListener('click', () => { titleAlt = !titleAlt; obj.title = titleAlt ? '标题 B' : '标题 A' })
+document.getElementById('btnRead').addEventListener('click', () => { showDouble() })
+document.getElementById('btnStop').addEventListener('click', () => {
+    stopWatch() // runner.effect.stop() → cleanupEffect 退订全部依赖，再改源不会有回调
+    document.getElementById('btnStop').disabled = true
+})
+</script>
+</body>
+</html>

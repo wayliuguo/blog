@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · 编译链路：模板 → AST / 静态标记 / render 代码</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; }
+    .intro { font-size: 13.5px; color: #495057; }
+    .intro code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; }
+    .panel { border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; background: #fff; margin-top: 14px; }
+    .panel-head { font-size: 13px; color: #868e96; margin-bottom: 8px; font-weight: 600; }
+    pre { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 6px 0; }
+    textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 8px; border: 1px solid #ced4da; border-radius: 6px; }
+    .cols { display: flex; gap: 16px; flex-wrap: wrap; }
+    .cols > div { flex: 1; min-width: 220px; }
+    .cols h3 { font-size: 13px; margin: 0 0 6px; color: #868e96; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>demo · 编译链路</h1>
+<p class="intro">模板字符串进 <code>compile()</code>，出来 <code>{ ast, code, render }</code> 三样产物：parse 建 AST、transform 落静态标记、generate 拼代码字符串并由 <code>new Function</code> 变成可执行 render。编辑下方模板即实时重新编译，三份产物随输入即时更新。</p>
+
+<div class="panel">
+    <div class="panel-head">模板（输入）</div>
+    <textarea id="tpl" rows="7"><section class="app-head">
+  <h3>任务列表（静态标题：编译时提升）</h3>
+  <p data-role="count">count = {{ count }}，double = {{ double }}，title = {{ title }}</p>
+  <button data-act="inc">count + 1</button>
+</section></textarea>
+</div>
+
+<div class="panel">
+    <div class="panel-head">编译产物（输出）</div>
+    <div class="cols">
+        <div><h3>AST（parse 产物）</h3><pre id="astOut">（加载即编译）</pre></div>
+        <div><h3>静态标记（transform 产物）</h3><pre id="marksOut">（加载即编译）</pre></div>
+        <div><h3>render 代码（generate 产物）</h3><pre id="codeOut">（加载即编译）</pre></div>
+    </div>
+</div>
+
+<script src="../lib/shared.js"></script>
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/compiler-core.js"></script>
+<script src="../lib/runtime-core.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+const M = window.MiniVue
+
+function markLines(node, depth, out) {
+    const pad = '  '.repeat(depth)
+    if (node.type === 'Element') {
+        out.push(`${pad}<${node.tag}> isStatic=${node.isStatic} patchFlag=${node.patchFlag}`)
+        node.children.forEach(c => markLines(c, depth + 1, out))
+    } else if (node.type === 'Interpolation') {
+        out.push(`${pad}{{ ${node.expression} }} → 动态`)
+    } else {
+        out.push(`${pad}"${node.content}" → 静态文本`)
+    }
+}
+
+function recompile() {
+    try {
+        const compiled = M.compile(document.getElementById('tpl').value)
+        document.getElementById('astOut').textContent = JSON.stringify(compiled.ast, null, 2)
+        const marks = []
+        compiled.ast.children.forEach(n => markLines(n, 0, marks))
+        document.getElementById('marksOut').textContent = marks.join('\n')
+        document.getElementById('codeOut').textContent = compiled.code
+    } catch (e) {
+        document.getElementById('codeOut').textContent = `编译失败：${e.message}`
+    }
+}
+// 编辑即编译：input 事件实时重编译；进页面先编译一次预置模板
+document.getElementById('tpl').addEventListener('input', recompile)
+recompile()
+</script>
+</body>
+</html>

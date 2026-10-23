@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · 卸载链路：render(null) → unmount → onUnmounted → effect.stop</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 1080px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; }
+    .intro { font-size: 13.5px; color: #495057; }
+    .intro code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; }
+    .panel { border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; background: #fff; margin-top: 14px; }
+    .panel-head { font-size: 13px; color: #868e96; margin-bottom: 8px; font-weight: 600; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+    #app { min-height: 120px; border: 1px dashed #dbe4ff; background: #f8f9ff; border-radius: 6px; padding: 10px 12px; font-size: 13px; color: #868e96; }
+    #app .app { color: #213547; }
+    #app h3 { margin: 2px 0 8px; font-size: 14px; }
+    #app p { margin: 4px 0; }
+    .state-line { font-size: 13.5px; padding: 4px 0; }
+    .state-line b { font-family: ui-monospace, Consolas, monospace; color: #1971c2; }
+    #vLife { color: #0b7285; }
+    #vDead { color: #e8590c; }
+</style>
+</head>
+<body>
+<h1>demo · 卸载链路</h1>
+<p class="intro">「卸载应用」触发 <code>render(null, container)</code>：unmount 摘 DOM → <code>onUnmounted</code> 执行 → 渲染 <code>effect.stop()</code> 退订全部依赖。之后「卸载后改 count」：数据确实变了（ref 是独立于实例的），但渲染 effect 已停止——<b>渲染区无任何变化就是本页的演示结果</b>。「重新挂载」是全新 setup、全新渲染 effect，旧 effect 不会复活。进页面已自动挂载一次。</p>
+
+<div class="panel">
+    <div class="panel-head">操作</div>
+    <button id="btnUnmount">卸载应用</button>
+    <button id="btnRemount" disabled>重新挂载</button>
+    <button id="btnDeadInc" disabled>卸载后改 count</button>
+    <div class="state-line">当前状态：<b id="vState">…</b> <span id="vLife"></span></div>
+    <div class="state-line">卸载后读数：<span id="vDead">（未卸载）</span></div>
+</div>
+
+<div class="panel">
+    <div class="panel-head">渲染区：挂载点本体 &lt;div id="app"&gt;</div>
+    <div id="app">（进页面自动挂载）</div>
+</div>
+
+<script src="../lib/shared.js"></script>
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/compiler-core.js"></script>
+<script src="../lib/runtime-core.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+const M = window.MiniVue
+
+const box = document.getElementById('app')
+const elState = document.getElementById('vState')
+const elLife = document.getElementById('vLife')
+const elDead = document.getElementById('vDead')
+const btnUnmount = document.getElementById('btnUnmount')
+const btnRemount = document.getElementById('btnRemount')
+const btnDeadInc = document.getElementById('btnDeadInc')
+
+let currentCount = null // 每次挂载产生全新实例：setup 里把当前 count 引用交给页面层
+let deadCount = null // 卸载前抓住的状态引用：组件已停，ref 数据还在
+
+// 纯 h 组件（不走编译器）：状态与渲染 effect 的生命周期都由 mount / render(null) 管理
+const App = {
+    setup() {
+        const count = M.ref(0)
+        currentCount = count
+        M.onUnmounted(() => {
+            elLife.textContent = 'onUnmounted 已触发（渲染 effect 已 stop）'
+            elState.textContent = '已卸载'
+        })
+        return () => M.h('div', { class: 'app' }, [
+            M.h('h3', null, '可卸载的应用'),
+            M.h('p', null, `count = ${count.value}（卸载后这个数字不会再变）`)
+        ])
+    }
+}
+
+function mount() {
+    if (box._vnode) return
+    box.innerHTML = '' // 清掉占位 / 卸载提示（mount 不会清容器）
+    M.createApp(App).mount(box) // setup → render → patch(null, subTree) → 真实 DOM
+    elState.textContent = '已挂载'
+    elLife.textContent = ''
+    elDead.textContent = '（未卸载）'
+    btnUnmount.disabled = false
+    btnRemount.disabled = true
+    btnDeadInc.disabled = true
+}
+
+btnUnmount.addEventListener('click', () => {
+    if (!box._vnode) return
+    const dead = currentCount // 卸载前抓住引用：ref 独立于组件实例存活
+    M.render(null, box) // 卸载链路：unmount → onUnmounted → effect.stop → hostRemove
+    box.textContent = '（已卸载 —— 点「重新挂载」）'
+    deadCount = dead
+    btnUnmount.disabled = true
+    btnRemount.disabled = false
+    btnDeadInc.disabled = false
+})
+
+btnRemount.addEventListener('click', () => {
+    if (box._vnode) return
+    mount() // 全新 setup、全新渲染 effect（旧 effect 已随卸载 stop，不会复活）
+})
+
+btnDeadInc.addEventListener('click', () => {
+    if (!deadCount) return
+    deadCount.value++ // trigger 找不到活跃订阅（渲染 effect 已 stop）→ 不会重渲染
+    elDead.textContent = `count = ${deadCount.value}（数据已变，渲染区无任何变化 —— 渲染 effect 已 stop）`
+})
+
+mount() // 进页面自动挂载
+</script>
+</body>
+</html>
