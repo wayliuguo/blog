@@ -97,7 +97,7 @@ export default [
                     {
                         text: 'Agent 模块总结',
                         link: '/ai/agent-development/总结'
-                    },
+                    }
                 ]
             }
         ]

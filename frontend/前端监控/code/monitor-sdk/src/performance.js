@@ -17,35 +17,35 @@ export function initPerformance(win) {
     // 统一订阅入口：buffered: true 补收 SDK 加载前已产生的 entry（否则 FCP 恒为 0，paint 常发生在 init 之前）
     function po(type, cb) {
         try {
-            new win.PerformanceObserver((list) => cb(list.getEntries())).observe({ type, buffered: true })
+            new win.PerformanceObserver(list => cb(list.getEntries())).observe({ type, buffered: true })
         } catch (e) {
             /* 浏览器不支持该 entry 类型时静默跳过，不把页面搞崩 */
         }
     }
 
-    po('paint', (entries) => {
+    po('paint', entries => {
         for (const e of entries) {
             if (e.name === 'first-paint') state.fp = Math.round(e.startTime)
             if (e.name === 'first-contentful-paint') state.fcp = Math.round(e.startTime)
         }
     })
-    po('largest-contentful-paint', (entries) => {
+    po('largest-contentful-paint', entries => {
         const last = entries[entries.length - 1]
         if (last) state.lcp = Math.round(last.startTime) // LCP 越晚越准：hidden 定稿时的最新候选就是终值
     })
-    po('layout-shift', (entries) => {
+    po('layout-shift', entries => {
         for (const e of entries) {
             state.clsRaw += e.value
             if (!e.hadRecentInput) state.cls += e.value
         }
     })
-    po('longtask', (entries) => {
+    po('longtask', entries => {
         for (const e of entries) {
             state.longtaskCount++
             state.tbt += Math.max(0, e.duration - 50)
         }
     })
-    po('event', (entries) => {
+    po('event', entries => {
         for (const e of entries) {
             if (e.duration > state.inp) state.inp = Math.round(e.duration)
         }
@@ -73,7 +73,10 @@ export function initPerformance(win) {
             /* ignore */
         }
         // 慢请求 Top5：接口排查最高频的诉求
-        const slowRequests = state.requestTimes.slice().sort((a, b) => b.duration - a.duration).slice(0, 5)
+        const slowRequests = state.requestTimes
+            .slice()
+            .sort((a, b) => b.duration - a.duration)
+            .slice(0, 5)
         return {
             type: 'perf',
             name: 'web-vitals',

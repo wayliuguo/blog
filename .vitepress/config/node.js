@@ -10,8 +10,11 @@ export default [
             { text: 'Buffer 与 Stream', link: '/node/运行环境/Buffer 与 Stream' },
             { text: '进程线程与优雅退出', link: '/node/运行环境/进程线程与优雅退出' },
             { text: '运行机制收束', link: '/node/运行环境/运行机制收束' },
-            { text: 'VSCode 调试 Node：inspect 协议、launch 配置与断点绑定', link: '/node/运行环境/VSCode 调试 Node：inspect 协议、launch 配置与断点绑定' },
-            { text: '模块总结（运行环境）', link: '/node/运行环境/总结' },
+            {
+                text: 'VSCode 调试 Node：inspect 协议、launch 配置与断点绑定',
+                link: '/node/运行环境/VSCode 调试 Node：inspect 协议、launch 配置与断点绑定'
+            },
+            { text: '模块总结（运行环境）', link: '/node/运行环境/总结' }
         ]
     },
     {
@@ -22,7 +25,7 @@ export default [
             { text: 'HTTP 与 HTTPS 深入', link: '/node/网络编程与实时通信/HTTP 与 HTTPS 深入' },
             { text: 'WebSocket 与 SSE 实时通信', link: '/node/网络编程与实时通信/WebSocket 与 SSE 实时通信' },
             { text: '一次请求完整经历了什么', link: '/node/网络编程与实时通信/一次请求完整经历了什么' },
-            { text: '模块总结（网络底层）', link: '/node/网络编程与实时通信/总结' },
+            { text: '模块总结（网络底层）', link: '/node/网络编程与实时通信/总结' }
         ]
     },
     {
@@ -35,7 +38,7 @@ export default [
             { text: 'Express 源码分析', link: '/node/Express 与 Koa/Express 源码分析' },
             { text: 'Koa 项目模板', link: '/node/Express 与 Koa/Koa 项目模板' },
             { text: 'Koa 源码分析', link: '/node/Express 与 Koa/Koa 源码分析' },
-            { text: '模块总结（Web 框架基础）', link: '/node/Express 与 Koa/总结' },
+            { text: '模块总结（Web 框架基础）', link: '/node/Express 与 Koa/总结' }
         ]
     },
     {
@@ -66,7 +69,7 @@ export default [
                     { text: 'Redis 进阶', link: '/node/Redis/Redis 进阶' }
                 ]
             },
-            { text: '模块总结（数据与缓存）', link: '/node/数据库/总结' },
+            { text: '模块总结（数据与缓存）', link: '/node/数据库/总结' }
         ]
     },
     {
@@ -107,7 +110,7 @@ export default [
                     { text: 'IoC 与依赖注入原理', link: '/node/NestJS 进阶/IoC 与依赖注入原理' }
                 ]
             },
-            { text: '模块总结（后端架构）', link: '/node/NestJS 入门/总结' },
+            { text: '模块总结（后端架构）', link: '/node/NestJS 入门/总结' }
         ]
     },
     {
@@ -147,7 +150,7 @@ export default [
                     { text: 'Git 与协作', link: '/node/进阶主题/Git 与协作' }
                 ]
             },
-            { text: '模块总结（工程化与拓展）', link: '/node/部署与工程化/总结' },
+            { text: '模块总结（工程化与拓展）', link: '/node/部署与工程化/总结' }
         ]
     }
 ]

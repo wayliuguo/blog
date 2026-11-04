@@ -1,11 +1,10 @@
 // 异常：window error（捕获阶段分流资源错误）/ unhandledrejection / fetch+XHR 请求拦截 / Vue errorHandler
 // 每一路都包 try/catch —— SDK 自己不能抛错，更不能因 SDK 报错触发再上报的死循环
 export function installExceptions(win, { send, onRequestTime }) {
-
     // 1. error 事件：资源错误（img/script/link）不冒泡，必须捕获阶段才能截住
     win.addEventListener(
         'error',
-        (event) => {
+        event => {
             try {
                 // 判据：事件对象上有 target.tagName 就是资源错误，没有才是脚本错误
                 if (event.target && event.target.tagName) {
@@ -35,7 +34,7 @@ export function installExceptions(win, { send, onRequestTime }) {
     )
 
     // 2. Promise 拒绝不走 error 事件，必须单独监听
-    win.addEventListener('unhandledrejection', (event) => {
+    win.addEventListener('unhandledrejection', event => {
         try {
             const reason = event.reason
             send({

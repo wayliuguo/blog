@@ -11,7 +11,7 @@ function pageName() {
     const seg = path
         .split('/')
         .filter(Boolean)
-        .filter((s) => !/^\d+$/.test(s))
+        .filter(s => !/^\d+$/.test(s))
         .join('_')
         .toUpperCase()
         .replace(/-/g, '_')
@@ -26,7 +26,11 @@ function eventPos(pos) {
 
 // PV：路由切换时由 afterEach 调用——PV 是业务事件，SDK 不自动上报（形态同 cash-web 的 page_visit 手动上报）
 export function trackPageView() {
-    report({ type: 'track', event: eventPos('PV'), params: { path: window.location.pathname + window.location.search } })
+    report({
+        type: 'track',
+        event: eventPos('PV'),
+        params: { path: window.location.pathname + window.location.search }
+    })
 }
 
 // 点击/自定义行为：语义对齐 cash-web 的 dataReport({ eventPos, extendInfo })

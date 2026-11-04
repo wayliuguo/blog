@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import OpenAI from 'openai'
-import type {
-    ChatCompletionMessageParam,
-    ChatCompletionTool
-} from 'openai/resources/chat/completions'
+import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions'
 
 @Injectable()
 export class LlmService {

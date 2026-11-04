@@ -10,11 +10,11 @@ export const cartCount = computed(() => cart.items.reduce((n, it) => n + it.qty,
 export const cartTotal = computed(() => cart.items.reduce((n, it) => n + it.qty * it.price, 0))
 
 export function findProduct(id) {
-    return products.find((p) => p.id === Number(id))
+    return products.find(p => p.id === Number(id))
 }
 
 export function addToCart(p, qty = 1) {
-    const exist = cart.items.find((it) => it.id === p.id)
+    const exist = cart.items.find(it => it.id === p.id)
     if (exist) exist.qty += qty
     else cart.items.push({ id: p.id, name: p.name, emoji: p.emoji, price: p.price, qty })
 }

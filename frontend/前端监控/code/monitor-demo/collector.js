@@ -13,7 +13,14 @@ const PORT = Number(process.env.PORT || 5189)
 const ROOT = path.dirname(url.fileURLToPath(import.meta.url))
 const DIST = path.join(ROOT, 'dist')
 const EVENTS_FILE = path.join(ROOT, 'data', 'events.jsonl')
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' }
+const MIME = {
+    '.html': 'text/html',
+    '.js': 'text/javascript',
+    '.css': 'text/css',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.json': 'application/json'
+}
 
 const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -37,14 +44,19 @@ const server = http.createServer((req, res) => {
     if (pathname === '/mock/slow') return setTimeout(() => respond(res, 200, 'slow ok'), 800)
     if (req.method === 'POST' && pathname === '/mock/pay') {
         let body = ''
-        req.on('data', (c) => (body += c))
+        req.on('data', c => (body += c))
         req.on('end', () => {
             // 演示逻辑：商品 1 固定支付失败（演示业务失败事件），其余成功
             const fail = body.includes('"productId":1')
-            setTimeout(() => {
-                res.writeHead(200, { 'Content-Type': 'application/json' })
-                res.end(JSON.stringify(fail ? { ok: false, reason: '风控拦截' } : { ok: true, payId: 'P' + Date.now() }))
-            }, fail ? 80 : 320) // 320ms：让支付请求出现在「慢请求」榜上又不至于拖测试
+            setTimeout(
+                () => {
+                    res.writeHead(200, { 'Content-Type': 'application/json' })
+                    res.end(
+                        JSON.stringify(fail ? { ok: false, reason: '风控拦截' } : { ok: true, payId: 'P' + Date.now() })
+                    )
+                },
+                fail ? 80 : 320
+            ) // 320ms：让支付请求出现在「慢请求」榜上又不至于拖测试
         })
         return
     }
@@ -52,7 +64,7 @@ const server = http.createServer((req, res) => {
     // 上报接收端：一个请求一批事件（JSON 数组）
     if (req.method === 'POST' && pathname === '/api/report') {
         let body = ''
-        req.on('data', (c) => (body += c))
+        req.on('data', c => (body += c))
         req.on('end', () => {
             let events = []
             try {
@@ -63,7 +75,7 @@ const server = http.createServer((req, res) => {
             }
             for (const e of events) print(e)
             fs.mkdirSync(path.dirname(EVENTS_FILE), { recursive: true })
-            fs.appendFileSync(EVENTS_FILE, events.map((e) => JSON.stringify(e)).join('\n') + (events.length ? '\n' : ''))
+            fs.appendFileSync(EVENTS_FILE, events.map(e => JSON.stringify(e)).join('\n') + (events.length ? '\n' : ''))
             res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true}')
         })
         return
@@ -75,7 +87,8 @@ const server = http.createServer((req, res) => {
 
 function print(e) {
     const label = e.type === 'track' ? e.event : e.message || ''
-    const extra = e.type === 'perf' ? `fp=${e.fp}ms fcp=${e.fcp}ms lcp=${e.lcp}ms cls=${e.cls} tbt=${e.tbt}ms inp=${e.inp}ms` : ''
+    const extra =
+        e.type === 'perf' ? `fp=${e.fp}ms fcp=${e.fcp}ms lcp=${e.lcp}ms cls=${e.cls} tbt=${e.tbt}ms inp=${e.inp}ms` : ''
     console.log(`▼ [${e.page}] ${e.type} ${label} ${extra}`)
     console.log(`    release=${e.release} env=${e.environment} handled=${e.handled === undefined ? '-' : e.handled}`)
 }
@@ -85,16 +98,32 @@ function print(e) {
 // 业务看「漏斗转化」（相邻步计数相除）。这是三类数据各自的标准消费方式
 function buildStats() {
     if (!fs.existsSync(EVENTS_FILE)) return { total: 0, note: '暂无数据，先在演示页触发几轮操作' }
-    const events = fs.readFileSync(EVENTS_FILE, 'utf-8').trim().split('\n').map((l) => {
-        try { return JSON.parse(l) } catch (e) { return null }
-    }).filter(Boolean)
+    const events = fs
+        .readFileSync(EVENTS_FILE, 'utf-8')
+        .trim()
+        .split('\n')
+        .map(l => {
+            try {
+                return JSON.parse(l)
+            } catch (e) {
+                return null
+            }
+        })
+        .filter(Boolean)
 
     // ① 错误看板：按归并键（类型+消息+位置）聚合 + 最近发生时间 + 影响页面
     const errorMap = new Map()
     for (const e of events) {
         if (e.type === 'perf' || e.type === 'track') continue
-        const key = e.type + '|' + (e.message || '') + '|' + ((e.filename || (e.data && e.data.url)) || '')
-        const item = errorMap.get(key) || { message: e.message || e.type, count: 0, pages: new Set(), handledTrue: 0, lastAt: 0, sample: e }
+        const key = e.type + '|' + (e.message || '') + '|' + (e.filename || (e.data && e.data.url) || '')
+        const item = errorMap.get(key) || {
+            message: e.message || e.type,
+            count: 0,
+            pages: new Set(),
+            handledTrue: 0,
+            lastAt: 0,
+            sample: e
+        }
         item.count++
         if (e.page) item.pages.add(e.page)
         if (e.handled) item.handledTrue++
@@ -104,37 +133,51 @@ function buildStats() {
     }
     const errors = [...errorMap.values()]
         .sort((a, b) => b.count - a.count)
-        .map((it) => ({
-            message: it.message, count: it.count,
-            pages: [...it.pages], handledRate: Math.round((it.handledTrue / it.count) * 100) + '%',
+        .map(it => ({
+            message: it.message,
+            count: it.count,
+            pages: [...it.pages],
+            handledRate: Math.round((it.handledTrue / it.count) * 100) + '%',
             lastAt: new Date(it.lastAt).toISOString(),
             stack: (it.sample.stack || '').split('\n').slice(0, 2)
         }))
 
     // ② 性能看板：取最新一条 perf 快照 + 慢请求榜（真实部署按 p75 聚合，单机演示取终值）
-    const perfs = events.filter((e) => e.type === 'perf')
+    const perfs = events.filter(e => e.type === 'perf')
     const perf = perfs.length ? perfs[perfs.length - 1] : null
-    const perfBoard = perf ? {
-        fp: perf.fp, fcp: perf.fcp, lcp: perf.lcp, cls: perf.cls, inp: perf.inp, tbt: perf.tbt,
-        navigation: perf.navigation, slowRequests: perf.slowRequests
-    } : null
+    const perfBoard = perf
+        ? {
+              fp: perf.fp,
+              fcp: perf.fcp,
+              lcp: perf.lcp,
+              cls: perf.cls,
+              inp: perf.inp,
+              tbt: perf.tbt,
+              navigation: perf.navigation,
+              slowRequests: perf.slowRequests
+          }
+        : null
 
     // ③ 业务看板：漏斗 = 曝光 → 点击 → 加购 → 下单（相邻步计数相除即转化率）
-    const trackEvents = events.filter((e) => e.type === 'track')
+    const trackEvents = events.filter(e => e.type === 'track')
     const byName = new Map()
     for (const e of trackEvents) {
         byName.set(e.event, (byName.get(e.event) || 0) + 1)
     }
     // 漏斗匹配用 includes：曝光事件名带商品 id 后缀（product_expose:1），后缀属于维度不属于步骤名
     const steps = ['product_expose', 'product_click', 'add_cart', 'order_submit']
-    const funnel = steps.map((s) => {
-        const count = [...byName.entries()].filter(([name]) => name.includes(s)).reduce((n, [, c]) => n + c, 0)
-        return { step: s, count }
-    }).map((item, i, arr) => ({
-        ...item,
-        rate: i === 0 ? '100%' : (arr[i - 1].count ? Math.round((item.count / arr[i - 1].count) * 100) + '%' : '-')
-    }))
-    const topEvents = [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
+    const funnel = steps
+        .map(s => {
+            const count = [...byName.entries()].filter(([name]) => name.includes(s)).reduce((n, [, c]) => n + c, 0)
+            return { step: s, count }
+        })
+        .map((item, i, arr) => ({
+            ...item,
+            rate: i === 0 ? '100%' : arr[i - 1].count ? Math.round((item.count / arr[i - 1].count) * 100) + '%' : '-'
+        }))
+    const topEvents = [...byName.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
         .map(([name, count]) => ({ name, count }))
 
     return { total: events.length, errors, perf: perfBoard, funnel, topEvents }

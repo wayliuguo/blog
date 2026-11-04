@@ -145,5 +145,5 @@ export default [
             { text: '虚拟滚动与大数据渲染', link: '/frontend/工程实践与架构/虚拟滚动与大数据渲染' },
             { text: '模块总结（工程实践与架构）', link: '/frontend/工程实践与架构/总结' }
         ]
-    },
+    }
 ]
