@@ -63,8 +63,6 @@ export default [
             { text: 'Vue 组件', link: '/frontend/vue/Vue%20组件' },
             { text: 'Vue 路由与状态', link: '/frontend/vue/Vue%20路由与状态' },
             { text: 'Vue3 原理', link: '/frontend/vue/Vue3%20原理' },
-            { text: 'Vue3 状态管理原理与实现', link: '/frontend/vue/Vue3%20状态管理原理与实现' },
-            { text: 'Vue Router 原理', link: '/frontend/vue/Vue%20Router%20原理' },
             { text: '模块总结（Vue）', link: '/frontend/vue/总结' }
         ]
     },

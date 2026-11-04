@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>demo · 整体运行：官网 CDN 用法（编译 → 挂载 → 响应式 → diff → 卸载）</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 24px auto; padding: 0 16px; color: #213547; }
+    h1 { font-size: 22px; }
+    .intro { font-size: 13.5px; color: #495057; }
+    .intro code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; }
+    .panel { border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; background: #fff; margin-top: 14px; }
+    .panel-head { font-size: 13px; color: #868e96; margin-bottom: 8px; font-weight: 600; }
+    pre { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 6px 0; }
+    .cols { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+    .cols > div { flex: 1; min-width: 260px; }
+    .cols h3 { font-size: 13px; margin: 0 0 6px; color: #868e96; }
+    button { margin: 2px 8px 2px 0; padding: 5px 12px; cursor: pointer; }
+    #app { min-height: 140px; border: 1px dashed #dbe4ff; background: #f8f9ff; border-radius: 6px; padding: 10px 12px; font-size: 13px; }
+    #app p { margin: 4px 0; }
+    #app ul { margin: 6px 0 0; padding-left: 20px; }
+    #app li { font-size: 13px; }
+    #app button { padding: 3px 10px; }
+    #lifeMark { font-size: 13px; color: #0b7285; }
+    #tickMark { font-size: 13px; color: #2b8a3e; margin: 8px 0 0; }
+    .bps { font-size: 12.5px; color: #495057; margin: 4px 0 0; padding-left: 20px; }
+    .bps li { margin: 3px 0; }
+    .bps code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>demo · 整体运行（官网 CDN 用法）</h1>
+<p class="intro">页面加载即按官网 CDN 的方式运行：<code>&lt;div id="app"&gt;</code> 里的 HTML 就是模板，脚本里 <code>createApp({...}).mount('#app')</code>——mount 时读取容器 <code>innerHTML</code> 交给 compile（<code>@click</code> / <code>v-for</code> / <code>:key</code> / 插值都在这一步编译），清空容器后由渲染器重建真实 DOM。左栏是组件源码，右栏渲染区就是这个组件；下面的页面层按钮负责触发各条链路。</p>
+
+<div class="panel">
+    <div class="cols">
+        <div>
+            <h3>组件源码（与官网 CDN 示例同构）</h3>
+            <pre>const { createApp, ref } = MiniVue
+
+createApp({
+  setup() {
+    const message = ref('Hello vue!')
+    const count = ref(0)
+    const todos = ref([
+      { id: 1, text: 'a' },
+      { id: 2, text: 'b' },
+      { id: 3, text: 'c' },
+      { id: 4, text: 'd' },
+      { id: 5, text: 'e' }
+    ])
+    const increment = () =&gt; count.value++
+    return { message, count, todos, increment }
+  }
+}).mount('#app')</pre>
+            <h3>挂载状态</h3>
+            <span id="lifeMark">onMounted 未触发</span>
+        </div>
+        <div>
+            <h3>渲染区：&lt;div id="app"&gt;（页面层的 HTML 即模板）</h3>
+            <div id="app">
+                <p>{{ message }}</p>
+                <p>count = {{ count }}</p>
+                <button @click="increment">count + 1</button>
+                <ul>
+                    <li v-for="t in todos" :key="t.id">#{{ t.id }} {{ t.text }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-head">页面层操作（不在组件内，卸载后仍可用；组件内的 count + 1 按钮走编译产物绑定的 onClick）</div>
+    <button id="btnMessage">改 message</button>
+    <button id="btnBatch">一次改三项（批处理）</button>
+    <button id="btnShuffle" title="点击后列表 [a,b,c,d,e] → [a,d,f,b,e]">乱序 + 插删（keyed diff 全算法）</button>
+    <button id="btnGrow" title="头同步全中（i 越过旧尾）→ 新项批量 mount，不进乱序区">新列表更长（追加一项）</button>
+    <button id="btnShrink" title="头同步全中（i 越过新尾）→ 末项直接 unmount，不进乱序区">旧列表更长（移除末项）</button>
+    <button id="btnUnload">卸载</button>
+    <p id="tickMark">点「改 message」看 nextTick 前后的 DOM 读取对照</p>
+</div>
+
+<div class="panel">
+    <div class="panel-head">断点标注（按链路顺序）</div>
+    <ol class="bps">
+        <li><code>mount('#app')</code>：字符串选择器 → <code>querySelector</code>；读容器 <code>innerHTML</code> 当模板 → <code>compile()</code>（断点：parse / transform / generate）→ 清空容器 → <code>render(vnode, container)</code></li>
+        <li><code>setup()</code>：建响应式状态；render 执行时模板里的插值读 <code>ctx.xxx</code>（ref 自动解包）→ track 建立依赖</li>
+        <li><code>patch(null, subTree)</code>：v-for 展开的 li 带 key，逐个 mountElement 生成真实 DOM</li>
+        <li>改状态：trigger → <code>queueJob</code>（同一 tick 多次写入去重成 1 个 job）→ 微任务 <code>flushJobs</code> → <code>patch(prev, next)</code>（插值文本走 patchFlag=1；列表走 keyed diff：头尾同步（整段增删走快速通道：批量 mount / unmount）→ 中间乱序 key 索引 → LIS 跳过本就位节点 → 只挪必须动的）</li>
+        <li><code>unmount()</code>：unmounted 钩子 → 渲染 effect stop（死写不再触发渲染）→ 递归 remove；重新加载页面即可重看挂载</li>
+    </ol>
+</div>
+
+<script src="../lib/shared.js"></script>
+<script src="../lib/reactivity.js"></script>
+<script src="../lib/compiler-core.js"></script>
+<script src="../lib/runtime-core.js"></script>
+<script src="../lib/index.js"></script>
+<script>
+const M = window.MiniVue
+
+// 组件用工厂函数：和官网一样返回组件对象，setup 里建响应式状态
+function makeApp() {
+    return {
+        setup() {
+            const message = M.ref('Hello vue!')
+            const count = M.ref(0)
+            const todos = M.ref([
+                { id: 1, text: 'a' },
+                { id: 2, text: 'b' },
+                { id: 3, text: 'c' },
+                { id: 4, text: 'd' },
+                { id: 5, text: 'e' }
+            ])
+            const increment = () => count.value++
+            M.onMounted(() => { lifeMark.textContent = 'onMounted 已触发（子树挂载完后统一执行）' })
+            M.onUnmounted(() => { lifeMark.textContent = 'unmounted 已触发（先钩子 → 再停渲染 effect → 再摘 DOM）' })
+            return { message, count, todos, increment }
+        }
+    }
+}
+
+let root = null // 根实例代理：页面层改状态全走它（ref 经 proxyRefs 自动解包）
+let appObj = null // createApp 返回的 app 对象：unmount 在它身上
+
+function startApp() {
+    appObj = M.createApp(makeApp())
+    root = appObj.mount('#app') // mount('#app')：选择器 + in-DOM 模板编译 + 清空容器 + 渲染
+}
+
+// —— 页面层按钮 ——
+document.getElementById('btnMessage').addEventListener('click', async () => {
+    const p = document.querySelector('#app p')
+    root.message = root.message === 'Hello vue!' ? 'Hello MiniVue!' : 'Hello vue!' // patchFlag=1 文本更新
+    const syncRead = p.textContent // 写入只是改了 ref：渲染 effect 排进微任务，此刻同步读仍是旧值
+    tickMark.textContent = `同步读=「${syncRead}」（DOM 未动）`
+    await M.nextTick() // 挂 currentFlushPromise 后面：resolve 时 flushJobs 已跑完，DOM 已落定
+    tickMark.textContent = `同步读=「${syncRead}」（DOM 未动） → await nextTick() 后读=「${p.textContent}」（已落定）`
+})
+document.getElementById('btnBatch').addEventListener('click', () => {
+    // 同一 tick 的 3 次同步写入 → 3 次 trigger → 3 次 queueJob → 去重 1 个 job → flushJobs 1 次
+    root.message = '批处理写入'
+    root.count += 1
+    if (root.todos.length) root.todos.splice(0, 1)
+})
+document.getElementById('btnShuffle').addEventListener('click', () => {
+    // [a,b,c,d,e] → [a,d,f,b,e]：头同步 A、尾同步 E 接住；中间区 C 删除、F 新增、B 命中 LIS 不动、D 移动
+    root.todos.splice(0, root.todos.length,
+        { id: 1, text: 'a' },
+        { id: 4, text: 'd' },
+        { id: 6, text: 'f' },
+        { id: 2, text: 'b' },
+        { id: 5, text: 'e' })
+})
+let newId = 6
+document.getElementById('btnGrow').addEventListener('click', () => {
+    // 头同步把旧列表全部摘中（i > e1）→ 走"新更长"快速通道：新项批量 mount 在末尾锚点前
+    root.todos.push({ id: ++newId, text: '新' + newId })
+})
+document.getElementById('btnShrink').addEventListener('click', () => {
+    // 头同步把新列表全部摘中（i > e2）→ 走"旧更长"快速通道：末项直接 unmount
+    if (root.todos.length > 1) root.todos.splice(root.todos.length - 1, 1)
+})
+document.getElementById('btnUnload').addEventListener('click', () => {
+    appObj.unmount() // unmounted 钩子 → effect.stop → 递归 remove；此后改状态是"死写"
+})
+
+// 加载即挂载（无启动按钮）
+startApp()
+</script>
+</body>
+</html>

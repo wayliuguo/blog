@@ -1,6 +1,6 @@
 # Vue3 原理
 
-> 本篇所有 `摘自` 代码块来自配套的可断点实现 `code/vue3/mini-vue/lib/`——按 Vue3 源码包结构分层拆分（`shared.js` → `reactivity.js` / `compiler-core.js` → `runtime-core.js` → `index.js`，纯 JS 零依赖，`<script>` 按序加载后经 `window.MiniVue` 统一使用，全量 JSDoc 注释）。正文每讲一个机制，就落到对应文件的函数上解析一次；5 个分链路纯渲染 demo 见 `code/vue3/mini-vue/demo/`（编译 / 响应式 / 挂载 / 更新 / 卸载各一页），与篇末「五、关键执行链路」一章逐节对齐，章节对照与断点建议见篇末「配套代码」。
+> 本篇所有 `摘自` 代码块来自配套的可断点实现 `code/vue3/mini-vue/lib/`——按 Vue3 源码包结构分层拆分（`shared.js` → `reactivity.js` / `compiler-core.js` → `runtime-core.js` → `index.js`，纯 JS 零依赖，`<script>` 按序加载后经 `window.MiniVue` 统一使用，全量 JSDoc 注释）。正文每讲一个机制，就落到对应文件的函数上解析一次；3 个模块 demo 见 `code/vue3/mini-vue/demo/`（编译 / 响应式 / 整体运行各一页，整体运行的 demo-app 按 Vue 官网 CDN 的方式在 `<div id="app">` 里直接写模板），与篇末「五、关键执行链路」一章逐节对齐，章节对照与断点建议见篇末「配套代码」。
 
 ## 一、Vue3 整体架构
 
@@ -117,7 +117,7 @@ Vue3 包结构
     new Function(code) ──────► 可执行 render 函数
         │
         ▼
-    render(ctx) ─────────────► VNode 树（交给运行时 patch）  〔详见 4.5〕
+    render(ctx) ─────────────► VNode 树（交给运行时 patch）  〔详见 4.2〕
 ```
 
 本章展开顺序：2.1 说 SFC 场景下模板从哪来；2.2 覆盖 parse 与 generate 两端；2.3 下钻 transform 的静态标记。
@@ -133,12 +133,10 @@ Vue3 包结构
   <!-- 模板块：交给 compiler-core 编译成 render -->
   <div>{{ msg }}</div>
 </template>
-
 <script setup>
 // 脚本块：`<script setup>` 会被编译成普通 setup 函数
 const msg = ref("hello");
 </script>
-
 <style scoped>
 /* 样式块：scoped 会为选择器追加 data-v-xxx 属性 */
 </style>
@@ -156,7 +154,6 @@ const msg = ref("hello");
 // 模板：<div>{{ msg }}</div>
 // 编译后大致得到这样的 render 函数（Vue 内部返回 VNode）
 import { toDisplayString, createElementVNode as _createElementVNode } from "vue";
-
 function render(_ctx, _cache) {
   return _createElementVNode("div", null, toDisplayString(_ctx.msg), 1);
 }
@@ -235,6 +232,15 @@ function parse(template) {
             // '<div id="a">' → m[1]='div'、m[2]=' id="a"'；'<img src="x"/>' 整体匹配且以 /> 收尾
             const selfClosing = /\/>$/.test(m[0]) // 以 /> 结尾 → 自闭合，不入栈
             const node = { type: 'Element', tag: m[1], attrs: parseAttrs(m[2]), children: [] }
+            // 指令提取：v-for="item in list" 不是 DOM 属性，从 attrs 摘出来挂到节点上
+            // （generate 阶段据此把该节点展开成 ctx.列表.map(item => h(...))）
+            if (node.attrs && node.attrs['v-for']) {
+                const vm = /^\s*([a-zA-Z_$][\w$]*)\s+(?:in|of)\s+([a-zA-Z_$][\w$]*)\s*$/.exec(node.attrs['v-for'])
+                if (!vm) throw new Error('v-for 暂只支持「item in list」形式：' + node.attrs['v-for'])
+                node.vFor = { item: vm[1], list: vm[2] }
+                delete node.attrs['v-for']
+                if (!Object.keys(node.attrs).length) node.attrs = null // 摘完就空 → 归 null（同"没有属性"）
+            }
             parent.children.push(node)
             if (!selfClosing) stack.push(node) // 非自闭合：后续 children 挂到它名下
             rest = rest.slice(m[0].length)
@@ -260,22 +266,94 @@ parse(template)
   过程: 正则逐段扫描 + 栈维护层级——开始标签入栈、结束标签出栈，文本取到下一个 {{ 或 < 为止
 ```
 
-**generate：递归生成代码字符串**，每个节点对应一次 `h(...)` 调用：
+**generate：递归生成代码字符串**，每个节点对应一次 `h(...)` 调用；`@click`、`:key`、`v-for` 这些指令也在这一步落地——事件改写成 `onClick`、动态绑定改写成 `key: 表达式`、v-for 节点展开成 `列表.map(item => h(...))`：
 
 > 摘自 `./code/vue3/mini-vue/lib/compiler-core.js`
 
 ```js
 // —— 3. generate：AST → render 代码字符串 ——
 /**
+ * 把模板表达式改写成带 ctx 前缀的可执行表达式（generate 的公共步骤）。
+ * 改写规则（自上而下）：
+ *   1. 循环变量（scope 集合里的名字）→ 保持裸引用（v-for 的 item 属于本次 map 的局部变量）；
+ *   2. 字面量 / 保留字 → 原样保留；
+ *   3. 前一个非空白字符是 "." → 保持裸引用（属性访问的尾部，如 t.id 的 id）；
+ *   4. 其余裸标识符 → 加 ctx. 前缀（组件状态经实例代理访问，ref 自动解包）。
+ * 对「单个标识符」这类简单表达式，改写结果与旧版 `ctx.表达式` 拼接完全一致，
+ * 因此不改变既有模板的编译产物。
+ *
+ * @param {string} expr - 模板里的表达式原文（如 'count'、't.id'、'count++'）
+ * @param {Set<string>} scope - 当前可见的循环变量集合（无 v-for 时为空集）
+ * @returns {string} 可执行表达式（裸标识符已挂到 ctx 上）
+ *
+ * @example
+ *   rewriteExpr('count', new Set())        // → 'ctx.count'
+ *   rewriteExpr('t.id', new Set(['t']))    // → 't.id'（t 在作用域、id 是成员）
+ *   rewriteExpr('count++', new Set())      // → 'ctx.count++'
+ */
+function rewriteExpr(expr, scope) {
+    return expr.replace(/[a-zA-Z_$][\w$]*/g, (name, offset, full) => {
+        if (scope.has(name)) return name
+        if (name === 'true' || name === 'false' || name === 'null' || name === 'undefined') return name
+        let i = offset - 1
+        while (i >= 0 && full[i] === ' ') i-- // 回看前一个非空白字符
+        if (full[i] === '.') return name // 成员访问尾部：t.id 的 id
+        return `ctx.${name}`
+    })
+}
+
+/**
+ * 把 attrs 对象生成 props 参数代码。
+ * 三类属性分流：普通属性 → JSON 字面量片段；@事件 → `onClick: () => 表达式`；
+ * :绑定 → `key: 表达式`。全是普通属性时直接 JSON.stringify（与旧产物格式一致），
+ * 混有指令时手动拼对象字面量。
+ *
+ * @param {Object|null} attrs - parse 产出的属性表（指令值仍是表达式原文）
+ * @param {Set<string>} scope - 循环变量作用域（改写表达式用）
+ * @returns {string} props 代码，形如 `{"class":"x"}` 或 `{":key 已改写": ..., onClick: ...}`
+ *
+ * @example
+ *   genProps({ class: 'x' }, new Set()) // → '{"class":"x"}'
+ *   genProps({ '@click': 'inc' }, new Set()) // → '{onClick: () => ctx.inc()}'
+ *   genProps({ ':key': 't.id' }, new Set(['t'])) // → '{key: t.id}'
+ */
+function genProps(attrs, scope) {
+    if (!attrs) return 'null'
+    const statics = {}
+    const dynamics = []
+    for (const [key, value] of Object.entries(attrs)) {
+        if (/^@|^v-on:/.test(key)) {
+            // 事件：@click / v-on:click → onClick。裸方法名补调用括号（@click="inc"），
+            // 其余表达式（如 count++）包一层括号直接作为函数体
+            const raw = key.replace(/^@|^v-on:/, '')
+            const name = 'on' + raw[0].toUpperCase() + raw.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+            const rewritten = rewriteExpr(String(value), scope)
+            const handler = /^[a-zA-Z_$][\w$]*$/.test(String(value).trim()) ? `() => ${rewritten}()` : `() => (${rewritten})`
+            dynamics.push(`${name}: ${handler}`)
+        } else if (/^:|^v-bind:/.test(key)) {
+            // 动态绑定：:key / v-bind:key → 属性名: 改写后的表达式
+            const raw = key.replace(/^:|^v-bind:/, '')
+            dynamics.push(`${raw}: ${rewriteExpr(String(value), scope)}`)
+        } else {
+            statics[key] = value
+        }
+    }
+    if (!dynamics.length) return JSON.stringify(statics)
+    const head = Object.keys(statics).length ? `${JSON.stringify(statics).slice(1, -1)}, ` : ''
+    return `{${head}${dynamics.join(', ')}}`
+}
+
+/**
  * 把标记完的 AST 生成为 render 函数体代码（顶层是一个 VNode 数组字面量）。
  *
  * genNode 按节点类型分派：
- *   - Text         → JSON.stringify 出带引号的字符串字面量（拼进代码里就是合法 JS）
- *   - Interpolation→ `toDisplayString(ctx.表达式)`（运行时由传入的函数解析显示）
- *   - Element      → `h("tag", props, children, patchFlag)`，children 有三种形态：
+ *   - Text          → JSON.stringify 出带引号的字符串字面量（拼进代码里就是合法 JS）
+ *   - Interpolation → `toDisplayString(改写后的表达式)`（运行时由传入的函数解析显示）
+ *   - Element       → `h("tag", props, children, patchFlag)`，children 有三种形态：
  *       a) 单个文本/插值孩子 → 直接是字符串表达式（运行时 shapeFlag 落 TEXT_CHILDREN）
  *       b) 全是文本+插值混合 → 用 + 拼成一个字符串表达式（同真实 Vue 的文本拼接产物）
  *       c) 含元素孩子       → 数组字面量（运行时 shapeFlag 落 ARRAY_CHILDREN）
+ *   - v-for 元素    → `...ctx.列表.map(item => h(...))`，item 进子表达式作用域
  * patchFlag 只在动态节点上追加（静态节点省略该参数）。
  *
  * @param {Object} ast - transform 之后的 AST
@@ -288,35 +366,46 @@ parse(template)
  *   const ast2 = parse('<div>共 {{ n }} 条</div>'); transform(ast2)
  *   generate(ast2)
  *   // → '[h("div", null, "共 " + toDisplayString(ctx.n) + " 条", 1)]'
+ *   const ast3 = parse('<ul><li v-for="t in ts" :key="t.id">{{ t.text }}</li></ul>'); transform(ast3)
+ *   generate(ast3)
+ *   // → '[h("ul", null, [...ctx.ts.map(t => h("li", {key: t.id}, toDisplayString(t.text), 1))])]'
  */
 function generate(ast) {
     /**
      * 递归生成一个节点的代码片段。
      *
      * @param {Object} node - AST 节点
+     * @param {Set<string>} scope - 当前可见的循环变量集合（顶层为空集）
      * @returns {string} 该节点对应的 JS 表达式
      */
-    function genNode(node) {
+    function genNode(node, scope = new Set()) {
         if (node.type === 'Text') return JSON.stringify(node.content) // 字符串字面量自带引号
-        if (node.type === 'Interpolation') return `toDisplayString(ctx.${node.expression})`
+        if (node.type === 'Interpolation') return `toDisplayString(${rewriteExpr(node.expression, scope)})`
+        // v-for：当前节点展开成 map 回调，循环变量加入子表达式作用域
+        // （回调内部再生成的表达式里，item 走裸引用、组件状态走 ctx.）
+        if (node.vFor) {
+            const inner = { ...node, vFor: null }
+            const body = genNode(inner, new Set([...scope, node.vFor.item]))
+            return `...ctx.${node.vFor.list}.map(${node.vFor.item} => ${body})`
+        }
         const flag = node.patchFlag ? `, ${node.patchFlag}` : '' // 静态节点不传 patchFlag
-        const props = node.attrs ? JSON.stringify(node.attrs) : 'null'
+        const props = genProps(node.attrs, scope)
         const children = node.children
         // 单文本 / 单插值孩子：生成字符串 children（运行时 shapeFlag 会标 TEXT_CHILDREN）
         if (children.length === 1 && children[0].type !== 'Element') {
-            return `h("${node.tag}", ${props}, ${genNode(children[0])}${flag})`
+            return `h("${node.tag}", ${props}, ${genNode(children[0], scope)}${flag})`
         }
         // 孩子全是文本 / 插值的混合：拼成一个字符串表达式（同真实 Vue 的文本拼接产物）
         if (children.length && children.every(c => c.type === 'Text' || c.type === 'Interpolation')) {
             const expr = children
-                .map(c => (c.type === 'Text' ? JSON.stringify(c.content) : `toDisplayString(ctx.${c.expression})`))
+                .map(c => (c.type === 'Text' ? JSON.stringify(c.content) : `toDisplayString(${rewriteExpr(c.expression, scope)})`))
                 .join(' + ')
             return `h("${node.tag}", ${props}, ${expr}${flag})`
         }
-        return `h("${node.tag}", ${props}, [${children.map(genNode).join(', ')}]${flag})`
+        return `h("${node.tag}", ${props}, [${children.map(c => genNode(c, scope)).join(', ')}]${flag})`
     }
     // 顶层包成数组：与运行时 render 返回数组、normalizeVNode 归一的约定对齐
-    return `[${ast.children.map(genNode).join(', ')}]`
+    return `[${ast.children.map(c => genNode(c)).join(', ')}]`
 }
 ```
 
@@ -358,7 +447,7 @@ compile(template)
   过程: parse → transform → generate 串成管线，new Function 把代码字符串变成真函数（h / toDisplayString / ctx 作闭包入参）
 ```
 
-> 配套 `./code/vue3/mini-vue/lib/compiler-core.js` 就是这三个阶段的最小实现（全量 JSDoc，可直接逐函数断点）；`mini-vue/demo/demo-compiler.html` 提供模板输入框（含预置示例），可实时看到 AST / 标记 / render 代码三份产物（纯产物展示，挂载走 demo-mount）。
+> 配套 `./code/vue3/mini-vue/lib/compiler-core.js` 就是这三个阶段的最小实现（全量 JSDoc，可直接逐函数断点）；`mini-vue/demo/demo-compiler.html` 提供模板输入框（含预置示例），可实时看到 AST / 标记 / render 代码三份产物（纯产物展示，实际挂载与整体运行见 demo-app）。
 
 ### 2.3 静态节点标记优化
 
@@ -415,6 +504,8 @@ function transform(ast) {
         for (const child of node.children) {
             if (walk(child)) hasDynamic = true
         }
+        // v-for 列表每次渲染都产出新数组，永远是动态节点（哪怕子树全是静态内容）
+        if (node.vFor) hasDynamic = true
         node.isStatic = !hasDynamic
         node.patchFlag = hasDynamic ? 1 : 0
         return hasDynamic
@@ -435,7 +526,7 @@ transform(ast)
 
 - **动态性会向上传染**：`walk` 返回"这棵子树是否含动态内容"，`<p>{{ count }}</p>` 里的插值让它自己变动态；再往上，只要任意孩子动态，父节点也跟着动态（patchFlag 表示"我的子树里有动态内容需要对比"）。
 - **`some` 的短路陷阱**：判断孩子时若写成 `children.some(walk)`，遇到第一个动态孩子就停，后面的静态兄弟再也得不到标记——所以这里用 `for` 全遍历。
-- **标记落到 VNode 上**：generate 把 `patchFlag` 写进 render 代码的第 4 个参数，`h("p", null, toDisplayString(count), 1)`；运行时 `createVNode` 把它存到 `vnode.patchFlag`，diff 时据此决定对比策略（见 4.2 的 `h` 实现）。
+- **标记落到 VNode 上**：generate 把 `patchFlag` 写进 render 代码的第 4 个参数，`h("p", null, toDisplayString(count), 1)`；运行时 `createVNode` 把它存到 `vnode.patchFlag`，diff 时据此决定对比策略（见 4.1 的 `h` 实现）。
 
 **静态节点标记带来的收益**：更新时只对比真正可能变化的动态节点，大量静态 DOM 直接跳过，显著提升更新性能。这也是 Vue3 相比 Vue2 在编译层做出的重要性能优化。
 
@@ -542,7 +633,6 @@ function reactive(target) {
 const weakMap = new WeakMap();
 const obj = {};
 weakMap.set(obj, "依赖集合"); // ✅ 键可以是对象
-
 let target = { data: "test" };
 weakMap.set(target, { deps: new Set() });
 target = null; // 解除引用后，键值对会被 GC 自动清理
@@ -605,12 +695,10 @@ reactive(target)
   输入: 原始对象
   输出: Proxy（同一 target 只代理一次，命中缓存直接返回）
   过程: reactiveMap 查缓存 → new Proxy(target, mutableHandlers) → 写缓存
-
 createGetter 的 get(target, key)
   输入: 代理对象上的一次属性读取
   输出: 属性值（是对象则再包一层 reactive——惰性深度代理）
   过程: 先应答 ReactiveFlags 特征属性 → Reflect.get → track(target, key) → isShallow 短路 → 深层对象递归代理
-
 createSetter 的 set(target, key, value)
   输入: 代理对象上的一次属性写入
   输出: Reflect.set 的结果（boolean）
@@ -842,7 +930,6 @@ effect(fn, { scheduler })
   输入: 副作用函数、可选调度器
   输出: runner（可手动触发，runner.effect.stop() 可解除依赖）
   过程: new ReactiveEffect(fn, scheduler) → 立即 run() 首跑建依赖
-
 ReactiveEffect.run()
   输入: void
   输出: fn() 的返回值
@@ -1260,7 +1347,6 @@ function createGetter(isReadonly = false, shallow = false) {
     const isExistInReactiveMap = () =>
       key === ReactiveFlags.RAW && receiver === reactiveMap.get(target);
     // ... readonlyMap / shallowReadonlyMap 同理
-
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly;
     } else if (key === ReactiveFlags.IS_READONLY) {
@@ -1301,255 +1387,132 @@ export function toRaw(value) {
 
 ## 四、运行时原理
 
-运行时负责把 VNode 真正"落地"到宿主环境（浏览器即真实 DOM）。全链路总纲如下，图上每个环节都能在正文小节下钻到代码级讲解：
+> 示意片段（无配套脚本）
 
 ```
-h(type, props, children) ─────► VNode（type / props / children / shapeFlag）  〔详见 4.2 · 4.3〕
-        │
-        ▼
-    createApp(root).mount(container) ──► render(vnode, container)            〔详见 4.1〕
-        │                                   = patch(null, vnode, container)
-        ▼
-    patch(n1, n2) 按 type / shapeFlag 分发                                   〔详见 4.3〕
-        ├─ ELEMENT：mountElement / patchElement                              〔详见 4.5〕
-        │     └─ 数组孩子 → patchKeyedChildren（头尾同步 + key 配对）          〔详见 4.6〕
-        ├─ STATEFUL_COMPONENT：mountComponent / updateComponent              〔详见 4.4〕
-        │     ├─ setupComponent：props / slots / setup / proxyRefs           〔详见 4.4 · 4.8〕
-        │     └─ setupRenderEffect：render 包成 effect（挂载 / 更新双分支）    〔详见 4.5〕
-        └─ Text / Comment / Fragment：文本与锚点处理                          〔详见 4.3〕
-
-    unmount：递归卸载子树 → onUnmounted → 渲染 effect.stop()                 〔详见 4.7〕
+        root.count++（数据变更）
+             │ 4.5 响应式 + effect 调度：trigger → scheduler → 重跑 render
+             ▼
+        render() ◄──── 4.3 组件挂载：组件负责产出 VNode（render 包进 effect）
+             ▼
+         VNode 树 ◄──── 4.1 VNode：中间描述层（type/children/shapeFlag…）
+             ▼
+           patch ◄───── 4.2 patch：调度中枢，挂载 / 更新统一从这里分发
+             ▼
+         真实 DOM ◄──── 4.4 元素挂载：只有元素 / 文本 VNode 落成 DOM
 ```
 
-下面按"入口 → VNode → patch → 组件"的链路展开。
+心智模型一句话：**VNode 是中间描述层，patch 统一分发挂载与更新；组件负责产出 VNode，元素 VNode 映射真实 DOM，响应式副作用驱动 render 重执行——数据驱动视图。** 4.1~4.5 按这张图各讲一环；实测运行数据集中在 5.3。
 
-### 4.1 runtime-dom / runtime-core 的分工
+### 4.1 VNode：数据的基石
 
-运行时核心**不认识 DOM**。所有平台相关的动作都由调用方注入，核心只负责"什么时候该调用哪个"：
+#### 4.1.1 定义、结构与类型
 
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+**定义**：VNode（虚拟节点）就是一个普通的 JS 对象，描述"真实节点长什么样"。
+
+**意义**：它是中间描述层——组件产出它、patch 消费它、DOM 由它映射。有了这一层，"改数据"和"动 DOM"彻底解耦，diff 与复用也有了操作单位。
+
+**结构**——五种类型的产出示例（示意，无配套脚本）：
 
 ```js
-// ============================================================
-// renderer：patch 分发 / 挂载更新卸载 / 列表 diff（源码 src/runtime-core/renderer.ts）
-//    ★ 断点：patch（shapeFlag 分发）、patchKeyedChildren（头尾同步 + key 配对）、
-//            mountComponent / unmount（生命周期）
-// createRenderer 是"平台无关"的关键：所有碰 DOM 的动作都经 options 里的
-// 宿主操作函数（hostXxx），换成自定义宿主（如假宿主 / canvas）即可跑在别的环境。
-// ============================================================
-/**
- * 由一组宿主操作装配出完整的渲染器：render / createApp / patch / unmount。
- * 内部闭包持有全部核心逻辑（patch 及其分发的 processXxx / mountXxx / unmount），
- * 对外只暴露这四个入口。
- *
- * @param {Object} options - 宿主操作：
- *   createElement / createText / createComment / setText / setElementText /
- *   insert / remove / nextSibling / patchProp
- * @returns {{render: Function, createApp: Function, patch: Function, unmount: Function}}
- *
- * @example
- *   const { render, createApp } = createRenderer(browserNodeOps)
- *   render(h('div', null, 'hi'), document.querySelector('#app'))
- *   createApp(RootComponent).mount('#app')
- */
-function createRenderer(options) {
-    const {
-        createElement: hostCreateElement,
-        createText: hostCreateText,
-        createComment: hostCreateComment,
-        setText: hostSetText,
-        setElementText: hostSetElementText,
-        insert: hostInsert,
-        remove: hostRemove,
-        nextSibling: hostNextSibling,
-        patchProp: hostPatchProp
-    } = options
+// ① 元素 VNode（type 是字符串）——字段最全的一种
+h('p', null, 'hi')
+{
+    type: 'p',          // 节点类型：字符串 = 元素标签名
+    props: null,        // 属性（class / style / onClick / key 等）
+    children: 'hi',     // 孩子：字符串（文本）或 VNode 数组
+    shapeFlag: 5,       // 形状位标记：1(元素) | 4(文本孩子)——4.1.2 详解
+    key: null,          // diff 配对用的标识
+    el: null,           // 对应的真实 DOM（挂载后回填）
+    component: null     // 组件 VNode 才有：指向组件实例
+}
+
+// ② 组件 VNode（type 是对象）——createApp(App) 的根 VNode 就是这一种
+h(App)
+{ type: App, props: null, children: null, shapeFlag: 2, el: null, component: null }
+//                                         ↑ STATEFUL_COMPONENT    ↑ 挂载后指向组件实例（4.3）
+
+// ③ 文本 VNode（type 是特殊符号 Text）——文本孩子由 createTextVNode 包装
+{ type: Text, props: null, children: 'hi', shapeFlag: 4, el: null }
+
+// ④ 注释 VNode（type 是特殊符号 Comment）——渲染 null / false 时的占位（createCommentVNode）
+{ type: Comment, props: null, children: '', shapeFlag: 4, el: null }
+
+// ⑤ Fragment VNode（type 是特殊符号 Fragment）——多个根节点的包装
+{ type: Fragment, props: null, children: [vnode1, vnode2, vnode3, vnode4], shapeFlag: 8, el: null }
+//                               demo-app 模板的 4 个顶层节点            ↑ 只做首尾锚点，自身不落 DOM
 ```
 
-```
-createRenderer(options)
-  输入: 9 个宿主操作（createElement / createText / createComment / setText / setElementText / insert / remove / nextSibling / patchProp）
-  输出: { render, createApp, patch, unmount }
-  过程: 把注入函数重命名为 host* 存进闭包——内部 patch 全家桶只调这些函数，平台差异全部挡在闭包外
-```
+**类型**五种，靠 type 的"长相"区分：
 
-浏览器那份实现就是标准的 DOM API，只有 `insert` 的一个细节值得留意——**anchor 为 null 时 `insertBefore` 就是 append**，所以九个操作里不需要单独来一个 `appendChild`：
+| 类型 | type 是什么 | 典型来源 |
+| --- | --- | --- |
+| 元素 | 字符串标签名（'p' / 'div'） | 模板里的标签、`h('p', …)` |
+| 组件 | 对象（含 setup / render） | `createApp(App)` 的根 VNode（4.3） |
+| 文本 | 特殊符号 `Text` | 文本孩子由 `createTextVNode` 包装 |
+| 注释 | 特殊符号 `Comment` | `createCommentVNode`（占位节点） |
+| Fragment | 特殊符号 `Fragment` | 多个根节点的包装（demo-app 的 4 个顶层节点） |
 
-> 摘自 `./code/vue3/mini-vue/lib/index.js`
+元素与组件靠 shapeFlag 位标记分发（4.2）；文本 / 注释的 shapeFlag 虽也登记（③④ 都是 4），但 patch 分发先按 type 特殊符号命中，轮不到位判断；Fragment 自身不落 DOM，只提供首尾锚点。
+
+#### 4.1.2 shapeFlag：一个数字带多个特征
+
+**为什么**：一个 VNode 可能同时是"元素 + 数组孩子"，普通枚举一个数字只能表达一种特征；位标记把每种特征放进独立的二进制位，一个数字就能同时携带多个特征。
+
+**常量定义**——五个特征各占一个二进制位：
+
+> 摘自 `./code/vue3/mini-vue/lib/shared.js`
 
 ```js
-// ============================================================
-// 浏览器宿主操作（源码 src/runtime-dom/nodeOps.ts + patchProp.ts）
-// ============================================================
-/**
- * 浏览器宿主的节点操作集合：createRenderer 所需的全部"碰 DOM"动作。
- * 每个方法都只做最薄的一层封装——具体何时调用、以什么顺序调用，
- * 全部由 runtime-core 的 renderer 决定。
- */
-const nodeOps = {
-    /** 创建元素节点（传入标签名，返回 HTMLElement）。 */
-    createElement: tag => document.createElement(tag),
-    /** 创建文本节点（独立于元素存在，如 Fragment 的锚点）。 */
-    createText: text => document.createTextNode(text),
-    /** 创建注释节点（null / false 的渲染占位）。 */
-    createComment: text => document.createComment(text),
-    /** 改文本节点内容（processText 复用旧节点时用）。 */
-    setText: (node, text) => {
-        node.nodeValue = text
-    },
-    /** 一次性改元素的全部文本孩子（TEXT_CHILDREN 更新路径）。 */
-    setElementText: (el, text) => {
-        el.textContent = text
-    },
-    /** 把 child 插到 parent 里 anchor 之前；anchor 为 null/nullish 追加到末尾。 */
-    insert: (child, parent, anchor) => {
-        parent.insertBefore(child, anchor || null)
-    },
-    /** 从 DOM 摘除节点（有父节点才摘，无则忽略）。 */
-    remove: child => {
-        const parent = child.parentNode
-        if (parent) parent.removeChild(child)
-    },
-    /** 取节点的下一个兄弟节点——patch 换类型时用它确定"原位置"锚点。 */
-    nextSibling: node => node.nextSibling
+const ShapeFlags = {
+    ELEMENT: 1, // 0001 —— 普通 DOM 元素（type 是字符串标签名）
+    STATEFUL_COMPONENT: 1 << 1, // 0010 —— 有状态组件（type 是对象，含 setup/render）
+    TEXT_CHILDREN: 1 << 2, // 0100 —— 孩子是一个字符串（纯文本）
+    ARRAY_CHILDREN: 1 << 3, // 1000 —— 孩子是 VNode 数组
+    SLOTS_CHILDREN: 1 << 4 // 0001 0000 —— 孩子是插槽对象 { default: () => [...] }
 }
 ```
 
-`runtime-dom` 这一层的全部职责就是"把两样东西装到一起"：
-
-> 摘自 `./code/vue3/mini-vue/lib/index.js`
-
-```js
-// ============================================================
-// 装配：runtime-core（createRenderer）× 浏览器宿主 = 可用的 createApp / render
-// ============================================================
-// 解构出的 render / patch / unmount 已内置浏览器 nodeOps，可直接对真实 DOM 使用
-const { render, createApp, patch, unmount } = createRenderer({ ...nodeOps, patchProp })
-
-// ============================================================
-// 聚合：三层 API 挂到 window.MiniVue（demo 与控制台统一入口）
-// 三个文件层各导出一部分，加上本文件装配出的浏览器渲染器，构成完整闭环。
-// ============================================================
-window.MiniVue = {
-    // 响应式层（reactivity.js）
-    reactive,
-    readonly,
-    shallowReadonly,
-    ref,
-    computed,
-    watch,
-    effect,
-    stop,
-    isReactive,
-    isReadonly,
-    isRef,
-    proxyRefs,
-    describeDeps,
-    // 编译层（compiler-core.js）
-    compile,
-    parse,
-    transform,
-    generate,
-    toDisplayString,
-    // 运行时层（runtime-core.js）
-    h,
-    createVNode,
-    createRenderer,
-    nextTick,
-    onMounted,
-    onUnmounted,
-    provide,
-    inject,
-    // 装配完成的浏览器渲染器（本文件）
-    render,
-    patch,
-    unmount,
-    createApp,
-    nodeOps,
-    patchProp
-}
-```
-
-```
-index.js（装配入口）
-  输入: nodeOps + patchProp（浏览器宿主实现）+ 前三个文件的全局 API
-  输出: window.MiniVue——编译 / 响应式 / 运行时三层 API 的统一命名空间
-  过程: createRenderer({ ...nodeOps, patchProp }) 装出面向浏览器的 render / createApp，再与响应式、编译层 API 一起聚合
-```
-
-**"平台无关"可以直接实测**：`mini-vue/lib/index.js` 的 nodeOps 对象就是宿主接口（createElement / setElementText / insert / patchProp / remove 等约定）——把它换成字符串拼接（createElement 返回标签字符串），就得到服务端渲染的雏形。两套宿主跑的是同一个组件定义、同一份 runtime-core，组件代码零改动：
-
-```
-==== 换宿主前后：操作次数对比（示意） ====
-  操作               假 DOM   字符串
-  createElement        3        3
-  setElementText       2        2
-  insert               3        3
-  patchProp            1        1
-
----- 结论 ----
-renderer 全程只调用注入进来的那 9 个函数，所以：
-  · 换成假 DOM 就是单测环境（不用 jsdom）
-  · 换成字符串拼接就是服务端渲染的雏形
-  · 官方把 runtime-core 与 runtime-dom 拆成两个包，原因就在这里
-```
-
-`createRenderer` 返回的 `createApp` 由 `createAppAPI` 生成，其 `mount` 方法先创建 VNode 再调用 `render`：
+先用 0001 / 1000 这类四位二进制把两个运算符的语法讲清（示意，无配套脚本）：
 
 > 示意片段（无配套脚本）
 
-```js
-export function createAppAPI(render) {
-  return function createApp(rootComponent) {
-    const app = {
-      _component: rootComponent,
-      mount(rootContainer) {
-        const vnode = createVNode(rootComponent); // 基于根组件创建 vnode
-        render(vnode, rootContainer);             // 调用 render 展开(挂载)
-      },
-    };
-    return app;
-  };
-}
+```
+| 按位或：两数对齐，任一位是 1，结果位就是 1 —— 用来「叠加」
+  0001 | 1000 = 1001
+
+& 按位与：两数对齐，两位都是 1，结果位才是 1 —— 用来「查询」
+  1001 & 1000 = 1000  → 非 0：这一位在
+  1001 & 0100 = 0000  → 为 0：这一位不在
 ```
 
-常见宿主操作对照：
+放到 shapeFlag 上就是两个动作：**写入用 `|=`（叠加登记特征），读取用 `&`（判断该进哪条逻辑）**。全库位置固定——
 
-| 操作 | 浏览器实现 |
-| --- | --- |
-| `createElement` | `document.createElement(type)` |
-| `createText` | `document.createTextNode(text)` |
-| `insert` | `parent.insertBefore(child, anchor)`（anchor 为 null 则插到末尾） |
-| `remove` | `parent.removeChild(child)` |
-| `setElementText` | `el.textContent = text` |
-| `patchProp` | 处理 class / style / 事件 / 属性的 DOM 绑定 |
+**写入（`|=`，只在 `createBaseVNode` 里，见 4.1.3）**，两轮共 5 处：
 
-### 4.2 h 函数与 createVNode
+- 第一轮看 type：字符串 → `|= ELEMENT`；对象 → `|= STATEFUL_COMPONENT`
+- 第二轮看 children：字符串 → `|= TEXT_CHILDREN`；数组 → `|= ARRAY_CHILDREN`；对象 → `|= SLOTS_CHILDREN`
 
-`h` 底层就是 `createVNode`：
+（文本 VNode 在 `createTextVNode` 里直接把 shapeFlag 赋成 TEXT_CHILDREN，同属写入。）
+
+**读取（`&`，散在各分发点）**，`shapeFlag & XXX` 就是问"**XXX 这一位是 1 吗**"——非 0 为真进入该逻辑，为 0 跳过：
+
+| 读取点 | 判断 | 命中后进入 |
+| --- | --- | --- |
+| patch 分发（4.2） | `& ELEMENT` / `& STATEFUL_COMPONENT` | processElement / processComponent |
+| mountElement 分孩子（4.4） | `& TEXT_CHILDREN` / `& ARRAY_CHILDREN` | 一次性写文本 / 逐个 mountChildren |
+| patchElement 分孩子（更新，lib） | `& TEXT_CHILDREN` / `& ARRAY_CHILDREN` | 改文本 / patchChildren |
+| unmount（4.2） | `& STATEFUL_COMPONENT` / `& ARRAY_CHILDREN` | 递归卸载组件子树 / 逐个卸载孩子 |
+
+一个数字带多个特征的价值就在这：建好一次，沿途每个分发点各取所需——挂载看"自己是什么"，孩子处理看"孩子是什么"，更新、卸载再看一遍，互不干扰。
+
+#### 4.1.3 h 函数：VNode 的产出
+
+`h` 转发给 `createVNode`，公共底座 `createBaseVNode` 组装对象，把 4.1.2 的「写入」规则落到代码——两轮判断（自己是什么 / 孩子是什么）：
 
 > 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
 
 ```js
-// 属性写法：h('div', { id: 'a' }, [ ... ]) 或 h(Component, { msg: 'hi' }, { default: () => ... })
-// 第 4 参 patchFlag 只有编译产物会传（2.3 静态标记）：手动 h 用不到，编译产物靠它落到 VNode 上
-/**
- * 创建 VNode 的用户级入口（模板里手写、编译产物都用它）。
- * 与 createVNode 的唯一差别：可接收第 4 参 patchFlag 并落到 VNode 上，
- * 供 patchElement 时跳过静态部分的比对。
- *
- * @param {string|Object|Symbol} type - 标签名 / 组件对象 / 特殊符号
- * @param {Object|null} [props] - 属性
- * @param {string|Array|Object|null} [children] - 孩子
- * @param {number} [patchFlag] - 编译器静态标记（1=TEXT），手动调用不传
- * @returns {Object} VNode
- *
- * @example
- *   h('div', { id: 'a' }, [h('span', null, 'hi')])
- *   // → 元素 + 数组孩子，shapeFlag: 1|8 = 9
- *   h('div', null, 'hi', 1)
- *   // → 编译产物形态：多带一个 patchFlag=1
- */
 const h = (type, props, children, patchFlag) => {
     const vnode = createVNode(type, props, children)
     if (patchFlag) vnode.patchFlag = patchFlag
@@ -1557,47 +1520,9 @@ const h = (type, props, children, patchFlag) => {
 }
 ```
 
-```
-h(type, props, children, patchFlag?)
-  输入: 节点类型 / 属性 / 孩子 / 可选补丁标记
-  输出: VNode
-  过程: 直接转发 createVNode；patchFlag 非零才写入 vnode.patchFlag——编译产物（2.3）与运行时（4.3）在这里握手
-```
-
-`createVNode` 负责创建各种类型的 VNode（节点信息载体）：
-
-- `type`：节点类型。
-  - **组件**：type 是一个对象 `{ name, setup(props, ctx) {}, render() {} }`。
-  - **元素**：type 是字符串，如 `createVNode("div", props, children)`。
-- `props`：属性对象。
-- `children`：数组（子节点列表）或字符串（文本）。
-
 > 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
 
 ```js
-/**
- * 所有 createXxxVNode 的公共底座：组装 VNode 对象并推导 shapeFlag。
- *
- * shapeFlag 分两步按位叠加（位运算 |= 把两个标记合并进一个数字）：
- *   1. type 是字符串 → ELEMENT（普通元素）；type 是对象 → STATEFUL_COMPONENT；
- *   2. children 是字符串 → TEXT_CHILDREN；数组 → ARRAY_CHILDREN（并把混入的原始
- *      字符串就地包成 Text VNode，对齐真实 Vue 的 normalizeChildren）；对象 → SLOTS_CHILDREN
- *      （插槽对象的形态：{ default: () => [...] }）。
- * key 从 props 里提出来单独放（diff 的配对依据），props 里的 key 原样保留、
- * 挂载时会被跳过不写到 DOM 上。
- *
- * @param {string|Object|Symbol} type - 标签名 / 组件对象 / Text·Fragment·Comment 符号
- * @param {Object|null} props - 属性对象（含 key / 事件 onXxx 等）
- * @param {string|Array|Object|null} children - 文本 / VNode 数组 / 插槽对象 / 无
- * @returns {Object} VNode：{ type, props, key, children, shapeFlag, el, component }
- *
- * @example
- *   createBaseVNode('div', { id: 'a' }, 'hi')
- *   // → { type:'div', props:{id:'a'}, key:null, children:'hi',
- *   //     shapeFlag: 1|4 = 5 (ELEMENT|TEXT_CHILDREN), el:null, component:null }
- *   createBaseVNode(Child, { key: 1, msg: 'hi' }, { default: () => [...] })
- *   // → shapeFlag: 2|16 (STATEFUL_COMPONENT|SLOTS_CHILDREN)、key: 1
- */
 function createBaseVNode(type, props, children) {
     const vnode = {
         type,
@@ -1620,85 +1545,67 @@ function createBaseVNode(type, props, children) {
         // 标签之间生成空白文本节点）统一包成 Text VNode——否则它们没有 type/el，
         // patch 会静默跳过、unmount 会拿 undefined.el 直接崩
         vnode.children = children.map(child => (isString(child) ? createTextVNode(child) : child))
-    }
-    else if (isObject(children)) vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
+    } else if (isObject(children)) vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
 
     return vnode
 }
 ```
 
 ```
-createBaseVNode(type, props, children)
+h → createVNode → createBaseVNode(type, props, children)
   输入: 节点类型（字符串=元素 / 对象=组件）、属性、孩子
-  输出: VNode（type/props/key/children/shapeFlag/el/component）
-  过程: 两轮位标记——type 定"自己是什么"，children 定"孩子长什么样"，落在同一个 shapeFlag 上；数组孩子里混入的原始字符串就地包成 Text VNode（compile 的产物在标签之间带空白文本）；key 归一成 null（undefined 会让 diff 误判类型变了）
+  输出: VNode 普通对象（type/props/children/shapeFlag/key/el/component）
+  过程: 两轮位标记——type 定"自己是什么"，children 定"孩子是什么"，落在同一个 shapeFlag 上
 ```
 
-注意 `key` 那一行的写法：`props.key != null ? props.key : null`——**有 props 却没有 key 的节点，`props.key` 是 `undefined` 而不是 `null`**，而 `null !== undefined`，diff 的同类型判断会把它判成"类型变了"，每次更新都整棵重建。归一成 `null` 就是修这个坑。
+断点建议：断在 `createBaseVNode`——看根组件 VNode 的 shapeFlag 落位（STATEFUL_COMPONENT=2）。
 
-### 4.3 shapeFlag：VNode 形状标记
+### 4.2 patch：运行时的调度中枢
 
-`shapeFlag` 是一个位运算枚举，用来表示 VNode 的"长什么样"，渲染器据此选择对应的处理分支：
+#### 4.2.1 定位：挂载与更新复用同一个函数
 
-> 摘自 `./code/vue3/mini-vue/lib/shared.js`
+**定位**：patch 是运行时的调度中枢——挂载和更新都从它走，区分手段只有一个——**n1（旧 VNode）是否为空**。
 
-```js
-// ============================================================
-// ShapeFlags：VNode 形状位标记（源码 src/shared/shapeFlags.ts）
-// ============================================================
-/**
- * VNode 的"形状"用二进制位来描述：每一位代表一种独立特征，可以按位组合。
- *
- * 为什么用位标记而不是普通字段？
- *   一个 VNode 可能同时是「组件 + slots 孩子」，普通枚举只能表达一种，
- *   位标记用一个数字就能同时携带多个布尔特征，判断时一次按位与（&）即可。
- *
- * @example
- *   // 元素 + 数组孩子：两个位叠加
- *   vnode.shapeFlag = ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN // 1 | 8 = 9
- *   // 判断是否是数组孩子：非 0 即为真
- *   if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) { ... }
- *   // 1<<n 就是第 n 位为 1：1<<0=1(0001)、1<<1=2(0010)、1<<2=4(0100)、1<<3=8(1000)
- */
-const ShapeFlags = {
-    ELEMENT: 1, // 0001 —— 普通 DOM 元素（type 是字符串标签名）
-    STATEFUL_COMPONENT: 1 << 1, // 0010 —— 有状态组件（type 是对象，含 setup/render）
-    TEXT_CHILDREN: 1 << 2, // 0100 —— 孩子是一个字符串（纯文本）
-    ARRAY_CHILDREN: 1 << 3, // 1000 —— 孩子是 VNode 数组
-    SLOTS_CHILDREN: 1 << 4 // 0001 0000 —— 孩子是插槽对象 { default: () => [...] }
-}
-```
+**首次挂载**：`createApp().mount('#app')` 走到 `render(vnode, container)`，容器上一帧为空 → `patch(null, vnode, container)`。
 
-**位运算的好处是"一个值同时表达多种组合特征"**：
-
-> 示意片段（无配套脚本）
-
-```js
-// 组合：有状态组件 + 数组子节点
-const shapeFlag = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.ARRAY_CHILDREN;
-
-// 检查是否包含某标志（按位与）
-if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) { /* 是 */ }
-if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) { /* 是 */ }
-```
-
-渲染器 `patch` 根据 `shapeFlag` 分发到不同处理函数，位运算把两层判断压成了一次：
+**更新**：数据变化后组件重新 render → `patch(prevVNode, nextVNode, container)`（4.5 闭环的终点）。
 
 > 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
 
 ```js
-    /**
-     * patch 的总分发：n1 为 null 表示挂载，n1、n2 都有表示更新。
-     * 分发顺序：先三个特殊符号（Text/Comment/Fragment），再按 shapeFlag 位判
-     * ELEMENT 还是 STATEFUL_COMPONENT。
-     * n1 存在但类型/key 对不上 → 没有复用余地：记下它的下个兄弟做锚点，
-     * 拆掉旧的、把 n1 置 null 走全新挂载。
-     *
-     * @param {Object|null} n1 - 旧 VNode（null 表示挂载）
-     * @param {Object} n2 - 新 VNode
-     * @param {Object} container - 宿主容器
-     * @param {Object|null} anchor - 插入锚点（插在它前面；null 追加到末尾）
-     */
+    function render(vnode, container) {
+        if (vnode == null) {
+            if (container._vnode) unmount(container._vnode, true)
+        } else {
+            // 顶层也允许直接给数组 / 字符串：统一成 VNode 再进 patch
+            vnode = normalizeVNode(vnode)
+            patch(container._vnode || null, vnode, container, null)
+        }
+        container._vnode = vnode
+    }
+```
+
+```
+render(vnode, container)
+  输入: 本帧 VNode（null 表示卸载上一帧整棵树）+ 容器
+  输出: void（副作用：DOM 落进容器，container._vnode 记住本帧）
+  过程: 上一帧为空 → patch(null, vnode) 挂载；有上一帧 → patch(prev, next) 更新；vnode=null → unmount 卸载
+```
+
+#### 4.2.2 patch 分发器：组件、元素、文本、Fragment
+
+四个参数贯穿整个调度——后面每个 `processXxx` / `mountXxx` 的签名都是它们：
+
+| 参数 | 作用 |
+| --- | --- |
+| `n1` | 旧 VNode——`null` 表示这一层首次挂载；有值表示更新 |
+| `n2` | 新 VNode——本次要落到 DOM 的目标，type / shapeFlag 都从它身上取 |
+| `container` | 宿主容器——挂载时新节点插进它，更新时在它里面原地改 |
+| `anchor` | 插入锚点——新节点插到它**之前**（null = 追加到末尾）；Fragment 定界、节点替换重建都靠它定位 |
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
     function patch(n1, n2, container, anchor) {
         if (n1 === n2) return
 
@@ -1711,443 +1618,63 @@ if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) { /* 是 */ }
 
         const { type, shapeFlag } = n2
         switch (type) {
-        case Text:
-            processText(n1, n2, container, anchor)
-            break
-        case Comment:
-            processComment(n1, n2, container, anchor)
-            break
-        case Fragment:
-            processFragment(n1, n2, container, anchor)
-            break
-        default:
-            if (shapeFlag & ShapeFlags.ELEMENT) processElement(n1, n2, container, anchor)
-            else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-                processComponent(n1, n2, container, anchor)
-            }
+            case Text:
+                processText(n1, n2, container, anchor)
+                break
+            case Comment:
+                processComment(n1, n2, container, anchor)
+                break
+            case Fragment:
+                processFragment(n1, n2, container, anchor)
+                break
+            default:
+                if (shapeFlag & ShapeFlags.ELEMENT) processElement(n1, n2, container, anchor)
+                else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+                    processComponent(n1, n2, container, anchor)
+                }
         }
     }
 ```
 
-`Fragment` 没有自己的节点，所以它用**两个空文本节点夹住自己这一段**当锚点——这也是为什么"顶层直接渲染一个数组"不会多出包裹节点。
+**首次执行命中路径**：`patch(null, rootVNode, '#app', null)`——n1 为 null 直通 switch，type 是组件对象，落 default 分支的 STATEFUL_COMPONENT → processComponent。
 
-### 4.4 组件实例化与 setup
+| 分支 | 挂载（n1 = null） | 更新（n1 有值） |
+| --- | --- | --- |
+| `processText` / `processComment` | 建文本 / 注释节点插入容器 | 复用旧节点改内容 |
+| `processFragment` | 建首尾锚点 + 逐孩子挂载 | 递归孩子 + 锚点更新 |
+| `processElement` | mountElement（4.4） | patchElement（lib） |
+| `processComponent` | mountComponent（4.3） | updateComponent（lib） |
 
-组件的"身份"用一个 `instance`（组件实例）管理，它保存组件的 props、setupState、render、el、提供了依赖注入用的 provides 等。
+```
+patch(n1, n2, container, anchor)
+  输入: 旧 VNode（null=挂载）+ 新 VNode + 容器 + 锚点
+  输出: 分发到对应 processXxx（Text/Comment/Fragment/Element/Component 五条）
+  过程: n1 存在但 type/key 对不上 → 记锚点、unmount 旧的、n1 置 null 走全新挂载（完整函数见 lib）
+```
 
-setup 阶段的流程大致为：
+#### 4.2.3 递归与卸载
 
-1. 从 `vnode.type` 上取得组件对象（options）。
-2. 创建组件实例 `instance`，初始化 props / slots。
-3. 调用 `setup(instance.props, { emit, slots, attrs, expose })`，拿到 setup 返回的 `setupState`。
-4. 若没有 `render`，则把 `setup` 返回的对象或 `data` 合并，最终调用组件的 `render`（或编译生成的 `render`）得到子树 VNode。
+**递归——树是怎么走完的**：patch 本身只做一件事——看一眼 n2 是什么类型，转发给对应处理器，它不处理孩子。孩子由各处理器再交回 patch，如此往复。拿 demo-app 首挂的真实递归链走一遍（示意，无配套脚本）：
 
-`<script setup>` 编译后等价于普通 `setup` 返回 setupState 的形式，这就是 1. 中提到的 SFC 编译与运行时在此"握手"。
+```
+patch(null, AppVNode, '#app', null)
+  └ processComponent → mountComponent → setupRenderEffect 执行 render()
+      └ patch(null, subTree(Fragment), '#app')          ← 又回到 patch！
+          └ processFragment → 建首尾锚点 → 逐个孩子
+              ├ patch(null, pVNode) ──── processElement → mountElement
+              │                             └ 文本孩子：hostSetElementText('hi')
+              ├ patch(null, buttonVNode) ─ processElement → mountElement …
+              └ patch(null, ulVNode) ──── processElement → mountElement
+                    └ mountChildren：每个 li 再 patch(null, liVNode) ── processElement …
+```
 
-props 那层解决的是"子组件改父组件传下来的值必须被拦住，但 props 还得跟着父组件更新"：
+一句话：**patch 负责"分发"，processXxx 负责"处理本层 + 把孩子交回 patch"**——一进一出，整棵树走完。每次深入孩子层，container 也随之变化（孩子的容器是父元素的 el）。
+
+**卸载——挂载递归的逆过程**：三个入口最终都调 unmount——① `app.unmount()`；② `render(null, container)`；③ 4.2.2 里 type/key 对不上时的"拆掉重建"。它做的事与挂载相反：组件先跑 unmounted 钩子、停渲染 effect（不停的话依赖还在，数据一变还会触发已卸载组件的更新——内存泄漏），元素先递归卸载孩子再摘自己，Fragment 逐个摘孩子最后摘首尾锚点：
 
 > 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
 
 ```js
-// ============================================================
-// 组件的 props 与 slots（源码 src/runtime-core/componentProps.ts）
-//    ★ 断点：initProps（声明过的进 props、没声明的进 attrs）
-// ============================================================
-/**
- * 初始化组件的 props / attrs。
- * 分拣规则：组件 options.props 里声明过的 key 进 props（并包 shallowReadonly），
- * 没声明的进 attrs（透传属性，$attrs 可见）。没声明任何 props 的组件
- * 直接把原始对象当 attrs 用，连分拣都省了。
- * propsRaw 保留一份可写的原始引用：父组件更新时改它，readonly 代理自动读到新值。
- *
- * @param {Object} instance - 组件实例（写入 props / propsRaw / attrs 三个字段）
- * @param {Object|null} rawProps - VNode 上带的原始 props
- *
- * @example
- *   // 组件声明 props: { msg: ... }，父组件传 { msg: 'hi', extra: 1 }
- *   // → instance.props = { msg: 'hi' }（readonly）
- *   //   instance.attrs = { extra: 1 }
- */
-function initProps(instance, rawProps) {
-    const props = {}
-    const attrs = {}
-    const options = instance.type.props
-    const raw = rawProps || {}
-
-    // 声明过的进 props，没声明的进 attrs——这决定了它会不会出现在 $attrs 里
-    for (const key of Object.keys(raw)) {
-        if (options && key in options) props[key] = raw[key]
-        else attrs[key] = raw[key]
-    }
-
-    instance.props = options ? shallowReadonly(props) : attrs
-    // 留一份原始对象的引用：更新 props 时直接改它，代理会自动读到新值
-    instance.propsRaw = options ? props : attrs
-    instance.attrs = options ? attrs : {}
-}
-```
-
-```
-initProps(instance, rawProps)
-  输入: 组件实例、vnode.props（父组件传的全部属性）
-  输出: 填好 instance.props（浅只读代理）/ propsRaw（原始引用）/ attrs
-  过程: 按组件声明分流——声明过的进 props（shallowReadonly 包一层），没声明的进 attrs；propsRaw 留给 updateProps 直改
-```
-
-`shallowReadonly` 是关键选型：**浅**只读，能拦住"子组件替换整个 prop"，又不妨碍 prop 内部的对象继续响应式。至于 `propsRaw`，是因为只读代理挡不住框架自己更新 props——框架拿着一份原始引用直接改，代理自动读到新值。
-
-### 4.5 虚拟 DOM：挂载 / 更新 / 卸载
-
-| 阶段 | 说明 |
-| --- | --- |
-| **挂载（mount）** | 首次渲染：创建真实 DOM、绑定 props/事件、挂载子节点、插入容器、触发 `onMounted` |
-| **更新（update）** | `patch` 对比新旧 VNode：文本不同则更新文本，元素走 `diff`，组件重新执行 render |
-| **卸载（unmount）** | 移除真实 DOM、清理组件 effect 与事件、触发 `onUnmounted`，防止内存泄漏 |
-
-前三层在这一节合上：**组件的 render 被包成一个 effect**，它读到的响应式数据就是它的依赖。`isMounted` 那一个布尔值区分了"挂载"和"更新"两种 patch 签名——`patch(null, subTree)` 与 `patch(prevSubTree, nextSubTree)`，正是新旧对比的入口：
-
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
-
-```js
-/**
- * 给组件装上"渲染 effect"——组件响应式的发动机。
- *
- * componentUpdateFn 内部用 isMounted 区分首次（挂载子树）与后续（patch 新旧子树），
- * 并在 patch 子树前后保存/恢复 currentScopeInstance：
- * 这段时间内被挂载的子组件实例的 parent 都指向本组件（provide/inject 链的来源）。
- *
- * scheduler 是关键：数据变化不直接重渲染，而是把 instance.update 排进
- * 微任务队列——同一 tick 改 10 次数据也只渲染 1 次（queueJob 去重）。
- *
- * @param {Object} instance - 组件实例（写入 update / subTree / isMounted）
- * @param {Object} initialVNode - 组件 VNode（挂载后把 el 回填到它上面）
- * @param {Object} container - 挂载容器
- * @param {Object|null} anchor - 插入锚点
- * @param {Function} patch - renderer 的 patch（闭包传入，避免全局引用）
- */
-function setupRenderEffect(instance, initialVNode, container, anchor, patch) {
-    const componentUpdateFn = () => {
-        // patch 子树期间本组件是"当前父实例"：沿途挂载的子组件 parent 指向它（provide/inject 依据）
-        const prev = currentScopeInstance
-        currentScopeInstance = instance
-        if (!instance.isMounted) {
-            const subTree = (instance.subTree = renderComponentRoot(instance))
-            patch(null, subTree, container, anchor)
-            initialVNode.el = subTree.el
-            instance.isMounted = true
-        } else {
-            const prevSubTree = instance.subTree
-            const nextSubTree = (instance.subTree = renderComponentRoot(instance))
-            patch(prevSubTree, nextSubTree, container, anchor)
-        }
-        currentScopeInstance = prev
-    }
-
-    // scheduler 是关键：数据变化不会立刻渲染，只把 update 排进微任务队列
-    instance.update = effect(componentUpdateFn, { scheduler: () => queueJob(instance.update) })
-}
-```
-
-```
-setupRenderEffect(instance, ...)
-  输入: 组件实例、挂载容器与锚点、patch 函数
-  输出: instance.update（渲染 effect 的 runner）
-  过程: componentUpdateFn 包成 effect——首跑走挂载分支 patch(null, subTree)，之后依赖变化走更新分支 patch(prev, next)；scheduler 把每次触发变成 queueJob 入队（微任务批处理）
-```
-
-"改三次只渲染一次"就发生在 scheduler 里。它用的是**微任务**，所以整块同步代码跑完、DOM 还是旧的，`nextTick()` 之后才能读到新值：
-
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
-
-```js
-/**
- * 把一个渲染 job 排进微任务队列（去重）。
- * 同步改 3 次数据 → 渲染 effect 被 trigger 3 次 → scheduler 调 3 次 queueJob，
- * 但 includes 保证同一个 job 只进队一次——这就是"批处理"的来源。
- *
- * @param {Function} job - 待执行函数（通常是组件的 instance.update）
- *
- * @example
- *   const job = () => console.log('flush')
- *   queueJob(job); queueJob(job) // → 队列里只有 1 个，微任务里只执行 1 次
- */
-function queueJob(job) {
-    if (!queue.includes(job)) queue.push(job) // 同一个 job 只排一次
-    queueFlush()
-}
-
-/**
- * 保证"排队 → 微任务 flush"只发起一次：isFlushPending 是闸门，
- * 已开闸就不再新建 Promise，直到 flushJobs 把它复位。
- */
-function queueFlush() {
-    if (isFlushPending) return
-    isFlushPending = true
-    currentFlushPromise = resolvedPromise.then(flushJobs)
-}
-
-/**
- * 在微任务里统一执行队列中的所有 job。
- * 先 splice 出快照再清空原队列：flush 过程中新触发的 job 留在队列里，
- * 结尾检查还有剩就递归再来一轮（组件父子链上的级联更新）。
- */
-function flushJobs() {
-    isFlushPending = false
-    const jobs = queue.splice(0, queue.length) // 先取出快照，flush 过程中新加的留到下一轮
-    for (const job of jobs) job()
-    if (queue.length) flushJobs() // 组件有父子依赖时，执行中可能又推入新 job
-}
-```
-
-```
-queueJob(job) → queueFlush() → flushJobs()
-  输入: job（组件的 update runner）
-  输出: void（副作用：微任务里统一执行全部 job）
-  过程: queue.includes 去重（同一组件多次触发只排一次）→ resolvedPromise.then 排进微任务 → flush 时 splice 取快照逐个执行，执行中新增的 job 留到下一轮
-```
-
-`queue.includes(job)` 这一句就是批处理的全部——**同一个组件的 update 在队列里只会出现一次**。在 `mini-vue/demo/demo-diff.html` 实测：点「同一 tick 连删 3 次」，页面直接呈现删完后的最终列表，中间两次状态从未渲染：
-
-```
-==== 3. 同一个 tick 改三次，只渲染一次（批处理）====
-  三次赋值后立刻看：渲染次数 +0，DOM 仍是旧文案
-  await nextTick() 之后：渲染次数 +1
-  DOM 变成「count=3，double=6」
-```
-
-由此得出四个能直接下判断的结论：**`this.count` 里没有 `.value`**（setup 返回的 ref 被 `proxyRefs` 包过）；**批处理不是额外实现**（渲染交给调度器的自然结果）；**props 是浅只读**（子组件改被告警，父组件传新值照常生效）；**卸载必须 stop 渲染 effect**（否则组件不在了更新还一直来，就是内存泄漏）。
-
-### 4.6 列表 diff：头尾同步 + 按 key 配对
-
-列表 diff 是**先对齐头尾、再处理中间乱序**（双端比较）。头尾两步便宜且常见——能对上的直接复用，一个属性都不多改：
-
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
-
-```js
-    // ---------- 列表 diff：先对齐头尾，再处理中间的乱序部分 ----------
-    /**
-     * 带 key 列表的 diff（真实 Vue 最长递增子序列算法的简化版）：
-     *   1. 从头同步：i 左移，类型+key 相同的就地 patch；
-     *   2. 从尾同步：e1/e2 左移，同理；
-     *   3. 旧遍历完（i > e1）新还有剩 → 剩下的全是新增，逐个插入；
-     *   4. 新遍历完（i > e2）旧还有剩 → 剩下的全是删除，逐个卸载；
-     *   5. 中间乱序：按新列表的 key 建索引 → 旧节点查表决定 patch 还是卸载
-     *      （没 key 的按下标硬对齐——这正是"用 index 当 key"引发错乱的原因）→
-     *      最后从后往前把新列表中间段的节点挪/插到正确位置。
-     * 从后往前是因为前一个节点的锚点（后一个节点的 el）必须先就位。
-     *
-     * @param {Array} c1 - 旧孩子数组
-     * @param {Array} c2 - 新孩子数组
-     * @param {Object} container - 宿主容器
-     * @param {Object|null} parentAnchor - 父级插入锚点（新列表末尾越界时的兜底锚点）
-     *
-     * @example
-     *   // 旧 [a,b,c] → 新 [c,a,b]：
-     *   // 头同步 a≠c 断、尾同步 c≠a 断 → 全乱序走第 5 步：
-     *   // key 索引 {a:0,b:1,c:2}；旧 a/b/c 全部查到 → 全 patch 复用，不重建；
-     *   // 从后往前 insert 把顺序摆正，宿主上最终顺序 [c,a,b]
-     */
-    function patchKeyedChildren(c1, c2, container, parentAnchor) {
-        let i = 0
-        const l2 = c2.length
-        let e1 = c1.length - 1
-        let e2 = l2 - 1
-
-        // 1. 从头同步：能对上的直接复用，一个属性都不多改
-        while (i <= e1 && i <= e2) {
-            const n1 = c1[i]
-            const n2 = c2[i]
-            if (!isSameVNodeType(n1, n2)) break
-            patch(n1, n2, container, parentAnchor)
-            i++
-        }
-
-        // 2. 从尾同步
-        while (i <= e1 && i <= e2) {
-            const n1 = c1[e1]
-            const n2 = c2[e2]
-            if (!isSameVNodeType(n1, n2)) break
-            patch(n1, n2, container, parentAnchor)
-            e1--
-            e2--
-        }
-
-        // 3. 新列表更长：中间这一段全部是新增
-        if (i > e1 && i <= e2) {
-            // 新增段插在"新列表里它后面的那个节点"之前；后面没有了就插到父级锚点（末尾）
-            const anchor = e2 + 1 < l2 ? c2[e2 + 1].el : parentAnchor
-            while (i <= e2) {
-                patch(null, c2[i], container, anchor)
-                i++
-            }
-            return
-        }
-
-        // 4. 旧列表更长：中间这一段全部要删除
-        if (i > e2 && i <= e1) {
-            while (i <= e1) {
-                unmount(c1[i], true)
-                i++
-            }
-            return
-        }
-
-        // 5. 中间乱序：按 key 建索引，找出"哪些还在、哪些新增"
-        const s1 = i
-        const s2 = i
-        const keyToNewIndex = new Map()
-        for (let j = s2; j <= e2; j++) {
-            if (c2[j].key !== null) keyToNewIndex.set(c2[j].key, j)
-        }
-
-        for (let j = s1; j <= e1; j++) {
-            const prevChild = c1[j]
-            // 没 key 的退化成按下标对应 —— 这正是"用 index 当 key"会出现的行为
-            const newIndex = prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
-
-            if (newIndex === undefined || newIndex > e2) {
-                unmount(prevChild, true) // 查不到（或越界）→ 这个节点被删掉了
-            } else {
-                patch(prevChild, c2[newIndex], container, parentAnchor) // 还在 → 就地更新
-            }
-        }
-
-        // 从后往前把节点挪到正确位置
-        // （真实 Vue 会先算最长递增子序列，跳过本来就在正确位置的那些，这里简化为逐个插）
-        for (let j = e2; j >= s2; j--) {
-            const nextChild = c2[j]
-            const anchor = j + 1 < l2 ? c2[j + 1].el : parentAnchor
-            if (nextChild.el === null) patch(null, nextChild, container, anchor) // 没挂过 → 新增
-            else hostInsert(nextChild.el, container, anchor) // 已存在 → 挪到正确位置
-        }
-    }
-```
-
-```
-patchKeyedChildren 第 1、2 步
-  输入: 旧孩子数组 c1、新孩子数组 c2
-  输出: i / e1 / e2 三个游标——圈出两端已同步、中间待处理的范围
-  过程: 双指针从头 / 从尾同步，isSameVNodeType（type + key）相同就地 patch 复用，遇不同立即停
-```
-
-头尾都没对上时才走"中间乱序"：按 key 建索引，找出哪些还能复用、哪些是新增，再统一搬移。**没 key 的退化成按下标对应——这正是"用 index 当 key"会出现的行为**：
-
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
-
-```js
-        // 5. 中间乱序：按 key 建索引，找出"哪些还在、哪些新增"
-        const s1 = i
-        const s2 = i
-        const keyToNewIndex = new Map()
-        for (let j = s2; j <= e2; j++) {
-            if (c2[j].key !== null) keyToNewIndex.set(c2[j].key, j)
-        }
-
-        for (let j = s1; j <= e1; j++) {
-            const prevChild = c1[j]
-            // 没 key 的退化成按下标对应 —— 这正是"用 index 当 key"会出现的行为
-            const newIndex = prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
-```
-
-断言 diff 最直接的办法是对照两种列表的渲染过程（无 key 的内容错位来自一组就地宿主操作）。`mini-vue/demo/demo-diff.html` 提供了有 key 列表的实测入口（删首项 / 删中间 / 追加 / 重置，宿主操作的真实数据见 5.4 节实例走读）；无 key 的对照行为如下：
-
-```
-==== 场景一：删掉列表第一项 ====
----- 无 key ----  宿主操作 5 次（改 data-id、改文本 ×2 + remove）
----- 有 key ----  宿主操作 1 次（remove）
-
-==== 场景二：把最后一项移到最前（纯重排）====
----- 无 key ----  宿主操作 6 次，全是"就地改写内容"，一个节点都没搬
----- 有 key ----  宿主操作 3 次，全是搬移（insert），一次内容都没改
-```
-
-两种写法的 DOM 结果看起来完全一样，差别只在过程——而"就地改写"意味着节点被复用、内容被换掉，节点上的输入框内容、焦点、组件内部状态都会串位。同时要清楚：**有 key 的重排不是零成本**，真实 Vue 会先算最长递增子序列，跳过本来就在正确位置的节点。
-
-### 4.7 生命周期钩子
-
-生命周期钩子本质是"**在特定时机调用的用户函数集合**"。以 `onMounted` 为例：
-
-- 内部把回调注册到当前组件实例的对应数组（如 `instance.mounted`）。
-- 组件挂载完成时，渲染器统一遍历并调用这些回调。
-
-注册依赖 `currentInstance`——它只在 setup 执行期间非空，所以钩子必须同步写在 setup 里：
-
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
-
-```js
-// ============================================================
-// 组件实例与渲染 effect（源码 src/runtime-core/component.ts）
-//    ★ 断点：componentUpdateFn（isMounted 区分挂载 / 更新）、setupComponent（setup 执行）
-// ============================================================
-/** 生命周期注册的依据：setup 执行期间的当前实例 */
-let currentInstance = null // 生命周期注册的依据：setup 执行期间的当前实例
-/** patch 子树期间的"当前父实例"：沿途挂载的子组件以它为 parent（provide/inject 查找链的依据） */
-let currentScopeInstance = null
-
-/**
- * 注册 mounted 钩子（只能在 setup 执行期间调用：靠 currentInstance 定位实例）。
- * 挂载完成后在 mountComponent 里统一执行。
- *
- * @param {Function} fn - 回调
- *
- * @example
- *   setup() { onMounted(() => console.log('mounted')) }
- */
-const onMounted = fn => currentInstance && currentInstance.mounted.push(fn)
-/**
- * 注册 unmounted 钩子（只能在 setup 执行期间调用）。
- * 卸载时在 unmount 的组件分支里统一执行。
- *
- * @param {Function} fn - 回调
- *
- * @example
- *   setup() { onUnmounted(() => console.log('unmounted')) }
- */
-const onUnmounted = fn => currentInstance && currentInstance.unmounted.push(fn)
-```
-
-调用时机在渲染器里：挂载钩子在 `mountComponent` 末尾统一触发（首次渲染 effect 是同步执行的，走到这里子树已挂载完）；卸载钩子在 `unmount` 里**先于 effect.stop 执行**：
-
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
-
-```js
-    /**
-     * 挂载组件：建实例（parent 取自 currentScopeInstance）→ setupComponent 初始化
-     * （执行 setup）→ setupRenderEffect 建渲染 effect（同步首跑即完成子树挂载）→
-     * 统一执行 onMounted 钩子（此时子树一定挂载完，子组件的钩子先于父组件）。
-     *
-     * @param {Object} initialVNode - 组件 VNode（component 字段回填实例）
-     * @param {Object} container - 宿主容器
-     * @param {Object|null} anchor - 插入锚点
-     */
-    function mountComponent(initialVNode, container, anchor) {
-        // parent 从 currentScopeInstance 取：组件更新 patch 子树时，它就是当前组件实例
-        const instance = (initialVNode.component = createComponentInstance(
-            initialVNode,
-            currentScopeInstance
-        ))
-        setupComponent(instance)
-        setupRenderEffect(instance, initialVNode, container, anchor, patch)
-        // 生命周期：首次渲染 effect 是同步执行的，走到这里子树已挂载完，统一调用挂载钩子
-        if (instance.isMounted) instance.mounted.forEach(hook => hook())
-    }
-```
-
-> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
-
-```js
-    // ---------- 卸载 ----------
-    /**
-     * 卸载一个 VNode（递归）：按类型分流——
-     *   Fragment：先递归卸载孩子，再移除首尾两个锚点节点；
-     *   组件：先执行 unmounted 钩子、再停掉渲染 effect（顺序反了会内存泄漏：
-     *   effect 还活着就会继续响应数据变化），最后递归卸载它的子树；
-     *   元素：先递归卸载数组孩子（子组件的钩子与 effect.stop 都靠这一步触发），
-     *   再移除自己的宿主节点。
-     *
-     * @param {Object} vnode - 要卸载的 VNode
-     * @param {boolean} doRemove - 是否真的从 DOM 摘除（false 只递归触发钩子，用于"换个容器"场景）
-     */
     function unmount(vnode, doRemove) {
         const { type, shapeFlag } = vnode
 
@@ -2177,119 +1704,491 @@ const onUnmounted = fn => currentInstance && currentInstance.unmounted.push(fn)
 ```
 
 ```
-onMounted(fn) / onUnmounted(fn)
-  输入: 用户回调
-  输出: void（副作用：回调进当前实例的 mounted / unmounted 数组）
-  过程: 注册靠 setup 执行期间的 currentInstance；mounted 在 mountComponent 末尾统一调用；unmounted 在 unmount 时先调用、再 effect.stop（顺序反了会漏触发）
+unmount(vnode, doRemove)
+  输入: 要卸载的 VNode + 是否从 DOM 摘除
+  输出: void（副作用：DOM 节点摘除、组件 effect 停止、unmounted 钩子执行）
+  过程: 按 type/shapeFlag 三分支——Fragment 摘孩子+锚点 / 组件停 effect+递归 subTree / 元素递归孩子+摘自己
 ```
 
-`watch` / `computed` 的清理（stop）也会在生命周期卸载阶段统一触发，确保数据变化不再影响已销毁的组件（防止内存泄漏）。
+断点建议：断在 `unmount` 点「卸载」按钮——看 App 组件分支进来后递归 subTree 的三分支次序。
 
-### 4.8 props 与插槽
+### 4.3 组件挂载：从组件到子 VNode
 
-**props**
+#### 4.3.1 挂载链条：processComponent → mountComponent
 
-- 组件 `props` 由 `setup(props)` 接收，由 `vnode.props` 提取、按组件声明的 `props` 配置校验与收集。
-- props 是**响应式且只读**的一部分（其实例上的 `props` 是通过 `shallowReadonly` 代理的，避免子组件随意改父组件的值）。
-- props 变化会触发子组件更新。
+接 4.2 的命中：`processComponent`（n1 为 null）→ `mountComponent`。完整链条六步：
 
-**插槽（slots）**
+> 示意片段（无配套脚本）
 
-- 父组件把模板片段编译为"返回 VNode 树的函数"作为插槽内容。
-- 子组件通过 `slots` 拿到这些函数并渲染（`useSlots` / `this.$slots`）。
-- 对应 `shapeFlag` 的 `SLOTS_CHILDREN`。作用域插槽与普通插槽的区别在于：插槽函数接收 props 参数，从而实现"子传父"的数据渲染。
-
-### 4.9 provide / inject：依赖注入
-
-`provide/inject` 用于跨层级传递数据，跳过中间组件。
-
-- 每个组件实例都有 `provides` 对象，初始指向父实例的 `provides`。
-- `provide(key, value)`：在**当前实例自己的 provides 副本**上设置值（浅复制父 provides 后再赋值，形成原型链式查找）。
-- `inject(key)`：从当前实例开始**沿 provides 链向上查找**，找到即返回。
+```
+processComponent（n1 = null）
+  ▼
+① 创建组件实例 createComponentInstance
+  ▼
+② 执行 setup（setupComponent）→ 返回值经 proxyRefs 落定 setupState
+  ▼
+③ 获取 render 函数（组件自带 / finishComponentSetup 兜底）
+  ▼
+④ 把 render 包进 effect（setupRenderEffect → instance.update）
+  ▼
+⑤ 执行 render() 产出子 VNode（subTree = renderComponentRoot(instance)）
+  ▼
+⑥ 对子 VNode 执行 patch(null, subTree) → 进入元素挂载流程（4.4）
+```
 
 > 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
 
 ```js
-// ============================================================
-// provide / inject：依赖注入（源码 src/runtime-core/apiInject.ts）
-//    ★ 断点：provide（原型链副本的创建时机）、inject（沿 parent 链向上查找）
-// 对应文档 4.9：初始与父实例共享同一个 provides；首次 provide 时才
-// 用 Object.create(parentProvides) 建原型链副本——此后"就近覆盖、向上穿透"。
-// ============================================================
-/**
- * 向后代提供数据。实例创建时 provides 直接指向父级的 provides（共享同一个对象），
- * 第一次调用 provide 才用 Object.create(parentProvides) 造一个"原型链副本"：
- * 写进副本的是自己的值，原型上还能读到祖先的值——查值时"就近覆盖、向上穿透"。
- *
- * @param {string|symbol} key - 提供的键
- * @param {*} value - 提供的值
- *
- * @example
- *   // 祖先组件 setup：provide('theme', 'dark')
- *   // 中间组件没 provide → 与父共享，读到 'dark'
- *   // 某后代 setup：provide('theme', 'light') → 它自己的子树读到 'light'（就近覆盖）
- */
-const provide = (key, value) => {
-    if (currentInstance) {
-        let { provides } = currentInstance
-        const parentProvides = currentInstance.parent && currentInstance.parent.provides
-        // 还在共享父的 provides，先建自己的原型链副本
-        if (parentProvides && provides === parentProvides) {
-            provides = currentInstance.provides = Object.create(parentProvides)
+    function processComponent(n1, n2, container, anchor) {
+        if (!n1) mountComponent(n2, container, anchor)
+        else updateComponent(n1, n2)
+    }
+```
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+    function mountComponent(initialVNode, container, anchor) {
+        // parent 从 currentScopeInstance 取：组件更新 patch 子树时，它就是当前组件实例
+        const instance = (initialVNode.component = createComponentInstance(initialVNode, currentScopeInstance))
+        setupComponent(instance)
+        setupRenderEffect(instance, initialVNode, container, anchor, patch)
+        // 生命周期：首次渲染 effect 是同步执行的，走到这里子树已挂载完，统一调用挂载钩子
+        if (instance.isMounted) instance.mounted.forEach(hook => hook())
+    }
+```
+
+```
+processComponent → mountComponent → setupComponent → setupRenderEffect
+  输入: 组件 VNode + 容器 + 锚点
+  输出: 组件实例（回填 vnode.component）+ instance.update（渲染 effect）+ 子树挂进容器
+  过程: 建实例 → 跑 setup → render 包进 effect → effect 首跑同步产出 subTree → patch(null, subTree)
+```
+
+#### 4.3.2 组件实例：instance 的诞生与填充
+
+**Component instance（组件实例）**——组件的上下文容器：组件的所有状态、方法、props、slots、渲染 effect 全挂在它身上，VNode 的 `component` 字段指向它（4.1.1 示意②里那个字段）。看它怎么诞生：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function createComponentInstance(vnode, parent) {
+    const instance = {
+        vnode,
+        type: vnode.type,
+        parent, // 父组件实例：mountComponent 时从 currentScopeInstance 取（provide/inject 向上查找用）
+        provides: parent ? parent.provides : {}, // 初始共享父的 provides，首次 provide 才建副本
+        props: {},
+        propsRaw: {},
+        attrs: {},
+        slots: {},
+        setupState: {},
+        ctx: {},
+        isMounted: false,
+        subTree: null,
+        update: null,
+        proxy: null,
+        mounted: [], // 生命周期：onMounted 注册的回调，挂载完成后统一执行
+        unmounted: [] // 生命周期：onUnmounted 注册的回调，卸载时统一执行
+    }
+    instance.ctx = { _: instance }
+    // emit：把子组件的 this.$emit('change', 1) 转成父组件传下来的 onChange
+    instance.emit = (event, ...args) => {
+        const handler = (instance.vnode.props || {})[`on${event[0].toUpperCase()}${event.slice(1)}`]
+        if (handler) handler(...args)
+    }
+    return instance
+}
+```
+
+诞生时是个"空壳"（props/slots/setupState 全是空对象，update/subTree 还是 null），随后每一步往里填——这就是 instance 随函数流程的演变：
+
+| 时刻 | 函数 | 填充的字段 |
+| --- | --- | --- |
+| 诞生 | createComponentInstance | 建空壳：vnode、parent、provides、ctx、emit、mounted/unmounted 数组 |
+| 初始化 | setupComponent → initProps / initSlots | props、propsRaw、attrs、slots |
+| 执行 setup | setupStatefulComponent | proxy（实例代理）、setupState（或直接 render） |
+| 包 effect | setupRenderEffect | update（渲染 effect）、subTree、isMounted=true |
+
+```
+createComponentInstance(vnode, parent)
+  输入: 组件 VNode + 父实例（从 currentScopeInstance 取）
+  输出: 组件实例（空壳，回填到 vnode.component）
+  过程: 建 15 个字段的对象字面量 + ctx（回指自身）+ emit（转发到父的 onXxx props）
+```
+
+#### 4.3.3 setupComponent：执行 setup
+
+链条②③的落点。三步走：props → slots → 有状态组件的 setup：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function setupComponent(instance) {
+    initProps(instance, instance.vnode.props)
+    initSlots(instance, instance.vnode.children)
+    setupStatefulComponent(instance)
+}
+```
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function setupStatefulComponent(instance) {
+    // 先建代理：render 里的 this.xxx 就是从这里取的
+    instance.proxy = new Proxy(instance.ctx, publicInstanceProxyHandlers(instance))
+
+    const { setup } = instance.type
+    if (setup) {
+        currentInstance = instance
+        try {
+            const setupResult = setup(shallowReadonly(instance.props), {
+                emit: instance.emit,
+                slots: instance.slots
+            })
+            handleSetupResult(instance, setupResult)
+        } finally {
+            currentInstance = null
         }
-        provides[key] = value
     }
-}
-
-/**
- * 注入祖先提供的数据：沿 parent 链的 provides 原型链向上查找（key in 判断会穿透原型）。
- * 找不到返回 undefined。注意取的是"父级的 provides"——自己 provide 的值自己 inject 不到。
- *
- * @param {string|symbol} key - 要注入的键
- * @returns {*} 祖先提供的值；无任何祖先提供时为 undefined
- *
- * @example
- *   // 子组件 setup（父级 provide('theme', 'dark') 后）：
- *   inject('theme') // → 'dark'
- *   inject('nothing') // → undefined
- */
-const inject = key => {
-    if (currentInstance) {
-        const parentProvides = currentInstance.parent && currentInstance.parent.provides
-        if (parentProvides && key in parentProvides) return parentProvides[key]
-    }
+    finishComponentSetup(instance)
 }
 ```
 
-```
-provide(key, value) / inject(key)
-  输入: 注入键与值 / 注入键
-  输出: void / 找到的值（找不到返回 undefined）
-  过程: instance.provides 初始与 parent.provides 是同一个对象；首次 provide 才 Object.create(parentProvides) 建原型链副本再赋值；inject 沿原型链向上查——parent 链由 4.5 摘录里的 currentScopeInstance 在挂载时逐层建立
+两个关键点：
+
+- **currentInstance 窗口期**——调 setup 前指向本实例、finally 里清空，`onMounted` / `provide` 这些 API 就是在这个窗口里知道"该注册到谁身上"。
+- **返回值二选一**——`handleSetupResult` 落定产物：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function handleSetupResult(instance, setupResult) {
+    if (isFunction(setupResult)) {
+        instance.render = setupResult // setup 直接返回 render 函数
+    } else if (isObject(setupResult)) {
+        instance.setupState = proxyRefs(setupResult) // 解包 ref，模板里不用写 .value
+    }
+}
 ```
 
-借用 JS 原型链（`Object.create`），实现了 `inject` 沿祖先链查找且支持同名覆盖的效果，这也是 Vue 依赖注入"就近覆盖、向上穿透"的原理。
+render 里的 `this.count` 从哪取？就是刚才建的实例代理——取值顺序：setupState 最优先（ref 已解包）→ `$slots` / `$el` 特判 → props → ctx 兜底：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+const publicInstanceProxyHandlers = instance => ({
+    get(target, key) {
+        const { setupState, props } = instance
+        if (key in setupState) return setupState[key] // setup 返回的（ref 已被解包）
+        if (key === '$slots') return instance.slots
+        if (key === '$el') return instance.vnode.el
+        if (key in props) return props[key] // props 其次
+        return target[key]
+    },
+```
+
+setup 没给 render 的话，兜底从组件 options 里取：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function finishComponentSetup(instance) {
+    if (!instance.render) instance.render = instance.type.render
+}
+```
+
+```
+setupComponent → initProps / initSlots / setupStatefulComponent
+  输入: 组件实例（空壳）
+  输出: 填好 props/slots/proxy/setupState（或 render）的实例
+  过程: 初始化 props/slots → 建 proxy → currentInstance 窗口期里跑 setup() → 返回值落定为 render 或 setupState → 兜底 render
+```
+
+#### 4.3.4 setupRenderEffect：把 render 包进 effect
+
+**effect（副作用）**——render 是一个副作用函数：执行时访问响应式数据就收集依赖（track），数据变更后重新执行 render 生成新 VNode，再走 patch 更新（闭环见 4.5）。链条④⑤的落点——render 被包进副作用函数，effect 首次执行是**同步**的，当场产出 subTree 并交回 patch（呼应 4.2.3 递归链的第二层）。`isMounted` 的 else 分支是更新路径：数据变化后重跑到这里，走 `patch(prevSubTree, nextSubTree)`（怎么触发的见 4.5）：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+    const componentUpdateFn = () => {
+        // patch 子树期间本组件是"当前父实例"：沿途挂载的子组件 parent 指向它（provide/inject 依据）
+        const prev = currentScopeInstance
+        currentScopeInstance = instance
+        if (!instance.isMounted) {
+            const subTree = (instance.subTree = renderComponentRoot(instance))
+            patch(null, subTree, container, anchor)
+            initialVNode.el = subTree.el
+            instance.isMounted = true
+        } else {
+            const prevSubTree = instance.subTree
+            const nextSubTree = (instance.subTree = renderComponentRoot(instance))
+            patch(prevSubTree, nextSubTree, container, anchor)
+        }
+        currentScopeInstance = prev
+    }
+
+    // scheduler 是关键：数据变化不会立刻渲染，只把 update 排进微任务队列
+    instance.update = effect(componentUpdateFn, { scheduler: () => queueJob(instance.update) })
+```
+
+生命周期钩子一句带过：`onMounted` / `onUnmounted` 把回调注册进实例数组，挂载钩子在 mountComponent 末尾统一执行，卸载钩子在 unmount 里先于 effect.stop 执行（4.2.3 已见）。
+
+断点建议：断在 `setupStatefulComponent` 的 `setup(...)` 调用——看状态落定；断在 `componentUpdateFn` 挂载分支——单步进 `patch(null, subTree)`。
+
+### 4.4 元素挂载：VNode → 真实 DOM
+
+#### 4.4.1 定位与五步流程
+
+**定位**：五种 VNode 里只有元素 / 文本会生成真实 DOM（组件 VNode 走 4.3，Fragment / 注释只是锚点辅助）。mountElement 五步：
+
+> 示意片段（无配套脚本）
+
+```
+processElement（n1 = null）
+  ▼ mountElement
+① hostCreateElement(type) —— 浏览器宿主即 document.createElement
+② vnode.el = 刚建的 DOM —— VNode 与真实节点互指
+③ patchProp 逐个挂属性 / 事件（onClick → addEventListener）
+④ 递归 patch 子节点 —— 文本一次性 setElementText；数组孩子逐个 patch(null, child)（在内存构建子 DOM 树）
+⑤ hostInsert(el, container, anchor) —— 插入父容器（append / 指定位置）
+```
+
+#### 4.4.2 mountElement 落地
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+    function processElement(n1, n2, container, anchor) {
+        if (!n1) mountElement(n2, container, anchor)
+        else patchElement(n1, n2, container, anchor)
+    }
+
+    function mountElement(vnode, container, anchor) {
+        vnode.el = hostCreateElement(vnode.type)
+
+        for (const [key, value] of Object.entries(vnode.props || {})) {
+            if (key === 'key') continue // key 是 diff 配对用的，不是 DOM 属性
+            hostPatchProp(vnode.el, key, null, value)
+        }
+
+        // 位运算分发孩子：文本 / 数组
+        const { shapeFlag, children } = vnode
+        if (shapeFlag & ShapeFlags.TEXT_CHILDREN) hostSetElementText(vnode.el, children)
+        else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) mountChildren(children, vnode.el, null)
+
+        hostInsert(vnode.el, container, anchor)
+    }
+
+    function mountChildren(children, container, anchor) {
+        // 数组孩子逐个归一：允许混入字符串（真实 Vue 的 normalizeChildren 也做这一步）
+        for (const child of children) patch(null, normalizeVNode(child), container, anchor)
+    }
+```
+
+```
+processElement → mountElement → mountChildren
+  输入: 新元素 VNode（n1=null）+ 容器 + 锚点
+  输出: void（副作用：真实 DOM 节点插入容器）
+  过程: createElement 建节点 → 挂属性/事件 → 孩子在内存里构建完（递归 patch）→ 最后一步才 insert 进父容器
+```
+
+这些 `host*` 函数是谁、从哪来，见 4.4.3。注意 mountChildren 又调回了 patch——4.2 的调度中枢在这里递归接住每个孩子。
+
+断点建议：断在 `mountElement`——看五步顺序；断在 `mountChildren`——确认孩子又回到 patch。
+
+#### 4.4.3 宿主操作：runtime-core 与 DOM 的边界
+
+mountElement 里的 `hostCreateElement` / `hostSetElementText` / `hostInsert` 不是 DOM API，而是 `createRenderer` 从 options 里解构重命名出来的**宿主操作**——runtime-core 只认这 9 个接口，不认识 `document`；"浏览器"这个平台由 index.js 注入实现，换一份实现（如字符串拼接）就是 SSR 雏形：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function createRenderer(options) {
+    const {
+        createElement: hostCreateElement,
+        createText: hostCreateText,
+        createComment: hostCreateComment,
+        setText: hostSetText,
+        setElementText: hostSetElementText,
+        insert: hostInsert,
+        remove: hostRemove,
+        nextSibling: hostNextSibling,
+        patchProp: hostPatchProp
+    } = options
+    // ……内部闭包持有 patch 及其分发的全部逻辑，对外只暴露 render / createApp / patch / unmount
+```
+
+每个宿主函数"什么时候被调"由运行时流程决定——以元素 VNode 的处理为主线（对应 4.4.2 五步）：
+
+> 示意片段（无配套脚本）
+
+```
+宿主函数的调用时机（runtime-core 调 → index.js 落地）
+
+挂载（mountElement）   createElement 建元素节点 → patchProp 挂属性/事件
+                       → setElementText 填元素文本 → insert 插入父容器（anchor 前或末尾）
+更新（patchElement）   setText 改文本节点内容 → setElementText 换元素全部文本
+                       → patchProp 增删改属性（新值 null 即移除）
+卸载 / 换位            remove 摘节点 → nextSibling 找"原位置"锚点
+锚点辅助               createText / createComment —— 文本与注释节点独立于元素存在
+```
+
+index.js 侧的实现（nodeOps）每个都是最薄的一层封装：
+
+> 摘自 `./code/vue3/mini-vue/lib/index.js`
+
+```js
+const nodeOps = {
+    /** 创建元素节点（传入标签名，返回 HTMLElement）。 */
+    createElement: tag => document.createElement(tag),
+    /** 创建文本节点（独立于元素存在，如 Fragment 的锚点）。 */
+    createText: text => document.createTextNode(text),
+    /** 创建注释节点（null / false 的渲染占位）。 */
+    createComment: text => document.createComment(text),
+    /** 改文本节点内容（processText 复用旧节点时用）。 */
+    setText: (node, text) => {
+        node.nodeValue = text
+    },
+    /** 一次性改元素的全部文本孩子（TEXT_CHILDREN 更新路径）。 */
+    setElementText: (el, text) => {
+        el.textContent = text
+    },
+    /** 把 child 插到 parent 里 anchor 之前；anchor 为 null/nullish 追加到末尾。 */
+    insert: (child, parent, anchor) => {
+        parent.insertBefore(child, anchor || null)
+    },
+    /** 从 DOM 摘除节点（有父节点才摘，无则忽略）。 */
+    remove: child => {
+        const parent = child.parentNode
+        if (parent) parent.removeChild(child)
+    },
+    /** 取节点的下一个兄弟节点——patch 换类型时用它确定"原位置"锚点。 */
+    nextSibling: node => node.nextSibling
+}
+```
+
+第 9 个是 `patchProp`（属性/事件分派，见 4.4.2 的 ③）——与 nodeOps 一起经 `createRenderer({ ...nodeOps, patchProp })` 装配进渲染器。具体何时调用、以什么顺序调用，全部由 runtime-core 的 renderer 决定（4.4.2 五步、5.3 各操作的宿主留痕就是调用现场）。
+
+### 4.5 响应式 + effect 调度：数据驱动视图的闭环
+
+#### 4.5.1 关联点：渲染 effect 与 scheduler
+
+三章讲过响应式本身（track / trigger），这里只讲它**和渲染的关联**——关联点就是 4.3 包住 render 的那个 effect。完整闭环：
+
+> 示意片段（无配套脚本）
+
+```
+组件 render 读响应式数据（ctx.count）
+  ▼ track：把渲染 effect 记为该数据的订阅者
+数据变更（root.count++）
+  ▼ trigger：找到订阅者 = 渲染 effect，但不直接执行——走 scheduler
+queueJob：去重（同一组件多次触发只排一次）→ 微任务 flushJobs
+  ▼
+重跑 render() 产出新 VNode → patch(prev, next)（回到 4.2，闭环）
+```
+
+关联的落点只有一行——effect 的第二个参数 scheduler：数据变化触发更新时**不走 effect 的默认立即执行，而是走 scheduler 把 update 排队**：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+    // scheduler 是关键：数据变化不会立刻渲染，只把 update 排进微任务队列
+    instance.update = effect(componentUpdateFn, { scheduler: () => queueJob(instance.update) })
+```
+
+#### 4.5.2 调度器：queueJob / queueFlush / flushJobs
+
+排队的三个函数——去重、排微任务、统一执行：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function queueJob(job) {
+    if (!queue.includes(job)) queue.push(job) // 同一个 job 只排一次
+    queueFlush()
+}
+
+function queueFlush() {
+    if (isFlushPending) return
+    isFlushPending = true
+    currentFlushPromise = resolvedPromise.then(flushJobs)
+}
+
+function flushJobs() {
+    isFlushPending = false
+    const jobs = queue.splice(0, queue.length) // 先取出快照，flush 过程中新加的留到下一轮
+    for (const job of jobs) job()
+    if (queue.length) flushJobs() // 组件有父子依赖时，执行中可能又推入新 job
+}
+```
+
+```
+trigger → scheduler → queueJob → queueFlush → flushJobs → componentUpdateFn 更新分支
+  输入: 数据变更事件（可能同一 tick 内多次）
+  输出: 微任务里统一重跑 render → patch(prev, next)
+  过程: queue.includes 去重（5 次触发只留 1 个 job，实测见 5.3）→ resolvedPromise.then 排微任务 → 逐个执行 job
+```
+
+**nextTick：等下一轮渲染落定的官方姿势**。`queueFlush` 排微任务时把 flush 存进了 `currentFlushPromise`，`nextTick` 就是把回调挂它后面——它 resolve 时 flushJobs 必然已跑完，回调里读 DOM 拿到的必是新值；没有排队的更新就退化为 `resolvedPromise`（下个微任务立刻执行）：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+function nextTick(fn) {
+    const promise = currentFlushPromise || resolvedPromise
+    return fn ? promise.then(fn) : promise
+}
+```
+
+```
+nextTick(fn)
+  输入: 回调 fn（可省，省略则返回 Promise 供 await）
+  输出: 与本轮 flush 对齐的 Promise
+  过程: 挂 currentFlushPromise 后面 → resolve 时 DOM 已更新；无排队更新则退化为 resolvedPromise
+```
+
+这就是"同步读 DOM 永远是旧值、`await nextTick()` 后才是新值"的出处——实测对照见 5.3.3。
+
+#### 4.5.3 闭环：更新分支回到 patch
+
+flushJobs 执行的 job 就是 4.3.3 `componentUpdateFn` 的更新分支——重跑 render 产出新子树，`patch(prev, next)` 回到 4.2：
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`
+
+```js
+        } else {
+            const prevSubTree = instance.subTree
+            const nextSubTree = (instance.subTree = renderComponentRoot(instance))
+            patch(prevSubTree, nextSubTree, container, anchor)
+        }
+```
+
+至此闭环：数据变更不手写任何 DOM 操作——trigger 找到渲染 effect、调度器排队、render 产出新 VNode、patch 做最小化更新，这就是"数据驱动视图"的全部。patch(prev, next) 之后的元素级 diff 细节（patchElement 属性比对、patchKeyedChildren 双端 + LIS）见 lib 完整函数，实测手推见 5.3.4。
+
+断点建议：断在 `queueJob`——点「一次改三项」确认多次调用只排 1 个 job；断在 `flushJobs`——确认执行时机在微任务。
 
 ## 五、关键执行链路
 
-前四章按「模块」讲函数，本章按「一次操作的调用顺序」把函数串成链路。每节一张 ASCII 链路图 + 分步实例走读（真实输入 / 输出数据块，产物为 lib 实际运行结果）+ 断点建议，与 `./code/vue3/mini-vue/demo/` 下的 5 个纯渲染 demo 一一对应（demo 加载即渲染，交互按钮 + 渲染区，`F12 → Sources` 按函数名搜即可断点）。函数的完整 JSDoc 与逐字代码摘录都在前文对应小节，本章不重复贴码，只给「见 X.X 节」引用。
-
-五条链路按数据形态衔接（模板串 → render 函数 → VNode 树 → 真实 DOM → 状态变更 → 新 VNode 树 → 最小 DOM 操作 → 销毁）：
+前四章按「模块」讲函数，本章按「一次操作的调用顺序」把函数串成链路。每节一张 ASCII 链路图 + 分步实例走读（真实输入 / 输出数据块，产物为 lib 实际运行结果）+ 断点建议，与 `./code/vue3/mini-vue/demo/` 下的 3 个模块 demo 一一对应（demo 加载即渲染，交互按钮 + 渲染区，`F12 → Sources` 按函数名搜即可断点）。函数的完整 JSDoc 与逐字代码摘录都在前文对应小节，本章不重复贴码，只给「见 X.X 节」引用。
+三条链路按数据形态衔接（模板串 → render 函数 → VNode 树 → 真实 DOM → 状态变更 → 新 VNode 树 → 最小 DOM 操作 → 销毁），其中③整体运行一条链串完挂载 → 更新 → 卸载：
 
 ```
-① 编译           ② 挂载              ③ 响应式           ④ 更新（批处理 + diff）   ⑤ 卸载
-demo-compiler    demo-mount          demo-reactivity    demo-diff               demo-unmount
-────────────     ────────────        ────────────       ────────────────        ────────────
-模板字符串         VNode 树            状态写入            状态写入                 render(null, 容器)
-   │ parse           │ mount             │ track(读)        │ set → trigger          │ unmount
-   ▼ AST             │ mountComponent    │                 │                        │   unmounted 钩子
-   │ transform       │ setupComponent    │                 │ queueJob（去重入队）     │   effect.stop（退订）
-   ▼ 带标记的 AST     │ setupRenderEffect │                 ▼ 微任务 flushJobs        │   递归 unmount(subTree)
-   │ generate        │   挂载分支          │                 │ patch(n1, n2)          │   hostRemove 摘 DOM
-   ▼ render 代码      │ patch(null,subTree)│                 │ patchElement           ▼
-   │ new Function    ▼ mountElement     │                 │ patchChildren
-   ▼ render 函数 ──▶ 真实 DOM ◀─────────┴── effect 重跑 ──▶ patchKeyedChildren
-                                     （触发③即回到这里）    （移动 / 新增 / 卸载）
+① 编译              ② 响应式            ③ 整体运行（挂载 → 更新 → 卸载一条链）
+demo-compiler       demo-reactivity     demo-app
+─────────────       ─────────────       ─────────────────────────────────────────────
+模板字符串            状态写入             mount('#app')
+   │ parse             │ track(读)          │ 选择器 → 读 innerHTML 当模板 → compile（接①）
+   ▼ AST               │ trigger(写)        │ setup 建状态 → setupRenderEffect 首跑
+   │ transform         ▼                    ▼ patch(null, subTree) → mountElement
+   ▼ 带标记的 AST        computed / watch       真实 DOM（组件内按钮走编译产物绑定的 onClick）
+   │ generate                               │ 状态变更 → trigger → queueJob（去重）→ 微任务 flushJobs
+   ▼ render 代码                             ▼ patch(prev, next)
+   │ new Function                              patchElement（patchFlag=1 文本更新）
+   ▼ render 函数 ─────▶ 交给运行时挂载           patchKeyedChildren（keyed diff + LIS 移动 / 新增 / 卸载）
+                                            │ app.unmount()：unmounted 钩子 → effect.stop → 摘 DOM
+                                            ▼ 死写不再触发渲染；重新加载页面即恢复
 ```
 
 ### 5.1 编译链路：模板字符串 → render 函数
@@ -2317,11 +2216,8 @@ demo-compiler    demo-mount          demo-reactivity    demo-diff               
 ```
 
 分步实例走读——每步给真实输入与真实输出（数据为 lib 实际运行产物，示例用 demo 预置模板）：
-
 **步骤① parse：模板串 → AST**
-
 输入（demo 预置模板，进页面自动编译的就是它）：
-
 > 示意片段（无配套脚本）
 
 ```html
@@ -2333,7 +2229,6 @@ demo-compiler    demo-mount          demo-reactivity    demo-diff               
 ```
 
 输出（AST 根节点 JSON；`…` 是真实存在的空白文本节点，这里略去）：
-
 > 示意片段（无配套脚本）
 
 ```json
@@ -2369,11 +2264,8 @@ demo-compiler    demo-mount          demo-reactivity    demo-diff               
 ```
 
 处理：正则逐段匹配开标签 / 文本 / 闭合标签，开闭标签栈配对出层级，开标签属性串再经 `parseAttrs` 切成 `{ key, value }`——三层嵌套 + 三类节点（Element / Text / Interpolation）就是 parse 的全部产出。
-
 **步骤② transform：AST → 带静态标记的 AST**
-
 输入：步骤① 的 AST。输出（transform 只补字段不动结构——同一节点的真实前后对比）：
-
 > 示意片段（无配套脚本）
 
 ```json
@@ -2400,11 +2292,8 @@ demo-compiler    demo-mount          demo-reactivity    demo-diff               
 ```
 
 规则即 `walk` 的判定：无插值 → `isStatic=true` + `patchFlag=0`；有插值 → `patchFlag=1`（TEXT）。见 2.3 节。
-
 **步骤③ generate：带标记 AST → render 代码**
-
 输入：步骤② 的 AST。输出（真实产物全文，单行字符串）：
-
 > 示意片段（无配套脚本）
 
 ```js
@@ -2412,11 +2301,8 @@ demo-compiler    demo-mount          demo-reactivity    demo-diff               
 ```
 
 要点全在串里：嵌套 `h(...)` 对应 AST 层级；插值变成 `toDisplayString(ctx.count)` 拼接；`patchFlag`（末尾的 `1`）作为 h 的参数直接写死进代码——运行时不再判断静态与否；顶层包成数组。
-
 **步骤④ compile：字符串 → 函数**
-
 输入：步骤③ 的代码字符串。处理：`new Function('h', 'toDisplayString', 'ctx', code)`。输出（真实产物：传入 h / toDisplayString / 初始状态执行一次得到 VNode 数组；`el` 全为 null——此刻尚未挂载）：
-
 > 示意片段（无配套脚本）
 
 ```json
@@ -2439,16 +2325,12 @@ demo-compiler    demo-mount          demo-reactivity    demo-diff               
 ```
 
 执行时插值已求值（`ctx.count` → 0）——**编译期只生成取值代码，求值发生在执行 render 的那一刻**；这份数组就是 5.3 挂载链路的输入。
-
 关键函数摘录（与 lib 逐字一致，完整 JSDoc 见对应小节）：`parse` / `generate` / `compile` 见 2.2 节；`transform.walk`（静态标记与 patchFlag）见 2.3 节。
-
 断点建议：
-
 - 断在 `parse` 主循环：看 `rest` 逐段变短、`stack` 如何配对出节点层级
 - 断在 `transform.walk`：静态 `<h3>` 落 `isStatic=true`（patchFlag=0），含插值的 `<p>` 落 `patchFlag=1`
 - 断在 `compile` 的 `new Function`：放行后，第三栏的代码字符串变成可执行 render
 - 编辑模板：三份产物即时更新，但**已挂载的页面不会变**——重新挂载才生效
-
 demo 入口：`./code/vue3/mini-vue/demo/demo-compiler.html`
 
 ### 5.2 响应式链路：状态读写 → effect 重跑 → computed / watch
@@ -2463,18 +2345,15 @@ demo 入口：`./code/vue3/mini-vue/demo/demo-compiler.html`
       ▼ track                                 ▼ trigger
       │   targetMap: WeakMap                  │   depsMap.get(key) 复制一份逐个唤醒
       ▼ target → Map<key, Set<effect>>        │
-      │   依赖关系图建成                        ├─ 渲染 effect：有 scheduler → queueJob（见 5.4）
+      │   依赖关系图建成                        ├─ 渲染 effect：有 scheduler → queueJob（见 4.5）
       │                                       ├─ 普通 effect：无 scheduler → 直接 run() 重跑
       │                                       ├─ computed 依赖：只置脏（_dirty = true）
       │                                       └─ watch 依赖：scheduler 跑回调（新值 ← 旧值）
 ```
 
 分步实例走读（场景与 demo-reactivity 的四行渲染区一致；输入是真实代码，输出是 lib 实际运行产物）：
-
 **步骤① track：读时建依赖**
-
 输入（demo 渲染区的建法——4 个 effect 各管一行，computed 与 watch 内部再各建 1 个 effect）：
-
 > 示意片段（无配套脚本）
 
 ```js
@@ -2496,9 +2375,7 @@ M.watch(count, (nv, ov) => { vWatch.textContent = String(nv); vWatchOld.textCont
 ```
 
 读三遍：count 这格 dep 里有 3 个 effect（渲染行 1 + computed getter + watch）；`obj` 的 `nested` 键与**嵌套对象自身的** `msg` 键各有一格——写深层能精确触发，是 3.1「惰性深度代理」在依赖图上的直接体现。
-
 **步骤② trigger：写时唤醒**
-
 输入：`count.value++`。输出（唤醒顺序 = dep 的插入序，真实留痕）：
 
 ```
@@ -2509,15 +2386,10 @@ effect#4 重跑                                    ← watch 的 scheduler → �
 ```
 
 同一时刻 demo 上能直接读到的证据：`vCalls`（getter 调用次数）**停在 1 没涨**、`vDouble` 仍是 0——置脏不等于重算。
-
 **步骤③ effect 重跑：渲染区跟着变**
-
 输出（渲染行 1 的前后对照，真实产物）：文本 `0` → `1`。重跑内部：`cleanupEffect` 先退订全部旧依赖 → 函数体重跑 → 再读 `count.value` 时 track 重建——「先清后收」保证条件分支变化后不留死依赖（见 3.4 节）。
-
 **步骤④ computed / watch：两条支线的真实数据**
-
 接着做三件事（对应 demo 的按钮）：
-
 > 示意片段（无配套脚本）
 
 ```js
@@ -2543,368 +2415,606 @@ watch 退订后再看依赖图（真实产物）：count 的 dep 从 3 个 effec
 ```
 
 关键函数摘录：`reactive` / `createGetter` / `createSetter` 见 3.1 节；`track` 见 3.2 节；`trigger` 见 3.3 节；`effect` / `cleanupEffect` / `stop` 见 3.4 节；`ref` 见 3.5 节；`computed` 见 3.7 节；`watch` 见 3.8 节。
-
 断点建议：
-
 - 断在 `track`：进页面首跑时看 depsMap 怎么一级级长出来
 - 断在 `trigger`：点 count+1，看唤醒了哪几个 effect（渲染 effect 走 scheduler，computed 只置脏）
 - 断在 `watch` 的回调：看新值 / 旧值来源；点 stop 后再改 count，确认 dep 已空、回调不再来
 - 不打断点也能验证 computed 缓存：读数区的「getter 调用次数」不随依赖变化增长，只在重读 `.value` 时 +1
-
 demo 入口：`./code/vue3/mini-vue/demo/demo-reactivity.html`
 
-### 5.3 挂载链路：createApp().mount → 真实 DOM
+### 5.3 整体运行链路：mount('#app') → 挂载 → 更新 → 卸载
 
-对应 demo：`demo-mount.html`——左栏是 subTree 的可读版本（VNode 树），右栏是挂载容器里的真实 DOM，两者一一对应；主题条演示 provide / inject。
-
-```
-M.createApp(App).mount(容器)
-   │ createAppAPI().mount                  runtime-core.js
-   ▼ createVNode(App)                      runtime-core.js
-   │   根组件包成 vnode
-   ▼ render(vnode, container)              runtime-core.js（createRenderer 内）
-   │   container._vnode 为空 → 首挂
-   ▼ patch(n1 = null, n2 = 组件 vnode)
-   │   shapeFlag 分派
-   ▼ processComponent → mountComponent     runtime-core.js
-   │   createComponentInstance 建实例
-   │   setupComponent：initProps → setup() → handleSetupResult / finishComponentSetup
-   ▼ setupRenderEffect                     runtime-core.js
-   │   effect(componentUpdateFn, { scheduler: queueJob })
-   │   首跑进挂载分支
-   ▼ renderComponentRoot → subTree
-   │   编译产物展开后的 VNode 树
-   ▼ patch(null, subTree) → mountElement   runtime-core.js
-   │   createElement → patchProp → mountChildren（递归）→ insert
-   ▼ 真实 DOM 挂进容器，onMounted 钩子入队
-```
-
-分步实例走读（对象是 demo-mount 的 App；输入是真实调用，输出为 lib 实际运行产物）：
-
-**步骤① createVNode + render 入口**
-
-输入（demo 真实调用，加载即执行）：
-
-> 示意片段（无配套脚本）
-
-```js
-M.createApp(App).mount(box)   // box = <div id="app">
-```
-
-输出：`box._vnode` 挂上根组件 vnode（`type` 为 App、`shapeFlag` 含 STATEFUL_COMPONENT）；render 检查 `container._vnode` 为空 → 走首挂 `patch(null, 组件 vnode)`。
-
-**步骤② mountComponent：实例化**
-
-输入：App 的 setup 返回 `{ count, double: computed(() => …), title }`（全是 ref / computed）。输出（`instance.setupState` 经 proxyRefs 解包后的真实读取结果——模板里读 `ctx.count` 拿到的就是数字）：
-
-> 示意片段（无配套脚本）
-
-```json
-{ "count": 0, "double": 0, "title": "标题 A" }
-```
-
-**步骤③ setupRenderEffect：产出 subTree**
-
-输出（`instance.subTree` 真实产物；JSON 略去空白文本节点，NokeyList 的子树与 KeyedList 同构但 li 无 key 字段，以 `…` 代）：
-
-> 示意片段（无配套脚本）
-
-```json
-{
-  "tag": "div",
-  "patchFlag": 0,
-  "children": [
-    {
-      "tag": "section", "patchFlag": 1,
-      "children": [
-        { "tag": "h3", "patchFlag": 0, "children": "任务列表（静态标题：编译时提升）", "el": "<h3> …" },
-        { "tag": "p", "patchFlag": 1, "children": "count = 0，double = 0，title = 标题 A", "el": "<p data-role=\"count\"> …" }
-      ],
-      "el": "<section class=\"app-head\">"
-    },
-    {
-      "component": "KeyedList",
-      "subTree": {
-        "tag": "section", "patchFlag": 0,
-        "children": [
-          { "tag": "h4", "patchFlag": 0, "children": "有 key 列表（key = id，按 key 配对）", "el": "<h4> …" },
-          { "tag": "ul", "patchFlag": 0, "children": [
-            { "tag": "li", "key": 1, "patchFlag": 0, "children": "#1 a", "el": "<li> …" },
-            { "tag": "li", "key": 2, "patchFlag": 0, "children": "#2 b", "el": "<li> …" },
-            { "tag": "li", "key": 3, "patchFlag": 0, "children": "#3 c", "el": "<li> …" }
-          ], "el": "<ul>" }
-        ],
-        "el": "<section class=\"list-block\">"
-      }
-    },
-    { "component": "NokeyList", "subTree": "…（同构，li 无 key 字段）" },
-    {
-      "component": "Mid",
-      "subTree": {
-        "component": "Leaf",
-        "subTree": {
-          "tag": "div", "patchFlag": 0,
-          "children": [
-            { "tag": "span", "patchFlag": 0, "children": "theme = 亮色（Leaf 读 .value 建立依赖）", "el": "<span> …" },
-            { "tag": "button", "patchFlag": 0, "children": "切换主题", "el": "<button> …" }
-          ],
-          "el": "<div class=\"theme-bar\">"
-        }
-      }
-    }
-  ],
-  "el": "<div class=\"app\">"
-}
-```
-
-每个元素节点已带上 `el`（挂完后指向真实 DOM）；组件 vnode 没有 el，`subTree` 字段才是它的渲染结果——demo 左栏就是这棵树的可读版本，Mid → Leaf 也演示了子组件递归挂载与 provide / inject 原型链。
-
-**步骤④ mountElement：VNode → DOM**
-
-输出（宿主操作序列真实留痕，节选——`…` 处为 KeyedList / NokeyList 各自的同构段落）：
+#### 5.3.1 挂载：createApp().mount('#app') 到 DOM 出现
 
 ```
-createElement div                          ← subTree 根（div.app）
-patchProp <div> class: null → "app"
-createElement section                      ← 编译产物第一段
-patchProp <section> class: null → "app-head"
-createElement h3
-setElementText <h3> ← "任务列表（静态标题：编译时提升）"
+主流程                                       mountComponent 内部（runtime-core.js，见 4.3）
+──────────────────────────────────────────────────────────────────────
+createApp(根组件对象)          index.js
+  │ 输入 App = { setup() {...} }（组件对象 = 函数集合：setup / render；demo 的 App 只有 setup，render 由 mount 编译补上）
+  │ 返回 app：{ mount, unmount }                ← unmount 是 5.3.6 的入口
+  ▼
+app.mount('#app')              index.js
+  │ ① document.querySelector 解析选择器
+  │ ② 取 innerHTML 当模板 → compile 产出编译 render（compiledRender，过程见 5.1）
+  │    包成组件 render 挂到 App 上：rootComponent.render = ctx => ...
+  │ ③ 清空容器 → 调工厂函数的 mount（runtime-core 闭包里那个）
+  ▼
+createVNode(rootComponent)     runtime-core.js
+  │ 返回根 VNode：{ type: App 组件对象（内含 setup / 组件 render）, props: null,
+  │                children: null, shapeFlag: 2, el: null, component: null }
+  ▼
+渲染器 render(rootVNode, container)   runtime-core.js
+  │ 渲染入口：首帧无旧树 → patch(null, rootVNode)
+  │ shapeFlag 分发（见 4.2）→ processComponent
+  ▼
+processComponent ──────────→  ① createComponentInstance   建实例空壳
+                              │    instance = { vnode, type, parent, provides,
+                              │      props:{}, propsRaw:{}, attrs:{}, slots:{}, setupState:{},
+                              │      ctx:{ _:instance }, isMounted:false, subTree:null,
+                              │      update:null, proxy:null, mounted:[], unmounted:[] }（+ emit）
+                              ② setupComponent            初始化三步走（见 4.3.3）
+                              │    ├ initProps            声明过的进 props，没声明的进 attrs
+                              │    ├ initSlots            插槽对象归一
+                              │    └ setupStatefulComponent ★ 重点
+                              │        ① 建 instance.proxy（render 里 this 的取值：setupState 最优先）
+                              │        ② currentInstance = instance 窗口期
+                              │           → setupResult = setup(props, { emit, slots })
+                              │        ③ handleSetupResult：返回对象 → setupState = proxyRefs(结果)
+                              │           （ref 已解包）；返回函数 → 它就是 render
+                              │        ④ finishComponentSetup：兜底从组件对象取 render
+                              │           （demo 的编译 render 就在这一步落定）
+                              ③ setupRenderEffect         组件 render 包进渲染 effect，首跑
+                              │    └ subTree = renderComponentRoot(instance)
+                              │       = normalizeVNode(render.call(proxy, proxy))
+                              │       执行组件 render（编译 render 的包装，ctx = 实例代理）得到：
+                              │       Fragment[ p"Hello vue!", p"count = 0", button"count + 1",
+                              │                ul[ li#1 "#1 a", li#2 "#2 b", li#3 "#3 c" ] ]（完整结构见下方块）
+                              ④ patch(null, subTree)      子树交回 patch（回到上行）
+  ▼
+processFragment → mountChildren   runtime-core.js
+  ▼
+mountElement ×4               runtime-core.js（见 4.4）
+  │ createElement → patchProp → setElementText / addEventListener → insert
+  ▼
+真实 DOM 出现在 #app；onMounted 钩子统一入队执行
+```
+
+**createApp（index.js）**：
+
+```
+目的: 装配层工厂——接收根组件对象，返回 app { mount, unmount }
+输入: App = { setup() {...} }（组件对象 = 函数集合：setup / render；demo 只有 setup，render 由 mount 编译补上）
+输出: app（mount = 下面那个包装层；unmount = 卸载入口，见 5.3.6）
+```
+
+**app.mount（index.js 包装层）**：
+
+```
+目的: 浏览器平台专属的三件事——选择器解析 + in-DOM 模板编译（编译 render 包成组件 render）+ 清空容器
+输入: '#app'（容器 innerHTML 即模板，4.1~4.5 讲解用的同一份）
+输出: 转调工厂 mount 的返回值——root（组件实例代理，页面层 root.message 读写都经它）
+```
+
+**工厂 mount（runtime-core 闭包，createAppAPI 产物）**：
+
+```
+目的: 平台无关的真正渲染入口
+输入: 根容器 el
+过程: createVNode(rootComponent) → 渲染器 render(rootVNode, el) → patch(null, rootVNode)
+输出: root（组件实例代理 = vnode.component.proxy）
+```
+
+**compile（compiler-core.js，过程详见 5.1）**：
+
+```
+输出: 编译 render（compiledRender）：4 个根 → mount 适配层多根包 Fragment（本例 4 个根 → Fragment）
+      [h("p", null, toDisplayString(ctx.message), 1), h("p", null, "count = " + toDisplayString(ctx.count), 1), h("button", {onClick: () => ctx.increment()}, "count + 1"), h("ul", null, [...ctx.todos.map(t => h("li", {key: t.id}, "#" + toDisplayString(t.id) + " " + toDisplayString(t.text), 1))], 1)]
+```
+
+**createVNode（runtime-core.js）**：
+
+```
+目的: 由组件对象创建根 VNode（4.1）
+输入: App（{ setup, render }；demo 的 render 由 mount 编译补上）
+输出: { type: App 组件对象（内含 setup / 组件 render）, props: null, children: null, shapeFlag: 2, el: null, component: null }
+```
+
+**createComponentInstance（runtime-core.js）**：
+
+```
+目的: 建实例空壳（4.3.2）
+输入: rootVNode, parent（根组件的 parent = null；provide/inject 向上查找用）
+输出: instance（15 字段空壳 + emit）——此刻除 vnode / type 外全是空值，随流程逐步填充（见 4.3.2 填充时刻表）：
+      { vnode: rootVNode, type: App, parent: null, provides: {},
+        props: {}, propsRaw: {}, attrs: {}, slots: {}, setupState: {},
+        ctx: { _: instance }, isMounted: false, subTree: null,
+        update: null, proxy: null, mounted: [], unmounted: [] }
+```
+
+**initProps / initSlots（runtime-core.js）**：
+
+```
+目的: 填 instance.props / attrs / slots（4.3.3）
+输入: instance（空壳）+ rootVNode.props / rootVNode.children
+输出: demo 根组件没传 props、没写插槽 → instance.props / attrs / slots 均为空对象
+      （props 的完整分拣规则见 4.3.3：声明过的进 props，没声明的进 attrs）
+```
+
+**setupComponent（runtime-core.js）**：
+
+```
+目的: 初始化三步走：initProps / initSlots → setupStatefulComponent（4.3.3）
+输入: instance（createComponentInstance 建的空壳）
+输出: instance.setupState —— 经 proxyRefs 解包后的真实读取（模板里读 ctx.count 拿到的就是数字）
+      { "message": "Hello vue!", "count": 0, "todos": "abc" }
+```
+
+**setupStatefulComponent（runtime-core.js）**：
+
+```
+目的: 建代理 + 执行 setup + 落定 setupState / render（4.3.3）
+输入: instance（空壳，props/slots 已由前两步填好）
+输出: instance.proxy（读值顺序 setupState 最优先，ref 已解包）
+      instance.setupState = proxyRefs(setup 返回的对象)
+      instance.render（demo：finishComponentSetup 兜底取 mount 编译补上的组件 render）
+```
+
+**setupRenderEffect（runtime-core.js）**：
+
+```
+目的: 把组件 render 包进渲染 effect 并首跑（4.3.4）
+输入: instance
+输出: subTree = renderComponentRoot(instance) 首跑产物（normalizeVNode(render.call(proxy, proxy))，
+      ctx = 实例代理；元素节点已带 el，li 自带 key——diff 的配对依据）
+      Fragment({tag=p, flag=1, el=<p>, children="Hello vue!"},
+               {tag=p, flag=1, el=<p>, children="count = 0"},
+               {tag=button, el=<button>, children="count + 1"},
+               {tag=ul, flag=1, el=<ul>,
+                children=[{tag=li, key=1, flag=1, el=<li>, children="#1 a"},
+                          {tag=li, key=2, flag=1, el=<li>, children="#2 b"},
+                          {tag=li, key=3, flag=1, el=<li>, children="#3 c"}]})
+```
+
+**mountElement（runtime-core.js）**：
+
+```
+目的: 元素 VNode 落成真实 DOM（4.4）
+输入: 元素 VNode + 容器 + 锚点
+输出（副作用）——宿主留痕节选（对照规律：一个 h(...) = 一次 createElement；文本孩子走
+               setElementText；事件走 addEventListener；开头两个 insert <#text> 是 Fragment 锚点）:
 createElement p
-patchProp <p> data-role: null → "count"
-setElementText <p data-role="count"> ← "count = 0，double = 0，title = 标题 A"
-insert <section class="app-head"> → <div class="app">（末尾）
-  …（KeyedList：section → h4 → ul → li ×3，自底向上逐层 insert）
-  …（NokeyList：同构一段）
-createElement div                          ← Leaf 的主题条
-setElementText <span> ← "theme = 亮色（Leaf 读 .value 建立依赖）"
-patchProp <button> onClick: null → undefined
-insert <div class="theme-bar"> → <div class="app">（末尾）
-insert <div class="app"> → <div>（末尾）   ← 根元素最后才进容器
+setElementText <p> ← "Hello vue!"
+insert <p> → <div#app>（anchor 前）
+createElement p
+setElementText <p> ← "count = 0"
+insert <p> → <div#app>（anchor 前）
+createElement button
+addEventListener <button> click      ← @click 的编译产物落在这里
+setElementText <button> ← "count + 1"
+insert <button> → <div#app>（anchor 前）
+createElement ul
+createElement li
+setElementText <li> ← "#1 a"
+insert <li> → <ul>（末尾）
+  …（li #2、#3 同构）
+insert <ul> → <div#app>（anchor 前）
 ```
 
-对照规律：一个 `h(...)` = 一次 `createElement`；文本孩子走 `setElementText`；属性走 `patchProp`；子树建完才整棵 `insert` 进容器。挂载完成后 onMounted 钩子统一入队执行（demo 的「挂载状态」栏显示 Leaf onMounted）。
+断点：断在 index.js 的 `createApp` 返回处与 `app.mount` 内，看 innerHTML → compile → 定义根组件 render → 清空容器 → 工厂 mount 的顺序；断在 `mountComponent`，看 setup 落定 4 个 ref → effect 首跑同步完成子树挂载。
 
-关键函数摘录：`h` / `createVNode` 见 4.2 节；shapeFlag 落位与 `patch` 分派见 4.3 节；`setupComponent` / `setupStatefulComponent`（实例化与 setup）见 4.4 节；`setupRenderEffect`（渲染 effect 的挂载 / 更新双分支）与 nodeOps / `patchProp` 见 4.5 / 4.1 节；`mountComponent` 与钩子触发时机见 4.7 节；`provide` / `inject`（主题条原型链）见 4.9 节。
+#### 5.3.2 更新 · 改 message（diff 全链）
 
-断点建议：
-
-- 断在 `mount`（createAppAPI 内）：看 container._vnode 为空，走 patch(null, …)
-- 断在 `setupComponent`：看 setupState 建好、proxyRefs 解包前后的差异
-- 断在 `componentUpdateFn` 挂载分支：单步进 `patch(null, subTree)`，看 mountElement 逐层递归
-- 对照页面左栏 VNode 树：每个 `h(...)` 节点对应一次 createElement / insert
-
-demo 入口：`./code/vue3/mini-vue/demo/demo-mount.html`
-
-### 5.4 更新链路：set → trigger → 批处理调度 → diff
-
-对应 demo：`demo-diff.html`——有 key 列表（删首项 / 删中间 / 追加 / 重置），「同一 tick 连删 3 项」按钮演示批处理（渲染次数只 +1，最终值一致）。
+一次文本更新也要从调度器一路走完 patch 的分发链——这是后面所有更新操作的共同骨架：
 
 ```
-组件内按钮 / 页面操作（同一 tick 可多次）
-   │
-   ▼ createSetter（set 陷阱）              reactivity.js
-   │   Reflect.set → 值变化 → trigger
-   ▼ trigger
-   │   渲染 effect 带 scheduler
-   ▼ queueJob(job)                        runtime-core.js
-   │   queue.includes 去重 → Promise.resolve().then(queueFlush)
-   ▼ flushJobs（微任务）                    runtime-core.js
-   │   统一执行 → 渲染 effect 重跑
-   ▼ componentUpdateFn 更新分支
-   │   renderComponentRoot 拿新 subTree
-   ▼ patch(n1 = 旧 subTree, n2 = 新 subTree)
-   │   isSameVNodeType 同类型 → processElement
-   ▼ patchElement → patchChildren          runtime-core.js
-   │   静态节点（patchFlag=0）直接跳过
-   ▼ patchKeyedChildren                    runtime-core.js
-       头头同步 → 尾尾同步 → 有 key 中间段：
-       旧 key→index 映射配对 → 复用不动 / 移动 / 新增 → 卸载多余旧节点
+主流程                                        patch 分发与比对（runtime-core.js）
+──────────────────────────────────────────────────────────────────────
+root.message = 'Hello MiniVue!'  reactivity.js
+  │ trigger（机制见 3.3）
+  ▼
+queueJob → 微任务 flushJobs      runtime-core.js（见 4.5.2）
+  ▼
+componentUpdateFn 更新分支       runtime-core.js（见 4.5.3）
+  │ 重跑 render() → patch(prevSubTree, nextSubTree)
+  ▼
+patch（两个 Fragment）────────→  processFragment（n1 有值）→ patchChildren
+                                 │ 两边都是数组 → patchKeyedChildren 头同步
+                                 │ 4 个孩子 type+key 全同 → 逐个递归 patch：
+                                 ├ p1     → processElement → patchElement → patchChildren
+                                 │          文本不等 → setElementText ×1   ← 唯一内容改动
+                                 ├ p2     → patchElement → patchChildren
+                                 │          "count = 0" === "count = 0" → 0 操作
+                                 ├ button → patchElement
+                                 │          onClick 闭包变 → 解绑旧绑新 addEventListener ×1
+                                 └ ul     → patchElement → patchChildren
+                                            patchKeyedChildren：li 全同 → 0 操作
 ```
 
-分步实例走读（对象是 demo-diff 的有 key 列表 `[a, b, c]`；输入是真实操作，输出为 lib 实际运行产物）：
+**queueJob（runtime-core.js）**：
 
-**步骤① set → trigger：一次 shift 写了三格**
+```
+目的: job 入队去重，排一次微任务（4.5.2）
+输入: 渲染 effect 的 scheduler（本次 1 次数据变更触发 1 次）
+输出: 队列 1 个 job；currentFlushPromise 排进微任务
+```
 
-输入（demo「删首项」按钮的真实代码）：
+**patch（runtime-core.js）**：
 
-> 示意片段（无配套脚本）
+```
+目的: 新旧 VNode 比对的统一入口（4.2）
+输入: n1 = prevSubTree、n2 = nextSubTree（两个都是 Fragment）
+输出: n1 有值 → 分发进 processFragment 走更新
+```
+
+**patchKeyedChildren（runtime-core.js，完整函数见 lib）**：
+
+```
+目的: 有 key 列表的最小化 diff（头同步 → 尾同步 → 判定 → 配对）
+输入: c1 / c2 = Fragment 的 4 个孩子（p / p / button / ul，type+key 全同）
+输出（副作用）——逐个递归 patch 后落到宿主的全部副作用:
+      setElementText <p> ← "Hello MiniVue!"    ← p1：文本不等，唯一的内容改动
+      addEventListener <button> click          ← button：新 render 的 onClick 闭包变，解绑旧绑新
+      （p2、ul/li：文本全部相同，0 次 DOM 操作）
+```
+
+**demo 实测 —— nextTick 前后读 DOM**（demo-app.html「改 message」按钮内置对照，状态行显示）：
+
+```
+同步读=「Hello vue!」（DOM 未动） → await nextTick() 后读=「Hello MiniVue!」（已落定）
+```
+
+印证 4.5.2：写入只改了 ref，渲染 effect 排进微任务——同步读永远拿旧值。
+
+断点：断在 `patch`（n1 / n2 两个 Fragment）、`processElement`（p 的旧 / 新 VNode）、`patchElement`（props 与孩子的比对）——可自行验证比对发生在 patchElement → patchChildren。
+
+#### 5.3.3 更新 · 一次改三项（批处理）
+
+```
+主流程                                        调度器内部（runtime-core.js，见 4.5.2）
+──────────────────────────────────────────────────────────────────────
+同一 tick 内 3 次同步写入
+（message 写入 + count 自增
+ + splice 删首项）────────────→  trigger ×7（机制见 3.3；5 次来自 splice 内部属性写入）
+                                 queueJob 被调 7 次（splice 内部 5 次属性写入：4 次搬移 + 1 次 length）
+                                 │ queue.includes 去重
+                                 ▼ 队列始终只有 1 个 job
+微任务 flushJobs 执行 1 次 ───→  一轮 patch 全部落定（中间状态从未渲染）
+```
+
+**queueJob（runtime-core.js）**：
+
+```
+目的: job 入队去重（4.5.2）
+输入: 同一 tick 的 7 次调用（message + count 2 次写入 + splice 内部 5 次属性写入）
+输出: 队列始终 1 个 job；微任务只排一次
+```
+
+**flushJobs（runtime-core.js）**：
+
+```
+目的: 微任务里统一执行队列（4.5.2）
+输入: queue（1 个渲染 job）
+输出: 执行 1 次 → setElementText ×2 + remove ×1，一轮 patch 全部落定
+```
+
+**实测**（demo-app.html「一次改三项」）：
+
+```
+==== 一次改三项：message 写入 + count 自增 + 删首项 ====
+  三次写入后立刻看：渲染次数 +0，DOM 仍是旧值
+  await nextTick() 之后：queueJob 被调 7 次（splice 内部 5 次属性写入），队列里始终只有 1 个 job
+  flushJobs 只执行 1 次：setElementText ×2 + remove ×1，一轮 patch 全部落定
+```
+
+断点：断在 `queueJob`（看 includes 去重）、`flushJobs`（确认执行时机在微任务）。
+
+#### 5.3.4 更新 · keyed diff：patchKeyedChildren 算法
+
+前提：`isSameVNodeType` 判断是否是同一个节点——**type + key 都相同才算同一个 vnode，可以复用**。进到这一步的路径：ul 的 `patchElement` → `patchChildren`（4.2.3）→ 两边都是数组 children → `patchKeyedChildren(c1, c2, container, parentAnchor)`。
+
+```
+c1：旧 children；c2：新 children
+i：头同步指针（往右推）；e1 / e2：旧 / 新列表末尾（尾同步往左推）
+```
+
+demo 操作：todos `[a, b, c, d, e]`（key 1~5）→ `[a, d, f, b, e]`（key 1、4、6、2、5）。ul 的 children 前后各夹一个空白文本节点（模板换行缩进，下文图中画成 `·`，key 为 null 记作 `-`），c1 / c2 实际各 7 项，图中「列表」行是下标，每行下方的数字行就是该行各格的 key 值。
+
+diff 全程做完，DOM 只动 3 次：
+
+```
+  ✂ remove  c   （新列表查无 key 3）
+  ★ mount   f   （新增）
+  ↔ insert  d   （挪到 f 前面）
+a、b、e 一根手指都不动——这就是"最小化更新"。下面五幕看它怎么推出来的。
+```
+
+**第 1 幕 · 头同步（前缀匹配）**——从队首点名：type + key 一样 → patch 复用，不一样 → 停
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`（patchKeyedChildren）
 
 ```js
-todos.shift()   // reactive 数组 [a, b, c] → [b, c]
-```
-
-输出（真实留痕）：原生 shift 内部是「index 0 ← b、index 1 ← c、length 3 → 2」三次属性写入，每次都走 set 陷阱 → 值变了 → trigger，渲染 effect 的 scheduler 被叫 3 次。列表渲染 effect 的依赖正落在 index 0/1/2 与 length 这些键上（render 里 `.map` 逐项读时 track）。
-
-**步骤② queueJob：3 次调用，1 个 job**
-
-输出（真实计数）：`queueJob` 被调用 **3 次**，队列里始终只有 **1 个 job**（`queue.includes` 去重），微任务里 `flushJobs` 执行 **1 次**。批处理按钮「同一 tick 连删 3 项」更夸张：`queueJob` 被叫 **6 次**，去重后仍只 flush **1** 个 job——这就是渲染次数不随写入次数增长的全部机制。
-
-**步骤③ 更新分支：新旧 children 对比**
-
-输入（flush 时只发生一次 diff——旧 children 是上一轮 subTree 的 ul 孩子引用，新 children 是重跑 render 的产物；真实产物）：
-
-> 示意片段（无配套脚本）
-
-```json
-{
-  "旧 ul.children": [
-    { "tag": "li", "key": 1, "children": "#1 a" },
-    { "tag": "li", "key": 2, "children": "#2 b" },
-    { "tag": "li", "key": 3, "children": "#3 c" }
-  ],
-  "新 ul.children": [
-    { "tag": "li", "key": 2, "children": "#2 b" },
-    { "tag": "li", "key": 3, "children": "#3 c" }
-  ]
+// —— 第 1 步 从头同步（前缀匹配）：type + key 相同 → 就地 patch 复用。
+//    一旦不匹配立即停——"跳过不匹配的继续往后找同类"是第 4 步按 key 建索引的活，这里不做
+while (i <= e1 && i <= e2) {
+    const n1 = c1[i]
+    const n2 = c2[i]
+    if (!isSameVNodeType(n1, n2)) break
+    patch(n1, n2, container, parentAnchor)
+    i++
 }
 ```
 
-**步骤④ patchKeyedChildren：本例全程零移动**
-
-对着实现手推这组输入（`i` 从头、`e1/e2` 从尾）：
-
 ```
-① 头同步：c1[0](li, key=1) vs c2[0](li, key=2)   → 同类型但 key 不同 → break（i=0）
-② 尾同步：c1[2](key=3) vs c2[1](key=3)           → 同 key → patch（文本没变，0 次 DOM 操作）
-           c1[1](key=2) vs c2[0](key=2)          → 同 key → patch → 新列表耗尽（e2 越过头）
-③ 判定：新列表已耗尽（i > e2）而旧列表还剩 li#1  → 走「旧多出来的全卸载」分支
-④ unmount(li#1)
+列表  0     1     2     3     4     5     6
+c1 |  ·  |  a  |  b  |  c  |  d  |  e  |  ·  |
+      -     1     2     3     4     5     -
+c2 |  ·  |  a  |  d  |  f  |  b  |  e  |  ·  |
+      -     1     4     6     2     5     -
+      ✓     ✓     ✗ break（b ≠ d）
+→ 头部 · 和 a 复用（0 宿主操作），i 停在 2
 ```
 
-输出（宿主操作序列真实留痕——本次更新的全部 DOM 操作就这一条）：
+**第 2 幕 · 尾同步（后缀匹配）**——从队尾点名：e1 / e2 往左推，同理
 
-```
-remove <li> "#1 a"
-```
-
-最终 DOM（真实产物）：
-
-```
-<ul>
-  <li>#2 b</li>
-  <li>#3 c</li>
-</ul>
-```
-
-有 key 的意义就在这：#2 / #3 的 DOM 节点被**原样复用**（文本对比相同，连 setText 都省了），消失的 #1 被**精确卸载**——不存在按下标错位、把 b/c 的内容写进别人节点这种事。
-
-**批处理实测**（demo「同一 tick 连删 3 项」按钮，真实数据）：同步阶段 `todos.length` 已是 0，但列表 DOM 仍是 3 个 li（渲染 effect 还在队列里）；微任务 flush 后 `flushJobs` 执行 1 次，宿主操作一次性 `remove` 3 次，列表直接从 3 项变 0 项——中间状态从未出现在页面上。
-
-关键函数摘录：`queueJob` / `queueFlush` / `flushJobs` / `nextTick` 见 4.5 节；`patchElement` / `patchChildren` / `patchKeyedChildren` 见 4.6 节；`trigger` 见 3.3 节。
-
-断点建议：
-
-- 断在 `queueJob`：同一 tick 连点 3 次「删首项」，看队列始终只有 1 个 job
-- 断在 `flushJobs`：确认执行时机在微任务——nextTick 回调排在其后（页面按钮里用 `M.nextTick(refreshTree)` 刷新 VNode 树即此原理）
-- 断在 `patchKeyedChildren` 头尾同步段：删首项时按 key 配对——5.4 步骤④的手推与 demo 实测一致：#2/#3 原地复用，全程零移动，只有 li#1 被精确卸载（宿主操作仅 1 次 remove）
-- 无 key 列表的对照行为（按下标就地改写、内容错位）见 4.6 节末的两种列表对照——demo 只保留有 key 列表，专注看精确 diff
-
-demo 入口：`./code/vue3/mini-vue/demo/demo-diff.html`
-
-### 5.5 卸载链路：render(null) → unmount → effect.stop
-
-对应 demo：`demo-unmount.html`——进页面自动挂载，「卸载应用」后点「卸载后改 count」：数据确实变了，但渲染区无任何变化（无变化即演示结果）；「重新挂载」是全新 setup、全新渲染 effect。
-
-```
-M.render(null, 容器)                     runtime-core.js（createRenderer 内）
-   │   container._vnode 存在 → 卸载
-   ▼ unmount(vnode, doRemove)            runtime-core.js
-   │   shapeFlag 分派
-   ▼ 组件分支（STATEFUL_COMPONENT）
-   │   unmounted 钩子逐个同步执行
-   │   update.effect.stop()              reactivity.js
-   │   cleanupEffect 退订全部依赖
-   ▼ unmount(subTree) 递归整棵树
-   │   Fragment / 元素 → unmountChildren
-   ▼ hostRemove(el)                      index.js nodeOps
-       DOM 从容器摘除；container._vnode = null
-       此后再写状态 → trigger 找不到订阅 → 渲染区无变化
-```
-
-分步实例走读（App 含一个 Child 子组件；输入是真实调用，输出为 lib 实际运行产物）：
-
-**步骤① render(null)：卸载入口**
-
-输入（demo「卸载应用」按钮的真实代码）：
-
-> 示意片段（无配套脚本）
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`（patchKeyedChildren）
 
 ```js
-M.render(null, box)   // box._vnode 存在 → unmount(box._vnode)，随后 box._vnode = null
+// —— 第 2 步 从尾同步（后缀匹配）：e1/e2 往左推，同理。
+//    "末尾追加 / 末尾不变"这类最常见场景，到这里就全部消化完了
+while (i <= e1 && i <= e2) {
+    const n1 = c1[e1]
+    const n2 = c2[e2]
+    if (!isSameVNodeType(n1, n2)) break
+    patch(n1, n2, container, parentAnchor)
+    e1--
+    e2--
+}
 ```
 
-**步骤② unmount 组件分支：钩子先于退订**
+```
+列表  0     1     2     3     4     5     6
+c1 |  ·  |  a  |  b  |  c  |  d  |  e  |  ·  |
+      -     1     2     3     4     5     -
+c2 |  ·  |  a  |  d  |  f  |  b  |  e  |  ·  |
+      -     1     4     6     2     5     -
+                        ✗     ✓           ✓
+→ 从右往左点名：尾部 · 复用 → e 复用 → d ≠ b 停；e1 = e2 = 4
+```
 
-输出（真实钩子顺序——App 的钩子先执行，递归到 Child 才轮到它）：
+**第 3 幕 · 边界：一边先点完名 = 纯增 / 纯删**
+
+`i > e1` → 新列表中间段全是新增，逐个挂载；`i > e2` → 旧列表中间段全是删除，逐个卸载——不用建索引、不用算 LIS，两个 if 各自 return（快速通道，演示见 5.3.5）。本例两边都有剩，不触发，进入第 4 幕。
+
+**第 4 幕 · 中间乱序区（核心）**——头尾同步后，中间夹住的三格 `[b, c, d] → [d, f, b]` 就是乱序区（s1 = s2 = i = 2）
+
+**4.1 发座位表：按 key 建索引 keyToNewIndex**
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`（patchKeyedChildren）
+
+```js
+// ① 按 key 建索引 keyToNewIndex：key → 它在新列表的下标（绝对下标）。
+//    目的：之后每个旧节点 O(1) 查一次就知道"我还在不在、在第几位"，
+//    免掉旧×新两两对比的 O(n²)；key 是 diff 的配对依据
+const keyToNewIndex = new Map()
+for (let j = s2; j <= e2; j++) {
+    if (c2[j].key !== null) keyToNewIndex.set(c2[j].key, j)
+}
+```
 
 ```
-App unmounted 钩子
-Child unmounted 钩子
+新乱序区 c2[2..4] = [d, f, b]，逐个登记座位号（key → 新列表下标）：
+    d(key4) → 2      f(key6) → 3      b(key2) → 4
+→ keyToNewIndex = {4→2, 6→3, 2→4}（与调试器一致）
 ```
 
-顺序是刻意安排的：先跑钩子再 `update.effect.stop()`——反了会内存泄漏（依赖还挂着、更新还会来）。
+**4.2 对号入座：遍历旧乱序区，查表填 map；查无 → 卸载**
 
-**步骤③ effect.stop：退订依赖**
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`（patchKeyedChildren）
 
-输出（`describeDeps()` 卸载前后的真实对照）：
+```js
+// ② 遍历旧乱序区，产出 newIndexToOldIndexMap（下文简称 map）——
+//    一张"新列表乱序区每一格来自旧列表哪里"的登记表：
+//      下标 = 新列表乱序区的相对位置（0,1,2...）
+//      值   = 旧列表下标 + 1（+1 是为了把 0 让出来表示"这格是新增"），0 = 新增待挂载
+const toBePatched = e2 - s2 + 1 // 新乱序区要落的格子总数：闭区间 [s2..e2] 的元素个数 = 差 + 1。
+//                                map 必须一格不缺——LIS 和第 5 步都按它遍历
+const newIndexToOldIndexMap = new Array(toBePatched).fill(0) // 先全填 0 = "全是新增"，配对到再覆盖
+let moved = false // 只要出现一次"逆序配对"，就说明有节点要挪动——才值得算 LIS
+let maxNewIndexSoFar = 0 // 到目前为止配对到的最大新下标；拿它和当前比较，逆序立刻现形
+
+for (let j = s1; j <= e1; j++) {
+    const prevChild = c1[j]
+    // 没 key 的节点查不了表，退化成按下标硬对齐（s2 + 相对偏移）——
+    // 这正是"用 index 当 key"时节点内容串位等怪现象的根源
+    const newIndex = prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
+
+    if (newIndex === undefined || newIndex > e2) {
+        unmount(prevChild, true) // 查无（或越界）→ 新列表已经没有它 → 卸载
+    } else {
+        // 登记进 map：newIndex - s2 把绝对下标换算成乱序区相对位置；j + 1 = 来自旧列表第 j 位
+        newIndexToOldIndexMap[newIndex - s2] = j + 1
+        // 新下标一路递增 = 旧序与新序一致，这段节点谁都不用挪；
+        // 一旦比 maxNewIndexSoFar 小（逆序）→ 有节点要挪，标记 moved
+        if (newIndex >= maxNewIndexSoFar) maxNewIndexSoFar = newIndex
+        else moved = true
+        patch(prevChild, c2[newIndex], container, parentAnchor) // 还在 → 就地更新（内容同则 0 宿主操作）
+    }
+}
+```
 
 ```
-卸载前：  {"_value":0,"__v_isRef":true}  value → 1 个 effect
+map 是一张"登记表"，先分清它的两个角色：
+    下标 → 新列表乱序区的相对位置（0,1,2...），一格对一个格子：0=d槽 1=f槽 2=b槽
+    值   → 这一格的来源：旧列表下标 + 1（+1 把 0 让出来表示"新增"），没有来源 = 0
+
+初始 [0, 0, 0]：全按"新增"预留，配对到谁再覆盖谁
+旧乱序区 [b, c, d] 逐个查座位表：
+    b(key2) → 新下标 4 → map[4-2]（绝对换算相对）= 2+1 = 3   ✓ 还在，patch
+    c(key3) → 查无此 key                                    ✂ 卸载（"谁被删了"在这一步落定）
+    d(key4) → 新下标 2 → map[2-2] = 4+1 = 5                 ✓ 还在；2 < 已出现的 4 → 逆序 → moved = true
+
+→ map = [ 5,  0,  3 ]，moved = true
+          d槽  f槽  b槽      ← 下标（0/1/2）= 新乱序区的位置
+    读法：d槽 值 5 → 来自旧列表下标 5-1 = 4（li#4）
+          f槽 值 0 → 旧列表没有它 = 新增
+          b槽 值 3 → 来自旧列表下标 3-1 = 2（li#2）
+```
+
+**4.3 求 LIS：找"来源顺序没变"的格子 = 不用挪的**
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`（patchKeyedChildren）
+
+```js
+// ③ 求 LIS（最长递增子序列，贪心 + 二分，O(n log n)）：
+//    map 里"值递增"的段 = 旧序与新序一致的节点——它们本来就在正确位置，不用挪。
+//    LIS 把"必须挪"的节点数压到最少；顺序完全没变时 moved = false，这里直接跳过
+const increasingNewIndexSequence = moved ? getSequence(newIndexToOldIndexMap) : []
+let seqIdx = increasingNewIndexSequence.length - 1 // 从 LIS 末尾往前配对
+```
+
+```
+map = [ 5,  0,  3 ]
+        ↓   ↓   ↓
+       d槽  f槽  b槽
+递增的值：0 → 3（f槽 → b槽）→ LIS = [1, 2]（map 的下标）
+b 在 LIS 里：相对顺序没变 → 原地不动；d（来源 5）不在 → 要挪；
+f 槽 map = 0 是新增，不参与"挪不挪"，第 5 幕走挂载
+```
+
+**第 5 幕 · 倒序落 DOM**——从右往左扫新乱序区：右邻居先就位，才能当左邻的插入锚点
+
+> 摘自 `./code/vue3/mini-vue/lib/runtime-core.js`（patchKeyedChildren）
+
+```js
+// —— 第 5 步 从后往前遍历新乱序区，落 DOM：mount 新增 / insert 挪位 / LIS 命中跳过 ——
+//    为什么从后往前：后一个节点的 el 要先就位，才能当前一个节点的插入锚点
+for (let j = toBePatched - 1; j >= 0; j--) {
+    const nextIndex = s2 + j // 乱序区相对位置 → 新列表绝对下标
+    const nextChild = c2[nextIndex]
+    // 插入锚点 = 右邻居的 el（头尾同步 + 前序节点就位后天然正确）；乱序区右边界外 → 兜底 parentAnchor
+    const anchor = nextIndex + 1 < l2 ? c2[nextIndex + 1].el : parentAnchor
+    if (newIndexToOldIndexMap[j] === 0) {
+        patch(null, nextChild, container, anchor) // map = 0 → 旧列表没有 → 新增挂载
+    } else if (moved) {
+        // seqIdx < 0：LIS 已全部配对完；j !== LIS[seqIdx]：当前格不在 LIS 里 → 挪到正确位置
+        if (seqIdx < 0 || j !== increasingNewIndexSequence[seqIdx]) {
+            hostInsert(nextChild.el, container, anchor)
+        } else {
+            seqIdx-- // LIS 命中：本来就在正确位置 → 原地不动（这就是 LIS 的意义）
+        }
+    }
+}
+```
+
+```
+从右往左扫新乱序区 [d, f, b]：
+    b → 在 LIS → 跳过（0 操作）
+    f → map = 0 → mount f，插在右邻居 b 前面
+    d → 不在 LIS → insert d 到 f 前面
+宿主留痕：remove c + mount f + insert d = 3 次（呼应开场）
+最终 li 顺序：[a, d, f, b, e] ✓
+```
+
+断点：断在 `patchKeyedChildren`（看 i / e1 / e2 游标与 keyToNewIndex 的构建）、`getSequence`（看 map 输入与 LIS 返回下标）。
+#### 5.3.5 更新 · 新列表更长 / 旧列表更长（纯头尾，快速通道）
+
+「新列表更长（追加一项）」/「旧列表更长（移除末项）」两个按钮各自触发边界判断的两个分支——头同步把一边全部摘中，中间区只剩另一边的纯增或纯删，不进乱序区：
+
+```
+新列表更长：todos.push({ id: 7, text: '新7' })      旧列表更长：todos.splice(length-1, 1)
+  ▼                                                 ▼
+① 头同步全中：li 逐个复用，i 越过 e1                ① 头同步全中：li 逐个复用，i 越过 e2
+  ② 尾同步：已无可比的公共尾巴                       ② 尾同步：已无可比的公共尾巴
+  ▼                                                 ▼
+③ i > e1 且 i ≤ e2：中间段全是新增                 ④ i > e2 且 i ≤ e1：中间段全是删除
+  → mount 新 li（插在末尾锚点前）                    → unmount 末项 li
+```
+
+（c1 / c2 同样各含前后空白 Text 节点，图里略去。）
+
+**patchKeyedChildren（runtime-core.js）**：
+
+```
+目的: 有 key 列表的最小化 diff——③ / ④ 快速通道
+输入: 新列表更长 → c2 = c1 + [新项]；旧列表更长 → c2 = c1 去掉末项
+输出（副作用）: 新更长 → mountElement + insert <li> 新项 ×1；旧更长 → unmount 末项 + remove ×1
+```
+
+点题：③④ 不建 Map、不算 LIS——只有"两边都有剩"的乱序区才值得做 O(n log n) 优化。
+
+断点：断在 `patchKeyedChildren` 的 `if (i > e1)`（新更长）与 `else if (i > e2)`（旧更长）两个分支。
+
+#### 5.3.6 卸载
+
+```
+主流程                                        unmount 组件分支（runtime-core.js，见 4.2.3）
+──────────────────────────────────────────────────────────────────────
+appObj.unmount()              index.js
+  │ 对 container._vnode 调内部 unmount
+  ▼
+unmount 组件分支 ───────────→  ① unmounted 钩子（先跑——反了会内存泄漏：依赖还挂着、更新还会来）
+                               ② update.effect.stop()    ← 渲染 effect 停止订阅
+                               ③ 递归 unmount(subTree) → unmountChildren → hostRemove
+  ▼
+孩子先摘，根与锚点最后摘；#app 清空
+```
+
+**unmount（runtime-core.js）**：
+
+```
+目的: 组件 / 元素 / Fragment 的递归卸载（4.2.3）
+输入: appObj.unmount()（内部对 container._vnode 调 unmount）
+输出（副作用）: 见下方三组实测
+```
+
+**describeDeps 前后对照**（message 的 dep）：
+
+```
+卸载前：  {"_value":"Hello vue!","__v_isRef":true}  value → 1 个 effect
 卸载后：  （空）
 ```
 
-死写证据（真实产物）：卸载后把 `count.value = 99`——游离的 `<p>` 文本仍是 `"count = 0"`，渲染 effect 已 stop、不再重跑。demo 点「卸载后改 count」渲染区无任何变化，就是这一步的结果。
-
-**步骤④ hostRemove：DOM 摘除**
-
-输出（宿主操作序列真实留痕——孩子先摘，根最后摘）：
+**unmount 副作用 —— 宿主留痕**：
 
 ```
+remove <p> "Hello vue!"
 remove <p> "count = 0"
-remove <p> "child 区域"
-remove <div class="app">
+remove <button> "count + 1"
+remove <li> "#1 a" / "#2 b" / "#3 c" / "#4 d" / "#5 e"
+remove <ul>
+remove <#text> ×2                    ← Fragment 锚点
 ```
 
-容器子节点数 1 → 0（真实计数）；「重新挂载」= 全新 `createApp(App).mount`——全新 setup、全新渲染 effect，旧 effect 不会复活。
+**钩子计数与死写证据**：
 
-关键函数摘录：`unmount` / `mountComponent`（钩子触发时机）见 4.7 节；`cleanupEffect` / `stop` 见 3.4 节；`createRenderer` / `render` 与 nodeOps（`hostRemove`）见 4.1 节。
+```
+钩子计数：{"mounted": 1, "unmounted": 1}
+卸载后 root.count = 99 → 宿主操作记录为空，渲染区无任何变化（渲染 effect 已 stop，trigger 找不到订阅者）
+```
 
-断点建议：
+断点：断在 `unmount` 组件分支，看 unmounted 钩子先执行、渲染 effect 后 stop；卸载后改 count，在 `trigger` 里确认 depsMap 已空。
 
-- 断在 `unmount` 组件分支：看 unmounted 钩子先执行、渲染 effect 后 stop 的顺序
-- 断在 `cleanupEffect`：确认 effect 从 dep 里被移除
-- 卸载后点「卸载后改 count」，在 `trigger` 里确认 depsMap 已空——这就是「无变化」的根源
-- 点「重新挂载」再断 `setupComponent`：全新实例、全新 effect，与上一次挂载无任何共享
-
-demo 入口：`./code/vue3/mini-vue/demo/demo-unmount.html`
+demo 入口：`./code/vue3/mini-vue/demo/demo-app.html`
 
 ## 配套代码
 
-本篇配套在 `./code/vue3/mini-vue/` 下分成两层：`lib/` 是按 Vue3 源码包结构拆分的纯 JS 实现（零依赖、`<script>` 按序加载，全局暴露 `window.MiniVue`，全量 JSDoc 注释，文件头标了覆盖机制与建议断点），`demo/` 是 5 个分链路纯渲染页面（浏览器直接打开或起静态服务器访问，`F12 → Sources` 可随时断点）。
-
+本篇配套在 `./code/vue3/mini-vue/` 下分成两层：`lib/` 是按 Vue3 源码包结构拆分的纯 JS 实现（零依赖、`<script>` 按序加载，全局暴露 `window.MiniVue`，全量 JSDoc 注释，文件头标了覆盖机制与建议断点），`demo/` 是 3 个模块页面（编译 / 响应式 / 整体运行各一页；浏览器直接打开或起静态服务器访问，`F12 → Sources` 可随时断点）。
 **实现文件**（加载顺序即依赖顺序：shared → reactivity / compiler-core → runtime-core → index）：
-
 | 文件 | 内容 | 对应小节 |
 | ---- | ---- | ---- |
-| `./code/vue3/mini-vue/lib/shared.js` | 类型判断工具与 `ShapeFlags` 位标记（对应 @vue/shared） | 4.3 shapeFlag |
+| `./code/vue3/mini-vue/lib/shared.js` | 类型判断工具与 `ShapeFlags` 位标记（对应 @vue/shared） | 4.1 shapeFlag |
 | `./code/vue3/mini-vue/lib/reactivity.js` | `ReactiveEffect`（effect 栈 / cleanup）/ `track` / `trigger` / `reactive` / `readonly` / `ref` / `proxyRefs` / `computed` / `watch`（对应 @vue/reactivity） | 3.1~3.10 |
 | `./code/vue3/mini-vue/lib/compiler-core.js` | `parse` → `transform` → `generate` → `compile`（对应 @vue/compiler-core） | 二、编译原理 |
-| `./code/vue3/mini-vue/lib/runtime-core.js` | VNode / patch 分发 / keyed diff / 组件实例 / 渲染 effect / 调度器 / 生命周期 / props / provide-inject（对应 @vue/runtime-core） | 4.2~4.9 |
-| `./code/vue3/mini-vue/lib/index.js` | 浏览器宿主 `nodeOps` / `patchProp` + `createRenderer` 装配 + `window.MiniVue` 聚合（对应 @vue/runtime-dom） | 4.1 · 全篇入口 |
-
-**交互 demo**（每条链路一页，纯渲染演示：加载即渲染，只保留必要的交互按钮与渲染区，无日志无探针；时序与复用等教学点由「五、关键执行链路」的文字与代码摘录承担）：
-
+| `./code/vue3/mini-vue/lib/runtime-core.js` | VNode / patch 分发 / render 入口与元素、组件分流（processElement / mountElement / processComponent / updateComponent）/ 挂载与更新路径（mountElement / mountChildren / patchElement / patchChildren）/ keyed diff / 组件实例 / 渲染 effect / 调度器与 nextTick / 生命周期 / props / provide-inject（对应 @vue/runtime-core） | 4.1~4.5 |
+| `./code/vue3/mini-vue/lib/index.js` | 浏览器宿主 `nodeOps` / `patchProp` + `createRenderer` 装配 + 浏览器装配层 `createApp`（选择器 / in-DOM 模板 / `app.unmount()`）+ `window.MiniVue` 聚合（对应 @vue/runtime-dom） | 4.4.3 · 四章引言 · 5.3 · 全篇入口 |
+**交互 demo**（编译 / 响应式各一页、整体运行一页，纯渲染演示：加载即渲染，只保留必要的交互按钮与渲染区，无日志无探针；时序与复用等教学点由「五、关键执行链路」的文字与代码摘录承担）：
 | demo | 交互内容 | 对应小节 |
 | ---- | ---- | ---- |
 | `./code/vue3/mini-vue/demo/demo-compiler.html` | 编辑模板实时产出 AST / 静态标记 / render 代码三份产物 | 2.2 · 2.3 · 5.1 |
 | `./code/vue3/mini-vue/demo/demo-reactivity.html` | ref / reactive 深层属性 / computed 缓存读数 / watch 建立与 stop，四行 effect 驱动数值 | 3.1~3.9 · 5.2 |
-| `./code/vue3/mini-vue/demo/demo-mount.html` | 编译产物装配成组件挂进 `<div id="app">`，VNode 树与真实 DOM 左右对照 + provide/inject 主题条 | 4.2~4.5 · 4.9 · 5.3 |
-| `./code/vue3/mini-vue/demo/demo-diff.html` | 有 key 列表 diff（删首项 / 删中间 / 追加 / 重置）+ 同一 tick 连删 3 项批处理读数 | 4.5~4.6 · 5.4 |
-| `./code/vue3/mini-vue/demo/demo-unmount.html` | 卸载 → onUnmounted → effect.stop，卸载后改 count 渲染区无任何变化，支持重挂 | 4.7 · 5.5 |
+| `./code/vue3/mini-vue/demo/demo-app.html` | 官网 CDN 用法整体运行：in-DOM 模板 + `@click` / `v-for` / `:key` 编译挂载，页面层按钮触发改 message（含 nextTick 前后读 DOM 对照）/ 一次改三项（批处理）/ 乱序 + 插删（keyed diff 全算法：双端同步 + key 索引 + LIS）/ 新列表更长 / 旧列表更长（③④ 快速通道）/ 卸载 | 4.1~4.5 · 5.3 |
 
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
 - 上一篇：[React 高级与原理](../react/React%20高级与原理.md)
-- 下一篇：[Vue3 状态管理原理与实现](./Vue3%20状态管理原理与实现.md)

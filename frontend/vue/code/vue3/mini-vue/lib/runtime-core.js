@@ -3,13 +3,14 @@
 // 对应 Vue3 源码包：@vue/runtime-core
 // 依赖：shared.js（ShapeFlags / 类型判断）+ reactivity.js（effect / proxyRefs /
 //       shallowReadonly）；被 index.js 依赖
-// 覆盖机制（对应《Vue3 原理》第四章）：h / createVNode（4.2）、shapeFlag（4.3）、
-//   组件实例化与 setup（4.4）、mount / patch / unmount（4.5）、keyed diff（4.6）、
-//   生命周期（4.7）、props / slots（4.8）、provide / inject（4.9）、
-//   queueJob 微任务批处理（1.1 协作关系）
+// 覆盖机制（对应《Vue3 原理》第四章，按 VNode + patch 心智模型排布五节）：
+//   VNode 数据基石（4.1）、patch 调度中枢（4.2）、组件挂载（4.3）、
+//   元素挂载（4.4）、响应式 + effect 调度（4.5）
 // ★ 建议断点：createBaseVNode（shapeFlag）、patch（shapeFlag 分发）、
-//   patchKeyedChildren（头尾同步 + key 配对）、componentUpdateFn（挂载 / 更新）、
-//   queueJob / flushJobs（批处理）、mountComponent / unmount（生命周期）
+//   processFragment / mountElement（挂载递归）、componentUpdateFn（挂载 / 更新）、
+//   queueJob / flushJobs / nextTick（批处理）、patchKeyedChildren（头尾同步 + key 配对 + LIS）、
+//   mountComponent / unmount（生命周期）
+//   ——正好对应 demo-app 的四段链路：mount('#app') → 挂载 → 更新 → 卸载（文档 4.1~4.5 各阶段 / 5.3 总览）
 // 整体协作链路（一条数据改动的完整旅程）：
 //   组件 render 读响应式数据（track）→ 数据变化（trigger）→ 渲染 effect 的
 //   scheduler → queueJob 入队 → 微任务 flushJobs → patch 新旧 VNode →
@@ -44,11 +45,13 @@ const Comment = Symbol('Comment')
  * @returns {Object} VNode：{ type, props, key, children, shapeFlag, el, component }
  *
  * @example
- *   createBaseVNode('div', { id: 'a' }, 'hi')
- *   // → { type:'div', props:{id:'a'}, key:null, children:'hi',
- *   //     shapeFlag: 1|4 = 5 (ELEMENT|TEXT_CHILDREN), el:null, component:null }
- *   createBaseVNode(Child, { key: 1, msg: 'hi' }, { default: () => [...] })
- *   // → shapeFlag: 2|16 (STATEFUL_COMPONENT|SLOTS_CHILDREN)、key: 1
+ *   // 位① ELEMENT：type 是字符串标签（demo 的 p/button/ul/li 都走这）
+ *   createBaseVNode('p', null, 'Hello vue!') // → shapeFlag: 1|4 = 5 (ELEMENT|TEXT_CHILDREN)
+ *   // 位② ARRAY_CHILDREN：children 是数组（混入的原始字符串就地包成 Text VNode）
+ *   createBaseVNode('ul', null, [li1, li2]) // → shapeFlag: 1|8 = 9 (ELEMENT|ARRAY_CHILDREN)
+ *   // 位③ STATEFUL_COMPONENT：type 是组件对象；children 是插槽对象再叠 SLOTS_CHILDREN
+ *   createBaseVNode(App, null, { default: () => [...] })
+ *   // → shapeFlag: 2|16 (STATEFUL_COMPONENT|SLOTS_CHILDREN)；key 从 props 单独提到 vnode.key
  */
 function createBaseVNode(type, props, children) {
     const vnode = {
@@ -84,10 +87,6 @@ function createBaseVNode(type, props, children) {
  * @param {Object|null} [props] - 属性
  * @param {string|Array|Object|null} [children] - 孩子
  * @returns {Object} VNode
- *
- * @example
- *   createVNode('span', null, 'hi')  // → shapeFlag: ELEMENT|TEXT_CHILDREN = 5
- *   createVNode(MyComp, { msg: 1 })  // → shapeFlag: STATEFUL_COMPONENT = 2
  */
 function createVNode(type, props = null, children = null) {
     return createBaseVNode(type, props, children)
@@ -98,9 +97,6 @@ function createVNode(type, props = null, children = null) {
  *
  * @param {string} [text] - 文本内容
  * @returns {Object} shapeFlag 强制为 TEXT_CHILDREN 的 VNode
- *
- * @example
- *   createTextVNode('hi') // → { type: Symbol(Text), children: 'hi', shapeFlag: 4 }
  */
 function createTextVNode(text = '') {
     const vnode = createBaseVNode(Text, null, String(text))
@@ -113,9 +109,6 @@ function createTextVNode(text = '') {
  *
  * @param {string} [text] - 注释内容
  * @returns {Object} type 为 Comment 符号的 VNode
- *
- * @example
- *   normalizeVNode(null) // → 注释 VNode（createCommentVNode('') 的产物）
  */
 function createCommentVNode(text = '') {
     return createBaseVNode(Comment, null, text)
@@ -135,10 +128,11 @@ function createCommentVNode(text = '') {
  * @returns {Object} VNode
  *
  * @example
- *   h('div', { id: 'a' }, [h('span', null, 'hi')])
- *   // → 元素 + 数组孩子，shapeFlag: 1|8 = 9
- *   h('div', null, 'hi', 1)
- *   // → 编译产物形态：多带一个 patchFlag=1
+ *   // 分支① 元素 + props + children：demo 编译产物的主体形态
+ *   h('p', null, toDisplayString(ctx.message), 1)
+ *   // → patchFlag=1（TEXT）：更新时只重算文本；li 带 key 时 key 落到 vnode.key 供 diff 配对
+ *   // 分支② 对象组件：mount('#app') 的装配层把根组件包成 VNode
+ *   h(App) // → shapeFlag: STATEFUL_COMPONENT = 2、props: null
  */
 const h = (type, props, children, patchFlag) => {
     const vnode = createVNode(type, props, children)
@@ -156,12 +150,6 @@ const h = (type, props, children, patchFlag) => {
  *
  * @param {*} child - render 返回值 / children 数组里的任意一项
  * @returns {Object} 一定是一个 VNode
- *
- * @example
- *   normalizeVNode('hi')      // → 文本 VNode（children='hi'）
- *   normalizeVNode(null)      // → 注释 VNode
- *   normalizeVNode([v1, v2])  // → Fragment VNode（children=[v1归一, v2归一]）
- *   normalizeVNode(h('div'))  // → 原样返回
  */
 function normalizeVNode(child) {
     if (child === null || child === undefined || typeof child === 'boolean') {
@@ -179,10 +167,6 @@ function normalizeVNode(child) {
  * @param {Object} n1 - 旧 VNode
  * @param {Object} n2 - 新 VNode
  * @returns {boolean} 是否可复用
- *
- * @example
- *   isSameVNodeType(h('div'), h('div'))            // → true（key 同为 null）
- *   isSameVNodeType(h('li', { key: 1 }), h('li', { key: 2 })) // → false（key 不同）
  */
 const isSameVNodeType = (n1, n2) => n1.type === n2.type && n1.key === n2.key
 
@@ -208,8 +192,11 @@ const resolvedPromise = Promise.resolve()
  * @param {Function} job - 待执行函数（通常是组件的 instance.update）
  *
  * @example
- *   const job = () => console.log('flush')
- *   queueJob(job); queueJob(job) // → 队列里只有 1 个，微任务里只执行 1 次
+ *   // 分支① 首次入队：改 message → scheduler 调 queueJob(job)
+ *   const job = instance.update
+ *   queueJob(job) // → includes 未命中 → 入队；queueFlush 把 flushJobs 挂进微任务（isFlushPending 闸门）
+ *   // 分支② 去重命中：「一次改三项」trigger 5 次调 5 次，同一个 job 只进队一次
+ *   queueJob(job) // → includes 命中，队列里始终只有 1 个 job，微任务只渲染 1 次
  */
 function queueJob(job) {
     if (!queue.includes(job)) queue.push(job) // 同一个 job 只排一次
@@ -245,10 +232,6 @@ function flushJobs() {
  *
  * @param {Function} [fn] - DOM 更新完成后执行的回调
  * @returns {Promise} 与本轮 flush 对齐的 Promise
- *
- * @example
- *   count.value = 1
- *   nextTick(() => console.log(el.textContent)) // → 此刻 DOM 已是 '1'
  */
 function nextTick(fn) {
     const promise = currentFlushPromise || resolvedPromise
@@ -268,11 +251,6 @@ function nextTick(fn) {
  *
  * @param {Object} instance - 组件实例（写入 props / propsRaw / attrs 三个字段）
  * @param {Object|null} rawProps - VNode 上带的原始 props
- *
- * @example
- *   // 组件声明 props: { msg: ... }，父组件传 { msg: 'hi', extra: 1 }
- *   // → instance.props = { msg: 'hi' }（readonly）
- *   //   instance.attrs = { extra: 1 }
  */
 function initProps(instance, rawProps) {
     const props = {}
@@ -314,10 +292,6 @@ function initSlots(instance, children) {
  *
  * @param {Object} rawSlots - { 槽名: 函数 | VNode | VNode[] }
  * @returns {Object} { 槽名: () => VNode[] }（渲染时调用即得孩子数组）
- *
- * @example
- *   normalizeObjectSlots({ default: () => [h('i')], header: h('b') })
- *   // → { default: 原函数, header: () => h('b') }（都变成可调用）
  */
 function normalizeObjectSlots(rawSlots) {
     const slots = {}
@@ -341,9 +315,6 @@ let currentScopeInstance = null
  * 挂载完成后在 mountComponent 里统一执行。
  *
  * @param {Function} fn - 回调
- *
- * @example
- *   setup() { onMounted(() => console.log('mounted')) }
  */
 const onMounted = fn => currentInstance && currentInstance.mounted.push(fn)
 /**
@@ -351,16 +322,13 @@ const onMounted = fn => currentInstance && currentInstance.mounted.push(fn)
  * 卸载时在 unmount 的组件分支里统一执行。
  *
  * @param {Function} fn - 回调
- *
- * @example
- *   setup() { onUnmounted(() => console.log('unmounted')) }
  */
 const onUnmounted = fn => currentInstance && currentInstance.unmounted.push(fn)
 
 // ============================================================
 // provide / inject：依赖注入（源码 src/runtime-core/apiInject.ts）
 //    ★ 断点：provide（原型链副本的创建时机）、inject（沿 parent 链向上查找）
-// 对应文档 4.9：初始与父实例共享同一个 provides；首次 provide 时才
+// 对应文档四章引言：初始与父实例共享同一个 provides；首次 provide 时才
 // 用 Object.create(parentProvides) 建原型链副本——此后"就近覆盖、向上穿透"。
 // ============================================================
 /**
@@ -370,11 +338,6 @@ const onUnmounted = fn => currentInstance && currentInstance.unmounted.push(fn)
  *
  * @param {string|symbol} key - 提供的键
  * @param {*} value - 提供的值
- *
- * @example
- *   // 祖先组件 setup：provide('theme', 'dark')
- *   // 中间组件没 provide → 与父共享，读到 'dark'
- *   // 某后代 setup：provide('theme', 'light') → 它自己的子树读到 'light'（就近覆盖）
  */
 const provide = (key, value) => {
     if (currentInstance) {
@@ -394,11 +357,6 @@ const provide = (key, value) => {
  *
  * @param {string|symbol} key - 要注入的键
  * @returns {*} 祖先提供的值；无任何祖先提供时为 undefined
- *
- * @example
- *   // 子组件 setup（父级 provide('theme', 'dark') 后）：
- *   inject('theme') // → 'dark'
- *   inject('nothing') // → undefined
  */
 const inject = key => {
     if (currentInstance) {
@@ -452,6 +410,13 @@ function createComponentInstance(vnode, parent) {
  * 组件初始化三步走：props → slots → 有状态组件的 setup。
  *
  * @param {Object} instance - 组件实例
+ *
+ * @example
+ *   // demo-app 根组件（vnode.props=null、children 是数组）：
+ *   setupComponent(instance)
+ *   // → initProps：没声明 props → instance.props = {}
+ *   // → initSlots：children 非 SLOTS_CHILDREN → slots = {}
+ *   // → setupStatefulComponent：执行 setup，落定 4 个 ref + increment 到 setupState
  */
 function setupComponent(instance) {
     initProps(instance, instance.vnode.props)
@@ -494,11 +459,6 @@ function setupStatefulComponent(instance) {
  *
  * @param {Object} instance - 组件实例
  * @returns {{get: Function, set: Function}} Proxy handlers
- *
- * @example
- *   // setup 返回 { count: ref(0) } 后：
- *   this.count  // → get 命中 setupState → 解包后的 0
- *   this.count = 1 // → set 写回 setupState.count.value
  */
 const publicInstanceProxyHandlers = instance => ({
     get(target, key) {
@@ -564,11 +524,6 @@ function renderComponentRoot(instance) {
  * @param {Object|null} prevProps - 旧 props
  * @param {Object|null} nextProps - 新 props
  * @returns {boolean} true 表示有变化（需要 updateProps + 重渲染）
- *
- * @example
- *   hasPropsChanged({ a: 1 }, { a: 2 })  // → true
- *   hasPropsChanged({ a: 1 }, { a: 1 })  // → false
- *   hasPropsChanged({ a: 1 }, { a: 1, b: 2 }) // → true（键数量不同）
  */
 // 父组件重新渲染后发现 props / slots 变了，才需要通知子组件重渲染
 // h(Child) 不传 props 时 vnode.props 是 null，先兜成空对象再比
@@ -610,6 +565,14 @@ function updateProps(instance, nextProps) {
  * @param {Object} container - 挂载容器
  * @param {Object|null} anchor - 插入锚点
  * @param {Function} patch - renderer 的 patch（闭包传入，避免全局引用）
+ *
+ * @example
+ *   // 分支① isMounted=false 挂载：mountComponent 第 3 步，effect 首跑同步执行
+ *   setupRenderEffect(instance, rootVNode, el, null, patch)
+ *   // → renderComponentRoot 得 Fragment subTree → patch(null, subTree) → isMounted 置 true
+ *   // 分支② 更新：改 message 后 scheduler 调 queueJob，微任务里重跑 componentUpdateFn
+ *   instance.update()
+ *   // → patch(prevSubTree, nextSubTree) 最小化更新子树
  */
 function setupRenderEffect(instance, initialVNode, container, anchor, patch) {
     const componentUpdateFn = () => {
@@ -649,11 +612,6 @@ function setupRenderEffect(instance, initialVNode, container, anchor, patch) {
  *   createElement / createText / createComment / setText / setElementText /
  *   insert / remove / nextSibling / patchProp
  * @returns {{render: Function, createApp: Function, patch: Function, unmount: Function}}
- *
- * @example
- *   const { render, createApp } = createRenderer(browserNodeOps)
- *   render(h('div', null, 'hi'), document.querySelector('#app'))
- *   createApp(RootComponent).mount('#app')
  */
 function createRenderer(options) {
     const {
@@ -700,6 +658,17 @@ function createRenderer(options) {
      * @param {Object} n2 - 新 VNode
      * @param {Object} container - 宿主容器
      * @param {Object|null} anchor - 插入锚点（插在它前面；null 追加到末尾）
+     *
+     * @example
+     *   // 分支① n1=null 挂载：demo 加载即触发（render 首帧 / setupRenderEffect 首跑）
+     *   patch(null, rootVNode, container, null)
+     *   // → processComponent 建组件 → 子树长出后 mountElement 递归挂 DOM
+     *   // 分支② 同类型更新：改 message 后微任务里触发
+     *   patch(prevSubTree, nextSubTree, container, null)
+     *   // → 同为 Fragment → patchChildren → patchElement 只动 patchFlag 标记的文本
+     *   // 分支③ 类型/key 变化：demo 单组件走不到
+     *   patch(oldDivVNode, newSpanVNode, container, anchor)
+     *   // → 记锚点 → unmount 旧的 → n1 置 null 走全新挂载
      */
     function patch(n1, n2, container, anchor) {
         if (n1 === n2) return
@@ -795,7 +764,7 @@ function createRenderer(options) {
 
     // ---------- 元素 ----------
     /**
-     * 元素的挂载 / 更新分流。
+     * 元素的挂载 / 更新分流：n1 为 null → mountElement（全新挂载），否则 patchElement（就地更新）。
      *
      * @param {Object|null} n1 - 旧 VNode
      * @param {Object} n2 - 新 VNode
@@ -814,6 +783,12 @@ function createRenderer(options) {
      * @param {Object} vnode - 要挂载的元素 VNode
      * @param {Object} container - 宿主容器
      * @param {Object|null} anchor - 插入锚点
+     *
+     * @example
+     *   // demo 的 <button @click="increment">count + 1</button>：四步依次执行
+     *   mountElement(buttonVNode, container, anchor)
+     *   // → createElement button → patchProp 落 addEventListener（@click 的编译产物）
+     *   //   → setElementText "count + 1"（文本孩子一步落位）→ insert 进容器
      */
     function mountElement(vnode, container, anchor) {
         vnode.el = hostCreateElement(vnode.type)
@@ -851,6 +826,13 @@ function createRenderer(options) {
      * @param {Object} n2 - 新 VNode
      * @param {Object} container - 宿主容器
      * @param {Object|null} anchor - 插入锚点
+     *
+     * @example
+     *   // demo-app「改 message」：新子树里的 <p> 与旧的 type/key 相同 → 分流到这
+     *   patchElement(prevP, nextP, container, anchor)
+     *   // → el 复用；props 双向 diff（onClick 每轮都是新闭包 → 解绑旧回调绑新回调）
+     *   // → patchChildren：文本孩子 "Hello vue!" !== "Hello MiniVue!" → setElementText 1 次
+     *   //   （静态的 <p>"count = 0" 文本相同、ul 里的 li 全同——一个宿主操作都不产生）
      */
     function patchElement(n1, n2, container, anchor) {
         const el = (n2.el = n1.el)
@@ -906,34 +888,80 @@ function createRenderer(options) {
 
     // ---------- 列表 diff：先对齐头尾，再处理中间的乱序部分 ----------
     /**
-     * 带 key 列表的 diff（真实 Vue 最长递增子序列算法的简化版）：
-     *   1. 从头同步：i 左移，类型+key 相同的就地 patch；
-     *   2. 从尾同步：e1/e2 左移，同理；
-     *   3. 旧遍历完（i > e1）新还有剩 → 剩下的全是新增，逐个插入；
-     *   4. 新遍历完（i > e2）旧还有剩 → 剩下的全是删除，逐个卸载；
-     *   5. 中间乱序：按新列表的 key 建索引 → 旧节点查表决定 patch 还是卸载
-     *      （没 key 的按下标硬对齐——这正是"用 index 当 key"引发错乱的原因）→
-     *      最后从后往前把新列表中间段的节点挪/插到正确位置。
-     * 从后往前是因为前一个节点的锚点（后一个节点的 el）必须先就位。
+     * 最长递增子序列（LIS，真实 Vue 同款 O(n log n) 解法）。
+     * diff 第 5 步用它找出"本来就在正确位置、不需要移动"的最多节点，
+     * 剩下的节点才需要 insert——这就是 Vue3 diff "最小化移动"的出处。
+     *
+     * 算法（贪心 + 二分 + 前驱回溯）：
+     *   - result 维护"当前最长递增子序列的下标"（尾部替换用二分找位置，O(log n)）；
+     *   - p[i] 记录"以 i 结尾的子序列里，i 的前一个元素下标"；
+     *   - 末尾从 result 最后一个元素沿 p 一路回溯，把 result 还原成真正的子序列下标。
+     *
+     * @param {number[]} arr - 每一项的值（这里传 newIndexToOldIndexMap：0 表示"新节点没有旧对应，待挂载"，会被跳过）
+     * @returns {number[]} 最长递增子序列的"下标"序列（升序）
+     */
+    function getSequence(arr) {
+        const p = arr.slice() // p[i]：子序列中 i 的前驱下标（回溯用）
+        const result = [0] // 存下标：当前 LIS 各位置对应的元素下标
+        let i, j, u, v, c
+        const len = arr.length
+        for (i = 0; i < len; i++) {
+            const arrI = arr[i]
+            if (arrI !== 0) {
+                // 0 是"新节点没有旧对应"的占位，不参与 LIS
+                j = result[result.length - 1]
+                if (arr[j] < arrI) {
+                    // 比 result 尾部还大 → 直接接上，LIS 变长
+                    p[i] = j
+                    result.push(i)
+                    continue
+                }
+                // 否则二分找 result 里第一个 >= arrI 的位置，替换之（让尾部更小，后面更容易接）
+                u = 0
+                v = result.length - 1
+                while (u < v) {
+                    c = (u + v) >> 1
+                    if (arr[result[c]] < arrI) u = c + 1
+                    else v = c
+                }
+                if (arrI < arr[result[u]]) {
+                    if (u > 0) p[i] = result[u - 1] // 记前驱，末尾回溯时还原真实序列
+                    result[u] = i
+                }
+            }
+        }
+        // 回溯：result 现在存的不是真实序列（有尾部替换过），沿 p 前驱链还原
+        u = result.length
+        v = result[u - 1]
+        while (u-- > 0) {
+            result[u] = v
+            v = p[v]
+        }
+        return result
+    }
+
+    /**
+     * 带 key 列表的最小化 diff（keyed 算法 + LIS 移动优化，真实 Vue 同款）。
+     * 主线：头同步 → 尾同步 → 边界（纯增 / 纯删）→ 乱序（建索引 → 配对 → LIS → 倒序落 DOM）。
+     * 每步的作用、每个属性的来龙去脉见函数体内逐行注释；逐步走读见《Vue3 原理》5.3.4。
      *
      * @param {Array} c1 - 旧孩子数组
      * @param {Array} c2 - 新孩子数组
      * @param {Object} container - 宿主容器
      * @param {Object|null} parentAnchor - 父级插入锚点（新列表末尾越界时的兜底锚点）
-     *
-     * @example
-     *   // 旧 [a,b,c] → 新 [c,a,b]：
-     *   // 头同步 a≠c 断、尾同步 c≠a 断 → 全乱序走第 5 步：
-     *   // key 索引 {a:0,b:1,c:2}；旧 a/b/c 全部查到 → 全 patch 复用，不重建；
-     *   // 从后往前 insert 把顺序摆正，宿主上最终顺序 [c,a,b]
      */
     function patchKeyedChildren(c1, c2, container, parentAnchor) {
+        // 游标与边界：
+        //   i  —— 头同步指针，从 0 往右推
+        //   e1 —— 旧列表末尾下标；e2 —— 新列表末尾下标（尾同步往左推）
+        //   头尾各扫一轮之后，[i..e1] vs [i..e2] 夹住的中间段就是"乱序区"
         let i = 0
-        const l2 = c2.length
+        const l2 = c2.length // 新列表总长：第 3 步算兜底锚点、第 5 步判越界都要用
         let e1 = c1.length - 1
         let e2 = l2 - 1
 
-        // 1. 从头同步：能对上的直接复用，一个属性都不多改
+        // —— 第 1 步 从头同步（前缀匹配）：type + key 相同 → 就地 patch 复用。
+        //    一旦不匹配立即停——"跳过不匹配的继续往后找同类"是第 4 步按 key 建索引的活，这里不做
         while (i <= e1 && i <= e2) {
             const n1 = c1[i]
             const n2 = c2[i]
@@ -942,7 +970,8 @@ function createRenderer(options) {
             i++
         }
 
-        // 2. 从尾同步
+        // —— 第 2 步 从尾同步（后缀匹配）：e1/e2 往左推，同理。
+        //    "末尾追加 / 末尾不变"这类最常见场景，到这里就全部消化完了
         while (i <= e1 && i <= e2) {
             const n1 = c1[e1]
             const n2 = c2[e2]
@@ -952,19 +981,19 @@ function createRenderer(options) {
             e2--
         }
 
-        // 3. 新列表更长：中间这一段全部是新增
+        // —— 第 3 步 边界：一边先扫完了，中间段就是纯增或纯删，不用"认真 diff" ——
         if (i > e1 && i <= e2) {
-            // 新增段插在"新列表里它后面的那个节点"之前；后面没有了就插到父级锚点（末尾）
+            // 旧的中段先耗尽 → 新列表中间段全是新增。
+            // 插入锚点 = 新列表里这批新增"后面的那个节点"（它已就位）；后面没有了 → 兜底父级锚点（末尾）
             const anchor = e2 + 1 < l2 ? c2[e2 + 1].el : parentAnchor
             while (i <= e2) {
-                patch(null, c2[i], container, anchor)
+                patch(null, c2[i], container, anchor) // n1 = null → 挂载
                 i++
             }
             return
         }
-
-        // 4. 旧列表更长：中间这一段全部要删除
         if (i > e2 && i <= e1) {
+            // 新的中段先耗尽 → 旧列表中间段全是删除，逐个卸载
             while (i <= e1) {
                 unmount(c1[i], true)
                 i++
@@ -972,39 +1001,77 @@ function createRenderer(options) {
             return
         }
 
-        // 5. 中间乱序：按 key 建索引，找出"哪些还在、哪些新增"
+        // —— 第 4 步 中间乱序（核心）：① 按 key 建索引 → ② 遍历旧区配对 → ③ 求 LIS ——
+        // 乱序区起点：头尾同步后新旧列表的 i 相等，所以 s1 / s2 共用同一个 i
         const s1 = i
         const s2 = i
+
+        // ① 按 key 建索引 keyToNewIndex：key → 它在新列表的下标（绝对下标）。
+        //    目的：之后每个旧节点 O(1) 查一次就知道"我还在不在、在第几位"，
+        //    免掉旧×新两两对比的 O(n²)；key 是 diff 的配对依据
         const keyToNewIndex = new Map()
         for (let j = s2; j <= e2; j++) {
             if (c2[j].key !== null) keyToNewIndex.set(c2[j].key, j)
         }
 
+        // ② 遍历旧乱序区，产出 newIndexToOldIndexMap（下文简称 map）——
+        //    一张"新列表乱序区每一格来自旧列表哪里"的登记表：
+        //      下标 = 新列表乱序区的相对位置（0,1,2...）
+        //      值   = 旧列表下标 + 1（+1 是为了把 0 让出来表示"这格是新增"），0 = 新增待挂载
+        const toBePatched = e2 - s2 + 1 // 新乱序区要落的格子总数：闭区间 [s2..e2] 的元素个数 = 差 + 1。
+        //                                map 必须一格不缺——LIS 和第 5 步都按它遍历
+        const newIndexToOldIndexMap = new Array(toBePatched).fill(0) // 先全填 0 = "全是新增"，配对到再覆盖
+        let moved = false // 只要出现一次"逆序配对"，就说明有节点要挪动——才值得算 LIS
+        let maxNewIndexSoFar = 0 // 到目前为止配对到的最大新下标；拿它和当前比较，逆序立刻现形
+
         for (let j = s1; j <= e1; j++) {
             const prevChild = c1[j]
-            // 没 key 的退化成按下标对应 —— 这正是"用 index 当 key"会出现的行为
+            // 没 key 的节点查不了表，退化成按下标硬对齐（s2 + 相对偏移）——
+            // 这正是"用 index 当 key"时节点内容串位等怪现象的根源
             const newIndex = prevChild.key !== null ? keyToNewIndex.get(prevChild.key) : s2 + (j - s1)
 
             if (newIndex === undefined || newIndex > e2) {
-                unmount(prevChild, true) // 查不到（或越界）→ 这个节点被删掉了
+                unmount(prevChild, true) // 查无（或越界）→ 新列表已经没有它 → 卸载
             } else {
-                patch(prevChild, c2[newIndex], container, parentAnchor) // 还在 → 就地更新
+                // 登记进 map：newIndex - s2 把绝对下标换算成乱序区相对位置；j + 1 = 来自旧列表第 j 位
+                newIndexToOldIndexMap[newIndex - s2] = j + 1
+                // 新下标一路递增 = 旧序与新序一致，这段节点谁都不用挪；
+                // 一旦比 maxNewIndexSoFar 小（逆序）→ 有节点要挪，标记 moved
+                if (newIndex >= maxNewIndexSoFar) maxNewIndexSoFar = newIndex
+                else moved = true
+                patch(prevChild, c2[newIndex], container, parentAnchor) // 还在 → 就地更新（内容同则 0 宿主操作）
             }
         }
 
-        // 从后往前把节点挪到正确位置
-        // （真实 Vue 会先算最长递增子序列，跳过本来就在正确位置的那些，这里简化为逐个插）
-        for (let j = e2; j >= s2; j--) {
-            const nextChild = c2[j]
-            const anchor = j + 1 < l2 ? c2[j + 1].el : parentAnchor
-            if (nextChild.el === null) patch(null, nextChild, container, anchor) // 没挂过 → 新增
-            else hostInsert(nextChild.el, container, anchor) // 已存在 → 挪到正确位置
+        // ③ 求 LIS（最长递增子序列，贪心 + 二分，O(n log n)）：
+        //    map 里"值递增"的段 = 旧序与新序一致的节点——它们本来就在正确位置，不用挪。
+        //    LIS 把"必须挪"的节点数压到最少；顺序完全没变时 moved = false，这里直接跳过
+        const increasingNewIndexSequence = moved ? getSequence(newIndexToOldIndexMap) : []
+        let seqIdx = increasingNewIndexSequence.length - 1 // 从 LIS 末尾往前配对
+
+        // —— 第 5 步 从后往前遍历新乱序区，落 DOM：mount 新增 / insert 挪位 / LIS 命中跳过 ——
+        //    为什么从后往前：后一个节点的 el 要先就位，才能当前一个节点的插入锚点
+        for (let j = toBePatched - 1; j >= 0; j--) {
+            const nextIndex = s2 + j // 乱序区相对位置 → 新列表绝对下标
+            const nextChild = c2[nextIndex]
+            // 插入锚点 = 右邻居的 el（头尾同步 + 前序节点就位后天然正确）；乱序区右边界外 → 兜底 parentAnchor
+            const anchor = nextIndex + 1 < l2 ? c2[nextIndex + 1].el : parentAnchor
+            if (newIndexToOldIndexMap[j] === 0) {
+                patch(null, nextChild, container, anchor) // map = 0 → 旧列表没有 → 新增挂载
+            } else if (moved) {
+                // seqIdx < 0：LIS 已全部配对完；j !== LIS[seqIdx]：当前格不在 LIS 里 → 挪到正确位置
+                if (seqIdx < 0 || j !== increasingNewIndexSequence[seqIdx]) {
+                    hostInsert(nextChild.el, container, anchor)
+                } else {
+                    seqIdx-- // LIS 命中：本来就在正确位置 → 原地不动（这就是 LIS 的意义）
+                }
+            }
         }
     }
 
     // ---------- 组件 ----------
     /**
-     * 组件的挂载 / 更新分流。
+     * 组件的挂载 / 更新分流：n1 为 null → mountComponent（全新实例），否则 updateComponent（复用实例）。
      *
      * @param {Object|null} n1 - 旧 VNode
      * @param {Object} n2 - 新 VNode
@@ -1024,6 +1091,12 @@ function createRenderer(options) {
      * @param {Object} initialVNode - 组件 VNode（component 字段回填实例）
      * @param {Object} container - 宿主容器
      * @param {Object|null} anchor - 插入锚点
+     *
+     * @example
+     *   // demo-app：根组件 VNode（type = { setup }，无 props 声明）挂进 #app：
+     *   mountComponent(rootVNode, el, null)
+     *   // → createComponentInstance（parent=null）→ setupComponent（setup 执行，4 个 ref 落定）
+     *   // → setupRenderEffect（effect 首跑同步完成子树挂载）→ mounted 钩子统一执行
      */
     function mountComponent(initialVNode, container, anchor) {
         // parent 从 currentScopeInstance 取：组件更新 patch 子树时，它就是当前组件实例
@@ -1063,6 +1136,14 @@ function createRenderer(options) {
      *
      * @param {Object} vnode - 要卸载的 VNode
      * @param {boolean} doRemove - 是否真的从 DOM 摘除（false 只递归触发钩子，用于"换个容器"场景）
+     *
+     * @example
+     *   // 分支① 组件：点「卸载」→ app.unmount → unmount(rootVNode, true)
+     *   unmount(componentVNode, true) // → unmounted 钩子 → effect.stop()（退订依赖）→ 递归卸子树
+     *   // 分支② Fragment：subTree 夹着 4 个顶层节点
+     *   unmount(fragmentVNode, true) // → 孩子逐个递归摘除 → 最后摘首尾两个锚点
+     *   // 分支③ 元素：p / button / li 走到这
+     *   unmount(elementVNode, true) // → 数组孩子先递归卸载 → hostRemove 摘掉自己
      */
     function unmount(vnode, doRemove) {
         const { type, shapeFlag } = vnode
@@ -1106,10 +1187,6 @@ function createRenderer(options) {
      * mount 时把根组件包成 VNode 渲进容器，返回根实例的代理（可从外部访问状态）。
      *
      * @returns {Function} createApp(rootComponent, rootProps) → { mount(rootContainer) }
-     *
-     * @example
-     *   const { createApp } = createRenderer(browserNodeOps)
-     *   createApp(App, { msg: 'hi' }).mount('#app') // → 返回 App 实例的 proxy
      */
     function createAppAPI() {
         return function createApp(rootComponent, rootProps = null) {

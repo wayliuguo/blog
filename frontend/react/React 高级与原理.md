@@ -563,4 +563,4 @@ function useState(initialValue) {
 
 - 本模块总结：[总结](./总结.md)
 - 下一篇：[手写 mini-react](./手写%20mini-react.md)
-- 本模块另四篇：[手写 mini-react](./手写%20mini-react.md) · [React 状态管理原理与实现](./React%20状态管理原理与实现.md) · [Vue3 原理](../vue/Vue3%20原理.md) · [Vue3 状态管理原理与实现](../vue/Vue3%20状态管理原理与实现.md)
+- 本模块另三篇：[手写 mini-react](./手写%20mini-react.md) · [React 状态管理原理与实现](./React%20状态管理原理与实现.md) · [Vue3 原理](../vue/Vue3%20原理.md)

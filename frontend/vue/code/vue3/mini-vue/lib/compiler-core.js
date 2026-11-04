@@ -92,6 +92,15 @@ function parse(template) {
             // '<div id="a">' → m[1]='div'、m[2]=' id="a"'；'<img src="x"/>' 整体匹配且以 /> 收尾
             const selfClosing = /\/>$/.test(m[0]) // 以 /> 结尾 → 自闭合，不入栈
             const node = { type: 'Element', tag: m[1], attrs: parseAttrs(m[2]), children: [] }
+            // 指令提取：v-for="item in list" 不是 DOM 属性，从 attrs 摘出来挂到节点上
+            // （generate 阶段据此把该节点展开成 ctx.列表.map(item => h(...))）
+            if (node.attrs && node.attrs['v-for']) {
+                const vm = /^\s*([a-zA-Z_$][\w$]*)\s+(?:in|of)\s+([a-zA-Z_$][\w$]*)\s*$/.exec(node.attrs['v-for'])
+                if (!vm) throw new Error('v-for 暂只支持「item in list」形式：' + node.attrs['v-for'])
+                node.vFor = { item: vm[1], list: vm[2] }
+                delete node.attrs['v-for']
+                if (!Object.keys(node.attrs).length) node.attrs = null // 摘完就空 → 归 null（同"没有属性"）
+            }
             parent.children.push(node)
             if (!selfClosing) stack.push(node) // 非自闭合：后续 children 挂到它名下
             rest = rest.slice(m[0].length)
@@ -112,6 +121,8 @@ function parse(template) {
 /**
  * 解析开始标签里的属性串，产出 attrs 对象。
  * 值形式二选一：key="value" → 字符串；只有 key → true（布尔属性，如 disabled）。
+ * 属性名支持三类（generate 再分流）：普通属性 id="app"、事件 @click / v-on:click、
+ * 动态绑定 :key / v-bind:key，以及指令 v-for（parse 里会摘到节点上）。
  * 一个属性都没有时返回 null（generate 会生成 props 参数 null）。
  *
  * @param {string} str - 开始标签内、标签名之后的属性串（可为空串）
@@ -122,12 +133,14 @@ function parse(template) {
  *   // → { id: 'app', disabled: true }
  *   parseAttrs('')        // → null
  *   parseAttrs(' class="x"') // → { class: 'x' }
+ *   parseAttrs(' @click="inc" :key="t.id"')
+ *   // → { '@click': 'inc', ':key': 't.id' }（指令原样保留，generate 再改写成 onClick / key）
  */
 function parseAttrs(str) {
     const attrs = {}
-    // 正则：([a-zA-Z-]+) 属性名（必须），(?:="([^"]*)")? 可选的 ="值"（值不含双引号）
+    // 正则：([@:a-zA-Z-]+) 属性名（含事件 @ 与绑定 : 前缀），(?:="([^"]*)")? 可选的 ="值"（值不含双引号）
     // matchAll 全局扫，没带值的属性 m[2] 为 undefined → 记成 true
-    for (const m of str.matchAll(/([a-zA-Z-]+)(?:="([^"]*)")?/g)) {
+    for (const m of str.matchAll(/([@:a-zA-Z-]+)(?:="([^"]*)")?/g)) {
         if (m[1]) attrs[m[1]] = m[2] !== undefined ? m[2] : true
     }
     return Object.keys(attrs).length ? attrs : null
@@ -168,6 +181,8 @@ function transform(ast) {
         for (const child of node.children) {
             if (walk(child)) hasDynamic = true
         }
+        // v-for 列表每次渲染都产出新数组，永远是动态节点（哪怕子树全是静态内容）
+        if (node.vFor) hasDynamic = true
         node.isStatic = !hasDynamic
         node.patchFlag = hasDynamic ? 1 : 0
         return hasDynamic
@@ -178,15 +193,89 @@ function transform(ast) {
 
 // —— 3. generate：AST → render 代码字符串 ——
 /**
+ * 把模板表达式改写成带 ctx 前缀的可执行表达式（generate 的公共步骤）。
+ * 改写规则（自上而下）：
+ *   1. 循环变量（scope 集合里的名字）→ 保持裸引用（v-for 的 item 属于本次 map 的局部变量）；
+ *   2. 字面量 / 保留字 → 原样保留；
+ *   3. 前一个非空白字符是 "." → 保持裸引用（属性访问的尾部，如 t.id 的 id）；
+ *   4. 其余裸标识符 → 加 ctx. 前缀（组件状态经实例代理访问，ref 自动解包）。
+ * 对「单个标识符」这类简单表达式，改写结果与旧版 `ctx.表达式` 拼接完全一致，
+ * 因此不改变既有模板的编译产物。
+ *
+ * @param {string} expr - 模板里的表达式原文（如 'count'、't.id'、'count++'）
+ * @param {Set<string>} scope - 当前可见的循环变量集合（无 v-for 时为空集）
+ * @returns {string} 可执行表达式（裸标识符已挂到 ctx 上）
+ *
+ * @example
+ *   rewriteExpr('count', new Set())        // → 'ctx.count'
+ *   rewriteExpr('t.id', new Set(['t']))    // → 't.id'（t 在作用域、id 是成员）
+ *   rewriteExpr('count++', new Set())      // → 'ctx.count++'
+ */
+function rewriteExpr(expr, scope) {
+    return expr.replace(/[a-zA-Z_$][\w$]*/g, (name, offset, full) => {
+        if (scope.has(name)) return name
+        if (name === 'true' || name === 'false' || name === 'null' || name === 'undefined') return name
+        let i = offset - 1
+        while (i >= 0 && full[i] === ' ') i-- // 回看前一个非空白字符
+        if (full[i] === '.') return name // 成员访问尾部：t.id 的 id
+        return `ctx.${name}`
+    })
+}
+
+/**
+ * 把 attrs 对象生成 props 参数代码。
+ * 三类属性分流：普通属性 → JSON 字面量片段；@事件 → `onClick: () => 表达式`；
+ * :绑定 → `key: 表达式`。全是普通属性时直接 JSON.stringify（与旧产物格式一致），
+ * 混有指令时手动拼对象字面量。
+ *
+ * @param {Object|null} attrs - parse 产出的属性表（指令值仍是表达式原文）
+ * @param {Set<string>} scope - 循环变量作用域（改写表达式用）
+ * @returns {string} props 代码，形如 `{"class":"x"}` 或 `{":key 已改写": ..., onClick: ...}`
+ *
+ * @example
+ *   genProps({ class: 'x' }, new Set()) // → '{"class":"x"}'
+ *   genProps({ '@click': 'inc' }, new Set()) // → '{onClick: () => ctx.inc()}'
+ *   genProps({ ':key': 't.id' }, new Set(['t'])) // → '{key: t.id}'
+ */
+function genProps(attrs, scope) {
+    if (!attrs) return 'null'
+    const statics = {}
+    const dynamics = []
+    for (const [key, value] of Object.entries(attrs)) {
+        if (/^@|^v-on:/.test(key)) {
+            // 事件：@click / v-on:click → onClick。裸方法名补调用括号（@click="inc"），
+            // 其余表达式（如 count++）包一层括号直接作为函数体
+            const raw = key.replace(/^@|^v-on:/, '')
+            const name = 'on' + raw[0].toUpperCase() + raw.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+            const rewritten = rewriteExpr(String(value), scope)
+            const handler = /^[a-zA-Z_$][\w$]*$/.test(String(value).trim())
+                ? `() => ${rewritten}()`
+                : `() => (${rewritten})`
+            dynamics.push(`${name}: ${handler}`)
+        } else if (/^:|^v-bind:/.test(key)) {
+            // 动态绑定：:key / v-bind:key → 属性名: 改写后的表达式
+            const raw = key.replace(/^:|^v-bind:/, '')
+            dynamics.push(`${raw}: ${rewriteExpr(String(value), scope)}`)
+        } else {
+            statics[key] = value
+        }
+    }
+    if (!dynamics.length) return JSON.stringify(statics)
+    const head = Object.keys(statics).length ? `${JSON.stringify(statics).slice(1, -1)}, ` : ''
+    return `{${head}${dynamics.join(', ')}}`
+}
+
+/**
  * 把标记完的 AST 生成为 render 函数体代码（顶层是一个 VNode 数组字面量）。
  *
  * genNode 按节点类型分派：
- *   - Text         → JSON.stringify 出带引号的字符串字面量（拼进代码里就是合法 JS）
- *   - Interpolation→ `toDisplayString(ctx.表达式)`（运行时由传入的函数解析显示）
- *   - Element      → `h("tag", props, children, patchFlag)`，children 有三种形态：
+ *   - Text          → JSON.stringify 出带引号的字符串字面量（拼进代码里就是合法 JS）
+ *   - Interpolation → `toDisplayString(改写后的表达式)`（运行时由传入的函数解析显示）
+ *   - Element       → `h("tag", props, children, patchFlag)`，children 有三种形态：
  *       a) 单个文本/插值孩子 → 直接是字符串表达式（运行时 shapeFlag 落 TEXT_CHILDREN）
  *       b) 全是文本+插值混合 → 用 + 拼成一个字符串表达式（同真实 Vue 的文本拼接产物）
  *       c) 含元素孩子       → 数组字面量（运行时 shapeFlag 落 ARRAY_CHILDREN）
+ *   - v-for 元素    → `...ctx.列表.map(item => h(...))`，item 进子表达式作用域
  * patchFlag 只在动态节点上追加（静态节点省略该参数）。
  *
  * @param {Object} ast - transform 之后的 AST
@@ -199,35 +288,50 @@ function transform(ast) {
  *   const ast2 = parse('<div>共 {{ n }} 条</div>'); transform(ast2)
  *   generate(ast2)
  *   // → '[h("div", null, "共 " + toDisplayString(ctx.n) + " 条", 1)]'
+ *   const ast3 = parse('<ul><li v-for="t in ts" :key="t.id">{{ t.text }}</li></ul>'); transform(ast3)
+ *   generate(ast3)
+ *   // → '[h("ul", null, [...ctx.ts.map(t => h("li", {key: t.id}, toDisplayString(t.text), 1))])]'
  */
 function generate(ast) {
     /**
      * 递归生成一个节点的代码片段。
      *
      * @param {Object} node - AST 节点
+     * @param {Set<string>} scope - 当前可见的循环变量集合（顶层为空集）
      * @returns {string} 该节点对应的 JS 表达式
      */
-    function genNode(node) {
+    function genNode(node, scope = new Set()) {
         if (node.type === 'Text') return JSON.stringify(node.content) // 字符串字面量自带引号
-        if (node.type === 'Interpolation') return `toDisplayString(ctx.${node.expression})`
+        if (node.type === 'Interpolation') return `toDisplayString(${rewriteExpr(node.expression, scope)})`
+        // v-for：当前节点展开成 map 回调，循环变量加入子表达式作用域
+        // （回调内部再生成的表达式里，item 走裸引用、组件状态走 ctx.）
+        if (node.vFor) {
+            const inner = { ...node, vFor: null }
+            const body = genNode(inner, new Set([...scope, node.vFor.item]))
+            return `...ctx.${node.vFor.list}.map(${node.vFor.item} => ${body})`
+        }
         const flag = node.patchFlag ? `, ${node.patchFlag}` : '' // 静态节点不传 patchFlag
-        const props = node.attrs ? JSON.stringify(node.attrs) : 'null'
+        const props = genProps(node.attrs, scope)
         const children = node.children
         // 单文本 / 单插值孩子：生成字符串 children（运行时 shapeFlag 会标 TEXT_CHILDREN）
         if (children.length === 1 && children[0].type !== 'Element') {
-            return `h("${node.tag}", ${props}, ${genNode(children[0])}${flag})`
+            return `h("${node.tag}", ${props}, ${genNode(children[0], scope)}${flag})`
         }
         // 孩子全是文本 / 插值的混合：拼成一个字符串表达式（同真实 Vue 的文本拼接产物）
         if (children.length && children.every(c => c.type === 'Text' || c.type === 'Interpolation')) {
             const expr = children
-                .map(c => (c.type === 'Text' ? JSON.stringify(c.content) : `toDisplayString(ctx.${c.expression})`))
+                .map(c =>
+                    c.type === 'Text'
+                        ? JSON.stringify(c.content)
+                        : `toDisplayString(${rewriteExpr(c.expression, scope)})`
+                )
                 .join(' + ')
             return `h("${node.tag}", ${props}, ${expr}${flag})`
         }
-        return `h("${node.tag}", ${props}, [${children.map(genNode).join(', ')}]${flag})`
+        return `h("${node.tag}", ${props}, [${children.map(c => genNode(c, scope)).join(', ')}]${flag})`
     }
     // 顶层包成数组：与运行时 render 返回数组、normalizeVNode 归一的约定对齐
-    return `[${ast.children.map(genNode).join(', ')}]`
+    return `[${ast.children.map(c => genNode(c)).join(', ')}]`
 }
 
 // —— compile：串起三阶段，new Function 得到真正可执行的 render ——

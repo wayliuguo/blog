@@ -27,14 +27,17 @@
 </head>
 <body>
 <h1>demo · 编译链路</h1>
-<p class="intro">模板字符串进 <code>compile()</code>，出来 <code>{ ast, code, render }</code> 三样产物：parse 建 AST、transform 落静态标记、generate 拼代码字符串并由 <code>new Function</code> 变成可执行 render。下方模板为固定示例，页面加载时编译一次，三份产物即为该模板的结果。</p>
+<p class="intro">模板字符串进 <code>compile()</code>，出来 <code>{ ast, code, render }</code> 三样产物：parse 建 AST（<code>v-for</code> 摘到 <code>node.vFor</code>）、transform 落静态标记（v-for 节点恒动态）、generate 拼代码字符串（<code>@click</code> 改写成 <code>onClick</code>、<code>:key</code> 改写成属性、v-for 展开成 <code>map</code>）并由 <code>new Function</code> 变成可执行 render。下方模板为固定示例，页面加载时编译一次，三份产物即为该模板的结果。</p>
 
 <div class="panel">
-    <div class="panel-head">模板（固定示例）</div>
-    <textarea id="tpl" rows="7" readonly><section class="app-head">
+    <div class="panel-head">模板（固定示例，含指令：@click / v-for / :key）</div>
+    <textarea id="tpl" rows="9" readonly><section class="app-head">
   <h3>任务列表（静态标题：编译时提升）</h3>
-  <p data-role="count">count = {{ count }}，double = {{ double }}，title = {{ title }}</p>
-  <button data-act="inc">count + 1</button>
+  <p>count = {{ count }}，double = {{ double }}，title = {{ title }}</p>
+  <button @click="count++">count + 1</button>
+  <ul>
+    <li v-for="t in todos" :key="t.id">{{ t.text }}</li>
+  </ul>
 </section></textarea>
 </div>
 

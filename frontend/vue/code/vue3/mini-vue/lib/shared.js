@@ -2,7 +2,7 @@
 // mini-vue/shared —— 类型判断与 ShapeFlags
 // 对应 Vue3 源码包：@vue/shared（最底层，自身零依赖）
 // 被依赖：reactivity.js / compiler-core.js / runtime-core.js / index.js
-// 对应文档：《Vue3 原理》3.10 类型判断、4.3 shapeFlag
+// 对应文档：《Vue3 原理》3.10 类型判断、4.1 shapeFlag
 // 说明：本文件只放"人人都要用、自己却不依赖任何人"的工具，
 //       所以它被所有其他模块引用而不会形成循环依赖。
 // ============================================================
