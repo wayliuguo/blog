@@ -118,7 +118,8 @@
             页面加载即按官网 CDN 的方式运行：<code>createRoot(document.getElementById('app')).render(h(App))</code>
             ——App 是一个函数组件，内部用 <code>useState</code> 持有 message / count / todos，两个
             <code>useEffect</code> 分别对应"挂载"与"[message] 依赖"。左栏是组件源码（<code>h</code> 就是
-            <code>createElement</code>，即 JSX 的运行时形态），右栏渲染区就是这个组件；下面的页面层按钮负责触发各条链路。
+            <code>createElement</code>，即 JSX
+            的运行时形态），右栏渲染区就是这个组件；下面的页面层按钮负责触发各条链路。
         </p>
 
         <div class="panel">
@@ -191,14 +192,14 @@ M.createRoot(document.getElementById('app'))
             <div class="panel-head">断点标注（按链路顺序，对应《React 原理》五章）</div>
             <ol class="bps">
                 <li>
-                    <code>createRoot().render(h(App))</code>：建 HostRoot fiber（stateNode =
-                    容器）→ <code>scheduleRootUpdate</code>（断点：scheduler.js 的
-                    <code>scheduleCallback</code>）→ MessageChannel 宏任务起跑
+                    <code>createRoot().render(h(App))</code>：建 HostRoot fiber（stateNode = 容器）→
+                    <code>scheduleRootUpdate</code>（断点：scheduler.js 的 <code>scheduleCallback</code>）→
+                    MessageChannel 宏任务起跑
                 </li>
                 <li>
                     <code>performRootWork</code>：开新工作栈（<code>createWorkInProgress</code> 双缓冲）→
-                    <code>workLoop</code> 逐 fiber 推进（断点：<code>performUnitOfWork</code>）→
-                    App 的 <code>beginWork</code> 走 <code>renderWithHooks</code>（断点：hooks 链表建立）
+                    <code>workLoop</code> 逐 fiber 推进（断点：<code>performUnitOfWork</code>）→ App 的
+                    <code>beginWork</code> 走 <code>renderWithHooks</code>（断点：hooks 链表建立）
                 </li>
                 <li>
                     <code>completeWork</code>：宿主 fiber 创建游离 DOM 实例并铺属性；
@@ -206,14 +207,14 @@ M.createRoot(document.getElementById('app'))
                     <code>flushPassiveEffects</code>：useEffect([]) 先执行 → onReady 递出 setState
                 </li>
                 <li>
-                    改状态：<code>dispatchSetState</code> 只记 action + 排调度（断点：看 hook.queue）→
-                    下一次 render 从根重算 → <code>reconcileChildren</code>（keyed diff：头同步 → 尾同步 →
-                    乱序区 lastPlacedIndex 判移动）→ <code>commitMutationEffects</code>（先删后插）→
-                    <code>flushPassiveEffects</code> 先 destroy 再 create
+                    改状态：<code>dispatchSetState</code> 只记 action + 排调度（断点：看 hook.queue）→ 下一次 render
+                    从根重算 → <code>reconcileChildren</code>（keyed diff：头同步 → 尾同步 → 乱序区 lastPlacedIndex
+                    判移动）→ <code>commitMutationEffects</code>（先删后插）→ <code>flushPassiveEffects</code> 先
+                    destroy 再 create
                 </li>
                 <li>
-                    <code>unmount()</code>：<code>commitDeletion</code>（断点：同步执行 useEffect destroy）→
-                    摘除 DOM；重新加载页面即可重看挂载
+                    <code>unmount()</code>：<code>commitDeletion</code>（断点：同步执行 useEffect destroy）→ 摘除
+                    DOM；重新加载页面即可重看挂载
                 </li>
             </ol>
         </div>
@@ -252,11 +253,17 @@ M.createRoot(document.getElementById('app'))
                     return () => lifeMark.append(`\n↳ 上一次 effect 的清理执行`)
                 }, [message])
 
-                return M.h('div', null,
+                return M.h(
+                    'div',
+                    null,
                     M.h('p', null, message),
                     M.h('p', null, 'count = ', count),
                     M.h('button', { onClick: () => setCount(count + 1) }, 'count + 1（组件内按钮）'),
-                    M.h('ul', null, todos.map(t => M.h('li', { key: t.id }, '#', t.id, ' ', t.text)))
+                    M.h(
+                        'ul',
+                        null,
+                        todos.map(t => M.h('li', { key: t.id }, '#', t.id, ' ', t.text))
+                    )
                 )
             }
 
