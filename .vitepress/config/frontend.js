@@ -76,9 +76,8 @@ export default [
             { text: 'React 状态管理', link: '/frontend/react/React%20状态管理' },
             { text: 'React 使用 TS', link: '/frontend/react/React%20使用%20TS' },
             { text: 'React 使用 CSS', link: '/frontend/react/React%20使用%20CSS' },
-            { text: 'React 高级与原理', link: '/frontend/react/React%20高级与原理' },
-            { text: 'React 状态管理原理与实现', link: '/frontend/react/React%20状态管理原理与实现' },
-            { text: '手写 mini-react', link: '/frontend/react/手写%20mini-react' },
+            { text: 'React 原理', link: '/frontend/react/React%20原理' },
+            { text: 'React 性能优化', link: '/frontend/react/React%20性能优化' },
             { text: '模块总结（React）', link: '/frontend/react/总结' }
         ]
     },

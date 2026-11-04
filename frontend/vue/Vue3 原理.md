@@ -3017,4 +3017,4 @@ demo 入口：`./code/vue3/mini-vue/demo/demo-app.html`
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 上一篇：[React 高级与原理](../react/React%20高级与原理.md)
+- 下一篇：[React 原理](../react/React%20原理.md)

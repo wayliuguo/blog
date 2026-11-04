@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <title>demo · 整体运行：官网 CDN 用法（挂载 → 调度 → hooks → keyed diff → 卸载）</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                max-width: 1180px;
+                margin: 24px auto;
+                padding: 0 16px;
+                color: #213547;
+            }
+            h1 {
+                font-size: 22px;
+            }
+            .intro {
+                font-size: 13.5px;
+                color: #495057;
+            }
+            .intro code {
+                background: #f1f3f5;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            .panel {
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 12px;
+                background: #fff;
+                margin-top: 14px;
+            }
+            .panel-head {
+                font-size: 13px;
+                color: #868e96;
+                margin-bottom: 8px;
+                font-weight: 600;
+            }
+            pre {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 6px;
+                padding: 10px 12px;
+                font-size: 12px;
+                overflow-x: auto;
+                margin: 6px 0;
+            }
+            .cols {
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+                align-items: flex-start;
+            }
+            .cols > div {
+                flex: 1;
+                min-width: 260px;
+            }
+            .cols h3 {
+                font-size: 13px;
+                margin: 0 0 6px;
+                color: #868e96;
+            }
+            button {
+                margin: 2px 8px 2px 0;
+                padding: 5px 12px;
+                cursor: pointer;
+            }
+            #app {
+                min-height: 140px;
+                border: 1px dashed #dbe4ff;
+                background: #f8f9ff;
+                border-radius: 6px;
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+            #app p {
+                margin: 4px 0;
+            }
+            #app ul {
+                margin: 6px 0 0;
+                padding-left: 20px;
+            }
+            #app li {
+                font-size: 13px;
+            }
+            #app button {
+                padding: 3px 10px;
+            }
+            #lifeMark {
+                font-size: 13px;
+                color: #0b7285;
+                white-space: pre-line;
+            }
+            #tickMark {
+                font-size: 13px;
+                color: #2b8a3e;
+                margin: 8px 0 0;
+            }
+            .bps {
+                font-size: 12.5px;
+                color: #495057;
+                margin: 4px 0 0;
+                padding-left: 20px;
+            }
+            .bps li {
+                margin: 3px 0;
+            }
+            .bps code {
+                background: #f1f3f5;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>demo · 整体运行（官网 CDN 用法）</h1>
+        <p class="intro">
+            页面加载即按官网 CDN 的方式运行：<code>createRoot(document.getElementById('app')).render(h(App))</code>
+            ——App 是一个函数组件，内部用 <code>useState</code> 持有 message / count / todos，两个
+            <code>useEffect</code> 分别对应"挂载"与"[message] 依赖"。左栏是组件源码（<code>h</code> 就是
+            <code>createElement</code>，即 JSX 的运行时形态），右栏渲染区就是这个组件；下面的页面层按钮负责触发各条链路。
+        </p>
+
+        <div class="panel">
+            <div class="cols">
+                <div>
+                    <h3>组件源码（与官网 CDN 示例同构）</h3>
+                    <pre>
+const M = window.MiniReact
+
+function App({ onReady }) {
+  const [message, setMessage] = M.useState('Hello React!')
+  const [count, setCount] = M.useState(0)
+  const [todos, setTodos] = M.useState([
+    { id: 1, text: 'a' },
+    { id: 2, text: 'b' },
+    { id: 3, text: 'c' },
+    { id: 4, text: 'd' },
+    { id: 5, text: 'e' }
+  ])
+  M.useEffect(() =&gt; {
+    onReady({ setMessage, setCount, setTodos })
+  }, [])
+  M.useEffect(() =&gt; {
+    lifeMark.append(`\nuseEffect([message]) 触发：${message}`)
+    return () =&gt; lifeMark.append(`\n上一次 effect 清理执行`)
+  }, [message])
+  return M.h('div', null,
+    M.h('p', null, message),
+    M.h('p', null, 'count = ', count),
+    M.h('button', { onClick: () =&gt; setCount(count + 1) }, 'count + 1'),
+    M.h('ul', null, todos.map(t =&gt;
+      M.h('li', { key: t.id }, '#', t.id, ' ', t.text)
+    ))
+  )
+}
+
+M.createRoot(document.getElementById('app'))
+  .render(M.h(App, { onReady: api =&gt; (appApi = api) }))</pre
+                    >
+                    <h3>useEffect 留痕</h3>
+                    <span id="lifeMark">等待挂载…</span>
+                </div>
+                <div>
+                    <h3>渲染区：&lt;div id="app"&gt;</h3>
+                    <div id="app"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                页面层操作（不在组件内，通过挂载 effect 递出的 setState 触发；组件内的 count + 1 按钮走 onClick 闭包）
+            </div>
+            <button id="btnMessage">改 message</button>
+            <button id="btnBatch">一次改三项（批处理）</button>
+            <button id="btnShuffle" title="点击后列表 [a,b,c,d,e] → [a,d,f,b,e]">
+                乱序 + 插删（keyed diff 全算法）
+            </button>
+            <button id="btnGrow" title="头同步全部命中（旧链耗尽）→ 新项批量 Placement，不进乱序区">
+                新列表更长（追加一项）
+            </button>
+            <button id="btnShrink" title="头同步把新列表全部摘中 → 剩余旧 fiber 直接 Deletion">
+                旧列表更长（移除末项）
+            </button>
+            <button id="btnUnload">卸载</button>
+            <p id="tickMark">点「改 message」看 setState 同步读与宏任务后的 DOM 对照</p>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">断点标注（按链路顺序，对应《React 原理》五章）</div>
+            <ol class="bps">
+                <li>
+                    <code>createRoot().render(h(App))</code>：建 HostRoot fiber（stateNode =
+                    容器）→ <code>scheduleRootUpdate</code>（断点：scheduler.js 的
+                    <code>scheduleCallback</code>）→ MessageChannel 宏任务起跑
+                </li>
+                <li>
+                    <code>performRootWork</code>：开新工作栈（<code>createWorkInProgress</code> 双缓冲）→
+                    <code>workLoop</code> 逐 fiber 推进（断点：<code>performUnitOfWork</code>）→
+                    App 的 <code>beginWork</code> 走 <code>renderWithHooks</code>（断点：hooks 链表建立）
+                </li>
+                <li>
+                    <code>completeWork</code>：宿主 fiber 创建游离 DOM 实例并铺属性；
+                    <code>commitRoot</code>（断点：<code>commitPlacement</code> + <code>getHostSibling</code>）→
+                    <code>flushPassiveEffects</code>：useEffect([]) 先执行 → onReady 递出 setState
+                </li>
+                <li>
+                    改状态：<code>dispatchSetState</code> 只记 action + 排调度（断点：看 hook.queue）→
+                    下一次 render 从根重算 → <code>reconcileChildren</code>（keyed diff：头同步 → 尾同步 →
+                    乱序区 lastPlacedIndex 判移动）→ <code>commitMutationEffects</code>（先删后插）→
+                    <code>flushPassiveEffects</code> 先 destroy 再 create
+                </li>
+                <li>
+                    <code>unmount()</code>：<code>commitDeletion</code>（断点：同步执行 useEffect destroy）→
+                    摘除 DOM；重新加载页面即可重看挂载
+                </li>
+            </ol>
+        </div>
+
+        <script src="../lib/shared.js"></script>
+        <script src="../lib/scheduler.js"></script>
+        <script src="../lib/hooks.js"></script>
+        <script src="../lib/reconciler.js"></script>
+        <script src="../lib/dom.js"></script>
+        <script src="../lib/index.js"></script>
+        <script>
+            const M = window.MiniReact // 统一走 M. 前缀：避免与 lib 顶层声明的 h/useState 等重名冲突
+
+            let appApi = null // 挂载 effect 递出的 setState 集合：页面层按钮全走它
+
+            // 组件用函数组件：hooks 建状态，onReady prop 把 setState 递给页面层
+            function App({ onReady }) {
+                const [message, setMessage] = M.useState('Hello React!')
+                const [count, setCount] = M.useState(0)
+                const [todos, setTodos] = M.useState([
+                    { id: 1, text: 'a' },
+                    { id: 2, text: 'b' },
+                    { id: 3, text: 'c' },
+                    { id: 4, text: 'd' },
+                    { id: 5, text: 'e' }
+                ])
+
+                // 挂载后把 setState 递给页面层（页面按钮不在组件内也能触发更新）
+                M.useEffect(() => {
+                    onReady({ setMessage, setCount, setTodos })
+                }, [])
+
+                // 依赖 [message]：message 不变的 render 完全跳过；变了先清后建
+                M.useEffect(() => {
+                    lifeMark.append(`\nuseEffect([message]) 触发：message=${message}`)
+                    return () => lifeMark.append(`\n↳ 上一次 effect 的清理执行`)
+                }, [message])
+
+                return M.h('div', null,
+                    M.h('p', null, message),
+                    M.h('p', null, 'count = ', count),
+                    M.h('button', { onClick: () => setCount(count + 1) }, 'count + 1（组件内按钮）'),
+                    M.h('ul', null, todos.map(t => M.h('li', { key: t.id }, '#', t.id, ' ', t.text)))
+                )
+            }
+
+            const root = M.createRoot(document.getElementById('app'))
+            root.render(M.h(App, { onReady: api => (appApi = api) }))
+            lifeMark.textContent = '挂载完成（useEffect([]) 已执行）'
+
+            // —— 页面层按钮 ——
+            document.getElementById('btnMessage').addEventListener('click', () => {
+                const p = document.querySelector('#app p')
+                appApi.setMessage(m => (m === 'Hello React!' ? 'Hello MiniReact!' : 'Hello React!'))
+                // setState 只记了 action：同步读到的还是旧 DOM（更新在下一个宏任务的 render+commit 里）
+                const syncRead = p.textContent
+                tickMark.textContent = `同步读=「${syncRead}」（DOM 未动）`
+                setTimeout(() => {
+                    // MessageChannel 排的宏任务先执行完 render+commit，然后才轮到这个 setTimeout
+                    tickMark.textContent = `同步读=「${syncRead}」（DOM 未动） → 宏任务后读=「${p.textContent}」（已落定）`
+                }, 0)
+            })
+
+            document.getElementById('btnBatch').addEventListener('click', () => {
+                // 同一宏任务里 3 次 setState → 3 次 scheduleRootUpdate → 合并成 1 次 render
+                const before = M.__internal.getRenderCount()
+                appApi.setMessage('批处理写入')
+                appApi.setCount(c => c + 1)
+                appApi.setTodos(t => t.slice(1))
+                setTimeout(() => {
+                    const delta = M.__internal.getRenderCount() - before
+                    tickMark.textContent = `3 次 setState → 从根 render 次数=${delta}（批处理：合并为 1 次）`
+                }, 0)
+            })
+
+            document.getElementById('btnShuffle').addEventListener('click', () => {
+                // [a,b,c,d,e] → [a,d,f,b,e]：头同步接住 a；尾同步接住 e；
+                // 乱序区：d 复用原位（lastPlacedIndex 不动）、f 新建、b 移动、c 删除
+                appApi.setTodos([
+                    { id: 1, text: 'a' },
+                    { id: 4, text: 'd' },
+                    { id: 6, text: 'f' },
+                    { id: 2, text: 'b' },
+                    { id: 5, text: 'e' }
+                ])
+            })
+
+            document.getElementById('btnGrow').addEventListener('click', () => {
+                // 头同步把新列表全部摘中（旧链耗尽）→ 快速通道：新项批量 Placement
+                appApi.setTodos(t => {
+                    const id = Math.max(...t.map(x => x.id)) + 1
+                    return [...t, { id, text: '新' + id }]
+                })
+            })
+
+            document.getElementById('btnShrink').addEventListener('click', () => {
+                // 头同步把旧列表全部摘中（新链耗尽）→ 快速通道：剩余旧 fiber 直接 Deletion
+                appApi.setTodos(t => (t.length > 1 ? t.slice(0, -1) : t))
+            })
+
+            document.getElementById('btnUnload').addEventListener('click', () => {
+                root.unmount() // commitDeletion：同步执行 useEffect destroy → 摘 DOM
+                appApi = null
+                lifeMark.append('\n↳ unmount：全部 effect 清理执行完毕，DOM 已摘除')
+                tickMark.textContent = '已卸载；重新加载页面可重看完整挂载链路'
+            })
+        </script>
+    </body>
+</html>
