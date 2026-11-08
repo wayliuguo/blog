@@ -1132,6 +1132,6 @@ function flatten(code, id) {
 ## 参考
 
 - 本模块总结：[总结](./总结.md)
-- 下一篇：[Rollup](./Rollup.md)
+- 相关篇：[Webpack](./webpack.md)
 - [Vite 官方文档](https://vite.dev/)
 - [Vite 插件 API](https://vite.dev/guide/api-plugin.html)

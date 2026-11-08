@@ -97,7 +97,7 @@ export default [
         collapsed: false,
         items: [
             { text: 'Vite', link: '/frontend/构建体系/Vite' },
-            { text: 'Rollup', link: '/frontend/构建体系/Rollup' },
+            { text: 'Webpack', link: '/frontend/构建体系/webpack' },
             { text: '模块总结（构建体系）', link: '/frontend/构建体系/总结' }
         ]
     },

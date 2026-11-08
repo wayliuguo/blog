@@ -1,0 +1,31 @@
+/* 演示 css-loader 的 @import 内联 */
+@import './base.css';
+
+.title {
+    color: #1f6feb;
+}
+
+.tip {
+    color: #57606a;
+    line-height: 1.7;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 6px;
+    background: #1f6feb;
+    color: #fff;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: #1a5fd0;
+}
+
+/* 演示 css-loader 把相对 url() 改写成 require()，最终插值出带 hash 的资源路径 */
+.logo {
+    width: 24px;
+    height: 24px;
+    background: url('./logo.svg') no-repeat center / contain;
+}
