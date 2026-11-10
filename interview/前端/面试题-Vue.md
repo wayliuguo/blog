@@ -460,167 +460,221 @@ export const enum PatchFlags {
 
 ### 20. 什么是虚拟 DOM？虚拟 DOM 的优缺点？
 
-- **是什么**：用 JS 对象描述 DOM 结构的树（vnode）
-- **价值**：先在 JS 层 diff 算出最小变更再操作真实 DOM——用可预测的 JS 计算换可控的 DOM 操作量，且跨平台
-
-- **vnode 是什么**
-  - 一个普通对象：`type`、`props`、`children`、`key`、`shapeFlag`、`el` 等字段描述一个节点及其子树
-  - 它是「渲染意图的快照」，与真实 DOM 一一对应但不持有 DOM 能力
-
-- **优点**
-  - DOM 操作代价高且难批量——先算最小变更集，再一次 patch，避免逐个属性读写触发布局抖动
-  - 跨平台：同一棵 vnode 可渲染成 DOM、SSR 字符串、原生组件（小程序/Canvas）
-  - 声明式：开发者描述「UI 应该是什么样」，框架负责「怎么变」
-
-- **缺点与边界**
-  - 多一层 vnode 创建 + diff 计算——比手写精准的最小 DOM 操作慢
-  - 极端性能场景（高频动画、大数据可视化）仍要直操作 DOM 或上合成层
-  - 它的价值是「保证不太差 + 把优化沉淀到框架」，不是「一定最快」
-  - Vue3 的编译优化把 vnode 的**创建**也省了：静态提升后静态节点只创建一次，Block Tree 让 diff 只遍历动态节点——虚拟 DOM 的劣势被编译期补偿
-  - 无 key 的 diff 是「就地复用」，vnode 的优势在顺序稳定时最明显；频繁重排才需要 key 与 LIS
-  - vnode 不等于 DOM：`vnode.el` 只是挂载后回填的真实节点引用，卸载/复用时要注意它的生命周期
+- 是什么：虚拟 DOM（VNode），就是用普通 JS 对象来描述真实 DOM 的结构、属性、子节点。
+- 过程：模板编译生成 render 函数，执行 render 产出 Vnode；之后通过 patch（diff）对比新旧两份 Vnode，算出最小改动，再操作真实 DOM。
+- 优点：
+  - 减少频繁DOM操作：js 算出最小变动部分，批量真实更新DOM
+  - 支持跨平台: 可以渲染到DOM、Canvas、SSR 等
+  - 抽象层：方便做编译优化、异步更新调度、批量更新
+- 缺点：
+  - 额外开销：生成 VNode、diff 对比本身有 JS 计算开销；极端简单场景，手动操作 DOM 会更快
+```
+{
+  type: 'div',
+  props: { class: 'box' },
+  children: 'hello'
+}
+```
 
 ### 21. Fragment 是什么？解决什么问题？Vue3 为什么能支持多根节点？
 
 - **是什么**：无包裹的多节点片段——组件能返回多个根节点而不引入多余 DOM
-- **机制**：Fragment 类型的 vnode，patch 走「多子节点」分支，首尾空文本锚点定位
 - **作用**：免包裹层保布局语义；template v-for / template v-if 多节点
-
-- **作用与典型场景**
-  - 不用为返回多个节点硬包一层 div：避免无意义包裹层破坏 flex/grid 布局语义，DOM 树更浅、选择器更干净
-  - `<template v-for>` 循环出多个同级节点（Vue2 的 template 上必须再套真实标签）；TransitionGroup 默认不渲染 wrapper 也是靠它
-  - `<template v-if>` 里写多个兄弟元素做条件渲染，不产生额外真实节点
+- **机制**：Fragment 类型的 vnode，patch 走「多子节点」分支，首尾空文本锚点定位
 
 - **Vue2 为什么做不到 → Vue3 怎么支持**
   - Vue2 的实例与 patch 都以「唯一根 vnode」为前提：`$el` 要指向一个确定的真实 DOM 根；diff 以单根为入口递归；父透传的 class/style 要自动落到唯一根上
   - Vue3 编译器允许多根，产出一个 `shapeFlag` 为 Fragment 的 vnode，children 是数组
   - patch 遇到 Fragment 走「多子节点」分支（数组 diff），不再要求单一入口；起止位置用 `hostCreateText('')` 生成的首尾空文本锚点定位
 
-- **边界与代价**
-  - 多根时 `$attrs` 不会自动继承——必须显式挑一个根写 `v-bind="$attrs"`，否则透传丢失（开发期有警告）
-  - 依赖 `$el` 的递归组件、部分第三方库要自己保证语义
-  - `<Transition>` 只接受单个元素/组件做过渡——多根子树要么包一层，要么改用 TransitionGroup
-  - 首尾空文本锚点是多根能被精确插入/卸载/移动的底层原因；单根与多根在 diff 入口上是统一的——`renderComponentRoot` 返回的 subTree 无论是不是 Fragment，都走 `patch(n1, n2, container, anchor)`
-  - `<template v-for>` 的 key 写在 template 标签上（Vue3 支持，Vue2 必须写在真实子元素上）——列表渲染里的常见追问
-  - Fragment 没有自己的 DOM——`vnode.el` 指向的是起始锚点文本节点，操作子树要沿着锚点找
-
 ### 22. Vue2 和 Vue3 的 diff 算法流程？key 在其中起什么作用？
-
-- **两大前提**：只同层比较、tag 不同直接替换
-- **Vue2**：双端对比——头头/尾尾/旧头新尾/旧尾新头四种组合
-- **Vue3**：前后缀同步 + 中间乱序用最长递增子序列，DOM 移动次数最少
-- **key**：判断「复用谁」的身份凭证
-
-- **diff 的两大前提**
-  - **只同层比较**：跨层移动视为删除 + 重建，不做跨层复用
-  - **tag 不同直接替换**：类型变了就不再比较子树
-
+- **Vue2 口述**：Vue2 使用双端 diff，维护四指针，循环依次做头头、尾尾、旧头新尾、旧尾新头四轮比对，匹配成功就 patch 并且移动指针，命中交叉分支就移动 DOM；四轮都失败就拿着新头的 key 在旧区间查找，找到就挪到旧头前面；循环结束后批量新增或者删除剩余节点；它是找到就立刻移动，无法保证最少移动
+- **Vue3 口述**：Vue3 diff 先双端预处理，把两头有序节点先 patch 掉；一边扫完就直接新增或者删除；两边都剩下乱序节点时，建立 key 到新下标的映射，遍历旧节点生成「新局部下标 → 旧下标 + 1」的数组；如果顺序发生变动，求最长递增子序列，得到不需要移动的局部下标；倒序遍历，不在序列里的节点移动，最后完成新增；可以做到理论最少 DOM 移动。
 - **Vue2：双端对比**
-  - 新旧列表各拿头尾两个指针，比较四种组合：头头、尾尾、旧头新尾、旧尾新头
-  - 四种都没命中 → 乱序处理：旧列表建 key → index 映射，用新头节点的 key 查表，命中就移动、否则新建
+  - 初始化设置四个指针：旧头、旧尾、新头、新尾；
+  - 主循环双端比对四轮
+    - 头头匹配，新旧头部相同 → patch，头指针同时后移
+    - 尾尾匹配，新旧尾相同 → patch，尾指针同时前移
+    - 旧头、新尾匹配，把旧头 DOM 移动到当前旧尾后面，patch，旧头指针后移、新尾指针前移
+    - 新头、旧尾匹配，把旧尾 DOM 移动到当前新头前面，patch，新头指针后移、旧头指针前移
+  - 如果四轮都没命中，则进行乱序匹配
+    - 确定当前新头节点，通过key值在旧剩余区间查找匹配
+    - 找到：把对应的DOM 节点移动到旧头前面，把旧数组该位置标记为 undefined，标记为已经复用
+    - 找不到：判定为新增节点，直接插入到旧头前面
+  - 指针交叉，循环结束
+    - 如果还有剩余新节点：新增
+    - 如果还有剩余旧节点：删除
+  - 局限：移动操作比较粗暴，适合简单列表；长列表、乱序重排性能一般
 
-- **Vue3：前后缀同步 + 最长递增子序列**
-  - 先同步头尾（前缀/后缀），只对中间乱序区做精细处理
-  - 建 `newIndexToOldIndexMap`（新位置 → 旧下标 + 1，0 表示新增），求出**最长递增子序列**——序列内节点不动，其余按需移动
-  - key 在这里是映射的键：有 key 才能把「节点身份」跨位置对上
-  - key 必须是**稳定且唯一**的业务标识（id）；用 `Math.random()` 等于每次全部销毁重建；key 只在同一父节点下需要唯一，且只影响同层 diff，不跨层级
-  - index 作 key 的错位机制：`[A,B,C]` 头部插入 D 时，旧新 key 0/1/2 全部「命中」，diff 认为位置没变、内容变了——整列表被 patch 重写，带状态的子组件（输入框、勾选）状态跟着错位；纯展示、不重排、只尾部追加时 index 才可接受
-  - 无 key 的列表退化为「就地复用」：按位置 patch，顺序变化时内容错位——带输入框的列表还会串数据
-  - LIS 只解决「移动最少」，删除/新增仍靠映射表判断；`moved` 标记决定是否真的执行移动
-  - Vue3 的 diff 还靠 patchFlag 跳过属性级全量比较，作用于单个节点的 patch，不是列表算法本身
+- **Vue3：预处理 + 最长递增子序列**
+  - 预处理：先从头向后，再从尾向前，匹配则指针推进，不匹配则停住
+  - 预处理结束，判断边界
+    - 旧节点没了，新节点还有：剩余节点全部新增
+    - 新节点没了，旧节点还有：剩余节点全部删除
+    - 旧节点和新节点都有：进入乱序处理流程
+      - 遍历新剩余片段，建立 key → 新全局索引映射表
+      - 以新剩余片段长度建立映射数组，填充 0
+      - 遍历旧剩余片段，通过key在映射表查找是否匹配
+        - 找不到：直接删除旧节点
+        - 找到：映射数组[新乱序片段的局部下标]=旧片段的全局下标+1（找不到的为0代表新增）
+      - 求最长递增子序列 LIS：返回不需要移动节点的局部下标序列
+      - 倒序遍历新节点：从后往前，判断是否属于 LIS
+        - 在序列里，不移动
+        - 不在：如果为0，新增节点移动到对应位置，否则移动到对应位置
+- **例子**
+```
+      0, 1, 2, 3, 4
+旧：[ a, b, c, d, e ]
+新：[ a, d, e, b, c ]
+```
+- Vue2 双端 diff 全过程
+  - 双端对比
+    - 头头对比匹配（a）, patch(a)
+    - 指针变动：
+      - newS=1, newStart=d, oldE=4, oldEnd=c
+      - oldS=1, oldStart=b, oldE=4, oldEnd=e
+  - 乱序第一轮
+    - 在旧剩余区间：b, c, d, e 遍历查找
+    - 找到，下标为3
+    - 旧数组该位置标记为 undefined, 即 [ a, b, c, undefined, e ]
+    - 把 d 的 DOM 移动到当前 oldStart（b）前面，patch(d)
+    - 指针变动：
+      - newS=2, newStart=e newE=4 newEnd=c
+      - oldS=1, oldStart=b oldE=4, oldEnd=e
+  - 双端对比，头尾对比匹配(e)
+    - 把 e 的 DOM 移动到当前 oldStart（b）前面，patch(e)
+    - 指针变动：
+      - newS=3, newStart=b newE=4 newEnd=c
+      - oldS=1, oldStart=b oldE=3, oldEnd=undefined -> oldE=2, oldEnd=c
+  - 后续就是patch(b)、patch(c)
+  
+- Vue3 预处理 + 最长递增子序列 diff 全过程
+  - 双端预处理，patch(a)
+    - 剩下片段：
+      - 旧 [ b, c, d, e ]
+      - 新 [ d, e, b, c ] 
+    - 头同步指针现在为 1
+  - 遍历新剩余片段，建立key → 新全局索引映射表：
+  ```
+  keyToNewIndexMap = {
+    d: 1,
+    e: 2,
+    b: 3,
+    c: 4
+  }
+  ```
+  - 遍历旧剩余片段，建立下标为新乱序片段的局部下标，值为旧片段的全局下标+1的数组（+1是为了避免和全局片段的下标0冲突）
+    - 头同步指针为 1
+      - key 为 b， 通过 keyToNewIndexMap 找到新全局索引为 3，所以新局部索引为 3-1=2
+      - 旧片段的全局索引记录规则为：旧片段的全局索引 +1 = 1 + 1 = 2 
+      - 则 newIndexToOldIndexMap[2] = 2
+    - 头同步指针为 2
+      - key 为 c， 通过 keyToNewIndexMap 找到新全局索引为 4，所以新局部索引为 4-1=3
+      - 旧片段的全局索引记录规则为：旧片段的全局索引 +1 = 2 + 1 = 3
+      - 则 newIndexToOldIndexMap[3] = 3
+    - 头同步指针为 3
+      - key 为 d， 通过 keyToNewIndexMap 找到新全局索引为 1，所以新局部索引为 1-1=0
+      - 旧片段的全局索引记录规则为：旧片段的全局索引 +1 = 3 + 1 = 4
+      - 则 newIndexToOldIndexMap[0] = 4
+    - 头同步指针为 4
+      - key 为 e， 通过 keyToNewIndexMap 找到新全局索引为 2，所以新局部索引为 2-1=1
+      - 旧片段的全局索引记录规则为：旧片段的全局索引 +1 = 4 + 1 = 5
+      - 则 newIndexToOldIndexMap[1] = 5
+  ```
+  newIndexToOldIndexMap = [
+    4,   // 局部下标 0 → d，来自旧下标 3 (+1)
+    5,   // 局部下标 1 → e，来自旧下标 4 (+1)
+    2,   // 局部下标 2 → b，来自旧下标 1 (+1)
+    3    // 局部下标 3 → c，来自旧下标 2 (+1)
+  ]
+  ```
+  - 求最长递增子序列 LIS的值为 [4, 5], 对应的局部下标为 [0, 1]
+  - 倒叙遍历新中间片段：局部下标：3 → 2 → 1 → 0 c b e d
+    - 局部下标3，newIndexToOldIndexMap[3]=c,锚点为：局部下标+1=4，newIndexToOldIndexMap[4]=undefined, 插入末尾
+    - 局部下标2，newIndexToOldIndexMap[2]=b, 锚点为：局部下标+1=3，newIndexToOldIndexMap[3]=c, 插入 c 前面
+    - 局部下标1，是 LIS 的一个元素，不移动
+    - 局部下标0，是 LIS 的一个元素，不移动
+- **vue2 diff 伪代码**
+```
+while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+  const oldStartVnode = oldCh[oldStartIdx]
+  const oldEndVnode = oldCh[oldEndIdx]
+  const newStartVnode = newCh[newStartIdx]
+  const newEndVnode = newCh[newEndIdx]
 
-### 23. Vue3 的编译期优化做了什么？静态节点如何处理？为什么性能提升明显？
+  // 四轮匹配，省略……
+  if (sameVnode(oldStartVnode, newStartVnode)) {
+    // ...
+  } else if (sameVnode(oldEndVnode, newEndVnode)) {
+    // ...
+  } else if (sameVnode(oldStartVnode, newEndVnode)) {
+    // ...
+  } else if (sameVnode(oldEndVnode, newStartVnode)) {
+    // ...
+  } else {
+    // ========== 四轮全部没命中，进入这里 ==========
+    // 拿新头的 key，去旧剩余区间找
+    const idxInOld = findIdxByKey(oldCh, oldStartIdx, oldEndIdx, newStartVnode.key)
 
-- **核心思想**：编译时能确定的信息别拖到运行时
-- **四机制**：静态提升、patchFlag、Block Tree、事件缓存——diff 从全量比变成只盯动态部分
+    if (idxInOld === undefined) {
+      // ✦ 在旧里面找不到：全新节点，插到 oldStart 前面
+      createElm(newStartVnode, parentElm, oldStartVnode.elm)
+    } else {
+      // ✦ 在旧里面找到了这个节点
+      const vnodeToMove = oldCh[idxInOld]
+      // 标记这个位置：已经被挪走，后续不再处理
+      oldCh[idxInOld] = undefined
+      // 把找到的这个真实 DOM，移动到旧头的前面
+      parentElm.insertBefore(vnodeToMove.elm, oldStartVnode.elm)
+      // patch 更新节点本身
+      patch(vnodeToMove, newStartVnode)
+    }
+    // 新头指针往后走
+    newStartIdx++
+  }
+}
+function findIdxByKey(list, l, r, key) {
+  for (let i = l; i <= r; i++) {
+    if (list[i] && list[i].key === key) {
+      return i
+    }
+  }
+}
 
-- **静态节点与静态提升**
-  - 静态节点 = 整棵子树不含任何动态绑定（插值/指令/动态属性）
-  - hoistStatic：把静态节点提到 render 函数外只创建一次，重渲染直接引用
-  - 连续静态节点超过阈值会合并成一个静态 vnode，用 innerHTML 直插，整段跳过 diff
-
-- **patchFlag：带类型的 diff 提示**
-  - 编译期给动态节点打标记：`TEXT` 只有文本会变、`CLASS` 只有 class 动态、`PROPS` 只有部分属性动态
-  - diff 时按 flag 只比较对应字段，跳过结构判断与全量属性对比；flag 可组合（按位或）
-
-- **Block Tree 与事件缓存**
-  - Block：以「结构可能变的块」为单位，把所有动态后代节点平铺收集进一个数组
-  - 更新时直接遍历这个数组，跳过整棵静态树；`v-if` 等结构变化会开新 Block
-  - cacheHandlers：模板内联事件函数缓存，避免每次渲染生成新函数引起子组件无效更新
-  - 传统 diff 的比对量与**节点总数**相关；优化后与**动态节点数**相关——静态占比越高提速越明显
-  - Block 的收集由编译器保证，运行时只看 `dynamicChildren`，不再递归 children
-  - 静态提升只对「纯静态」生效：只要子树里有一处动态绑定，整棵就不能提升
+function sameVnode(a, b) {
+  return a.key === b.key && a.tag === b.tag
+}
+```
 
 ## 八、Vue Router 路由
 
-### 24. hash 模式和 history 模式的原理与区别？history 需要后端怎么配合？
+### 23. hash 模式和 history 模式的原理与区别？history 需要后端怎么配合？
 
 - **hash**：监听 hashchange，# 后变化不发请求，兼容好
-- **history**：pushState/replaceState 改路径，美观、SEO 友好；但刷新会真请求路径——后端必须 try_files 兜底 index.html，否则 404
-
-- **原理差异**
-
-| 维度   | hash                          | history                                  |
-| ------ | ----------------------------- | ---------------------------------------- |
-| 原理   | # 后内容变化，监听 hashchange | pushState/replaceState + popstate        |
-| 请求   | 改 hash 不发请求              | 改路径不发请求，但**刷新会真请求该路径** |
-| 服务端 | 无要求                        | 所有路径兜底 index.html，否则刷新 404    |
-| 其他   | url 带 # 不美观               | SSR/SEO 更友好                           |
+- **history**：pushState/replaceState 改路径，美观、SEO 友好；但刷新会真请求路径——后端必须 try_files 兜底 index.html，否则 404（https://xxx/user/xxx）
 
 - **history 404 的根因**
   - 深链刷新时浏览器把 `/user/123` 当真实资源请求服务器，服务器没这文件就 404
   - Nginx 用 `try_files $uri $uri/ /index.html` 兜底；history 模式下这条是必须项
 
-- **怎么选**
-  - 能配服务端就 history（配兜底）；静态托管改不了服务端（部分 CDN 托管）就用 hash
-  - 两种模式都必须处理「路由变化不整页刷新」——hash 用 hashchange，history 用 popstate 监听浏览器前进后退
-  - history 模式还要处理「首屏基路径」：部署在子路径下要配 `base`，否则资源 404
-  - pushState 改 URL 不会触发页面重载，但会写入历史栈——`replaceState` 才不新增记录
 
-### 25. 路由守卫有哪些？执行顺序？
+### 24. 动态路由与 addRoute 的使用场景？
 
-- **三层**：全局（beforeEach/beforeResolve/afterEach）、路由独享（beforeEnter）、组件内（Enter/Update/Leave）
-- **主干流程**：离开旧组件 → 全局 beforeEach → beforeEnter → 解析异步组件 → beforeRouteEnter → beforeResolve → 确认 → afterEach → DOM 更新
-
-- **三层守卫**
-  - 全局：`beforeEach`（鉴权主战场）、`beforeResolve`（导航确认前最后时机，适合拉依赖数据）、`afterEach`（改标题、埋点，无 next）
-  - 路由独享：`beforeEnter`，配置在某条路由上
-  - 组件内：`beforeRouteEnter`（**拿不到 this**，实例还没建，要 `next(vm => ...)`）、`beforeRouteUpdate`（同组件复用如 `/user/:id` 变化）、`beforeRouteLeave`（离开确认：未保存提示）
-
-- **完整导航解析流程（背主干）**
-  - 导航触发 → 失活组件 beforeRouteLeave → 全局 beforeEach → 复用组件 beforeRouteUpdate → 路由独享 beforeEnter → **解析异步路由组件** → 激活组件 beforeRouteEnter → 全局 beforeResolve → 导航确认 → 全局 afterEach → DOM 更新 → beforeRouteEnter 的 next 回调
-
-- **Vue Router 4 的变化**
-  - `new VueRouter` → `createRouter` + `createWebHistory`
-  - `next` 变可选：返回 `false` 取消导航、返回路由路径即重定向
-  - `beforeRouteEnter` 拿不到 this 的根因：导航发生在旧组件卸载、新组件创建之前，守卫执行时实例还不存在
-  - 守卫里做异步鉴权要用 `await` 或返回 Promise，别只写回调——不返回则导航不会等待
-  - 重定向在 `beforeEach` 里做要防死循环：目标路由等于当前路由时要提前放行
-
-### 26. 动态路由与 addRoute 的使用场景？权限路由怎么实现？
-
-- **流程**：登录拉权限 → addRoute 注册可访问路由 → beforeEach 校验「有 token 但路由未注册」先补注册再放行
-- **两个坑**：404 路由必须最后注册；路由表只在内存，刷新要重走注册
-
-- **核心 API**
+- 区分：
+  - 静态路由：写死在代码，初始化直接传入 createRouter，所有人都能访问
+  - 动态路由：不是写死，等拿到用户权限之后，调用 `addRoute` 注册可访问路由，beforeEach 校验「有 token 但路由未注册」先补注册再放行
+- 核心场景：
+  - 权限路由：登录之后，根据后端返回的权限菜单、权限标识，动态生成路由
+  - 按需加载业务模块：某些独立业务模块，进入特定条件才加载对应的路由配置
+  - 页面配置化（低代码）：后端配置页面，返回路由信息，前端运行时注册
+  - 避免路由过大：路由不一次性全部注册
+- 核心 API：
   - `router.addRoute(route)` / `router.removeRoute(name)`：登录后拉权限表，过滤出可访问路由逐条注册
   - `router.hasRoute()` 判断是否已注册（热更新、重复登录场景）
 
-- **权限路由标准流程**
-  - 登录 → 拿角色/权限码 → 过滤静态路由表或请求后端菜单 → addRoute 注册 → beforeEach 校验并补注册 → 放行
-  - 404 路由放最后：先注册会把「尚未注册的合法路由」全部吞成 404
-  - 刷新恢复：路由表只在内存，刷新即失——beforeEach 里判断「有 token 但未初始化路由」时重走注册
-
-- **两种数据来源的取舍**
-  - 后端返回菜单：权限粒度由后端掌控、前端零硬编码，但要防组件名映射不上
-  - 前端静态表过滤：实现简单，适合角色少的系统，但改权限要发版
-  - addRoute 后如果当前正停留在被移除的路由，要手动 `replace` 到一个安全路径，否则页面停在已失效的组件
-  - 嵌套路由注册要把父路由的 `name` 作为 `addRoute` 的第一个参数；`matched` 是「父 → 子」的层级链，由路径层级决定，与注册顺序无关
-  - removeRoute 后同一 name 可再次 addRoute，热更新调试时常用
-
 ## 九、状态管理 Pinia / Vuex
 
-### 27. Pinia 和 Vuex 的区别？核心概念与常用实例方法？
+### 25. Pinia 和 Vuex 的区别？核心概念与常用实例方法？
 
 - **四个优势**：去 mutation（直接改/action 统一）、完整 TS 推导、模块扁平无命名空间、代码分割友好
 - **三件套**：state / getters / actions——同步异步都写 action
@@ -682,7 +736,7 @@ await counter.asyncAdd(1)       // action 内同步/异步都行
 
 ## 十、性能优化
 
-### 28. Vue 项目有哪些性能优化手段？（编码 / 运行时 / 打包三层）
+### 26. Vue 项目有哪些性能优化手段？（编码 / 运行时 / 打包三层）
 
 - **编码层**：少算少更新——computed 缓存、稳定 key、动静拆分
 - **运行时层**：少代理少渲染——shallowRef/markRaw、keep-alive、v-memo、虚拟滚动
@@ -708,7 +762,7 @@ await counter.asyncAdd(1)       // action 内同步/异步都行
   - 编码层最容易被忽略的「computed 替代模板方法调用」这种小事，收益随渲染次数线性放大
   - 回答时主动说「我会先测量」：performance / Lighthouse 先定位是包大、首屏阻塞还是长任务，再选对应层
 
-### 29. 路由懒加载与异步组件怎么实现？代码分割的两个粒度？
+### 27. 路由懒加载与异步组件怎么实现？代码分割的两个粒度？
 
 - **同源机制**：动态 import 是「构建工具可静态分析的分割点」→ 拆独立 chunk，运行时才请求
 - **两个粒度**：路由懒加载 = 页面级（`component: () => import(...)`）；异步组件 = 组件级（defineAsyncComponent，配 loading/error/超时）
@@ -740,7 +794,7 @@ await counter.asyncAdd(1)       // action 内同步/异步都行
   - 异步组件 + keep-alive 组合：缓存的是已加载实例，切回不再触发加载——省流量但可能错过代码更新
   - 加载失败可配 errorComponent + `onError` 回调做重试与上报
 
-### 30. 打包层面如何优化 Vue 项目体积？Tree-Shaking 的前提？
+### 28. 打包层面如何优化 Vue 项目体积？Tree-Shaking 的前提？
 
 - **手段**：visualizer 先定位 → 按需引入、分包、Tree-Shaking、手动拆包
 - **三个前提**：ESM 静态结构 + sideEffects 标记 + 生产压缩器删除——缺一不可
@@ -774,7 +828,7 @@ await counter.asyncAdd(1)       // action 内同步/异步都行
 
 ## 十一、开放类（工程思考）
 
-### 31. 过往项目中 Vue 技术栈遇到的最大技术难点是什么，怎么解决的？
+### 29. 过往项目中 Vue 技术栈遇到的最大技术难点是什么，怎么解决的？
 
 - **难点定位**：异步竞态治理——「异步时序 + 框架副作用机制 + 状态归属」三者叠加，偶现难复现
 - **方案两层**：治错序（序号标记位 → watch onCleanup）+ 控并发（防抖 + 请求池）
