@@ -118,9 +118,7 @@ export default [
         text: '性能优化',
         collapsed: false,
         items: [
-            { text: '性能优化体系与指标', link: '/frontend/性能优化/性能优化体系与指标' },
-            { text: '性能优化手段与落地', link: '/frontend/性能优化/性能优化手段与落地' },
-            { text: '模块总结（性能优化）', link: '/frontend/性能优化/总结' }
+            { text: '前端性能优化', link: '/frontend/性能优化/前端性能优化' }
         ]
     },
     {
