@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>空白页 · 白屏采集验证</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- 容器撑满视口但没有内容：这正是 SPA 白屏的典型形态（外壳在、内容是空的） -->
+        <div id="app" style="min-height: 100vh"></div>
+        <script type="module" src="./blank.js"></script>
+    </body>
+</html>

@@ -125,7 +125,7 @@ export default [
         text: '前端监控',
         collapsed: false,
         items: [
-            { text: '监控SDK', link: '/frontend/前端监控/监控SDK' },
+            { text: '监控 SDK 设计与实现', link: '/frontend/前端监控/监控SDK设计与实现' },
             { text: '模块总结（前端监控）', link: '/frontend/前端监控/总结' }
         ]
     },

@@ -1,5 +1,22 @@
-// monitor-sdk 公共出口
-// 五个能力文件：init（初始化装配）/ exceptions（异常）/ performance（性能）/ declarative（声明上报）/ report（上报）
-// 手动上报入口：report()——业务侧区分上报类型的二次封装（如 PV/点击/错误）在接入层完成
-export { init, getCurrentInstance } from './init.js'
-export { report } from './report.js'
+// 公共出口：对外只有 init 一个函数，其余都是插件工厂（方便业务裁插件或写自己的插件）。
+import { resolveConfig } from './config'
+import { createKernel } from './core/kernel'
+
+/**
+ * 初始化监控 SDK。全站只 init 一次：多实例会导致监听器重复挂载、队列各自为战。
+ * @param {object} config 配置项都可选，见 config.js 的 defaultConfig
+ * @returns {object} 实例：report / captureError / flush / getContext / getSession /
+ *   setUser / setTag / attachVue / checkWhiteScreen / teardown / cfg / stats
+ */
+export function init(config) {
+    return createKernel(resolveConfig(config))
+}
+
+export { createCustomPlugin } from './plugins/custom'
+export { createPerformancePlugin } from './plugins/performance'
+export { createJsErrorPlugin } from './plugins/js-error'
+export { createResourcePlugin } from './plugins/resource'
+export { createRequestPlugin } from './plugins/request'
+export { createRouterPlugin } from './plugins/router'
+export { createBehaviorPlugin } from './plugins/behavior'
+export { createWhiteScreenPlugin } from './plugins/whitescreen'

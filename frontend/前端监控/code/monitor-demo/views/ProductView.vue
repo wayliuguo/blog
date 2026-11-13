@@ -1,11 +1,10 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { findProduct, addToCart } from '../store.js'
 import { trackClick } from '../useReport.js'
 
 const route = useRoute()
-const router = useRouter()
 const product = findProduct(route.params.id)
 const qty = ref(1)
 
@@ -39,10 +38,6 @@ async function buyNow() {
         trackClick('pay_fail', { id: product.id, reason: data.reason })
     }
 }
-
-function goCart() {
-    router.push('/cart')
-}
 </script>
 
 <template>
@@ -59,15 +54,9 @@ function goCart() {
 
         <div class="row">
             <span>数量</span>
-            <button class="plain" @click="changeQty(-1)">-</button>
+            <button class="plain" data-track="qty_minus" @click="changeQty(-1)">-</button>
             <b>{{ qty }}</b>
-            <button class="plain" @click="changeQty(1)">+</button>
-        </div>
-
-        <div class="actions">
-            <button class="ghost" @click="addCart">加入购物车</button>
-            <button @click="buyNow">立即购买</button>
-            <button class="plain" @click="goCart">查看购物车</button>
+            <button class="plain" data-track="qty_plus" @click="changeQty(1)">+</button>
         </div>
 
         <ul class="promise">
@@ -75,53 +64,121 @@ function goCart() {
             <li>七天无理由</li>
             <li>全国联保</li>
         </ul>
+
+        <div class="desc">
+            <p class="desc-title">服务承诺</p>
+            <p class="desc-text">页面渲染完成后，性能、白屏、路由、行为等数据已经陆续上报。</p>
+        </div>
+
+        <!-- H5 底部操作条：加购与购买常驻，不用滚到底部找按钮 -->
+        <div class="actions">
+            <button class="ghost" data-track="add_cart" @click="addCart">加入购物车</button>
+            <button data-track="buy_now" @click="buyNow">立即购买</button>
+        </div>
     </div>
 </template>
 
 <style scoped>
 .detail {
-    background: #fff;
-    border-radius: 10px;
-    padding: 22px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px 16px 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 .hero {
     display: flex;
-    gap: 20px;
+    gap: 16px;
     align-items: center;
+    background: linear-gradient(120deg, #fff4ec, #ffe9d8);
+    border-radius: 12px;
+    padding: 16px;
 }
 .emoji {
-    font-size: 72px;
+    font-size: 64px;
+    filter: drop-shadow(0 3px 6px rgba(255, 90, 0, 0.18));
 }
 .info h2 {
-    font-size: 20px;
+    font-size: 19px;
+    font-weight: 700;
 }
 .price {
     margin-top: 8px;
-    color: #ff5a00;
+    color: var(--brand);
     font-size: 20px;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
 .price s {
-    color: #bbb;
-    font-size: 13px;
+    color: #b6b9be;
+    font-size: 12px;
     font-weight: 400;
 }
 .row {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 22px 0;
+    margin: 18px 2px;
+    font-size: 14px;
+    color: var(--ink-2);
 }
-.actions {
-    display: flex;
-    gap: 10px;
+.row b {
+    color: var(--ink);
+    font-size: 16px;
+    min-width: 22px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.row button {
+    width: 34px;
+    padding: 6px 0;
+    font-size: 16px;
+    border-radius: 8px;
 }
 .promise {
-    margin-top: 22px;
-    color: #888;
+    margin-top: 4px;
+    color: var(--ink-2);
     font-size: 12px;
     display: flex;
-    gap: 16px;
+    gap: 14px;
     list-style: none;
+}
+.desc {
+    margin-top: 18px;
+    background: #f7f8fa;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+.desc-title {
+    font-size: 13px;
+    font-weight: 700;
+}
+.desc-text {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--ink-2);
+    line-height: 1.6;
+}
+/* 底部操作条：左卡右主，比例 2:3 是 H5 商城的通行做法 */
+.actions {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(24, 28, 36, 0.06);
+}
+.actions .ghost {
+    flex: 2;
+}
+.actions button:not(.ghost) {
+    flex: 3;
 }
 </style>

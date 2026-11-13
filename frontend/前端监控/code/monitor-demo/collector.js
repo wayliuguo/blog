@@ -86,16 +86,24 @@ const server = http.createServer((req, res) => {
 })
 
 function print(e) {
-    const label = e.type === 'track' ? e.event : e.message || ''
+    const data = e.data || {}
     const extra =
-        e.type === 'perf' ? `fp=${e.fp}ms fcp=${e.fcp}ms lcp=${e.lcp}ms cls=${e.cls} tbt=${e.tbt}ms inp=${e.inp}ms` : ''
-    console.log(`▼ [${e.page}] ${e.type} ${label} ${extra}`)
-    console.log(`    release=${e.release} env=${e.environment} handled=${e.handled === undefined ? '-' : e.handled}`)
+        e.type === 'perf'
+            ? `fp=${data.fp} fcp=${data.fcp} lcp=${data.lcp} cls=${data.cls} inp=${data.inp} tbt=${data.tbt}`
+            : e.type === 'white-screen'
+            ? `blank=${data.blank}/${data.total} ratio=${data.ratio}`
+            : e.type === 'request'
+            ? `status=${data.status} ${data.duration}ms`
+            : ''
+    console.log(
+        `▼ [${(e.page && e.page.path) || '-'}] ${e.type}${e.subtype ? '/' + e.subtype : ''} ${e.message || ''} ${extra}`
+    )
+    console.log(`    release=${e.release} env=${e.env} session=${((e.session && e.session.id) || '').slice(0, 8)}`)
 }
 
-// ---- 数据使用：把 events.jsonl 聚合成三块看板 ----
-// 错误看「同类聚合」（同类型+同消息+同位置归并为一个计数），性能看「分位数」（p75 比均值抗噪），
-// 业务看「漏斗转化」（相邻步计数相除）。这是三类数据各自的标准消费方式
+// ---- 数据使用：把 events.jsonl 聚合成四块看板 ----
+// 错误看「同类聚合」（指纹相同归并为一个计数）、性能看「终值与分位」、
+// 请求看「慢与失败」、业务看「漏斗转化」。这是四类数据各自的标准消费方式
 function buildStats() {
     if (!fs.existsSync(EVENTS_FILE)) return { total: 0, note: '暂无数据，先在演示页触发几轮操作' }
     const events = fs
@@ -111,65 +119,82 @@ function buildStats() {
         })
         .filter(Boolean)
 
-    // ① 错误看板：按归并键（类型+消息+位置）聚合 + 最近发生时间 + 影响页面
+    // ① 错误看板：按指纹（类型+子类型+消息+栈顶帧）聚合。
+    // resource 只有 load-error 才算错误，timing 是性能汇总不是异常
     const errorMap = new Map()
     for (const e of events) {
-        if (e.type === 'perf' || e.type === 'track') continue
-        const key = e.type + '|' + (e.message || '') + '|' + (e.filename || (e.data && e.data.url) || '')
+        const isError = e.type === 'error' || (e.type === 'resource' && e.subtype === 'load-error')
+        if (!isError) continue
+        const key = e.fingerprint || `${e.type}|${e.message || ''}`
         const item = errorMap.get(key) || {
             message: e.message || e.type,
+            type: e.type,
+            source: (e.data && e.data.source) || '-',
             count: 0,
             pages: new Set(),
-            handledTrue: 0,
             lastAt: 0,
             sample: e
         }
         item.count++
-        if (e.page) item.pages.add(e.page)
-        if (e.handled) item.handledTrue++
+        if (e.page && e.page.path) item.pages.add(e.page.path)
         item.lastAt = Math.max(item.lastAt, e.timestamp)
-        item.sample = e // 最后一条当样本（带完整调用栈）
+        item.sample = e
         errorMap.set(key, item)
     }
     const errors = [...errorMap.values()]
         .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
         .map(it => ({
             message: it.message,
+            type: it.type,
+            source: it.source,
             count: it.count,
             pages: [...it.pages],
-            handledRate: Math.round((it.handledTrue / it.count) * 100) + '%',
             lastAt: new Date(it.lastAt).toISOString(),
             stack: (it.sample.stack || '').split('\n').slice(0, 2)
         }))
 
-    // ② 性能看板：取最新一条 perf 快照 + 慢请求榜（真实部署按 p75 聚合，单机演示取终值）
+    // ② 性能看板：取最新一条 perf 终值（真实部署按 p75 聚合，单机演示取终值）
     const perfs = events.filter(e => e.type === 'perf')
     const perf = perfs.length ? perfs[perfs.length - 1] : null
-    const perfBoard = perf
-        ? {
-              fp: perf.fp,
-              fcp: perf.fcp,
-              lcp: perf.lcp,
-              cls: perf.cls,
-              inp: perf.inp,
-              tbt: perf.tbt,
-              navigation: perf.navigation,
-              slowRequests: perf.slowRequests
-          }
-        : null
+    const perfBoard = perf ? { page: perf.page && perf.page.path, ...perf.data } : null
 
-    // ③ 业务看板：漏斗 = 曝光 → 点击 → 加购 → 下单（相邻步计数相除即转化率）
-    const trackEvents = events.filter(e => e.type === 'track')
+    // ③ 请求看板：慢请求榜 + 失败列表
+    const requests = events.filter(e => e.type === 'request')
+    const slowRequests = requests
+        .filter(e => e.data && e.subtype === 'slow')
+        .sort((a, b) => (b.data.duration || 0) - (a.data.duration || 0))
+        .slice(0, 5)
+        .map(e => ({ url: e.data.url, duration: e.data.duration, method: e.data.method }))
+    const failedRequests = requests
+        .filter(e => e.data && e.data.success === false)
+        .slice(-10)
+        .map(e => ({
+            url: e.data.url,
+            status: e.data.status,
+            subtype: e.subtype,
+            at: new Date(e.timestamp).toISOString()
+        }))
+
+    // ④ 业务看板：漏斗 = 曝光 → 点击 → 加购 → 下单。
+    // 曝光/声明式点击来自 behavior（subtype + selector），手动埋点来自 custom（data.name），两者都要计入
+    const customs = events.filter(e => e.type === 'custom')
+    const behaviors = events.filter(e => e.type === 'behavior')
     const byName = new Map()
-    for (const e of trackEvents) {
-        byName.set(e.event, (byName.get(e.event) || 0) + 1)
+    for (const e of customs) {
+        const name = (e.data && e.data.name) || e.message || ''
+        byName.set(name, (byName.get(name) || 0) + 1)
     }
-    // 漏斗匹配用 includes：曝光事件名带商品 id 后缀（product_expose:1），后缀属于维度不属于步骤名
+    for (const e of behaviors) {
+        const label = (e.data && e.data.selector) || e.message || ''
+        const name = `${e.subtype}:${label}`
+        byName.set(name, (byName.get(name) || 0) + 1)
+    }
     const steps = ['product_expose', 'product_click', 'add_cart', 'order_submit']
     const funnel = steps
-        .map(s => {
-            const count = [...byName.entries()].filter(([name]) => name.includes(s)).reduce((n, [, c]) => n + c, 0)
-            return { step: s, count }
+        .map(step => {
+            const count = [...byName.entries()].filter(([name]) => name.includes(step)).reduce((n, [, c]) => n + c, 0)
+            return { step, count }
         })
         .map((item, i, arr) => ({
             ...item,
@@ -180,7 +205,25 @@ function buildStats() {
         .slice(0, 10)
         .map(([name, count]) => ({ name, count }))
 
-    return { total: events.length, errors, perf: perfBoard, funnel, topEvents }
+    // ⑤ 稳定性看板：白屏与路由
+    const whiteScreens = events.filter(e => e.type === 'white-screen')
+    const routes = events.filter(e => e.type === 'router')
+    const routeCount = new Map()
+    for (const e of routes) routeCount.set(e.data.route, (routeCount.get(e.data.route) || 0) + 1)
+
+    return {
+        total: events.length,
+        errors,
+        perf: perfBoard,
+        requests: { slow: slowRequests, failed: failedRequests },
+        funnel,
+        topEvents,
+        whiteScreen: {
+            count: whiteScreens.length,
+            last: whiteScreens.length ? whiteScreens[whiteScreens.length - 1].data : null
+        },
+        routes: [...routeCount.entries()].sort((a, b) => b[1] - a[1]).map(([route, count]) => ({ route, count }))
+    }
 }
 
 function respond(res, status, text) {

@@ -60,79 +60,113 @@ function onProductClick(p) {
 
 <style scoped>
 .banner {
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: space-between;
     background: linear-gradient(120deg, #ff5a00, #ff9500);
-    border-radius: 12px;
-    padding: 26px 28px;
+    border-radius: var(--radius);
+    padding: 20px 20px;
     color: #fff;
 }
+/* 斜向高光条：给纯色渐变一点层次 */
+.banner::after {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -12%;
+    width: 55%;
+    height: 180%;
+    background: rgba(255, 255, 255, 0.14);
+    transform: rotate(24deg);
+    border-radius: 40px;
+}
+.banner-text {
+    position: relative;
+    z-index: 1;
+}
 .banner-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     letter-spacing: 2px;
 }
 .banner-sub {
     margin-top: 6px;
-    font-size: 14px;
-    opacity: 0.92;
+    font-size: 13px;
+    opacity: 0.94;
+    font-variant-numeric: tabular-nums;
 }
 .banner-emoji {
+    position: relative;
+    z-index: 1;
     font-size: 44px;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
 }
 .sec-title {
-    margin: 20px 0 12px;
-    font-size: 17px;
+    margin: 16px 2px 10px;
+    font-size: 16px;
+    font-weight: 700;
 }
+/* H5 双列大卡：单手操作下点击目标更大 */
 .grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
 }
 .card {
     position: relative;
-    background: #fff;
-    border-radius: 10px;
-    padding: 18px 12px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px 12px 14px;
     text-align: center;
     text-decoration: none;
-    color: #222;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-    transition: transform 0.15s;
+    color: var(--ink);
+    box-shadow: 0 1px 6px rgba(24, 28, 36, 0.06);
+    transition:
+        transform 0.15s,
+        box-shadow 0.15s;
 }
-.card:hover {
-    transform: translateY(-2px);
+.card:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 10px rgba(24, 28, 36, 0.12);
 }
 .tag {
     position: absolute;
     top: 8px;
     left: 8px;
-    background: #eee;
-    color: #666;
+    background: #eef0f3;
+    color: var(--ink-2);
     font-size: 11px;
-    border-radius: 4px;
-    padding: 1px 6px;
+    border-radius: 5px;
+    padding: 1px 7px;
+    font-weight: 600;
 }
 .tag.hot {
     background: #ffece4;
-    color: #ff5a00;
+    color: var(--brand);
 }
 .emoji {
-    font-size: 40px;
+    font-size: 48px;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.1));
 }
 .name {
-    margin-top: 8px;
+    margin-top: 10px;
     font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .price {
     margin-top: 4px;
-    color: #ff5a00;
+    color: var(--brand);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
 }
 .price s {
-    color: #bbb;
+    color: #b6b9be;
     font-weight: 400;
     font-size: 12px;
     margin-left: 4px;

@@ -35,7 +35,7 @@ async function submitOrder() {
             notify('支付失败：' + data.reason)
         }
     } catch (e) {
-        errorReport(e, { flow: 'order' }, { total: cartTotal.value })
+        errorReport(e, { flow: 'order', total: String(cartTotal.value) })
         notify('下单异常，已上报（看 collector 终端）')
     }
 }
@@ -52,7 +52,11 @@ function buildPayload() {
 <template>
     <div class="cart-view">
         <h2>购物车</h2>
-        <p v-if="!cart.items.length" class="empty">购物车是空的，去首页挑一件吧</p>
+        <div v-if="!cart.items.length" class="empty">
+            <p class="empty-emoji">🧺</p>
+            <p class="empty-text">购物车是空的，去首页挑一件吧</p>
+            <router-link to="/" class="empty-link">去逛逛</router-link>
+        </div>
         <ul v-else>
             <li v-for="it in cart.items" :key="it.id" class="item">
                 <span class="emoji">{{ it.emoji }}</span>
@@ -62,11 +66,12 @@ function buildPayload() {
             </li>
         </ul>
 
+        <!-- H5 固定结算条：合计与提交常驻底部 -->
         <div v-if="cart.items.length" class="bar">
-            <span
+            <span class="bar-total"
                 >合计 <b class="total">¥{{ cartTotal }}</b></span
             >
-            <button @click="submitOrder">提交订单</button>
+            <button data-track="submit_order" @click="submitOrder">提交订单</button>
         </div>
 
         <transition name="fade">
@@ -77,60 +82,101 @@ function buildPayload() {
 
 <style scoped>
 .cart-view {
-    background: #fff;
-    border-radius: 10px;
-    padding: 22px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px 16px 16px;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
 }
 h2 {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
+    font-size: 18px;
 }
 .empty {
-    color: #999;
-    padding: 30px 0;
     text-align: center;
+    padding: 46px 0 30px;
+}
+.empty-emoji {
+    font-size: 52px;
+    filter: grayscale(0.4);
+}
+.empty-text {
+    margin-top: 10px;
+    color: var(--ink-2);
+    font-size: 13px;
+}
+.empty-link {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 26px;
+    background: var(--brand);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 18px;
+    text-decoration: none;
 }
 .item {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 12px 0;
-    border-bottom: 1px solid #f2f2f2;
+    padding: 12px 2px;
+    border-bottom: 1px solid var(--line);
     list-style: none;
+    font-size: 14px;
 }
 .emoji {
-    font-size: 30px;
+    font-size: 32px;
 }
 .name {
     flex: 1;
+    font-weight: 600;
 }
 .qty {
-    color: #888;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
 }
 .price {
-    color: #ff5a00;
+    color: var(--brand);
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
+/* 结算条与商品页操作条同一套 H5 范式 */
 .bar {
+    position: fixed;
+    bottom: calc(58px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 24px);
+    max-width: 456px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 16px;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 18px rgba(24, 28, 36, 0.12);
+    padding: 10px 14px;
+}
+.bar-total {
+    font-size: 13px;
+    color: var(--ink-2);
 }
 .total {
-    color: #ff5a00;
-    font-size: 18px;
+    color: var(--brand);
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
 }
 .toast {
     position: fixed;
     left: 50%;
-    bottom: 60px;
+    bottom: calc(110px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.78);
+    background: rgba(28, 30, 33, 0.86);
     color: #fff;
     font-size: 13px;
     border-radius: 18px;
-    padding: 8px 18px;
+    padding: 9px 20px;
     z-index: 99;
+    backdrop-filter: blur(6px);
 }
 .fade-enter-active,
 .fade-leave-active {
