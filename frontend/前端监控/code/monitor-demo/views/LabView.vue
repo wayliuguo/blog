@@ -30,7 +30,9 @@ function sampleDemo() {
     const before = sdk.stats.sampled
     for (let i = 0; i < 10; i++) sdk.captureError(new Error('采样演示错误 #' + i))
     const dropped = sdk.stats.sampled - before
-    result.value = `触发 10 次 × ${Math.round(sampleRate.value * 100)}% → 采样丢弃 ${dropped} 条，入队 ${10 - dropped} 条（stats.sampled）`
+    result.value = `触发 10 次 × ${Math.round(sampleRate.value * 100)}% → 采样丢弃 ${dropped} 条，入队 ${
+        10 - dropped
+    } 条（stats.sampled）`
     refresh()
 }
 
@@ -46,7 +48,9 @@ function throttleDemo() {
 async function flushNow() {
     const before = sdk.stats.sent
     await sdk.flush('manual')
-    result.value = `手动 flush 完成，新增送达 ${sdk.stats.sent - before} 条；最近触发原因 = ${sdk.stats.lastFlushReason}`
+    result.value = `手动 flush 完成，新增送达 ${sdk.stats.sent - before} 条；最近触发原因 = ${
+        sdk.stats.lastFlushReason
+    }`
     refresh()
 }
 
@@ -106,9 +110,9 @@ function rawPushState() {
 async function checkWhiteScreen() {
     const report = await sdk.checkWhiteScreen()
     result.value = report
-        ? `容器 ${report.container}：空白点 ${report.blankPoints}/${report.totalPoints}（${Math.round(report.ratio * 100)}%）→ ${
-              report.blank ? '判定白屏，已上报' : '非白屏'
-          }`
+        ? `容器 ${report.container}：空白点 ${report.blankPoints}/${report.totalPoints}（${Math.round(
+              report.ratio * 100
+          )}%）→ ${report.blank ? '判定白屏，已上报' : '非白屏'}`
         : '白屏插件未启用'
     refresh()
 }
@@ -194,7 +198,9 @@ onMounted(refresh)
         <section>
             <h3>[采集] 自定义上报 / 声明式埋点</h3>
             <button class="plain" @click="manualEvent">自定义 · report()</button>
-            <button class="plain" @click="trackClick('manual_click', { from: 'lab' })">自定义 · 业务封装 trackClick</button>
+            <button class="plain" @click="trackClick('manual_click', { from: 'lab' })">
+                自定义 · 业务封装 trackClick
+            </button>
             <button data-track="lab.declarative_click">行为 · 点击｜data-track 属性</button>
             <div data-expose="lab.expose_panel" class="expose-box">
                 行为 · 曝光｜本区块带 data-expose，滚入视口自动上报

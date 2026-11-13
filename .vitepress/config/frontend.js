@@ -117,9 +117,7 @@ export default [
     {
         text: '性能优化',
         collapsed: false,
-        items: [
-            { text: '前端性能优化', link: '/frontend/性能优化/前端性能优化' }
-        ]
+        items: [{ text: '前端性能优化', link: '/frontend/性能优化/前端性能优化' }]
     },
     {
         text: '前端监控',

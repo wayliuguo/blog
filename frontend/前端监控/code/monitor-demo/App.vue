@@ -80,13 +80,7 @@ body {
 }
 body {
     background: #e9eaee;
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        'PingFang SC',
-        'HarmonyOS Sans SC',
-        'Microsoft YaHei',
-        sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', sans-serif;
     color: var(--ink);
 }
 /* 移动优先的页面壳：手机全宽，桌面居中成「手机预览」 */
