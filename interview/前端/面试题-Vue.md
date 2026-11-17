@@ -5,7 +5,7 @@
 ### 1. Vue2 和 Vue3 主要区别有哪些？
 
 - **响应式原理：defineProperty → Proxy**
-  - Vue2 使用的是Object.defineProperty劫持对象已有属性，无法监听新增、删除属性，数组靠重写7个方法，初始化要全量递归，成本高
+  - Vue2 使用的是Object.defineProperty劫持对象已有属性，无法监听新增、删除属性，map、set 无法监听，数组靠重写7个方法，初始化要全量递归，成本高
   - Vue3 使用的是 Proxy + Reflect, 代理整个对象，其是**惰性代理**：访问到深层才代理，初始化成本低
 
 - **API 风格：Options → Composition**

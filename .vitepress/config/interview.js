@@ -4,8 +4,8 @@ export default [
         link: '/interview/反问面试官'
     },
     {
-        text: '项目面试题',
-        link: '/interview/项目面试题'
+        text: '模拟面试',
+        link: '/interview/模拟面试'
     },
     {
         text: '前端',
