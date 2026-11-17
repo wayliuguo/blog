@@ -4,7 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
-const CASES = ['store', 'strict', 'lockfile', 'workspace', 'ci']
+const CASES = ['workspace']
 const name = process.argv[2]
 
 if (!name || !CASES.includes(name)) {

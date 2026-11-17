@@ -36,56 +36,40 @@
 
 ## 《pnpm》七章骨架
 
-| 章 | 结论 | 实验 |
+| 章 | 结论 | 表达 |
 | --- | --- | --- |
-| 一、npm 平坦树的两个后果 | 重复安装 + 幽灵依赖可被 require | `duplicate` + `phantom`（`npm-lab`） |
-| 二、安装模型：store / 硬链接 / `.pnpm` / 符号链接 | 全局 store 内容寻址，文件硬链接进项目，顶层是链接不是副本 | `store` |
-| 三、严格 node_modules | 未声明依赖在 pnpm 下直接 `MODULE_NOT_FOUND`；`public-hoist-pattern` / `shamefully-hoist` 的取舍 | `strict`（`pnpm-lab`） |
-| 四、lockfile 固化解析结果 | `pnpm-lock.yaml` 结构；`--frozen-lockfile` 让锁文件与 package.json 不一致时失败 | `lockfile` |
-| 五、workspace 多包仓库 | `workspace:*` 建本地链接；`--filter` / `-r` 按依赖图执行 | `workspace` |
-| 六、CI：fetch + 冻结 + 缓存 | 只凭锁文件预热 store，再离线安装 | `ci` |
-| 七、迁移与命令对照 | npm → pnpm 命令表；`packageManager` + corepack | 速查表（示意） |
+| 一、npm 平坦树的两个后果 | 重复安装 + 幽灵依赖可被 require | ASCII 目录树 + 示意片段 |
+| 二、安装模型：store / 硬链接 / `.pnpm` / 符号链接 | 全局 store 内容寻址，文件硬链接进项目，顶层是链接不是副本 | ASCII + 示意 |
+| 三、严格 node_modules | 未声明依赖在 pnpm 下直接 `MODULE_NOT_FOUND`；`public-hoist-pattern` / `shamefully-hoist` 的取舍 | ASCII + 示意 |
+| 四、lockfile 固化解析结果 | `pnpm-lock.yaml` 结构；`--frozen-lockfile` 让锁文件与 package.json 不一致时失败 | 示意 yaml + 示意命令 |
+| 五、workspace 多包仓库 | `workspace:*` 建本地链接；`--filter` / `-r` 按依赖图执行 | `workspace`（`pnpm-lab`） |
+| 六、CI：fetch + 冻结 + 缓存 | 只凭锁文件预热 store，再离线安装 | 示意命令 |
+| 七、迁移与命令对照 | npm → pnpm 命令表；`packageManager` + corepack | 速查表 |
 
-结尾固定 `## 配套代码` + `## 参考`（参考首行为本模块总结）。代码块逐字摘自 lab 脚本并标注来源与运行命令。
+结尾固定 `## 配套代码` + `## 参考`（参考首行为本模块总结）。只有第五章的代码块逐字摘自 lab 脚本并标注来源与运行命令，其余小节标注「示意片段（无配套脚本）」。
 
 ## 实验台结构
 
-npm 侧与 pnpm 侧拆成两个同级 lab，各自维护 `package.json` 与 fixture，不互相引用。
+只保留 pnpm 侧的 workspace 实验，npm 侧不建 lab。
 
 ```
-frontend/工程化/code/npm-lab/
-├── package.json          # private；scripts: lab:duplicate / lab:phantom
-├── cases/
-│   ├── duplicate.mjs     # 多版本重复安装：npm ls --all --parseable 列出所有副本
-│   ├── phantom.mjs       # 幽灵依赖：只声明 is-odd，require 传递依赖 is-number
-│   └── _util.mjs         # 执行命令、复制 fixture、列顶层包名
-├── fixtures/
-│   ├── duplicate/        # is-even@1.0.0 + is-odd@3.0.1
-│   └── phantom/          # 只声明 is-odd，src/check.js 里 require('is-number')
-└── README.md             # case ↔ 篇目小节对照表
-
 frontend/工程化/code/pnpm-lab/
-├── package.json          # private；scripts.lab = node lab.mjs；依赖 is-odd@3.0.1
-├── lab.mjs               # case 分发：store / strict / lockfile / workspace / ci
+├── package.json          # private；scripts.lab = node lab.mjs；无第三方依赖
+├── lab.mjs               # case 分发（当前只有 workspace）
 ├── cases/
-│   ├── store.mjs         # store 路径、.pnpm 目录、junction 目标、nlink
-│   ├── strict.mjs        # pnpm 临时工程安装并 require 未声明依赖，补声明后恢复
-│   ├── lockfile.mjs      # 锁文件顶层结构、改 package.json 后 frozen 安装失败
 │   ├── workspace.mjs     # 工作区链接目标、--filter 拓扑执行
-│   └── ci.mjs            # pnpm fetch + --offline 安装
+│   └── _util.mjs         # 执行命令、复制 fixture、路径格式化
 ├── fixtures/
-│   ├── strict-pkg/       # 只声明 is-odd，src/check.js 里 require('is-number')
-│   └── workspace/        # pnpm-workspace.yaml + packages/utils + packages/ui + apps/web
+│   └── workspace/        # pnpm-workspace.yaml + packages/utils + packages/ui + apps/web + 锁文件
 ├── .work/                # 运行期临时工程与安装目录（gitignore）
-└── README.md             # case ↔ 篇目小节对照表
+└── README.md             # case ↔ 篇目对照表
 ```
 
 约束：
 
-- 输出只收稳定事实（路径、链接目标、`nlink`、错误码、依赖树、锁文件片段），不收耗时。
-- 两个 lab 的临时工程都建在系统临时目录（`os.tmpdir()`），不放在仓库内：放在 `E:\working\blog` 下时 Node 会沿父目录命中博客仓库自己的 `node_modules`，让 pnpm 也"看起来"能解析幽灵依赖。
-- store 已在 `E:\.pnpm-store\v11`，与工程同盘，硬链接成立；`store` case 为了稳定的 `nlink` 另用 `.work/store` 独立 store。
-- `code/.gitignore` 增加 `.work/`（lab 的临时安装目录不入库）；lab 根与 workspace fixture 的 `pnpm-lock.yaml` 入库，保证解析结果可复现。
+- 输出只收稳定事实（链接目标、运行结果、锁文件片段、构建顺序），不收耗时。
+- lab 无第三方依赖，`pnpm lab workspace` 直接运行；`.work/` 由 `code/.gitignore` 忽略。
+- workspace fixture 的 `pnpm-lock.yaml` 入库，保证解析结果可复现。
 
 ## 总结.md 重排
 
@@ -95,7 +79,7 @@ frontend/工程化/code/pnpm-lab/
 
 ## 验收
 
-1. `npm run lab:duplicate|lab:phantom` 与 `pnpm lab store|strict|lockfile|workspace|ci` 均可跑，正文读数与输出一致
+1. `pnpm lab workspace` 可跑，第五章读数与输出一致；其余小节标注「示意片段（无配套脚本）」
 2. `NODE_OPTIONS` 清空后 VitePress build 通过（含新页面与中文路径）
 3. 全库 grep `构建体系` 无残留（git 历史除外）
 4. 侧边栏四项与 `frontend/工程化/` 文件一一对应

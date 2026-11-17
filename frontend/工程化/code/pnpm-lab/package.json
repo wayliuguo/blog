@@ -2,7 +2,7 @@
     "name": "pnpm-lab",
     "version": "1.0.0",
     "private": true,
-    "description": "pnpm 实验：store/硬链接、严格 node_modules、lockfile、workspace、CI 离线安装",
+    "description": "pnpm workspace 实验：workspace:* 本地链接与 --filter 拓扑编排",
     "scripts": {
         "lab": "node lab.mjs"
     }

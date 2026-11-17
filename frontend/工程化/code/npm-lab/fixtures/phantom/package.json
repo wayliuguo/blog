@@ -1,9 +1,0 @@
-{
-    "name": "phantom-pkg",
-    "version": "1.0.0",
-    "private": true,
-    "description": "只声明 is-odd，源码里却 require 传递依赖 is-number",
-    "dependencies": {
-        "is-odd": "3.0.1"
-    }
-}
