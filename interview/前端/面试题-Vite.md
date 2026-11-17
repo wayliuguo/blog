@@ -1,6 +1,6 @@
 # 面试题 · Vite
 
-> 对齐知识体系 frontend/构建体系/Vite.md。
+> 对齐知识体系 frontend/工程化/Vite.md。
 > 简历构建口径：熟悉 Vite 项目构建与优化。Webpack 专属概念（loader/plugin 事件流）不在本篇范围，被问就答「生产实践以 Vite/Rollup 为主，webpack 概念层了解」。
 
 ## 一、原理与心智模型

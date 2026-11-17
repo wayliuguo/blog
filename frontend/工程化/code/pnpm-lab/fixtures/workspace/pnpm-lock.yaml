@@ -1,0 +1,24 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  apps/web:
+    dependencies:
+      '@lab/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@lab/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+
+  packages/ui:
+    dependencies:
+      '@lab/utils':
+        specifier: workspace:*
+        version: link:../utils
+
+  packages/utils: {}

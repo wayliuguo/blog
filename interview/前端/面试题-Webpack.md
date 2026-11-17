@@ -1,6 +1,6 @@
 # 面试题 · Webpack
 
-> 对齐知识体系 frontend/构建体系/webpack.md（配套代码 `code/webpack-lab` + `code/mini-webpack`，所有结论可实跑复现）。
+> 对齐知识体系 frontend/工程化/webpack.md（配套代码 `code/webpack-lab` + `code/mini-webpack`，所有结论可实跑复现）。
 > 全篇按「一句结论 + ①②③ 分层论证 + ⭐ 加分点」组织；深入阅读回链 webpack.md 对应小节。
 
 ## 一、原理与心智模型

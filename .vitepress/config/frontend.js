@@ -93,12 +93,13 @@ export default [
         ]
     },
     {
-        text: '构建体系',
+        text: '工程化',
         collapsed: false,
         items: [
-            { text: 'Vite', link: '/frontend/构建体系/Vite' },
-            { text: 'Webpack', link: '/frontend/构建体系/webpack' },
-            { text: '模块总结（构建体系）', link: '/frontend/构建体系/总结' }
+            { text: 'pnpm', link: '/frontend/工程化/pnpm' },
+            { text: 'Vite', link: '/frontend/工程化/Vite' },
+            { text: 'Webpack', link: '/frontend/工程化/webpack' },
+            { text: '模块总结（工程化）', link: '/frontend/工程化/总结' }
         ]
     },
     {

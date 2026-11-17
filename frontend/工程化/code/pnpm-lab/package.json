@@ -1,0 +1,9 @@
+{
+    "name": "pnpm-lab",
+    "version": "1.0.0",
+    "private": true,
+    "description": "pnpm 实验：store/硬链接、严格 node_modules、lockfile、workspace、CI 离线安装",
+    "scripts": {
+        "lab": "node lab.mjs"
+    }
+}

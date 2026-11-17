@@ -16,3 +16,6 @@ bench/*.trash*
 # 各 lab 独立的依赖安装目录
 node_modules/
 package-lock.json
+
+# pnpm-lab 运行期临时工程与安装目录
+.work/
