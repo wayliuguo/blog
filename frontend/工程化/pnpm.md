@@ -1,15 +1,113 @@
 # pnpm
 
-## 一、npm 平坦树：重复安装与幽灵依赖
+## npm 问题：重复安装与幽灵依赖
 
 npm 从 v3 起把依赖尽量拍平到项目顶层的 `node_modules`，解决深层嵌套的路径长度问题。代价有两个：
 
-1. **同一份文件被装多次**。不同包依赖同一库的不同版本时，冲突的那份只能嵌套在依赖方下面，磁盘上出现多份副本。
+1. **同名包的不同版本各留一份**。不同子树依赖同一库的不同版本时，冲突的那份只能嵌套在依赖方下面，磁盘上出现多份副本。
 2. **传递依赖全部暴露在顶层**。源码可以 `require` 一个自己没声明的包——这就是幽灵依赖（phantom dependency）。
 
-本 lab 的对照组只声明 `is-odd`，源码却直接 `require` 它的传递依赖 `is-number`：
+### 重复安装：一个包名，两处实体
 
-> 摘自 `./code/pnpm-lab/fixtures/strict-pkg/src/check.js`（运行：`pnpm lab strict`）
+`is-even@1.0.0` 依赖 `is-odd@0.1.2`，后者要 `is-number@3.0.0`；根工程又直接声明 `is-odd@3.0.1`，它要 `is-number@6.0.0`。两个包名各有两个版本，平坦树只能每个包名留一份在顶层，另一份嵌进依赖方自己的 `node_modules`：
+
+> 摘自 `./code/npm-lab/fixtures/duplicate/package.json`（运行：`npm run lab:duplicate`）
+
+```json
+{
+    "name": "duplicate-pkg",
+    "version": "1.0.0",
+    "private": true,
+    "description": "is-even@1.0.0 要 is-odd@0.1.2，根工程又要 is-odd@3.0.1，两棵子树对 is-number 的版本要求也不同",
+    "dependencies": {
+        "is-even": "1.0.0",
+        "is-odd": "3.0.1"
+    }
+}
+```
+
+实验用 `npm ls --all --parseable` 把每个已安装包的绝对路径列出来，嵌套副本也在其中：
+
+> 摘自 `./code/npm-lab/cases/duplicate.mjs`（运行：`npm run lab:duplicate`）
+
+```js
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { run, fresh, copyFixture } from './_util.mjs'
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+// 重复安装：is-even@1.0.0 依赖 is-odd@0.1.2（要 is-number@3.0.0），
+// 根工程又直接要 is-odd@3.0.1（要 is-number@6.0.0）。
+// 平坦树里同名的两个版本只能一份在顶层、另一份嵌进父包自己的 node_modules
+export async function runCase() {
+    const dir = copyFixture(path.join(root, 'fixtures/duplicate'), fresh(path.join(os.tmpdir(), 'npm-lab-duplicate')))
+    run('npm install --silent --no-audit --no-fund', dir)
+
+    // --parseable 每个已安装包输出一行绝对路径，嵌套的那份也在里面
+    const rows = run('npm ls --all --parseable', dir)
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .filter(pkgDir => pkgDir !== dir)
+        .map(pkgDir => {
+            const pkg = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
+            return {
+                where: path.relative(dir, pkgDir).split(path.sep).join('/'),
+                name: pkg.name,
+                version: pkg.version
+            }
+        })
+        .sort((a, b) => a.where.localeCompare(b.where))
+
+    console.log(`安装目录数          ${rows.length}`)
+    console.log('node_modules 布局')
+    for (const row of rows) console.log(`  ${row.where}  ${row.name}@${row.version}`)
+
+    const byName = new Map()
+    for (const { name, version } of rows) {
+        if (!byName.has(name)) byName.set(name, new Set())
+        byName.get(name).add(version)
+    }
+    for (const [name, versions] of byName) {
+        if (versions.size > 1) console.log(`重复安装            ${name}  ${[...versions].join(' + ')}`)
+    }
+
+    // 同一句 require('is-number')，在根目录和 is-even 里命中不同副本
+    const query = 'node -p "require(\'is-number/package.json\').version"'
+    console.log(`根目录 require      is-number@${run(query, dir)}`)
+    console.log(`is-even 内 require  is-number@${run(query, path.join(dir, 'node_modules/is-even'))}`)
+}
+
+await runCase()
+```
+
+```txt
+安装目录数          7
+node_modules 布局
+  node_modules/is-buffer  is-buffer@1.1.6
+  node_modules/is-even  is-even@1.0.0
+  node_modules/is-even/node_modules/is-number  is-number@3.0.0
+  node_modules/is-even/node_modules/is-odd  is-odd@0.1.2
+  node_modules/is-number  is-number@6.0.0
+  node_modules/is-odd  is-odd@3.0.1
+  node_modules/kind-of  kind-of@3.2.2
+重复安装            is-number  3.0.0 + 6.0.0
+重复安装            is-odd  0.1.2 + 3.0.1
+根目录 require      is-number@6.0.0
+is-even 内 require  is-number@3.0.0
+```
+
+- 顶层 `is-odd@3.0.1` / `is-number@6.0.0` 是根工程直接要的版本；`is-odd@0.1.2` / `is-number@3.0.0` 只存在于 `is-even` 的子树里，项目源码解析不到。
+- 同一句 `require('is-number')`，在根目录拿到 `6.0.0`、在 `is-even` 目录里拿到 `3.0.0`——重复安装不只是磁盘上多几份文件，它会改变运行时看到的行为。
+- 提升的副作用还会扩散：`is-number@3.0.0` 的依赖 `is-buffer` / `kind-of` 也被拍到了顶层，同样没有出现在任何 `package.json` 里。
+
+### 幽灵依赖：没声明的包也能 require
+
+把上面对照组缩到只有一条链：`package.json` 只声明 `is-odd`，源码却直接 `require` 它的传递依赖 `is-number`。
+
+> 摘自 `./code/npm-lab/fixtures/phantom/src/check.js`（运行：`npm run lab:phantom`）
 
 ```js
 // package.json 只声明了 is-odd；is-number 是它的传递依赖，没有直接声明
@@ -22,6 +120,29 @@ try {
 ```
 
 npm 安装后，`is-number` 被提升到顶层，于是这段代码跑得通：
+
+> 摘自 `./code/npm-lab/cases/phantom.mjs`（运行：`npm run lab:phantom`）
+
+```js
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { run, fresh, copyFixture, topLevel } from './_util.mjs'
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+// 幽灵依赖：fixture 只声明 is-odd，src/check.js 却 require 它的传递依赖 is-number
+// 临时工程放系统临时目录，避免向上命中博客仓库自己的 node_modules
+export async function runCase() {
+    const dir = copyFixture(path.join(root, 'fixtures/phantom'), fresh(path.join(os.tmpdir(), 'npm-lab-phantom')))
+    run('npm install --silent --no-audit --no-fund', dir)
+
+    console.log(`npm 顶层            ${topLevel(dir).join(' ')}`)
+    console.log(`npm 运行 check.js   ${run('node src/check.js', dir)}`)
+}
+
+await runCase()
+```
 
 ```txt
 npm 顶层            is-number is-odd
@@ -111,41 +232,40 @@ export async function runCase({ root }) {
 
 ## 三、严格的 node_modules 让幽灵依赖直接报错
 
-同样的对照组换成 pnpm 安装，源码再 `require('is-number')`：
+同一份源码交给 pnpm 安装，再 `require('is-number')`：
 
 > 摘自 `./code/pnpm-lab/cases/strict.mjs`（运行：`pnpm lab strict`）
 
 ```js
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { run, fresh, copyFixture, topLevel } from './_util.mjs'
+
+// 严格性实验：项目只声明 is-odd，源码却 require 它的传递依赖 is-number
+// 临时工程放系统临时目录，避免向上命中博客仓库自己的 node_modules
 export async function runCase({ root }) {
     const fixture = path.join(root, 'fixtures/strict-pkg')
-    const base = fresh(path.join(os.tmpdir(), 'pnpm-lab-strict'))
-    const npmDir = copyFixture(fixture, path.join(base, 'npm'))
-    const pnpmDir = copyFixture(fixture, path.join(base, 'pnpm'))
+    const dir = copyFixture(fixture, path.join(fresh(path.join(os.tmpdir(), 'pnpm-lab-strict')), 'pnpm'))
 
-    run('npm install --silent --no-audit --no-fund', npmDir)
-    run('pnpm install --reporter=silent --no-frozen-lockfile', pnpmDir)
+    run('pnpm install --reporter=silent --no-frozen-lockfile', dir)
+    console.log(`pnpm 顶层           ${topLevel(dir).join(' ')}`)
+    console.log(`pnpm 运行 check.js  ${run('node src/check.js', dir)}`)
 
-    console.log(`npm 顶层            ${topLevel(npmDir).join(' ')}`)
-    console.log(`pnpm 顶层           ${topLevel(pnpmDir).join(' ')}`)
-    console.log(`npm 运行 check.js   ${run('node src/check.js', npmDir)}`)
-    console.log(`pnpm 运行 check.js  ${run('node src/check.js', pnpmDir)}`)
-
-    // 补上显式声明后，pnpm 也会把 is-number 放到顶层
-    const pkgFile = path.join(pnpmDir, 'package.json')
+    // 补上显式声明后，is-number 才会作为直接依赖出现在顶层
+    const pkgFile = path.join(dir, 'package.json')
     const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'))
     pkg.dependencies['is-number'] = '6.0.0'
     fs.writeFileSync(pkgFile, JSON.stringify(pkg, null, 4) + '\n')
-    run('pnpm install --reporter=silent --no-frozen-lockfile', pnpmDir)
+    run('pnpm install --reporter=silent --no-frozen-lockfile', dir)
 
-    console.log(`pnpm 补声明后顶层   ${topLevel(pnpmDir).join(' ')}`)
-    console.log(`pnpm 补声明后结果   ${run('node src/check.js', pnpmDir)}`)
+    console.log(`pnpm 补声明后顶层   ${topLevel(dir).join(' ')}`)
+    console.log(`pnpm 补声明后结果   ${run('node src/check.js', dir)}`)
 }
 ```
 
 ```txt
-npm 顶层            is-number is-odd
 pnpm 顶层           is-odd
-npm 运行 check.js   未声明依赖可用（被提升到顶层）
 pnpm 运行 check.js  未声明依赖不可用（MODULE_NOT_FOUND）
 pnpm 补声明后顶层   is-number is-odd
 pnpm 补声明后结果   未声明依赖可用（被提升到顶层）
@@ -163,7 +283,7 @@ pnpm 的顶层只有直接声明的 `is-odd`；`is-number` 虽然也在 `node_mo
 
 另一个方向的严格性是**安装脚本**：pnpm 10 起默认不执行依赖包的生命周期脚本，只在 `pnpm.onlyBuiltDependencies` 白名单里放行。这一条挡的是供应链攻击，遇到需要编译原生模块的包（如 `esbuild`）时，按提示把包名加进白名单即可。
 
-> 实验里有一个容易踩的坑：`strict` 的两个临时工程放在系统临时目录，而不是仓库内。放在 `E:\working\blog` 下时，Node 会沿父目录向上找到博客仓库自己的 `node_modules`，`is-number` 被上层命中，pnpm 也会"看起来"能解析幽灵依赖。判断严格性时，工程必须放在没有父级 `node_modules` 的干净路径。
+> 实验里有一个容易踩的坑：`strict` 的临时工程放在系统临时目录，而不是仓库内。放在 `E:\working\blog` 下时，Node 会沿父目录向上找到博客仓库自己的 `node_modules`，`is-number` 被上层命中，pnpm 也会"看起来"能解析幽灵依赖。判断严格性时，工程必须放在没有父级 `node_modules` 的干净路径。
 
 ## 四、声明与锁文件不一致时，冻结安装必须失败
 
@@ -425,19 +545,26 @@ web 运行结果            <section>hello pnpm</section>
 
 ## 配套代码
 
-本篇示例来自 `code/pnpm-lab`（独立的 pnpm 项目，首次运行前先 `pnpm install`）。
+本篇示例来自两个同级 lab：`code/npm-lab`（npm 侧，脚本自己在临时目录安装）与 `code/pnpm-lab`（独立 pnpm 项目，首次运行前先 `pnpm install`）。
 
 | 文件 | 作用 | 对应小节 |
 | --- | --- | --- |
+| `./code/npm-lab/package.json` | 两个命令：`lab:duplicate` / `lab:phantom` | 一 |
+| `./code/npm-lab/cases/_util.mjs` | 执行命令、复制 fixture、列顶层包名 | 一 |
+| `./code/npm-lab/cases/duplicate.mjs` | 多版本重复安装：列出所有副本，比较根目录与嵌套处的解析结果 | 一 |
+| `./code/npm-lab/cases/phantom.mjs` | 幽灵依赖：未声明的传递依赖被提升到顶层 | 一 |
+| `./code/npm-lab/fixtures/duplicate/` | 根依赖 `is-even@1.0.0` + `is-odd@3.0.1` | 一 |
+| `./code/npm-lab/fixtures/phantom/` | 只声明 `is-odd`、源码却 `require('is-number')` 的对照工程 | 一 |
+| `./code/npm-lab/README.md` | case ↔ 篇目对照与运行说明 | — |
 | `./code/pnpm-lab/package.json` | 唯一命令 `lab`：`pnpm lab <case>` | 二～六 |
 | `./code/pnpm-lab/lab.mjs` | case 分发：`store` / `strict` / `lockfile` / `workspace` / `ci` | 二～六 |
 | `./code/pnpm-lab/cases/_util.mjs` | 执行命令、复制 fixture、顶层包名与相对路径格式化 | 二～六 |
 | `./code/pnpm-lab/cases/store.mjs` | 两个临时工程共享 store：inode、`nlink`、符号链接 | 二 |
-| `./code/pnpm-lab/cases/strict.mjs` | npm / pnpm 对照：幽灵依赖、补声明后恢复 | 三 |
+| `./code/pnpm-lab/cases/strict.mjs` | pnpm 严格性：幽灵依赖报 `MODULE_NOT_FOUND`、补声明后恢复 | 三 |
 | `./code/pnpm-lab/cases/lockfile.mjs` | 生成锁文件、`--frozen-lockfile` 门禁 | 四 |
 | `./code/pnpm-lab/cases/workspace.mjs` | `workspace:*` 链接、`--filter` 拓扑编排 | 五 |
 | `./code/pnpm-lab/cases/ci.mjs` | `pnpm fetch` + 离线冻结安装 | 六 |
-| `./code/pnpm-lab/fixtures/strict-pkg/` | 只声明 `is-odd`、源码却 `require('is-number')` 的对照组 | 一、三 |
+| `./code/pnpm-lab/fixtures/strict-pkg/` | 只声明 `is-odd`、源码却 `require('is-number')` 的 pnpm 对照组 | 三 |
 | `./code/pnpm-lab/fixtures/workspace/` | 三包 monorepo：`utils` / `ui` / `web` + 锁文件 | 五、六 |
 | `./code/pnpm-lab/README.md` | case ↔ 篇目对照与运行说明 | — |
 

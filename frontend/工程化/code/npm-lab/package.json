@@ -1,0 +1,10 @@
+{
+    "name": "npm-lab",
+    "version": "1.0.0",
+    "private": true,
+    "description": "npm 实验：多版本重复安装、幽灵依赖",
+    "scripts": {
+        "lab:duplicate": "node cases/duplicate.mjs",
+        "lab:phantom": "node cases/phantom.mjs"
+    }
+}
