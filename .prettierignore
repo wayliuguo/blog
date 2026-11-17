@@ -4,3 +4,4 @@ dist/**
 commitlint.config.js
 .github/**
 **/package.json
+**/pnpm-lock.yaml

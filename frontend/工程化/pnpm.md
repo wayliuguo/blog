@@ -65,11 +65,7 @@ export async function runCase({ root }) {
         const dir = fresh(path.join(root, '.work', name))
         fs.writeFileSync(
             path.join(dir, 'package.json'),
-            JSON.stringify(
-                { name, private: true, dependencies: { 'is-odd': '3.0.1' } },
-                null,
-                4
-            )
+            JSON.stringify({ name, private: true, dependencies: { 'is-odd': '3.0.1' } }, null, 4)
         )
         run(`pnpm install --reporter=silent --prefer-offline --store-dir "${storeDir}"`, dir)
         return dir
@@ -86,7 +82,13 @@ export async function runCase({ root }) {
     console.log(`.pnpm 里的实体     ${rel(a, path.dirname(pkgOf(a)))}`)
     console.log(`顶层 is-odd        ${topLink.isSymbolicLink() ? '符号链接' : '普通目录'} -> ${rel(a, real)}`)
     console.log(`两个工程同一文件   同一 inode：${statA.ino === statB.ino ? '是' : '否'}，nlink=${statB.nlink}`)
-    console.log(`.pnpm 下的包       ${fs.readdirSync(path.join(a, 'node_modules/.pnpm')).filter(name => !name.startsWith('.') && name !== 'lock.yaml' && name !== 'node_modules').sort().join(' ')}`)
+    console.log(
+        `.pnpm 下的包       ${fs
+            .readdirSync(path.join(a, 'node_modules/.pnpm'))
+            .filter(name => !name.startsWith('.') && name !== 'lock.yaml' && name !== 'node_modules')
+            .sort()
+            .join(' ')}`
+    )
 }
 ```
 
