@@ -1,12 +1,13 @@
 {
     "name": "@lab/ui",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "private": true,
     "main": "index.js",
     "scripts": {
         "build": "node -e \"console.log('build @lab/ui')\""
     },
     "dependencies": {
-        "@lab/utils": "workspace:*"
+        "@lab/utils": "workspace:*",
+        "is-odd": "3.0.1"
     }
 }

@@ -1,0 +1,13 @@
+{
+    "name": "@lab/web",
+    "version": "0.1.0",
+    "private": true,
+    "main": "index.js",
+    "scripts": {
+        "build": "node -e \"console.log('build @lab/web')\"",
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "@lab/ui": "workspace:*"
+    }
+}

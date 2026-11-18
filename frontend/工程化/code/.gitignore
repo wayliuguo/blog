@@ -17,5 +17,6 @@ bench/*.trash*
 node_modules/
 package-lock.json
 
-# pnpm-lab 运行期临时工程与安装目录
+# pnpm-core-lab / pnpm-workspace-lab 运行期临时工程与安装目录
 .work/
+.tmp/

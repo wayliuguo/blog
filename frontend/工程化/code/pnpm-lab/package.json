@@ -1,9 +1,0 @@
-{
-    "name": "pnpm-lab",
-    "version": "1.0.0",
-    "private": true,
-    "description": "pnpm workspace 实验：workspace:* 本地链接与 --filter 拓扑编排",
-    "scripts": {
-        "lab": "node lab.mjs"
-    }
-}
