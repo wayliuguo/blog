@@ -40,11 +40,11 @@
 | --- | --- | --- | --- |
 | 一、npm 问题 | 重复安装 | 平坦树同名包只留一份顶层，另一份嵌进依赖方；同一行 `require` 从不同目录命中不同版本 | `npm-lab`（package.json + `npm ls --all` 实测输出） |
 | | 幽灵依赖 | 传递依赖被拍到顶层，未声明的包也能 `require` | 同一工程（顶层目录 + `require` 实测输出） |
-| 二、pnpm 核心特性 | store 硬链接 + 符号链接 | 全局 store 内容寻址，文件硬链接进 `.pnpm`，顶层是指向 `.pnpm` 的符号链接 | `pnpm-core-lab/app-a`、`app-b`（`LinkType` / `.Target` / `fsutil hardlink list` 实测输出） |
+| 二、pnpm 核心特性 | store 硬链接 + 符号链接 | 全局 store（`pnpm store path`）存内容，硬链接放进 `.pnpm`，符号链接把包名指到版本目录 | 概念图（以 `react` + `loose-envify` 为例，不需要真实仓库） |
 | | 严格 node_modules | 未声明依赖在 pnpm 下直接 `MODULE_NOT_FOUND`；`public-hoist-pattern` / `shamefully-hoist` / `node-linker=hoisted` 三档放宽；`onlyBuiltDependencies` 管安装脚本 | 同一工程内 `node -e` 实测输出 + 三档表 |
 | 三、构建 monorepo | 工作区骨架 / 建包与声明本地依赖 / 安装后的链接与锁文件 / 按依赖图执行脚本 / 日常管理 / 发布 | `pnpm-workspace.yaml` 声明成员；`workspace:*` 建本地链接；`--filter` / `-r` 按拓扑序执行；增删依赖、`pnpm why`、发布 | `pnpm-workspace-lab`（yaml / package.json / 锁文件片段 / 命令实测输出） |
 
-尾注固定 `## 配套代码` + `## 参考`（参考首行为本模块总结）。所有代码块逐字摘自真实文件，所有输出逐字来自本机运行。
+尾注固定 `## 配套代码` + `## 参考`（参考首行为本模块总结）。除概念示意图外，代码块逐字摘自真实文件，输出逐字来自本机运行。
 
 已删除（用户确认）：锁文件与冻结安装、CI 只凭锁文件安装、npm 迁移对照。
 
@@ -58,8 +58,7 @@ frontend/工程化/code/
 │   ├── package.json               # is-even@1.0.0 + is-odd@3.0.1（两个 is-number 版本；未声明的 is-number 在顶层）
 │   └── README.md                  # 安装与观察命令
 ├── pnpm-core-lab/
-│   ├── app-a/package.json         # is-even@1.0.0
-│   ├── app-b/package.json         # is-even@1.0.0（与 app-a 共享 store 里的同一份硬链接）
+│   ├── app-a/package.json         # is-even@1.0.0（严格 node_modules 演示）
 │   └── README.md                  # 安装与观察命令（LinkType / Target / hardlink list / MODULE_NOT_FOUND）
 └── pnpm-workspace-lab/
     ├── package.json               # 根：private + packageManager + 汇总脚本
@@ -85,7 +84,7 @@ frontend/工程化/code/
 
 ## 验收
 
-1. `npm-lab` 执行 `npm install` 成功；`pnpm-core-lab/{app-a,app-b}` 与 `pnpm-workspace-lab` 各自 `pnpm install` 成功
+1. `npm-lab` 执行 `npm install` 成功；`pnpm-core-lab/app-a` 与 `pnpm-workspace-lab` 各自 `pnpm install` 成功
 2. 文档中「摘自」代码块与源文件逐字一致，实测输出与当前机器重跑一致
 3. `NODE_OPTIONS` 清空后 VitePress build 通过（含新页面与中文路径）
 4. 全库 grep `构建体系`、`pnpm-lab`、`pnpm lab` 无残留（git 历史与本 spec 除外）

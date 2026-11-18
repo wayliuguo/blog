@@ -69,127 +69,59 @@ pnpm 用两个机制分别对应上面两个问题：**磁盘上只存一份**�
 
 ### store 硬链接 + 符号链接
 
-`node_modules` 里有两类"链接"，分工完全不同：
+pnpm 用三样东西配合：**全局 store 存内容**、**硬链接把内容放进项目**、**符号链接把包名指到版本目录**。
 
-- **符号链接**（Windows 上是 junction）只负责指路：包名 → 某个版本目录；
-- **硬链接**发生在**文件**一级：同一份内容有多个目录项，磁盘上只存一份。
+#### 1. store：内容只存一份
 
-`app-a` 只声明一个依赖：
+- 位置由 `pnpm store path` 给出（本机是 `E:\.pnpm-store\v11`），所有项目共用同一个 store；
+- store 内部按内容哈希分目录，一个文件的路径形如 `files/3f/<hash>`；
+- 同一个包的同一个文件只出现一次，与装过它的项目数量无关。
 
-> 摘自 `./code/pnpm-core-lab/app-a/package.json`（在该目录执行 `pnpm install`）
+#### 2. 硬链接：把 store 的文件挂进项目
 
-```json
-{
-    "name": "pnpm-app-a",
-    "version": "1.0.0",
-    "private": true,
-    "dependencies": {
-        "is-even": "1.0.0"
-    }
-}
-```
-
-#### 顶层：直接依赖只是一个 junction
-
-```powershell
-Get-ChildItem node_modules -Directory | Select-Object Name, LinkType
-```
+安装时 pnpm 不复制文件，而是在项目侧为 store 里的文件再建一个目录项：
 
 ```txt
-Name       LinkType
-----       --------
-.pnpm
-is-even    Junction
+全局 store（`pnpm store path`）
+└── files/…
+    └── <hash>                        ← 唯一实体
+          ▲ 硬链接（同一份内容，两个路径）
+          │
+node_modules/.pnpm/react@18.2.0/node_modules/react/<文件>
 ```
 
-```powershell
-(Get-Item node_modules/is-even).Target
-```
+- 硬链接不是快捷方式：两个路径指向同一份数据，改一个另一个也变；
+- 项目里看到的是真文件，但磁盘占用没有翻倍；
+- Windows 上 `fsutil hardlink list <文件>` 会同时列出 store 路径与项目路径。
+
+#### 3. 符号链接：把包名指到某个版本
+
+以 `react` 为例（它依赖 `loose-envify`）：
 
 ```txt
-E:\working\blog\frontend\工程化\code\pnpm-core-lab\app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even
+node_modules/
+├── react -> .pnpm/react@18.2.0/node_modules/react            # 直接依赖：符号链接（Windows 是 junction）
+└── .pnpm/
+    ├── react@18.2.0/node_modules/
+    │   ├── react/                                             # 真实目录，文件硬链接自 store
+    │   └── loose-envify -> ../../loose-envify@1.4.0/node_modules/loose-envify   # react 的依赖：符号链接
+    └── loose-envify@1.4.0/node_modules/
+        └── loose-envify/                                      # 真实目录，文件硬链接自 store
 ```
 
-`is-even` 不是目录，而是指向 `.pnpm` 的 junction。顶层只给 `package.json` 里直接声明的包开口。
+- `node_modules/react`：只给 `package.json` 里直接声明的包开口，本身只是一个链接；
+- `.pnpm/react@18.2.0/node_modules/react`：真实目录，里面是硬链接自 store 的文件；
+- `.pnpm/react@18.2.0/node_modules/loose-envify`：react 的依赖，指向 `loose-envify@1.4.0` 的版本目录；每个版本一个目录，所以两个版本可以并存；
+- 包自己的依赖挂在它旁边的 `node_modules` 里，解析不向上找，也不会串到别的版本；
+- `.pnpm/node_modules` 是私有提升区，里面全是符号链接，项目源码不会从这里解析。
 
-#### `.pnpm` 里：实体目录 + 依赖 junction
+#### 一句话总结
 
-```powershell
-Get-ChildItem node_modules/.pnpm/is-even@1.0.0/node_modules -Force | Select-Object Name, LinkType
-```
-
-```txt
-Name    LinkType
-----    --------
-is-even
-is-odd  Junction
-```
-
-- `is-even` 没有 LinkType：它是真实目录，包的文件都在里面；
-- `is-odd` 是 junction，指向 `is-odd@0.1.2` 的版本目录：
-
-```powershell
-(Get-Item node_modules/.pnpm/is-even@1.0.0/node_modules/is-odd).Target
-```
-
-```txt
-E:\working\blog\frontend\工程化\code\pnpm-core-lab\app-a\node_modules\.pnpm\is-odd@0.1.2\node_modules\is-odd
-```
-
-每个包都这样挂自己的依赖，整棵依赖图由 junction 串起来。版本目录名带版本号，所以同一个包的两个版本可以并存：
-
-```powershell
-Get-ChildItem node_modules/.pnpm -Directory | Select-Object -ExpandProperty Name
-```
-
-```txt
-is-buffer@1.1.6
-is-even@1.0.0
-is-number@3.0.0
-is-odd@0.1.2
-kind-of@3.2.2
-node_modules
-```
-
-其中 `node_modules` 是私有提升区，里面同样全是 junction，项目源码不会从这里解析。
-
-#### 实体目录里的文件是硬链接
-
-`is-even` 目录里的 `index.js` 与全局 store 的文件共享同一份内容。`fsutil hardlink list` 列出指向这份内容的全部路径：
-
-```powershell
-# 在 pnpm-core-lab 根目录执行
-fsutil hardlink list app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\index.js
-```
-
-```txt
-\.pnpm-store\v11\files\dd\131e756f380a89a93ab6098d23e765d35330d66d6ef992f47d7b59c4dc3419877642489b24936b732ac5008319302afb4f030482733d44e326b4dfd47c665a
-\working\blog\frontend\工程化\code\pnpm-core-lab\app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\index.js
-\working\blog\frontend\工程化\code\pnpm-core-lab\app-b\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\index.js
-```
-
-#### 为什么需要 app-a 和 app-b 两个工程
-
-- 只装 `app-a` 时，这条命令只有两条路径：store 与 `app-a`——能证明"文件不是复制进项目的"；
-- 再装一个依赖相同的 `app-b`，同一个文件变成三条路径：两个工程共用一份内容，第二个工程没有多占磁盘。这是 pnpm 在多项目机器上省空间的直接证据；
-- 分工是：`app-a` 看"store → 项目"的硬链接，`app-b` 看"项目 ↔ 项目"的共享。
-
-```
-全局 store（E:\.pnpm-store\v11）
-   │ 硬链接：同一份内容，多个目录项
-   ├──> app-a/node_modules/.pnpm/is-even@1.0.0/node_modules/is-even/index.js
-   └──> app-b/node_modules/.pnpm/is-even@1.0.0/node_modules/is-even/index.js
-          ▲ junction（符号链接）
-   app-a/node_modules/is-even
-```
-
-| 位置 | 类型 | 作用 |
+| 层 | 机制 | 解决什么 |
 | --- | --- | --- |
-| 全局 store | 内容寻址的文件仓库 | 每个文件唯一的实体 |
-| `node_modules/<包名>` | junction | 只暴露 `package.json` 里直接声明的包 |
-| `.pnpm/<包名>@<版本>/node_modules/<包名>` | 真实目录 | 包的内容，其中的文件硬链接到 store |
-| `.pnpm/<包名>@<版本>/node_modules/<依赖>` | junction | 让这个包解析到自己版本的依赖 |
-| `.pnpm/node_modules` | junction | 私有提升区，供 peer 依赖与部分工具使用 |
+| 全局 store（`pnpm store path`） | 内容寻址 | 同一个文件全机器只存一份 |
+| `.pnpm/<包>@<版本>/node_modules/<包>` | 硬链接 | 项目里"有文件"，但不复制内容 |
+| `node_modules/<包>`、`.pnpm/<包>@<版本>/node_modules/<依赖>` | 符号链接 | 把包名指到确定的版本目录 |
 
 两个实践细节：
 
@@ -198,7 +130,7 @@ fsutil hardlink list app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even
 
 ### 严格 node_modules 让幽灵依赖直接报错
 
-还是 `app-a` 那个工程：`is-even` 的传递依赖 `is-odd` 在 `.pnpm` 里有实体，但顶层没有它的链接，项目源码解析不到。
+以实验台 `pnpm-core-lab/app-a` 为例（只装了 `is-even@1.0.0`）：`is-even` 的传递依赖 `is-odd` 在 `.pnpm` 里有实体，但顶层没有它的链接，项目源码解析不到。
 
 ```powershell
 node -e "try{require('is-odd');console.log('ok')}catch(e){console.log(e.code)}"
@@ -433,7 +365,6 @@ Found 1 version of is-odd
 | --- | --- | --- |
 | `./code/npm-lab/` | `is-even@1.0.0` + `is-odd@3.0.1`：两份实体，且未声明的 `is-number` 能从顶层 require | 一 |
 | `./code/pnpm-core-lab/app-a/` | `is-even@1.0.0`：顶层只有一条链接，未声明依赖报错 | 二 |
-| `./code/pnpm-core-lab/app-b/` | 同依赖：与 app-a 的实体文件是同一份硬链接 | 二 |
 | `./code/pnpm-workspace-lab/` | 可运行的 monorepo：工作区声明、本地依赖、编排脚本 | 三 |
 | 各实验台的 `README.md` | 安装方式与观察命令 | — |
 
