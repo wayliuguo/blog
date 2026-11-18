@@ -31,19 +31,19 @@ const refreshing = ref(false)
 
 const yearOptions = computed(() => [
     { text: '全部年份', value: '' },
-    ...(options.value.years || []).map((year) => ({ text: `${year} 年`, value: String(year) }))
+    ...(options.value.years || []).map(year => ({ text: `${year} 年`, value: String(year) }))
 ])
 const categoryOptions = computed(() => [
     { text: '全部类型', value: '' },
-    ...(options.value.types || []).map((type) => ({ text: type, value: type }))
+    ...(options.value.types || []).map(type => ({ text: type, value: type }))
 ])
 const cityOptions = computed(() => [
     { text: '全部城市', value: '' },
-    ...(options.value.cities || []).map((city) => ({ text: city, value: city }))
+    ...(options.value.cities || []).map(city => ({ text: city, value: city }))
 ])
 const artistOptions = computed(() => [
     { text: '全部艺人', value: '' },
-    ...(options.value.artists || []).map((artist) => {
+    ...(options.value.artists || []).map(artist => {
         const name = typeof artist === 'string' ? artist : artist.name
         return { text: name, value: name }
     })

@@ -41,7 +41,7 @@ const showDatePicker = ref(false)
 const showCategoryPicker = ref(false)
 
 const categoryColumns = computed(() =>
-    (categories.value.length ? categories.value : ['音乐会', '话剧', '音乐节', '展览', '其他']).map((item) => ({
+    (categories.value.length ? categories.value : ['音乐会', '话剧', '音乐节', '展览', '其他']).map(item => ({
         text: item,
         value: item
     }))
@@ -114,8 +114,8 @@ async function onSubmit() {
 
     const payload: ShowPayload = {
         title: form.title.trim(),
-        artists: artists.map((name) => ({ name })),
-        guests: splitNames(form.guests).map((name) => ({ name })),
+        artists: artists.map(name => ({ name })),
+        guests: splitNames(form.guests).map(name => ({ name })),
         showDate: form.showDate,
         city: form.city.trim(),
         cityAdcode: origin.value?.cityAdcode,

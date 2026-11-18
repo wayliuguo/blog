@@ -13,10 +13,12 @@ const overview = ref<StatsOverview | null>(null)
 const loading = ref(false)
 const dimension = ref<Dimension>('byCity')
 
-const yearOptions = computed(() => (years.value.length ? years.value : [currentYear]).map((y) => ({
-    text: `${y} 年`,
-    value: String(y)
-})))
+const yearOptions = computed(() =>
+    (years.value.length ? years.value : [currentYear]).map(y => ({
+        text: `${y} 年`,
+        value: String(y)
+    }))
+)
 
 const dimensionTabs = [
     { name: 'byCity', title: '城市' },
@@ -26,7 +28,7 @@ const dimensionTabs = [
 
 const monthly = computed(() => {
     const buckets = Array.from({ length: 12 }, () => ({ count: 0, spent: 0 }))
-    ;(overview.value?.monthly || []).forEach((item) => {
+    ;(overview.value?.monthly || []).forEach(item => {
         const month = Number(item.month.slice(5, 7))
         if (month >= 1 && month <= 12) {
             buckets[month - 1].count += item.count || 0
@@ -36,7 +38,7 @@ const monthly = computed(() => {
     return buckets.map((bucket, index) => ({ label: `${index + 1}月`, ...bucket }))
 })
 
-const maxMonthly = computed(() => Math.max(1, ...monthly.value.map((item) => item.spent)))
+const maxMonthly = computed(() => Math.max(1, ...monthly.value.map(item => item.spent)))
 
 /** 不同维度的原始字段名不同，这里统一成 name / count / totalSpent */
 const ranking = computed(() => {
@@ -44,13 +46,13 @@ const ranking = computed(() => {
     if (!source) return []
     const raw =
         dimension.value === 'byCity'
-            ? (source.byCity || []).map((item) => ({ name: item.city, ...item }))
+            ? (source.byCity || []).map(item => ({ name: item.city, ...item }))
             : dimension.value === 'byStar'
-              ? source.byStar || []
-              : (source.byType || []).map((item) => ({ name: item.type, ...item }))
+            ? source.byStar || []
+            : (source.byType || []).map(item => ({ name: item.type, ...item }))
 
     const rows = raw
-        .map((item) => ({
+        .map(item => ({
             name: item.name || '',
             count: item.count || 0,
             spent: item.totalSpent || 0
@@ -58,7 +60,7 @@ const ranking = computed(() => {
         .sort((a, b) => b.spent - a.spent)
 
     const totalSpent = rows.reduce((sum, item) => sum + item.spent, 0)
-    return rows.slice(0, 10).map((item) => ({
+    return rows.slice(0, 10).map(item => ({
         ...item,
         percent: totalSpent > 0 ? Math.round((item.spent / totalSpent) * 1000) / 10 : 0
     }))
