@@ -19,6 +19,9 @@ node -p "require('./node_modules/is-even/node_modules/is-number/package.json').v
 ```powershell
 # is-number 没有写进 package.json，却出现在顶层：幽灵依赖
 Get-ChildItem node_modules -Directory | Select-Object -ExpandProperty Name
+
+# index.js 里直接 require 未声明的 is-number
+node index.js   # true
 ```
 
 实测环境：Node 24.16 · npm 11。

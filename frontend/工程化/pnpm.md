@@ -1,6 +1,6 @@
 # pnpm
 
-## 一、npm 问题：重复安装与幽灵依赖
+## npm 问题：重复安装与幽灵依赖
 
 npm 从 v3 起把依赖尽量拍平到项目顶层的 `node_modules`，解决深层嵌套的路径长度问题。代价有两个：
 
@@ -9,7 +9,8 @@ npm 从 v3 起把依赖尽量拍平到项目顶层的 `node_modules`，解决深
 
 ### 重复安装：一个包名，两处实体
 
-`is-even@1.0.0` 依赖 `is-odd@0.1.2`，后者要 `is-number@3.0.0`；根工程又直接声明 `is-odd@3.0.1`，它要 `is-number@6.0.0`：
+- 根工程声明`is-even@1.0.0`，其依赖 `is-odd@0.1.2`，后者依赖 `is-number@3.0.0`；
+- 根工程声明 `is-odd@3.0.1`，其依赖 `is-number@6.0.0`：
 
 > 摘自 `./code/npm-lab/package.json`（在该目录执行 `npm install`）
 
@@ -25,9 +26,8 @@ npm 从 v3 起把依赖尽量拍平到项目顶层的 `node_modules`，解决深
 }
 ```
 
-平坦树只能每个包名留一份在顶层，另一份嵌进依赖方自己的 `node_modules`。`npm ls --all` 能直接看到两个版本：
-
 ```txt
+// npm ls --all 能直接看到两个版本
 npm-lab@1.0.0 E:\working\blog\frontend\工程化\code\npm-lab
 ├─┬ is-even@1.0.0
 │ └─┬ is-odd@0.1.2
@@ -38,9 +38,8 @@ npm-lab@1.0.0 E:\working\blog\frontend\工程化\code\npm-lab
   └── is-number@6.0.0
 ```
 
-落到磁盘上，两份 `is-number` 分别在顶层和 `is-even` 的子树里：
-
-```
+```txt
+// 磁盘表现
 node_modules/
 ├── is-even@1.0.0
 │   └── node_modules/
@@ -52,52 +51,28 @@ node_modules/
 └── kind-of@3.2.2
 ```
 
-同一句 `require('is-number')`，从不同目录出发命中不同副本：
-
-```bash
-node -p "require('is-number/package.json').version"                                        # 6.0.0
-node -p "require('./node_modules/is-even/node_modules/is-number/package.json').version"    # 3.0.0
-```
-
-- 顶层 `is-odd@3.0.1` / `is-number@6.0.0` 是根工程直接要的版本；`is-odd@0.1.2` / `is-number@3.0.0` 只存在于 `is-even` 的子树里，项目源码解析不到。
-- 重复安装不只是磁盘上多几份文件：同一行 `require` 从不同位置拿到不同版本，运行时行为跟着变。
-- 提升的副作用会扩散：`is-number@3.0.0` 的依赖 `is-buffer` / `kind-of` 也被拍到了顶层，同样没有出现在任何 `package.json` 里。
 
 ### 幽灵依赖：没声明的包也能 require
 
-还是同一个工程：`package.json` 里只有 `is-even` 与 `is-odd`，`is-number` 只是它们拉进来的传递依赖，却被拍到了顶层。
+- 表现：
 
-```powershell
-Get-ChildItem node_modules -Directory | Select-Object -ExpandProperty Name
-# is-buffer
-# is-even
-# is-number
-# is-odd
-# kind-of
-node -p "require('is-number/package.json').version"   # 6.0.0
+```js
+const is_number = require('is-number')
+console.log(is_number('123')) // true
 ```
 
-Node 解析模块时只沿目录向上找 `node_modules`，不检查是否在 `package.json` 里声明，所以这段代码"能跑"。危险不在"当前能跑"，而在"依赖别人的安装结果"：换一个包管理器、升级 `is-odd` 到不再依赖 `is-number` 的版本、或者顶层恰好由另一个包带进来不同版本的 `is-number`，同一段代码就可能解析到别的版本，甚至直接报错。pnpm 的思路是从布局上让这件事不可发生。
+- 问题：依赖了别人安装的结果，当依赖不存在后会报错（换包管理器、升级后不再依赖、顶层依赖不同版本）
 
-## 二、pnpm 核心特性
+## pnpm 核心特性
 
 pnpm 用两个机制分别对应上面两个问题：**磁盘上只存一份**（store + 硬链接），**解析时只给直接依赖**（严格的 `node_modules`）。
 
 ### store 硬链接 + 符号链接
 
-注册表里的包下载一次，按内容哈希落进全局 store；项目里的实体文件是 store 文件的硬链接，顶层目录只是指向 `.pnpm` 的符号链接：
+`node_modules` 里有两类"链接"，分工完全不同：
 
-```
-registry
-   │ 下载一次，按内容哈希落盘
-   ▼
-全局 store（`pnpm store path`）
-   │ 硬链接：同一份文件、多个目录项、同一 inode
-   ▼
-项目A/node_modules/.pnpm/is-even@1.0.0/node_modules/is-even   ← 实体文件
-   ▲ 符号链接（Windows 上是 junction）
-项目A/node_modules/is-even
-```
+- **符号链接**（Windows 上是 junction）只负责指路：包名 → 某个版本目录；
+- **硬链接**发生在**文件**一级：同一份内容有多个目录项，磁盘上只存一份。
 
 `app-a` 只声明一个依赖：
 
@@ -114,7 +89,7 @@ registry
 }
 ```
 
-安装后顶层只有一条链接，实体和整棵依赖图都在 `.pnpm` 里：
+#### 顶层：直接依赖只是一个 junction
 
 ```powershell
 Get-ChildItem node_modules -Directory | Select-Object Name, LinkType
@@ -135,20 +110,33 @@ is-even    Junction
 E:\working\blog\frontend\工程化\code\pnpm-core-lab\app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even
 ```
 
-`app-b` 装同一个包后，两个工程的实体文件是同一份物理文件。`fsutil hardlink list` 列出同一个文件的全部路径：
+`is-even` 不是目录，而是指向 `.pnpm` 的 junction。顶层只给 `package.json` 里直接声明的包开口。
+
+#### `.pnpm` 里：实体目录 + 依赖 junction
 
 ```powershell
-# 在 pnpm-core-lab 根目录执行
-fsutil hardlink list app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\package.json
+Get-ChildItem node_modules/.pnpm/is-even@1.0.0/node_modules -Force | Select-Object Name, LinkType
 ```
 
 ```txt
-\.pnpm-store\v11\files\99\b0543e83fc41a5727cb53cfa763fff9954e11a8995aecb2448374f19ebb0b156c3f0d9829cb1216af647cf063339348ee09dbef8c68e650dfef0068c930a19
-\working\blog\frontend\工程化\code\pnpm-core-lab\app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\package.json
-\working\blog\frontend\工程化\code\pnpm-core-lab\app-b\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\package.json
+Name    LinkType
+----    --------
+is-even
+is-odd  Junction
 ```
 
-`.pnpm` 下的目录名带版本，所以两个版本可以并存；每个包的依赖挂在它旁边的 `node_modules` 里：
+- `is-even` 没有 LinkType：它是真实目录，包的文件都在里面；
+- `is-odd` 是 junction，指向 `is-odd@0.1.2` 的版本目录：
+
+```powershell
+(Get-Item node_modules/.pnpm/is-even@1.0.0/node_modules/is-odd).Target
+```
+
+```txt
+E:\working\blog\frontend\工程化\code\pnpm-core-lab\app-a\node_modules\.pnpm\is-odd@0.1.2\node_modules\is-odd
+```
+
+每个包都这样挂自己的依赖，整棵依赖图由 junction 串起来。版本目录名带版本号，所以同一个包的两个版本可以并存：
 
 ```powershell
 Get-ChildItem node_modules/.pnpm -Directory | Select-Object -ExpandProperty Name
@@ -163,13 +151,45 @@ kind-of@3.2.2
 node_modules
 ```
 
-三个层次各司其职：
+其中 `node_modules` 是私有提升区，里面同样全是 junction，项目源码不会从这里解析。
 
-| 位置 | 是什么 | 作用 |
+#### 实体目录里的文件是硬链接
+
+`is-even` 目录里的 `index.js` 与全局 store 的文件共享同一份内容。`fsutil hardlink list` 列出指向这份内容的全部路径：
+
+```powershell
+# 在 pnpm-core-lab 根目录执行
+fsutil hardlink list app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\index.js
+```
+
+```txt
+\.pnpm-store\v11\files\dd\131e756f380a89a93ab6098d23e765d35330d66d6ef992f47d7b59c4dc3419877642489b24936b732ac5008319302afb4f030482733d44e326b4dfd47c665a
+\working\blog\frontend\工程化\code\pnpm-core-lab\app-a\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\index.js
+\working\blog\frontend\工程化\code\pnpm-core-lab\app-b\node_modules\.pnpm\is-even@1.0.0\node_modules\is-even\index.js
+```
+
+#### 为什么需要 app-a 和 app-b 两个工程
+
+- 只装 `app-a` 时，这条命令只有两条路径：store 与 `app-a`——能证明"文件不是复制进项目的"；
+- 再装一个依赖相同的 `app-b`，同一个文件变成三条路径：两个工程共用一份内容，第二个工程没有多占磁盘。这是 pnpm 在多项目机器上省空间的直接证据；
+- 分工是：`app-a` 看"store → 项目"的硬链接，`app-b` 看"项目 ↔ 项目"的共享。
+
+```
+全局 store（E:\.pnpm-store\v11）
+   │ 硬链接：同一份内容，多个目录项
+   ├──> app-a/node_modules/.pnpm/is-even@1.0.0/node_modules/is-even/index.js
+   └──> app-b/node_modules/.pnpm/is-even@1.0.0/node_modules/is-even/index.js
+          ▲ junction（符号链接）
+   app-a/node_modules/is-even
+```
+
+| 位置 | 类型 | 作用 |
 | --- | --- | --- |
-| 全局 store | 按内容寻址的文件仓库 | 同一份内容只存一次，跨项目、跨分支共享 |
-| `node_modules/.pnpm/<name>@<version>/node_modules/<name>` | 包的实体目录 | 每个"包 + 版本"一个目录，目录旁挂它自己的依赖链接 |
-| `node_modules/<name>` | 指向 `.pnpm` 的符号链接 | 只暴露 `package.json` 里直接声明的包 |
+| 全局 store | 内容寻址的文件仓库 | 每个文件唯一的实体 |
+| `node_modules/<包名>` | junction | 只暴露 `package.json` 里直接声明的包 |
+| `.pnpm/<包名>@<版本>/node_modules/<包名>` | 真实目录 | 包的内容，其中的文件硬链接到 store |
+| `.pnpm/<包名>@<版本>/node_modules/<依赖>` | junction | 让这个包解析到自己版本的依赖 |
+| `.pnpm/node_modules` | junction | 私有提升区，供 peer 依赖与部分工具使用 |
 
 两个实践细节：
 
