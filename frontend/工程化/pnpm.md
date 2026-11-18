@@ -11,11 +11,11 @@ npm 从 v3 起把依赖尽量拍平到项目顶层的 `node_modules`，解决深
 
 `is-even@1.0.0` 依赖 `is-odd@0.1.2`，后者要 `is-number@3.0.0`；根工程又直接声明 `is-odd@3.0.1`，它要 `is-number@6.0.0`：
 
-> 摘自 `./code/npm-lab/duplicate/package.json`（在该目录执行 `npm install`）
+> 摘自 `./code/npm-lab/package.json`（在该目录执行 `npm install`）
 
 ```json
 {
-    "name": "npm-duplicate",
+    "name": "npm-lab",
     "version": "1.0.0",
     "private": true,
     "dependencies": {
@@ -28,7 +28,7 @@ npm 从 v3 起把依赖尽量拍平到项目顶层的 `node_modules`，解决深
 平坦树只能每个包名留一份在顶层，另一份嵌进依赖方自己的 `node_modules`。`npm ls --all` 能直接看到两个版本：
 
 ```txt
-npm-duplicate@1.0.0 E:\working\blog\frontend\工程化\code\npm-lab\duplicate
+npm-lab@1.0.0 E:\working\blog\frontend\工程化\code\npm-lab
 ├─┬ is-even@1.0.0
 │ └─┬ is-odd@0.1.2
 │   └─┬ is-number@3.0.0
@@ -41,7 +41,7 @@ npm-duplicate@1.0.0 E:\working\blog\frontend\工程化\code\npm-lab\duplicate
 落到磁盘上，两份 `is-number` 分别在顶层和 `is-even` 的子树里：
 
 ```
-duplicate/node_modules/
+node_modules/
 ├── is-even@1.0.0
 │   └── node_modules/
 │       ├── is-number@3.0.0        ← 冲突版本，只能嵌套
@@ -65,27 +65,15 @@ node -p "require('./node_modules/is-even/node_modules/is-number/package.json').v
 
 ### 幽灵依赖：没声明的包也能 require
 
-把对照缩到一条链：只声明 `is-odd`，源码却直接 `require` 它的传递依赖 `is-number`。
-
-> 摘自 `./code/npm-lab/phantom/package.json`（在该目录执行 `npm install`）
-
-```json
-{
-    "name": "npm-phantom",
-    "version": "1.0.0",
-    "private": true,
-    "dependencies": {
-        "is-odd": "3.0.1"
-    }
-}
-```
-
-安装后顶层多出一个没声明过的包：
+还是同一个工程：`package.json` 里只有 `is-even` 与 `is-odd`，`is-number` 只是它们拉进来的传递依赖，却被拍到了顶层。
 
 ```powershell
 Get-ChildItem node_modules -Directory | Select-Object -ExpandProperty Name
+# is-buffer
+# is-even
 # is-number
 # is-odd
+# kind-of
 node -p "require('is-number/package.json').version"   # 6.0.0
 ```
 
@@ -423,8 +411,7 @@ Found 1 version of is-odd
 
 | 路径 | 内容 | 对应小节 |
 | --- | --- | --- |
-| `./code/npm-lab/duplicate/` | `is-even@1.0.0` + `is-odd@3.0.1`，`npm install` 后看两份实体 | 一 |
-| `./code/npm-lab/phantom/` | 只声明 `is-odd@3.0.1`，`npm install` 后顶层多出 `is-number` | 一 |
+| `./code/npm-lab/` | `is-even@1.0.0` + `is-odd@3.0.1`：两份实体，且未声明的 `is-number` 能从顶层 require | 一 |
 | `./code/pnpm-core-lab/app-a/` | `is-even@1.0.0`：顶层只有一条链接，未声明依赖报错 | 二 |
 | `./code/pnpm-core-lab/app-b/` | 同依赖：与 app-a 的实体文件是同一份硬链接 | 二 |
 | `./code/pnpm-workspace-lab/` | 可运行的 monorepo：工作区声明、本地依赖、编排脚本 | 三 |

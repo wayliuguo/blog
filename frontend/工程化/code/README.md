@@ -17,7 +17,7 @@
 
 | 实验台 | 命令（在该目录下执行） | 演示什么 | 对应篇目 |
 | ---- | ---- | ---- | ---- |
-| `npm-lab/` | 分别进 `duplicate/`、`phantom/` 执行 `npm install` | npm 平坦树的两个副作用：多版本重复安装、幽灵依赖 | pnpm |
+| `npm-lab/` | 进该目录执行 `npm install` | npm 平坦树的两个副作用：多版本重复安装、幽灵依赖 | pnpm |
 | `pnpm-core-lab/` | 分别进 `app-a/`、`app-b/` 执行 `pnpm install` | store 硬链接 + 符号链接、严格 node_modules | pnpm |
 | `pnpm-workspace-lab/` | `pnpm install` · `pnpm -r run build` · `pnpm start` | monorepo：`workspace:*` 本地链接、`--filter` 编排、成员增删与发布 | pnpm |
 | `vite-lab/` | `npm run dev` · `build` · `preview` | Vue 3 单入口工程：`.vue` SFC + `vue-router` 路由懒加载，官方 `@vitejs/plugin-vue` + 手写插件（dev 期 mock API / HMR 观测；build 期虚拟模块 / 剔除 / HTML 收尾 / 压缩 / 体积门禁） | Vite |
@@ -38,7 +38,7 @@
 
 | 目录 | 内容 |
 | ---- | ---- |
-| `npm-lab/` | npm 实验台：`duplicate/`（`is-even` + `is-odd`）与 `phantom/`（只声明 `is-odd`），装完自己看 `node_modules` |
+| `npm-lab/` | npm 实验台：`is-even` + `is-odd`，装完自己看 `node_modules`（两份 `is-number`、未声明却在顶层的包） |
 | `pnpm-core-lab/` | pnpm 安装模型：`app-a/` 与 `app-b/` 装同一个包，对照顶层链接与实体文件 |
 | `pnpm-workspace-lab/` | 可运行的 monorepo：根 `package.json` + `pnpm-workspace.yaml` + `packages/{utils,ui}` + `apps/web` + 锁文件 |
 | `vite-lab/` | Vue 3 工程配置：`src/` 为 SFC + 路由源码，`vite.config.mjs` + 官方 `vue()` + 手写插件（`plugins/`：dev 期 `mini-mock` / `mini-hmr`，build 期 `mini-virtual` / `mini-drop` / `mini-html` / `mini-terser` / `mini-size-gate`） |
