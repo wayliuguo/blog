@@ -846,7 +846,7 @@ pnpm preview    # http://localhost:5184，预览 dist/
 | `./code/vite-lab/src/main.js` | 环境变量、虚拟模块、真实 npm 依赖 | 插件实战 |
 | `./code/vite-lab/src/App.vue`、`src/views/`、`src/components/` | SFC 根组件 + 两个路由视图 + 卡片组件 | 插件实战 |
 | `./code/vite-lab/src/router.js` | 路由表：`() => import()` 路由级懒加载 | 构建优化 |
-| `./code/vite-lab/src/style.css`、`base.css`、`helper.js` | 样式（`@import`）与工具函数样本 | CSS |
+| `./code/vite-lab/src/style.css`、`src/base.css`、`src/helper.js` | 样式（`@import`）与工具函数样本 | CSS |
 | `./code/vite-lab/.env`、`.env.production` | 环境变量（`VITE_APP_NAME`） | 环境变量 |
 | `./code/vite-lab/plugins/mini-virtual.mjs` | 虚拟模块（`resolveId` + `load`） | `mini-virtual` |
 | `./code/vite-lab/plugins/mini-mock.mjs` | dev 期 mock API（`configureServer`） | `mini-mock` |
