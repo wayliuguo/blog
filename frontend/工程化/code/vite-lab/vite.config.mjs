@@ -8,12 +8,9 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import miniVirtual from './plugins/mini-virtual.mjs'
-import miniDrop from './plugins/mini-drop.mjs'
 import miniHtml from './plugins/mini-html.mjs'
-import miniTerser from './plugins/mini-terser.mjs'
 import miniSizeGate from './plugins/mini-size-gate.mjs'
 import miniMock from './plugins/mini-mock.mjs'
-import miniHmr from './plugins/mini-hmr.mjs'
 
 const DIR = import.meta.dirname
 
@@ -33,11 +30,9 @@ export default defineConfig({
         vue(),
         // 顺序即注册顺序；真正的先后由各自的 enforce / order 决定
         miniVirtual(),
-        miniDrop(),
         miniHtml({ nonce: 'lab-nonce' }),
-        // 下面两个只在 dev 生效（各自声明了 apply: 'serve'），build 时根本不加载
-        miniMock(),
-        miniHmr()
+        // 只在 dev 生效（插件自己声明了 apply: 'serve'），build 时根本不加载
+        miniMock()
     ],
 
     // 依赖预构建：把 CJS / 碎片化依赖预先转成 ESM 并合并
@@ -48,8 +43,8 @@ export default defineConfig({
     build: {
         outDir: 'dist',
         emptyOutDir: true,
-        // 关掉内置压缩，改用我们手写的 miniTerser（与 webpack 篇同构）
-        minify: false,
+        // 内置 esbuild 压缩；插件一节只保留四个钩子示例，压缩不再手写
+        minify: true,
         // 资源内联阈值：小于它的资源内联进 JS
         assetsInlineLimit: 4096,
         // CSS 单独成文件，不走运行时注入
@@ -67,8 +62,8 @@ export default defineConfig({
                     return null
                 }
             },
-            // 挂在 output 上的手写插件：压缩在前、称重在后的顺序即依赖关系
-            plugins: [miniTerser(), miniSizeGate({ limitKb: 60, manifest: 'build-manifest.json' })]
+            // 挂在 output 上的插件：产物生成后称重，并落一份清单
+            plugins: [miniSizeGate({ limitKb: 60, manifest: 'build-manifest.json' })]
         }
     }
 })

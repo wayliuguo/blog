@@ -234,7 +234,7 @@ class MyPlugin {
 
 - 「`sideEffects: false` ≠ 模块内副作用语句可删」：它说的是「模块没被引用可整块删」，已在依赖图里的模块，顶层副作用语句照样保留
 - 与 Rollup 的对比是加分项：Rollup 解析期一步完成删除；webpack 是「标记+压缩」两步——只配 `sideEffects` 不开生产压缩，一个字节都不会少
-- 实测验证方法：构建产物里搜未引用函数名，或用 analyze-lab 做对照实验
+- 实测验证方法：构建产物里搜未引用函数名，或做「开 / 关 `sideEffects`」的体积对照实验
 
 ### 9. Code Splitting 怎么做？splitChunks 的 cacheGroups 怎么配？
 

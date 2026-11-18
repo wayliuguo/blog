@@ -15,7 +15,6 @@
     "devDependencies": {
         "@vitejs/plugin-vue": "^6.0.9",
         "magic-string": "^0.30.0",
-        "terser": "^5.51.2",
         "vite": "^8.0.0"
     }
 }

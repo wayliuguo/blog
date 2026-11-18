@@ -3,9 +3,6 @@ dist/
 dist-*/
 .wp-cache/
 
-# analyze-lab 的被测源码由 optimize.cjs 自己生成（源码内容写在脚本里）
-analyze-lab/src/
-
 # bench 的样本源码由 bench/gen.cjs 生成、bench/run.cjs 每次运行先清空再重建
 bench/src/
 bench/src-noside/

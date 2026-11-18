@@ -3,8 +3,6 @@ import MagicString from 'magic-string'
 import App from './App.vue'
 import router from './router.js'
 import './style.css'
-import './mock.js' // 不该上线，会被 mini-drop 清空
-import './main.spec.js' // 不该上线，会被 mini-drop 清空
 import { BUILD_INFO } from 'virtual:build-info' // 磁盘上不存在，由 mini-virtual 提供
 
 // import.meta.env 会被 Vite 在构建期静态替换成字面量
@@ -21,5 +19,4 @@ app.use(router)
 app.provide('appInfo', { appName, inProd, build: BUILD_INFO })
 app.mount('#app')
 
-console.log('调试日志：构建期会被 mini-drop 清掉')
 console.log(ms.toString())
