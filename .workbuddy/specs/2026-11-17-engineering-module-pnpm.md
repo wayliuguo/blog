@@ -1,11 +1,11 @@
 # Spec：构建体系模块改为工程化并新增 pnpm
 
 日期：2026-11-17
-状态：已确认（2026-11-18 按「三部分 + 三台真实工程实验台」调整）
+状态：已确认（2026-11-18 按「三部分 + 两台实验台」调整）
 
 ## 目标
 
-把 `frontend/构建体系/` 整体改名为 `frontend/工程化/`，侧边栏、总结、配套代码 README 与面试题引用同步更新；在模块内新增《pnpm》一篇及三台配套实验台（`npm-lab`、`pnpm-core-lab`、`pnpm-workspace-lab`）。现有 Vite / Webpack 篇与各 lab 的 npm 命令保持不动。
+把 `frontend/构建体系/` 整体改名为 `frontend/工程化/`，侧边栏、总结、配套代码 README 与面试题引用同步更新；在模块内新增《pnpm》一篇及两台配套实验台（`npm-lab`、`pnpm-workspace-lab`）。现有 Vite / Webpack 篇与各 lab 的 npm 命令保持不动。
 
 ## 改名清单
 
@@ -57,9 +57,6 @@ frontend/工程化/code/
 ├── npm-lab/
 │   ├── package.json               # is-even@1.0.0 + is-odd@3.0.1（两个 is-number 版本；未声明的 is-number 在顶层）
 │   └── README.md                  # 安装与观察命令
-├── pnpm-core-lab/
-│   ├── app-a/package.json         # is-even@1.0.0（严格 node_modules 演示）
-│   └── README.md                  # 安装与观察命令（LinkType / Target / hardlink list / MODULE_NOT_FOUND）
 └── pnpm-workspace-lab/
     ├── package.json               # 根：private + packageManager + 汇总脚本
     ├── pnpm-workspace.yaml        # packages/* + apps/*
@@ -84,7 +81,7 @@ frontend/工程化/code/
 
 ## 验收
 
-1. `npm-lab` 执行 `npm install` 成功；`pnpm-core-lab/app-a` 与 `pnpm-workspace-lab` 各自 `pnpm install` 成功
+1. `npm-lab` 执行 `npm install` 成功；`pnpm-workspace-lab` 执行 `pnpm install` 成功
 2. 文档中「摘自」代码块与源文件逐字一致，实测输出与当前机器重跑一致
 3. `NODE_OPTIONS` 清空后 VitePress build 通过（含新页面与中文路径）
 4. 全库 grep `构建体系`、`pnpm-lab`、`pnpm lab` 无残留（git 历史与本 spec 除外）

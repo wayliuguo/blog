@@ -6,19 +6,18 @@
 
 ## 环境要求
 
-- Node.js 22+（Vite 8 要求 Node 20.19+ / 22.12+，实测用 22.22；`npm-lab` / `pnpm-*` 实测用 Node 24.16）
+- Node.js 22+（Vite 8 要求 Node 20.19+ / 22.12+，实测用 22.22；`npm-lab` / `pnpm-workspace-lab` 实测用 Node 24.16）
 - **每个实验台都是独立项目，必须进到各自目录安装依赖**：`vite-lab` / `webpack-lab` / `mini-*` 等各自维护 `package.json` 与 `node_modules`，互不干扰
 - 主要版本（实测）：webpack 5 · vite 8 · vue 3（`vite-lab` 与 `webpack-lab` 的 SFC 与路由） · pnpm 11
 - 部分脚本会写临时产物到各自的 `dist*` / `node_modules/.vite` / `.work` 目录，可随时删除重跑
 
 ## 实验台
 
-每个实验台单独 `cd` 进去、单独安装依赖（npm 项目用 `npm install`，pnpm 项目用 `pnpm install`）。pnpm 相关的三台没有脚本，装完自己观察 `node_modules`。
+每个实验台单独 `cd` 进去、单独安装依赖（npm 项目用 `npm install`，pnpm 项目用 `pnpm install`）。`npm-lab` 没有脚本，装完自己观察 `node_modules`。
 
 | 实验台 | 命令（在该目录下执行） | 演示什么 | 对应篇目 |
 | ---- | ---- | ---- | ---- |
 | `npm-lab/` | 进该目录执行 `npm install` | npm 平坦树的两个副作用：多版本重复安装、幽灵依赖 | pnpm |
-| `pnpm-core-lab/` | 进 `app-a/` 执行 `pnpm install` | store 硬链接 + 符号链接、严格 node_modules | pnpm |
 | `pnpm-workspace-lab/` | `pnpm install` · `pnpm -r run build` · `pnpm start` | monorepo：`workspace:*` 本地链接、`--filter` 编排、成员增删与发布 | pnpm |
 | `vite-lab/` | `npm run dev` · `build` · `preview` | Vue 3 单入口工程：`.vue` SFC + `vue-router` 路由懒加载，官方 `@vitejs/plugin-vue` + 手写插件（dev 期 mock API / HMR 观测；build 期虚拟模块 / 剔除 / HTML 收尾 / 压缩 / 体积门禁） | Vite |
 | `webpack-lab/` | `npm run build` · `preview` | Vue 3 单入口生产构建：官方 `vue-loader` + 手写 loader（css-loader / extract-css-loader）+ 手写插件（CSS 抽离 / 压缩 / HTML 注入），splitChunks + runtimeChunk | Webpack |
@@ -39,7 +38,6 @@
 | 目录 | 内容 |
 | ---- | ---- |
 | `npm-lab/` | npm 实验台：`is-even` + `is-odd`，装完自己看 `node_modules`（两份 `is-number`、未声明却在顶层的包） |
-| `pnpm-core-lab/` | pnpm 安装模型：`app-a/` 装 `is-even`，对照顶层链接、实体目录与严格解析 |
 | `pnpm-workspace-lab/` | 可运行的 monorepo：根 `package.json` + `pnpm-workspace.yaml` + `packages/{utils,ui}` + `apps/web` + 锁文件 |
 | `vite-lab/` | Vue 3 工程配置：`src/` 为 SFC + 路由源码，`vite.config.mjs` + 官方 `vue()` + 手写插件（`plugins/`：dev 期 `mini-mock` / `mini-hmr`，build 期 `mini-virtual` / `mini-drop` / `mini-html` / `mini-terser` / `mini-size-gate`） |
 | `webpack-lab/` | 生产构建配置：`webpack.config.cjs` + 手写 loader（`loaders/`）+ 手写插件（`plugins/`）+ Vue 3 演示源码（`src/`） |
