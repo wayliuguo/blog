@@ -1,10 +1,15 @@
 # Vite
 
-> 三段式：**使用与核心模型 → 插件体系 → 最小实现**。示例是一个真实的 Vue 3 单入口应用——SFC + `vue-router` 路由懒加载；SFC 交给官方 `@vitejs/plugin-vue`，四个手写插件分别对应 `resolveId`/`load`、`configureServer`、`transformIndexHtml`、`generateBundle` 四类钩子。
+本篇配两个工程，各管一半：
 
-## 一、使用 & 核心模型
+| 工程 | 是什么 | 用在哪 |
+| --- | --- | --- |
+| `./code/h5-vite/` | 「赴演记 H5」：Vue 3 + TS + Vue Router + Vant + Axios + Pinia，接真实后端 | 使用 & 核心模型、工程化 & 性能 |
+| `./code/vite-lab/` | 插件实验工程：手写四个插件，把钩子逐个跑一遍 | 插件体系 |
 
-### 1.1 核心设计思想
+## 使用 & 核心模型
+
+### 核心设计思想
 
 ```
 dev   浏览器 import ──请求──> Vite Server ──转译──> 返回 ESM 源码（不打包）
@@ -20,8 +25,8 @@ build 从 index.html 入口 ──全量解析──> 依赖图 ──打包 / �
 
 两句话记住差异：
 
-- **dev 处理的是「被请求到的模块」**。浏览器发一个 URL，server 才读文件、转译、返回；没被请求到的模块一次都不转。`helper.js` 被 `main.js` import 了，但浏览器没请求它之前，server 不会处理它。
-- **build 处理的是「整个依赖图」**。从 `index.html` 里的入口出发，全量走 `resolveId → load → transform`，再把图固化成 chunk。本 lab 一次 `npm run build` 实测 `38 modules transformed`。
+- **dev 处理的是被请求到的模块**：浏览器发一个 URL，server 才读文件、转译、返回；没被请求到的模块一次都不转。`ListView.vue` 被 `router.ts` import 了，但浏览器没请求它之前，server 不会处理它。
+- **build 处理的是整个依赖图**：从 `index.html` 里的入口出发，全量走 `resolveId → load → transform`，再把图固化成 chunk。
 
 dev 侧维护的结构叫**模块图**（module graph）：一个 URL 对应一个模块节点，节点上挂 `importers`（谁 import 我）与 `importedModules`（我 import 谁）。它解释了几个反直觉行为：
 
@@ -33,20 +38,35 @@ dev 侧维护的结构叫**模块图**（module graph）：一个 URL 对应一�
 
 还有一个与 webpack 相反的约定：**Vite 的入口写在 HTML 里**。`index.html` 是构建起点，不是产物模板；下面这句就是 entry：
 
-> 摘自 `./code/vite-lab/index.html`
+> 摘自 `./code/h5-vite/index.html`
 
 ```html
-<script type="module" src="/src/main.js"></script>
+<script type="module" src="/src/main.ts"></script>
 ```
 
-### 1.2 基础使用
+### 基础使用
 
-初始化一个项目只有两步：装依赖、写配置。
+真实项目的初始化只有两步：装依赖、写配置。`h5-vite` 的依赖清单（pnpm 管理）：
 
-```bash
-npm create vite@latest my-app -- --template vue
-# 或手工：npm i -D vite @vitejs/plugin-vue
-```
+| 类型 | 包 | 作用 |
+| --- | --- | --- |
+| 运行时 | `vue`、`vue-router`、`pinia` | 视图、路由、状态 |
+| 运行时 | `vant` | 移动端组件库 |
+| 运行时 | `axios` | 请求后端 |
+| 开发 | `vite`、`@vitejs/plugin-vue` | 构建器与 SFC 编译 |
+| 开发 | `typescript`、`vue-tsc` | 类型检查（`vue-tsc` 挂在 `build` 前） |
+| 开发 | `unplugin-auto-import`、`unplugin-vue-components` | API / 组件按需自动引入 |
+| 开发 | `vite-plugin-compression` | 产物另存 `.gz` |
+
+脚本与端口：
+
+| 命令 | 做什么 | 端口 / 产物 |
+| --- | --- | --- |
+| `pnpm dev` | dev server，按请求即时转换，`/api` 转发到真实后端 | 5183 |
+| `pnpm build` | `vue-tsc --noEmit` 类型检查 + production 构建 | `dist/` |
+| `pnpm build:only` | 跳过类型检查直接构建（量产物读数用） | `dist/` |
+| `pnpm preview` | 纯静态服务预览 `dist/`，仍保留 `/api` 代理 | 5184 |
+| `pnpm typecheck` | 只跑类型检查 | — |
 
 配置本身只有五类，与 webpack 的五类一一对应：
 
@@ -58,63 +78,84 @@ npm create vite@latest my-app -- --template vue
 | 扩展 | `plugins` | `plugins` |
 | 优化 | `build.rollupOptions.output.manualChunks` / `minify` | `optimization` |
 
-> 摘自 `./code/vite-lab/vite.config.mjs`（运行：`npm run build`）
+下面是完整的生产配置——本工程没有第二个配置文件：
 
-```js
-export default defineConfig({
-    root: DIR,
+> 摘自 `./code/h5-vite/vite.config.ts`（运行：`pnpm build`）
 
-    // 环境变量前缀：只有 VITE_ 开头的才会暴露给客户端代码
-    envPrefix: 'VITE_',
+```ts
+const API_TARGET = 'https://api.show-track.top'
+const proxy = {
+    '/api': { target: API_TARGET, changeOrigin: true }
+}
 
-    define: {
-        // 编译期常量，与 webpack DefinePlugin 等价
-        __BUILD_TIME__: JSON.stringify(new Date().toISOString())
-    },
-
+export default defineConfig(({ mode }) => ({
     plugins: [
-        // 官方 @vitejs/plugin-vue 编译 .vue 单文件组件；它也是唯一一个非手写插件
         vue(),
-        // 顺序即注册顺序；真正的先后由各自的 enforce / order 决定
-        miniVirtual(),
-        miniHtml({ nonce: 'lab-nonce' }),
-        // 只在 dev 生效（插件自己声明了 apply: 'serve'），build 时根本不加载
-        miniMock()
+        // Vue / Router / Pinia 的 API 免 import
+        AutoImport({
+            imports: ['vue', 'vue-router', 'pinia'],
+            dts: 'src/auto-imports.d.ts'
+        }),
+        // 模板里写 <van-button> 即可；样式随组件按需注入
+        Components({
+            resolvers: [VantResolver()],
+            dts: 'src/components.d.ts'
+        }),
+        // 产物另存一份 .gz，由 Nginx 直接送出
+        compression({ threshold: 1024, ext: '.gz', deleteOriginFile: false })
     ],
 
-    // 依赖预构建：把 CJS / 碎片化依赖预先转成 ESM 并合并
-    optimizeDeps: {
-        include: ['magic-string']
+    resolve: {
+        alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }
     },
 
+    // 只有 VITE_ 前缀的变量会进入客户端产物
+    envPrefix: ['VITE_'],
+
+    server: { port: 5183, proxy },
+    preview: { port: 5184, proxy },
+
+    // 生产构建去掉日志与断点
+    esbuild: { drop: mode === 'production' ? ['console', 'debugger'] : [] },
+
     build: {
+        target: 'es2020',
         outDir: 'dist',
         emptyOutDir: true,
-        // 内置 esbuild 压缩；插件一节只保留四个钩子示例，压缩不再手写
-        minify: true,
-        // 资源内联阈值：小于它的资源内联进 JS
         assetsInlineLimit: 4096,
-        // CSS 单独成文件，不走运行时注入
         cssCodeSplit: true,
-
+        sourcemap: false,
         rollupOptions: {
             output: {
-                // 内容变了文件名才变 → CDN 长缓存
                 entryFileNames: 'assets/[name].[hash:8].js',
-                chunkFileNames: 'assets/[name].[hash:8].chunk.js',
+                chunkFileNames: 'assets/[name].[hash:8].js',
                 assetFileNames: 'assets/[name].[hash:8][extname]',
-                // 手动分组：把 node_modules 依赖单独打一个 chunk
+                // 三方依赖按来源分组：任一业务改动都不会打乱它们的 hash
                 manualChunks(id) {
-                    if (id.includes('node_modules')) return 'vendor'
-                    return null
+                    if (!id.includes('node_modules')) return null
+                    if (id.includes('node_modules/vant')) return 'vant'
+                    if (id.includes('node_modules/axios')) return 'axios'
+                    if (
+                        id.includes('node_modules/vue') ||
+                        id.includes('node_modules/@vue') ||
+                        id.includes('node_modules/pinia')
+                    ) {
+                        return 'vue'
+                    }
+                    return 'vendor'
                 }
-            },
-            // 挂在 output 上的插件：产物生成后称重，并落一份清单
-            plugins: [miniSizeGate({ limitKb: 60, manifest: 'build-manifest.json' })]
+            }
         }
     }
-})
+}))
 ```
+
+这份配置里有四处是「生产才需要、模板项目不会给」的：
+
+1. **`server.proxy` 与 `preview.proxy` 是两份**。代理只在本地服务器上生效，`dist/` 里没有任何转发逻辑；上线后由 Nginx 把 `/api` 反代到同一个后端。
+2. **`manualChunks` 按来源拆三组**。`vant` 单独成 chunk 后，改一行业务代码不会让 155 kB 的组件库重新下载。
+3. **`esbuild.drop` 只在 production 开**。dev 下保留 `console` 才能调试，build 前自动抹掉。
+4. **`compression` 在构建末尾补 `.gz`**，静态服务器可直接送压缩文件，省掉运行时压缩。
 
 五个路径 / 出口项要分清：
 
@@ -126,7 +167,7 @@ export default defineConfig({
 | `build.outDir` | `'dist'` | 产物目录，相对 `root` |
 | `build.rollupOptions` | `{}` | 直接透传给 Rollup / Rolldown：`input`、`output`、`plugins` 都在这里 |
 
-`define` 替换的是**代码文本**，值必须 `JSON.stringify`——不加引号会被当成标识符而报错，这一点与 webpack 的 `DefinePlugin` 完全一样。
+`define` 替换的是**代码文本**，值必须 `JSON.stringify`——不加引号会被当成标识符而报错，这一点与 webpack 的 `DefinePlugin` 完全一样。本工程没有用 `define`，所有编译期注入都走环境变量，见下。
 
 #### 环境变量
 
@@ -155,20 +196,40 @@ export default defineConfig({
 2. **替换是字面量内联**，所以 `if (import.meta.env.PROD) {...}` 的假分支能被压缩器删掉。
 3. **不能动态拼接 key**，构建期不知道 `key` 是什么。
 
-本 lab 的 `.env` 写 `VITE_APP_NAME=vite-lab-dev`，`.env.production` 写 `vite-lab-prod`。dev 下请求 `/src/main.js`，server 返回的第一行就是注入的环境对象：
+本工程的 `.env` 写 `VITE_APP_TITLE=赴演记 H5`，`.env.development` 把它覆盖成 `赴演记 H5 (dev)`。dev 下请求 `/src/env.ts`，server 返回的第一行就是注入的环境对象：
 
 ```
 import.meta.env = {"BASE_URL": "/", "DEV": true, "MODE": "development", "PROD": false, "SSR": false,
-  "VITE_API_BASE": "http://localhost:3000", "VITE_APP_NAME": "vite-lab-dev"};
+  "VITE_API_BASE": "/api", "VITE_APP_TITLE": "赴演记 H5 (dev)", "VITE_ASSET_BASE": "https://api.show-track.top"};
 ```
 
-build 后产物里则是一个字面量（生产构建取了 `.env.production`）：
+注意里面**没有 `VITE_API_TOKEN`**：token 只写在 `.env.local`（已 gitignore），仓库里提交的是 `.env.local.example`。没配这一项，对象里就根本没有这个 key，代码里的 `|| ''` 兜底才会生效：
 
-```
-={name:`vite-lab`,mode:`production`},j=`vite-lab-prod`,M=!0,…
+> 摘自 `./code/h5-vite/src/env.ts`
+
+```ts
+export const ENV = {
+    appTitle: import.meta.env.VITE_APP_TITLE || '赴演记 H5',
+    apiBase: import.meta.env.VITE_API_BASE || '/api',
+    assetBase: import.meta.env.VITE_ASSET_BASE || 'https://api.show-track.top',
+    apiToken: import.meta.env.VITE_API_TOKEN || '',
+    isDev: import.meta.env.DEV
+}
 ```
 
-`j` 是 `appName`，`M` 是 `inProd = true`——全部在构建期定死。
+收口成 `ENV` 的意义：业务代码里只有这一处出现 `import.meta.env`，换构建器时只改这个文件。
+
+build 后产物里**不存在 `import.meta.env` 这个对象**，全部是字面量——`dist/assets/*.js` 里能搜到 `赴演记 H5` 与 `"/api"`，而 `import.meta.env.DEV` 出现的地方已被折叠成假值、整段删掉。
+
+token 的放法（只走环境变量，不进配置文件、不进 git）：
+
+```bash
+cp .env.local.example .env.local
+# 编辑 .env.local：VITE_API_TOKEN=你的 token
+pnpm dev
+```
+
+token 会被编译进产物，因此只用于本地调试；真实的线上鉴权应由网关下发。
 
 #### 静态资源
 
@@ -183,6 +244,20 @@ build 后产物里则是一个字面量（生产构建取了 `.env.production`�
 
 是否内联由 `build.assetsInlineLimit` 决定（默认 4096 字节）；`?inline` / `?no-inline` 可以显式覆盖它。
 
+本工程的海报来自后端，是运行时拼出来的绝对地址，所以不走 import——`/uploads/xxx` 这类相对路径要补上资源域名：
+
+> 摘自 `./code/h5-vite/src/utils/format.ts`
+
+```ts
+export function posterOf(show: ShowRecord): string {
+    const url = show.posterOssUrl || show.posterOriginalUrl || show.posterUrl
+    if (!url) return ''
+    return url.startsWith('/') ? `${ENV.assetBase}${url}` : url
+}
+```
+
+`ENV.assetBase` 就是 `.env` 里的 `VITE_ASSET_BASE`——同一份代码在 dev 与线上取到同一个域名前缀。
+
 #### CSS
 
 | 需求 | 写法 | 说明 |
@@ -196,37 +271,67 @@ build 后产物里则是一个字面量（生产构建取了 `.env.production`�
 
 `.vue` 的编译不在内置转换里，必须装 `@vitejs/plugin-vue`——所谓「配置全手写」针对的是产物收尾，不是语言编译。
 
-### 1.3 工程化 & 性能
+Vant 的样式分两种入口：模板里用到的组件由 `VantResolver` 自动注入样式；`showToast` / `showConfirmDialog` 这类函数式组件不经过模板解析，必须手动引一次：
+
+> 摘自 `./code/h5-vite/src/main.ts`
+
+```ts
+import 'vant/es/toast/style'
+import 'vant/es/dialog/style'
+import './styles/index.css'
+```
+
+### 工程化 & 性能
 
 #### 预构建（`optimizeDeps`）
 
 **为什么需要预构建**：`node_modules` 里的包大量是 CommonJS，浏览器不认；即使是 ESM，一个包也可能拆成几百个小文件，浏览器逐个请求会形成请求瀑布。预构建把依赖提前转成**单个 ESM 文件**并合并，一次解决两件事。
 
-产物落在 `node_modules/.vite/deps/`，并带一份元数据：
+产物落在 `node_modules/.vite/deps/`，并带一份元数据（节选）：
 
-> 摘自 `./code/vite-lab/node_modules/.vite/deps/_metadata.json`（运行：`npm run dev`）
+> 摘自 `./code/h5-vite/node_modules/.vite/deps/_metadata.json`（运行：`pnpm dev`）
 
 ```json
 {
-  "hash": "a06f9a76",
+  "hash": "4652dcf8",
   "optimized": {
-    "magic-string": { "src": "../../magic-string/dist/magic-string.es.mjs", "file": "magic-string.js" },
-    "vue-router": { "src": "../../vue-router/dist/vue-router.mjs", "file": "vue-router.js" },
-    "vue": { "src": "../../vue/dist/vue.runtime.esm-bundler.js", "file": "vue.js" }
+    "axios": { "src": "../../.pnpm/axios@1.21.1/node_modules/axios/index.js", "file": "axios.js" },
+    "pinia": { "src": "../../.pnpm/pinia@3.0.4_.../node_modules/pinia/dist/pinia.mjs", "file": "pinia.js" },
+    "vant": { "src": "../../.pnpm/vant@4.10.2_.../node_modules/vant/es/index.mjs", "file": "vant.js" },
+    "vant/es": { "src": "../../.pnpm/vant@4.10.2_.../node_modules/vant/es/index.mjs", "file": "vant_es.js" },
+    "vant/es/toast/style": {
+      "src": "../../.pnpm/vant@4.10.2_.../node_modules/vant/es/toast/style/index.mjs",
+      "file": "vant_es_toast_style.js"
+    },
+    "vue-router": { "src": "../../.pnpm/vue-router@4.6.5_.../node_modules/vue-router/dist/vue-router.mjs", "file": "vue-router.js" },
+    "vue": { "src": "../../.pnpm/vue@3.5.45_.../node_modules/vue/dist/vue.runtime.esm-bundler.js", "file": "vue.js" }
+  },
+  "chunks": {
+    "es-CqdtDXc6": { "file": "es-CqdtDXc6.js", "isDynamicEntry": false },
+    "vue.runtime.esm-bundler-enJwGQ0A": { "file": "vue.runtime.esm-bundler-enJwGQ0A.js", "isDynamicEntry": false }
   }
 }
 ```
 
-dev 下 `main.js` 的 import 会被改写成预构建产物：
+`optimized` 共 27 项，其中 21 项是 `vant/es/*/style/index`——Vant 按需引入的样式子路径也被逐个预构建了，所以 dev 下点开一个按钮不会突然卡一下。
+
+dev 下 `main.ts` 的 import 会被改写成预构建产物：
 
 ```
-import { createApp } from "/node_modules/.vite/deps/vue.js?v=13a1fdef"
-import MagicString from "/node_modules/.vite/deps/magic-string.js?v=13a1fdef"
+import { createApp } from "/node_modules/.vite/deps/vue.js?v=55f00eac";
+import { createPinia } from "/node_modules/.vite/deps/pinia.js?v=55f00eac";
+import "/node_modules/.vite/deps/vant_es_toast_style.js?v=55f00eac";
+import "/node_modules/.vite/deps/vant_es_dialog_style.js?v=55f00eac";
+import "/src/styles/index.css";
+import App from "/src/App.vue";
+import router from "/src/router.ts";
 ```
+
+只有裸导入会指向 `.vite/deps`，源码路径仍是 `/src/*` 原样返回；`?v=` 是预构建的缓存戳，依赖变了才会变，所以这一串 URL 可以被浏览器一直缓存到下次重新预构建。
 
 三个开关：
 
-- `optimizeDeps.include`：显式声明要预构建的依赖。动态 import、插件内部引入的依赖可能扫不到，提前写死可以避免 dev 中途重新预构建并刷新页面（本 lab 显式加了 `magic-string`）。
+- `optimizeDeps.include`：显式声明要预构建的依赖。动态 import、插件内部引入的依赖可能扫不到，提前写死可以避免 dev 中途重新预构建并刷新页面（`vite-lab` 的 `magic-string` 只在插件里被 import，就是这么加的）。
 - `optimizeDeps.exclude`：排除某个包。常见于本地 workspace 包——被预构建成一个文件后，这个节点对编辑不再敏感。
 - `optimizeDeps.force` / `--force`：忽略缓存重新预构建。改完 `vite.config` 里依赖相关配置后用它。
 
@@ -234,7 +339,7 @@ import MagicString from "/node_modules/.vite/deps/magic-string.js?v=13a1fdef"
 
 HMR 的原理仍然是「模块粒度 = 文件粒度」：服务端只重转变更模块，再通过 WebSocket 告诉浏览器重新发一个 ESM 请求，不需要重新打包，所以更新耗时与项目规模无关。
 
-模块自己声明接受更新，冒泡才会停在这一层：
+本工程一行 HMR 代码都没写，边界由 `@vitejs/plugin-vue` 生成：SFC 的 `<template>` 与 `<style>` 各有一条 accept 边，改模板只换渲染函数、改样式只换 `<style>` 标签。需要自己接管时再写：
 
 ```js
 // 只在 dev 存在；build 时整段是死代码，会被摇掉
@@ -255,60 +360,98 @@ if (import.meta.hot) {
 - **代码分割**：`build.rollupOptions.output.manualChunks` 按模块 id 分组；路由表里的 `() => import()` 自动切 chunk。
 - **tree-shaking**：Rollup / Rolldown 的能力，前提是 ESM；包自己的 `sideEffects` 声明决定「没被引用的模块能不能整块删」。
 - **压缩**：`build.minify` 默认 `'esbuild'`；要更激进的压缩可换 `'terser'`（需装 `terser`）。
-- **兼容**：`build.target` 默认按浏览器基线（`baseline-widely-available`），要兼容旧浏览器时显式写 `es2015` / `es2017` 等。
+- **兼容**：`build.target` 默认按浏览器基线（`baseline-widely-available`），要兼容旧浏览器时显式写 `es2015` / `es2017` 等。本工程写死 `es2020`。
 - **资源内联**：`build.assetsInlineLimit` 控制小文件是否变 data URL。
 - **CSS 拆分**：`build.cssCodeSplit` 让异步 chunk 的 CSS 随 chunk 加载。
+- **组件按需**：`unplugin-vue-components` + `VantResolver` 让模板里的 `<van-button>` 自动 import 组件与样式；产物 CSS 里只有用到的组件。
 
-`manualChunks` 只接受函数形式（Rolldown 下写对象会报 `Invalid type: Expected Function but received Object`）：
+`manualChunks` 只接受函数形式（Rolldown 下写对象会报 `Invalid type: Expected Function but received Object`）。本工程按来源分四组：
 
-> 摘自 `./code/vite-lab/vite.config.mjs`（运行：`npm run build`）
+> 摘自 `./code/h5-vite/vite.config.ts`（运行：`pnpm build`）
 
-```js
+```ts
 manualChunks(id) {
-    if (id.includes('node_modules')) return 'vendor'
-    return null
+    if (!id.includes('node_modules')) return null
+    if (id.includes('node_modules/vant')) return 'vant'
+    if (id.includes('node_modules/axios')) return 'axios'
+    if (
+        id.includes('node_modules/vue') ||
+        id.includes('node_modules/@vue') ||
+        id.includes('node_modules/pinia')
+    ) {
+        return 'vue'
+    }
+    return 'vendor'
 }
 ```
 
-路由级懒加载是最自然的分割点：
+路由级懒加载是最自然的分割点，五个页面各一个 chunk：
 
-> 摘自 `./code/vite-lab/src/router.js`（运行：`npm run build`）
+> 摘自 `./code/h5-vite/src/router.ts`（运行：`pnpm build`）
 
-```js
-const routes = [
-    { path: '/', name: 'home', component: () => import('./views/Home.vue') },
-    { path: '/about', name: 'about', component: () => import('./views/About.vue') }
-]
+```ts
+{
+    path: '/shows',
+    name: 'shows',
+    component: () => import(/* webpackChunkName: "list" */ './views/shows/ListView.vue')
+},
+{
+    path: '/shows/new',
+    name: 'show-create',
+    component: () => import(/* webpackChunkName: "edit" */ './views/shows/EditView.vue')
+}
 ```
 
-一次 `npm run build` 的产物（按 gzip 排序，来自 `dist/build-manifest.json`）：
+`/* webpackChunkName: ... */` 是给 webpack 篇对照用的：Vite 忽略这个注释，chunk 名直接用文件名（`ListView`）；webpack 认它，产物里就是 `list.js`。同一份路由表在两边都能读。
+
+一次 `pnpm build:only` 的产物（gzip 取 `dist/assets/*.gz` 的实测字节）：
 
 ```
-assets/vendor.DsOb2RQy.chunk.js  chunk  raw 106176B  gzip  38898B   ← node_modules
-assets/index.DBSKlWm-.js         chunk  raw   3509B  gzip   1797B   ← 入口
-assets/Home.k5xB5yNE.chunk.js    chunk  raw    703B  gzip    552B   ← 路由懒加载：Home.vue
-assets/About.C2uZzM78.chunk.js   chunk  raw    411B  gzip    350B   ← 路由懒加载：About.vue
-index.html                       asset  raw    549B  gzip    341B
-assets/index.Ci2kpolT.css        asset  raw    420B  gzip    262B   ← style.css + SFC 样式
-assets/Home.CqUoZoTO.css         asset  raw     99B  gzip    109B   ← Home.vue 的 <style scoped>
-合计 gzip 42309B，预算 60KB —— 通过
+✓ 452 modules transformed.
+dist/index.html                       0.80 kB   未达压缩阈值
+dist/assets/vant.39HXYg1r.js        154.99 kB │ gzip: 55.36 kB   ← 组件库 + Vue 运行时
+dist/assets/vant.BAD5TRji.css        99.36 kB │ gzip: 37.79 kB   ← 用到的组件样式
+dist/assets/axios.BDQnQehb.js        57.44 kB │ gzip: 20.58 kB   ← 请求库
+dist/assets/vue.B-ghYvVV.js          30.93 kB │ gzip: 11.77 kB   ← vue-router + pinia
+dist/assets/EditView.COBCXol3.js      5.95 kB │ gzip:  2.26 kB   ← 路由懒加载
+dist/assets/ListView.B9ZFnnqn.js      4.95 kB │ gzip:  2.20 kB   ← 路由懒加载
+dist/assets/index.CWmPoycl.js         4.93 kB │ gzip:  2.17 kB   ← 入口
+dist/assets/StatsView.DmbXC73j.js     3.81 kB │ gzip:  1.75 kB
+dist/assets/DetailView.CJeuOyVs.js    3.23 kB │ gzip:  1.61 kB
+dist/assets/format.BPs43kNI.js        2.77 kB │ gzip:  1.53 kB   ← 共享工具
+dist/assets/MineView.CmHZ86rE.js      2.41 kB │ gzip:  1.31 kB
+dist/assets/index.CxpevrKH.css        0.90 kB   未达压缩阈值
+dist/assets/*View.*.css            0.08～0.79 kB
+dist/assets/show.L6ctyh5o.js          0.57 kB
+dist/assets/stats.D6Q5HtaH.js         0.20 kB
+dist/assets/rolldown-runtime.….js     0.16 kB
+✓ built in 1.02s
+11 个 .gz 合计 141.7 kB；算上未压缩的小文件与 HTML，整包 ≈ 147.1 kB
+首屏（HTML + vue + vant + axios + 入口 + 列表页）≈ 135.5 kB
 ```
 
-`vendor` 的 hash 稳定就能长缓存；两个路由视图只在导航到对应路径时才下载；CSS 有独立 hash，也随 HTML 并行加载。
+两组依赖的 hash 与业务代码无关：只改 `StatsView.vue`，`vant.39HXYg1r.js` 的文件名不变，CDN 缓存继续命中。`vant` 一组占了总量的一半以上，这是组件库的固定成本；继续压只能减少用到的组件，而不是换压缩器。
 
-三个命令共用同一份配置：
+分组边界还有一处值得记住：名字叫 `vue` 的那个 chunk 里只有 `vue-router` 与 `pinia`，**Vue 运行时被归进了 `vant` chunk**。`manualChunks` 表达的是「我希望怎么分」，最终落点是打包器的模块归属规则；配了函数不等于拿到的分组和函数字面一一对应。webpack 篇用同名分组，体积对不上也是这个原因。
+
+`vite-plugin-compression` 在同一个 `dist/assets/` 里再写 11 个 `.gz`（`deleteOriginFile: false` 保留原文件，方便对比）。构建日志里它打印的是带盘符的拼接路径，那只是 Windows 下的日志格式问题，产物位置是对的。
+
+四个命令共用同一份配置：
 
 | 命令 | 做什么 | 服务 / 产物 |
 | --- | --- | --- |
-| `npm run dev` | 起 dev server，按请求即时转换 | 端口 5182 |
-| `npm run build` | production 构建，写盘 | `dist/` |
-| `npm run preview` | 先 `vite build`，再起纯静态服务预览真实产物 | 端口 5181 |
+| `pnpm dev` | 起 dev server，按请求即时转换 | 端口 5183 |
+| `pnpm build` | 类型检查 + production 构建 | `dist/` |
+| `pnpm build:only` | 只构建 | `dist/` |
+| `pnpm preview` | 起纯静态服务预览真实产物 | 端口 5184 |
 
-`vite preview` **不是 dev server**：没有 HMR、不做任何转换，它服务的就是 `build` 写盘的 `dist/`——预览到的和要上线的完全一致。
+`vite preview` **不是 dev server**：没有 HMR、不做任何转换，它服务的就是 `build` 写盘的 `dist/`——预览到的和要上线的完全一致。本工程的 `preview` 还多配了一份 `/api` 代理，否则预览时列表页会 404。
 
-## 二、插件体系
+## 插件体系
 
-### 2.1 插件结构
+使用篇里的插件全是现成的（`@vitejs/plugin-vue`、两个 unplugin、compression）。这一节换到 `./code/vite-lab`，手写四个插件，把钩子的触发时机、参数与顺序看清。
+
+### 插件结构
 
 一个插件就是一个对象；唯一必填字段是 `name`，其余全是钩子：
 
@@ -335,9 +478,9 @@ Vite 的钩子有**两条正交的轴**：**归属**（通用还是 Vite 专有�
 | `buildStart` | `(options)` | 两者 | 已解析的 options | — |
 | `resolveId` | `(source, importer)` | 两者 | 说明符、importer | `mini-virtual` |
 | `load` | `(id)` | 两者 | 已解析的 id | `mini-virtual` |
-| `transform` | `(code, id)` | 两者 | 源码 + id | —（原理见 3.2） |
+| `transform` | `(code, id)` | 两者 | 源码 + id | —（返回新 code 即替换源码） |
 | `buildEnd` | `(error?)` | 两者 | 构建结束 / 报错 | — |
-| `renderChunk` | `(code, chunk)` | **build** | 已生成的 chunk 代码 | —（分工见 2.4） |
+| `renderChunk` | `(code, chunk)` | **build** | 已生成的 chunk 代码 | —（分工见「三个钩子的分工纪律」） |
 | `generateBundle` | `(options, bundle)` | **build** | 完整 bundle | `mini-size-gate` |
 | `closeBundle` | `()` | **build** | 已写盘的产物 | — |
 
@@ -350,7 +493,7 @@ Vite 的钩子有**两条正交的轴**：**归属**（通用还是 Vite 专有�
 | `configureServer` | `(server)` | **dev** | 加中间件、WebSocket | `mini-mock` |
 | `configurePreviewServer` | `(server)` | **preview** | 预览期中间件 | — |
 | `transformIndexHtml` | `(html, ctx)` | 两者 | 改 HTML（build 侧有 `ctx.bundle`） | `mini-html` |
-| `hotUpdate` | `(ctx)` | **dev** | 热更新时介入模块集合 | —（原理见 1.3） |
+| `hotUpdate` | `(ctx)` | **dev** | 热更新时介入模块集合 | —（原理见「HMR」） |
 
 三条读表纪律：
 
@@ -358,7 +501,7 @@ Vite 的钩子有**两条正交的轴**：**归属**（通用还是 Vite 专有�
 2. **不是所有钩子都会在你的项目里跑**。`configurePreviewServer` 只在 `vite preview` 时触发；表里的空行也是信息。
 3. **钩子不触发先查 `apply`**。`apply: 'serve'` 的插件在 build 里根本不加载。
 
-### 2.2 顺序与门禁
+### 顺序与门禁
 
 webpack 用 `stage` 数值给同一阶段内的插件排序；Vite 没有这类数字，排序分三层：
 
@@ -385,7 +528,7 @@ alias → pre → vite core → normal → vite build → post → vite build po
 
 写成钩子体内 `if (command === 'build')`，插件在另一端仍会被加载、`config` 仍会被调用，只是钩子体不干活。
 
-### 2.3 插件实战：四个钩子各写一个
+### 插件实战：四个钩子各写一个
 
 四个插件覆盖四类最常用的钩子。先给一个最小骨架——**插件的全部接口就是「返回一个对象，在对象上挂钩子」**：
 
@@ -403,7 +546,7 @@ export default function myPlugin(options = {}) {
 }
 ```
 
-#### 2.3.1 `mini-virtual`：`resolveId` + `load`
+#### `mini-virtual`：`resolveId` + `load`
 
 源码里 `import { BUILD_INFO } from 'virtual:build-info'`，磁盘上没有这个文件。虚拟模块靠两个钩子配合：`resolveId` 认领说明符、`load` 提供内容。
 
@@ -446,7 +589,7 @@ export default function miniVirtual() {
 
 dev 下同样有效：请求 `virtual:build-info` 会走一遍 `resolveId → load → transform`，URL 被编码成 `/@id/__x00__virtual:build-info`。
 
-#### 2.3.2 `mini-mock`：`configureServer`
+#### `mini-mock`：`configureServer`
 
 页面里 `fetch('/api/user')`，请求由中间件直接应答，背后没有真实后端。插件声明 `apply: 'serve'`，build 时根本不加载。
 
@@ -506,7 +649,7 @@ $ curl http://localhost:5182/api/user
 {"id":1,"name":"vite-lab","role":"admin"}
 ```
 
-#### 2.3.3 `mini-html`：`transformIndexHtml`
+#### `mini-html`：`transformIndexHtml`
 
 `apply: 'build'` + `order: 'post'`，保证只在构建期、且在其它 HTML 变换之后执行。
 
@@ -570,7 +713,7 @@ export default function miniHtml(options = {}) {
 
 `<script>` / `<link>` 引用的是**现读出来的最终文件名**——hash 变了它自动跟着变，所以从不手写 `<script src="app.js">`。
 
-#### 2.3.4 `mini-size-gate`：`generateBundle`
+#### `mini-size-gate`：`generateBundle`
 
 `generateBundle` 是「已生成、未写盘」的唯一安全窗口：此时能读到最终代码，也能增删产物。
 
@@ -628,9 +771,9 @@ export default function miniSizeGate({ limitKb = Infinity, manifest = 'build-man
 2. **产出清单而不是只打印**。构建日志会丢，`build-manifest.json` 会进 CI 产物；下次体积涨了，diff 两份清单就知道是哪个 chunk 涨的。
 3. **`this.error` 让插件从「报告」变成「门禁」**。CI 里的非零退出码就是靠它。
 
-实测读数见 1.3 的产物清单；阈值 60KB 是「挡住继续膨胀」，不是脱离技术栈的绝对值。
+`vite-lab` 的一次构建合计 gzip 42309B，预算 60KB —— 通过。阈值是「挡住继续膨胀」，不是脱离技术栈的绝对值。
 
-### 2.4 三个钩子的分工纪律
+### 三个钩子的分工纪律
 
 build 侧最后三道工序该挂在哪，是实操里最容易选错的：
 
@@ -654,213 +797,71 @@ build 侧最后三道工序该挂在哪，是实操里最容易选错的：
 
 一条总纲：**语言编译一律用官方（`@vitejs/plugin-vue`）；产物收尾才值得自己写；生态里已有成熟插件时优先用现成的。**
 
-## 三、最小实现：mini-vite
-
-`mini-vite` 是**独立项目**（`code/mini-vite/`，与 vite-lab 平级；唯一依赖 `acorn`），`npm run mini` 跑一段 build，不需要浏览器、也不需要真实项目。
-
-它复刻的不是「另一个打包器」，而是**插件容器如何按钩子语义调用插件**：从入口全量建图 → 拓扑排序 → 拼成一个文件。
-
-| 文件 | 承担的概念 | 对应真实 Vite |
-| --- | --- | --- |
-| `index.mjs` | 入口：跑一段 build，打印钩子触发次数 | — |
-| `lib/hook.mjs` | 极简 tapable：`call` / `first` / `pipe` 三种调用约定 | `getSortedPluginHooks` |
-| `lib/plugin-container.mjs` | 插件容器：`config` → `apply` 过滤 → `enforce`/`order` 排序 → 注册 → 分发 | `pluginContainer.ts` |
-| `lib/resolve.mjs` | 说明符 → id（相对 / 裸导入 / 虚拟模块） | `vite:resolve` |
-| `lib/module-graph.mjs` | 模块图：`imports` / `importers` + 拓扑排序 | `moduleGraph.ts` |
-| `lib/transform.mjs` | import-analysis：acorn 解析 import → 记图 | `vite:import-analysis` |
-| `lib/build.mjs` | build 引擎：全量建图 + 打包（scope hoisting 极简版） | Rollup / Rolldown |
-| `lib/emit.mjs` | 产物：`generateBundle` → 写盘 → HTML → `closeBundle` | `generateBundle` / `closeBundle` |
-| `plugins/` | 4 个示例插件（`mini-virtual` / `mini-banner` / `mini-report` / `mini-html`） | — |
-
-**读法（由内向外）**：先看 `lib/hook.mjs`（钩子怎么被调用）与 `lib/plugin-container.mjs`（插件怎么被过滤、排序、注册）；再看 `lib/build.mjs`，它只是「在什么时机调用容器」。
-
-### 3.1 插件容器：过滤、排序、注册
-
-容器按顺序做四件事：跑 `config` / `configResolved`、按 `apply` 过滤、把每个钩子收集成有序数组、暴露分发方法。**排序只在这一处**——主键 `enforce`、次键 `order`、末键注册顺序兜底：
-
-> 摘自 `./code/mini-vite/lib/plugin-container.mjs`（运行：`npm run mini`）
-
-```js
-    // ---- 3. apply 过滤 ----
-    const activePlugins = rawPlugins.filter(p => applyMatches(p, command, mode))
-
-    // ---- 4. 每个钩子收集成一个有序 Hook ----
-    //    排序：主键 enforce（跨插件），次键 order（同一钩子内），末键注册顺序（稳定）
-    const hooks = {}
-    for (const name of RUN_HOOKS) {
-        const entries = []
-        activePlugins.forEach((plugin, index) => {
-            const entry = hookEntry(plugin, name)
-            if (!entry) return
-            entries.push({
-                plugin,
-                fn: entry.fn,
-                tier: TIER[plugin.enforce] ?? TIER.normal,
-                order: TIER[entry.order] ?? TIER.normal,
-                index
-            })
-        })
-        entries.sort((a, b) => a.tier - b.tier || a.order - b.order || a.index - b.index)
-
-        const hook = new Hook()
-        for (const e of entries) {
-            const ctx = context(e.plugin)
-            hook.tap(e.plugin.name, (...args) => e.fn.apply(ctx, args))
-        }
-        hooks[name] = hook
-    }
-```
-
-`apply` 过滤把不匹配当前 `command` 的插件剔除——本实现只跑 build，所以 `apply: 'serve'` 的插件不参与；真实 Vite 在 dev 下则反过来。`config` / `configResolved` 在过滤之前跑，这也解释了「漏写 `apply` 的插件，`config` 仍会被调用」。
-
-### 3.2 钩子的三种调用约定
-
-容器把钩子按语义分成三类，`lib/hook.mjs` 各给一个方法——这就是「钩子怎么被调用」的全部：
-
-> 摘自 `./code/mini-vite/lib/hook.mjs`（运行：`npm run mini`）
-
-```js
-export class Hook {
-    constructor() {
-        this.taps = []
-    }
-
-    tap(name, fn) {
-        this.taps.push({ name, fn })
-    }
-
-    async call(...args) {
-        for (const t of this.taps) await t.fn(...args)
-    }
-
-    async first(...args) {
-        for (const t of this.taps) {
-            const result = await t.fn(...args)
-            if (result != null) return result
-        }
-        return null
-    }
-
-    async pipe(seed, ...rest) {
-        let current = seed
-        for (const t of this.taps) {
-            const result = await t.fn(current, ...rest)
-            if (result != null) current = result
-        }
-        return current
-    }
-}
-```
-
-| 约定 | 行为 | 用在哪些钩子 |
-| --- | --- | --- |
-| `call` | 依次 `await`，忽略返回值 | `buildStart` / `buildEnd` / `closeBundle` / `generateBundle` |
-| `first` | 依次 `await`，第一个非空结果即返回 | `resolveId` / `load` |
-| `pipe` | 上一个的返回值喂给下一个 | `transform` / `renderChunk` / `transformIndexHtml` |
-
-`transform` 钩子在本实现里只「解析说明符 + 记图」，不改代码——`lib/transform.mjs` 用 acorn 解析静态 `import` / `export ... from`，把说明符交给容器的 `resolveId`，再把依赖写进模块图，供 build 做拓扑排序。
-
-### 3.3 build 引擎：全量建图 + 拼成一个文件
-
-从入口出发把整张图走一遍，再按拓扑序把各模块摊平进一个作用域——删掉 import 语句、去掉 export 关键字，即「scope hoisting 极简版」：
-
-> 摘自 `./code/mini-vite/lib/build.mjs`（运行：`npm run mini`）
-
-```js
-    // 全量建图：从入口出发，把整张依赖图（可达模块）都走一遍
-    async function visit(id) {
-        if (visited.has(id)) return
-        visited.add(id)
-        const code = await container.load(id)
-        if (code == null) throw new Error(`无法加载 ${id}`)
-        codeById.set(id, await container.transform(code, id))
-        moduleGraph.markTransformed(id)
-        for (const dep of moduleGraph.get(id)?.imports ?? []) await visit(dep)
-    }
-    await visit(entry)
-
-    // 拓扑排序：依赖在前、入口在后
-    const order = moduleGraph.topoSort([entry])
-    const parts = order.map(id => `// ---- ${label(id, root)} ----\n${flatten(codeById.get(id), id)}`)
-    let code = parts.join('\n\n') + '\n'
-
-    const chunk = { type: 'chunk', fileName: 'assets/index.js', isEntry: true, modules: order }
-    code = await container.renderChunk(code, chunk, { format: 'es' })
-
-    await container.buildEnd()
-    return { code, chunk, entry, order }
-```
-
-`flatten` 用 acorn 扫描顶层语句：`ImportDeclaration` 整条删掉，`ExportNamedDeclaration` 只删 `export ` 关键字或整条导出列表；`export default` 明确报错——真正的作用域分析超出最小实现。真实 Rollup / Rolldown 还会做重命名、作用域分析与 tree-shaking，这里只保留「打包 = 建图 + 拓扑 + 拼接」。
-
-### 3.4 一次运行的读数
-
-`npm run mini` 跑一段 build：建图 → 打包 → 执行产物 → 打印钩子触发次数。
-
-```
-=== build 引擎：一次走完整张模块图，拼成一个文件 ===
-  [mini-virtual] config：command=build mode=production
-  [mini-virtual] configResolved：缓存 mode=production
-  [mini-banner] renderChunk：给产物加 banner
-  [mini-report] generateBundle：输出目录 …/mini-vite/dist
-    - assets/index.js  611 B
-  [mini-html] transformIndexHtml：ctx.bundle=true
-  参与打包的模块 6 个：src/deep2.js → src/deep.js → src/helper.js → \0deps:tiny-lib → \0virtual:build-info → src/main.js
-  产物 assets/index.js：611 B
-  执行产物（node dist/assets/index.js）：
-    hi, mini-vite! (deep:deep2)
-    hello from tiny-lib
-    mode = production
-
-=== 钩子调用（一次构建）===
-  钩子                build
-  config              1
-  configResolved      1
-  buildStart          1
-  resolveId           5
-  load                6
-  transform           6
-  renderChunk         1
-  generateBundle      1
-  closeBundle         1
-  transformIndexHtml  1
-  buildEnd            1
-```
-
-这张表同时落地三件事：
-
-- **通用钩子在 build 下都跑一遍**：`resolveId` 5 次、`load` / `transform` 各 6 次——整张图 6 个模块（4 个磁盘文件 + 1 个裸导入占位 `\0deps:tiny-lib` + 1 个虚拟模块 `\0virtual:build-info`）。
-- **输出阶段钩子各 1 次**：`renderChunk` / `generateBundle` / `closeBundle` / `transformIndexHtml`。
-- **产物真的能执行**：拼接后的文件用子进程 `node dist/assets/index.js` 跑通。
-
-对照真实 Vite，这个最小实现已经「骨架齐全」：插件容器（过滤 / 排序 / 注册 / 分发）、三种调用约定、虚拟模块、模块图与拓扑排序。Vite 真身叠加的，是内置插件链、HMR 的 accept 边界、依赖预构建的缓存、以及 Rolldown 生产引擎——**机制没变，只是把每一步做重、做对、做成可插拔**。
-
 ## 配套代码
 
-本篇示例来自 `code/vite-lab`（独立 npm 项目，首次运行前先 `npm install`）。
+两个独立工程，各自 `pnpm install` 后即可运行。
+
+### h5-vite
+
+「赴演记 H5」：Vue 3 + TypeScript + Vue Router + Vant + Axios + Pinia，接真实后端 `https://api.show-track.top`，只做核心闭环五页（列表 / 详情 / 新增 + 编辑 / 统计 / 我的）。
 
 | 文件 | 作用 | 对应小节 |
 | --- | --- | --- |
-| `./code/vite-lab/package.json` | 三个命令：`dev` / `build` / `preview` | 1.3 |
-| `./code/vite-lab/vite.config.mjs` | **唯一配置**：入口 / hash / 四个手写插件 / manualChunks | 1.2、2.3 |
-| `./code/vite-lab/index.html` | 入口（Vite 的 entry 写在 HTML 里） | 1.1 |
-| `./code/vite-lab/src/main.js` | 环境变量、虚拟模块、真实 npm 依赖 | 1.2、2.3 |
-| `./code/vite-lab/src/App.vue`、`src/views/`、`src/components/` | SFC 根组件 + 两个路由视图 + 卡片组件 | 1.3 |
-| `./code/vite-lab/src/router.js` | 路由表：`() => import()` 路由级懒加载 | 1.3 |
-| `./code/vite-lab/src/style.css`、`base.css`、`helper.js` | 样式（`@import`）与工具函数样本 | 1.2、1.3 |
-| `./code/vite-lab/.env`、`.env.production` | 环境变量（`VITE_APP_NAME`） | 1.2 |
-| `./code/vite-lab/plugins/mini-virtual.mjs` | 虚拟模块（`resolveId` + `load`） | 2.3.1 |
-| `./code/vite-lab/plugins/mini-mock.mjs` | dev 期 mock API（`configureServer`） | 2.3.2 |
-| `./code/vite-lab/plugins/mini-html.mjs` | HTML 收尾（`transformIndexHtml`） | 2.3.3 |
-| `./code/vite-lab/plugins/mini-size-gate.mjs` | 体积门禁 + 清单（`generateBundle`） | 2.3.4 |
-| `./code/mini-vite/index.mjs` | 单 build 引擎入口：建图打包 + 钩子触发次数 | 三 |
-| `./code/mini-vite/lib/` | `hook` / `plugin-container` / `resolve` / `module-graph` / `transform` / `build` / `emit` | 三 |
-| `./code/mini-vite/plugins/` | 4 个示例插件 | 三 |
-| `./code/mini-vite/src/` | 演示源码（main / helper / deep / deep2） | 三 |
+| `./code/h5-vite/package.json` | 五个命令：`dev` / `build` / `build:only` / `preview` / `typecheck` | 基础使用 |
+| `./code/h5-vite/vite.config.ts` | **唯一配置**：插件、代理、分组、hash、压缩 | 基础使用、构建优化 |
+| `./code/h5-vite/index.html` | 入口（Vite 的 entry 写在 HTML 里） | 核心设计思想 |
+| `./code/h5-vite/.env`、`.env.development`、`.env.production` | 环境变量（`VITE_APP_TITLE` 按 mode 变） | 环境变量 |
+| `./code/h5-vite/.env.local.example` | token 模板（复制为 `.env.local`，已被 gitignore） | 环境变量 |
+| `./code/h5-vite/src/env.ts` | 环境变量收口，全项目唯一读 `import.meta.env` 的地方 | 环境变量 |
+| `./code/h5-vite/src/main.ts` | 入口脚本：Pinia、Router、Vant 函数式样式 | CSS |
+| `./code/h5-vite/src/router.ts` | 五条路由 + `() => import()` 懒加载 | 构建优化 |
+| `./code/h5-vite/src/views/shows/` | 列表 / 详情 / 新增+编辑（Vant List、DropdownMenu、Form、DatePicker） | 工程化 & 性能 |
+| `./code/h5-vite/src/views/stats/`、`views/mine/` | 统计页（进度条 + Top10）、我的页（运行信息） | 工程化 & 性能 |
+| `./code/h5-vite/src/api/` | `client.ts`（拦截器 + 响应解包）+ `show` / `stats` / `user` | 工程化 & 性能 |
+| `./code/h5-vite/src/stores/me.ts` | Pinia store：profile + 概览，`Promise.all` 并发 | 工程化 & 性能 |
+| `./code/h5-vite/src/utils/format.ts` | 金额、费用口径、艺人文本、海报地址、日期倒计时 | 环境变量、静态资源 |
+| `./code/h5-vite/src/components/ShowCard.vue` | 列表卡片 | — |
+| `./code/h5-vite/src/styles/index.css` | 全局样式（安全区、页面留白） | CSS |
 
-运行：`cd code/vite-lab && npm install`，然后 `npm run dev`（5182）、`npm run build`、`npm run preview`（5181）。
+运行：
 
-`mini-vite` 是独立项目：`cd code/mini-vite && npm install && npm run mini`。
+```bash
+cd code/h5-vite
+pnpm install
+cp .env.local.example .env.local   # 填入 VITE_API_TOKEN
+pnpm dev        # http://localhost:5183
+pnpm build      # 类型检查 + 产物到 dist/
+pnpm preview    # http://localhost:5184，预览 dist/
+```
+
+### vite-lab
+
+插件实验工程：单入口 + 四个手写插件 + 路由懒加载，用来看钩子什么时候触发。
+
+| 文件 | 作用 | 对应小节 |
+| --- | --- | --- |
+| `./code/vite-lab/package.json` | 三个命令：`dev` / `build` / `preview` | 插件实战 |
+| `./code/vite-lab/vite.config.mjs` | **唯一配置**：四个手写插件 + `manualChunks` + 体积门禁 | 插件实战、三个钩子的分工纪律 |
+| `./code/vite-lab/index.html` | 入口 | 核心设计思想 |
+| `./code/vite-lab/src/main.js` | 环境变量、虚拟模块、真实 npm 依赖 | 插件实战 |
+| `./code/vite-lab/src/App.vue`、`src/views/`、`src/components/` | SFC 根组件 + 两个路由视图 + 卡片组件 | 插件实战 |
+| `./code/vite-lab/src/router.js` | 路由表：`() => import()` 路由级懒加载 | 构建优化 |
+| `./code/vite-lab/src/style.css`、`base.css`、`helper.js` | 样式（`@import`）与工具函数样本 | CSS |
+| `./code/vite-lab/.env`、`.env.production` | 环境变量（`VITE_APP_NAME`） | 环境变量 |
+| `./code/vite-lab/plugins/mini-virtual.mjs` | 虚拟模块（`resolveId` + `load`） | `mini-virtual` |
+| `./code/vite-lab/plugins/mini-mock.mjs` | dev 期 mock API（`configureServer`） | `mini-mock` |
+| `./code/vite-lab/plugins/mini-html.mjs` | HTML 收尾（`transformIndexHtml`） | `mini-html` |
+| `./code/vite-lab/plugins/mini-size-gate.mjs` | 体积门禁 + 清单（`generateBundle`） | `mini-size-gate` |
+
+运行：
+
+```bash
+cd code/vite-lab
+npm install
+npm run dev       # http://localhost:5182
+npm run build
+npm run preview   # http://localhost:5181
+```
 
 ## 参考
 

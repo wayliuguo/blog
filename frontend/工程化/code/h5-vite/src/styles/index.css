@@ -1,0 +1,68 @@
+:root {
+    --app-bg: #f7f8fa;
+    --app-text: #1f2937;
+    --app-muted: #8a8f99;
+    --app-card: #ffffff;
+    --app-radius: 12px;
+    --app-gap: 12px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--app-bg);
+    color: var(--app-text);
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.page {
+    padding: var(--app-gap);
+    padding-bottom: calc(var(--app-gap) + env(safe-area-inset-bottom));
+}
+
+.section-title {
+    margin: 20px 4px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--app-muted);
+}
+
+.card {
+    background: var(--app-card);
+    border-radius: var(--app-radius);
+    padding: 14px;
+}
+
+.muted {
+    color: var(--app-muted);
+    font-size: 12px;
+}
+
+.sticky-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--app-bg);
+}
+
+.fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    z-index: 20;
+}
