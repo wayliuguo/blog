@@ -432,32 +432,49 @@ Vite 的钩子有**两条正交的轴**：**归属**（通用还是 Vite 专有�
 
 #### 通用钩子（Rollup / Rolldown 兼容）
 
-| 钩子 | 参数 | 生效端 | 此刻能看到 | 本篇谁在用 |
+| 钩子 | 参数 | 生效端 | 此刻能看到 | 用途 |
 | --- | --- | --- | --- | --- |
-| `buildStart` | `(options)` | 两者 | 已解析的 options | — |
-| `resolveId` | `(source, importer)` | 两者 | 说明符、importer | `mini-virtual` |
-| `load` | `(id)` | 两者 | 已解析的 id | `mini-virtual` |
-| `transform` | `(code, id)` | 两者 | 源码 + id | —（返回新 code 即替换源码） |
-| `buildEnd` | `(error?)` | 两者 | 构建结束 / 报错 | — |
-| `renderChunk` | `(code, chunk)` | **build** | 已生成的 chunk 代码 | —（分工见「三个钩子的分工纪律」） |
-| `generateBundle` | `(options, bundle)` | **build** | 完整 bundle | `mini-size-gate` |
-| `closeBundle` | `()` | **build** | 已写盘的产物 | — |
+| `buildStart` | `(options)` | 两者 | 解析完的 input 配置 | 初始化、计时 |
+| `resolveId` | `(source, importer)` | 两者 | 说明符与发起方（例见下方代码块） | 解析导入路径：别名、虚拟模块都在这里认领 |
+| `load` | `(id)` | 两者 | 解析后的 id（`'\0virtual:build-info'`） | 读文件；虚拟模块在这里生成模块源码 |
+| `transform` | `(code, id)` | 两者 | 上一棒产出的源码全文 + id | 转译替换：返回新 code 即替换源码 |
+| `buildEnd` | `(error?)` | 两者 | 成功 / 第一个报错 | 收尾、上报 |
+| `renderChunk` | `(code, chunk)` | **build** | 每个产物 chunk 的代码 | 逐 chunk 改产物（注入代码、改写路径） |
+| `generateBundle` | `(options, bundle)` | **build** | 完整 bundle，key 即文件名 | 拿全部产物做检查 |
+| `closeBundle` | `()` | **build** | 已写盘的产物 | 清理、通知 |
+
+虚拟模块插件被触发时，两个钩子的真实参数长这样：
+
+```ts
+// 业务源码里写：import { BUILD_INFO } from 'virtual:build-info'
+// 磁盘上不存在这个文件，于是先落进 resolveId：
+
+// ① resolveId(source = 'virtual:build-info', importer = '/src/main.ts')
+//    source = 导入说明符（import 里写的原样字符串）；importer = 谁发起的这个 import
+//    插件命中约定，返回 '\0virtual:build-info'（\0 前缀防止被当成真实路径再去找磁盘）
+//    其他插件返回 null → 不认领，交给链上下一个
+
+// ② load(id = '\0virtual:build-info')
+//    命中约定，返回的字符串就是「模块源码」，会像真实文件一样被后续 transform 接力：
+
+//    export const BUILD_INFO = { name: 'vite-lab', mode: 'development' }
+```
 
 #### Vite 专有钩子
 
-| 钩子 | 参数 | 生效端 | 用途 | 本篇谁在用 |
+| 钩子 | 参数 | 生效端 | 此刻能看到 | 用途 |
 | --- | --- | --- | --- | --- |
-| `config` | `(config, env)` | 两者 | 改配置（返回 partial） | — |
-| `configResolved` | `(config)` | 两者 | 读最终配置 | `mini-virtual`（缓存 `mode`） |
-| `configureServer` | `(server)` | **dev** | 加中间件、WebSocket | `mini-mock` |
-| `configurePreviewServer` | `(server)` | **preview** | 预览期中间件 | — |
-| `transformIndexHtml` | `(html, ctx)` | 两者 | 改 HTML（build 侧有 `ctx.bundle`） | `mini-html` |
-| `hotUpdate` | `(ctx)` | **dev** | 热更新时介入模块集合 | —（原理见「HMR」） |
+| `config` | `(config, env)` | 两者 | 用户配置 + `{ mode, command }` | 改配置（返回 partial 会合并进最终配置） |
+| `configResolved` | `(config)` | 两者 | 最终配置（只读，改了不生效） | 读定稿配置；mini-virtual 在这里缓存 `mode` |
+| `configureServer` | `(server)` | **dev** | dev server 实例 | 挂中间件、WebSocket；mini-mock 的 mock 接口就这么加的 |
+| `configurePreviewServer` | `(server)` | **preview** | preview server 实例 | 预览期加中间件（如代理） |
+| `transformIndexHtml` | `(html, ctx)` | 两者 | HTML 入口全文（build 侧有 `ctx.bundle`） | 改 HTML；mini-html 在这里注入产物引用 |
+| `hotUpdate` | `(ctx)` | **dev** | 变更文件与受影响模块 | HMR 时决定让哪些模块失效（原理见「HMR」） |
 
 三条读表纪律：
 
 1. **「两端都跑」不等于「含义相同」**。`resolveId` / `load` / `transform` 在 dev 只处理被请求到的模块，在 build 处理整张依赖图。
-2. **不是所有钩子都会在你的项目里跑**。`configurePreviewServer` 只在 `vite preview` 时触发；表里的空行也是信息。
+2. **不是所有钩子都会在你的项目里跑**。`configurePreviewServer` 只在 `vite preview` 时触发，`renderChunk` / `generateBundle` / `closeBundle` 只在 build 时触发。
 3. **钩子不触发先查 `apply`**。`apply: 'serve'` 的插件在 build 里根本不加载。
 
 一次完整构建里，这些钩子按下面的顺序触发：
@@ -477,13 +494,15 @@ generateBundle → writeBundle → closeBundle  产物阶段（build 才有）
 
 Vite 的排序分三层：
 
-| 层 | 手段 | 作用范围 | 例子 |
-| --- | --- | --- | --- |
-| 1 | 不用排 | 跨钩子 | `resolveId → load → transform` 天然有先后 |
-| 2 | `enforce: 'pre' \| 'normal' \| 'post'` | **跨插件、同一个钩子** | 想抢在内置转换前看源码就用 `pre` |
-| 3 | `order: 'pre' \| 'normal' \| 'post'` | **同插件、同一钩子的多个 handler** | `transformIndexHtml: { order: 'post', handler }` |
+| 层 | 手段 | 作用范围 |
+| --- | --- | --- |
+| 1 | 不用排 | 跨钩子：`resolveId → load → transform` 天然有先后 |
+| 2 | `enforce: 'pre' \| 'normal' \| 'post'` | **跨插件、同一个钩子** |
+| 3 | `order: 'pre' \| 'normal' \| 'post'` | **同插件、同一钩子的多个 handler** |
 
-第 2 层（跨插件）——同一个钩子（比如 `transform`），插件间的执行顺序由 `enforce` 决定，与 `plugins` 数组里的书写顺序无关：
+#### 插件间顺序（enforce）
+
+同一个钩子（比如 `transform`），插件之间的执行顺序由 `enforce` 决定，与 `plugins` 数组里的书写顺序无关：
 
 ```ts
 // vite.config.ts
@@ -499,7 +518,9 @@ plugins: [
 // transform 的实际执行顺序：pre-plugin → normal-plugin → post-plugin
 ```
 
-第 3 层（插件内部）——同一个插件给同一钩子写了多个 handler 时，用 `order` 排这些 handler：
+#### 插件内部顺序（order）
+
+同一个插件给同一钩子写了多个 handler 时，用 `order` 排这些 handler：
 
 ```ts
 { name: 'my-plugin',
@@ -510,7 +531,9 @@ plugins: [
 // order 只管「这个钩子的多个 handler」之间的先后；插件整体在哪一层仍由 enforce 决定
 ```
 
-**官方顺序链是什么**：所有插件自始至终排在同一条执行队列里，`enforce` 不是「切到另一条链」，而是决定你的插件**插进这条单链的哪个位置**。链上每一段的构成：
+#### 插件顺序链
+
+所有插件自始至终排在同一条执行队列里，`enforce` 不是「切到另一条链」，而是决定你的插件**插进这条单链的哪个位置**。链上每一段的构成：
 
 ```text
 alias            Vite 开箱即用的路径别名，永远最前
