@@ -25,12 +25,12 @@ module.exports = class DebugLogPlugin {
         })
 
         // ② 所有插件装完，配置已定稿
-        compiler.hooks.afterPlugins.tap(DebugLogPlugin.name, (compiler) => {
+        compiler.hooks.afterPlugins.tap(DebugLogPlugin.name, compiler => {
             log('afterPlugins', `plugins.length=${compiler.options.plugins.length}, mode=${compiler.options.mode}`)
         })
 
         // ③ 新一次编译即将开始（watch 下每次重编都触发）
-        compiler.hooks.compile.tap(DebugLogPlugin.name, (params) => {
+        compiler.hooks.compile.tap(DebugLogPlugin.name, params => {
             log('compile', `normalModuleFactory=${!!params.normalModuleFactory}`)
         })
 
@@ -41,22 +41,24 @@ module.exports = class DebugLogPlugin {
         })
 
         // ⑤ 产物已定稿、尚未写盘：能拿到全部 assets
-        compiler.hooks.emit.tap(DebugLogPlugin.name, (compilation) => {
+        compiler.hooks.emit.tap(DebugLogPlugin.name, compilation => {
             const names = Object.keys(compilation.assets)
             log('emit', `assets(${names.length})=[${names.slice(0, 6).join(', ')}${names.length > 6 ? ', …' : ''}]`)
         })
 
         // ⑥ 写盘之后
-        compiler.hooks.afterEmit.tap(DebugLogPlugin.name, (compilation) => {
+        compiler.hooks.afterEmit.tap(DebugLogPlugin.name, compilation => {
             log('afterEmit', '产物已写入 dist/')
         })
 
         // ⑦ 整个构建结束：stats 背后就是 compilation，直接取汇总数
-        compiler.hooks.done.tap(DebugLogPlugin.name, (stats) => {
+        compiler.hooks.done.tap(DebugLogPlugin.name, stats => {
             const { compilation } = stats
             log(
                 'done',
-                `hash=${compilation.hash}, duration=${stats.endTime - stats.startTime}ms, modules=${compilation.modules.size}, assets=${Object.keys(compilation.assets).length}`
+                `hash=${compilation.hash}, duration=${stats.endTime - stats.startTime}ms, modules=${
+                    compilation.modules.size
+                }, assets=${Object.keys(compilation.assets).length}`
             )
         })
     }
