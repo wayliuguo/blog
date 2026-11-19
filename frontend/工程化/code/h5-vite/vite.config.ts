@@ -41,8 +41,8 @@ export default defineConfig(({ mode }) => ({
     // 只有 VITE_ 前缀的变量会进入客户端产物
     envPrefix: ['VITE_'],
 
-    server: { port: 5183, proxy },
-    preview: { port: 5184, proxy },
+    server: { proxy },
+    preview: { proxy },
 
     // 生产构建去掉日志与断点
     esbuild: { drop: mode === 'production' ? ['console', 'debugger'] : [] },

@@ -5,10 +5,10 @@
     "type": "module",
     "description": "赴演记 H5：Vue 3 + TS + Router + Vant + Axios + Pinia，Vite 生产构建",
     "scripts": {
-        "dev": "vite --port 5183",
+        "dev": "vite",
         "build": "vue-tsc --noEmit && vite build",
         "build:only": "vite build",
-        "preview": "vite preview --port 5184",
+        "preview": "pnpm build && vite preview",
         "typecheck": "vue-tsc --noEmit"
     },
     "dependencies": {
