@@ -1,4 +1,4 @@
-// lib/counter.cjs —— CommonJS 风格的计数器（给 03-cjs-value-vs-esm-binding.mjs 做对照用）
+// lib/counter.cjs —— CommonJS 风格的计数器（给 module-cache.cjs 做缓存命中实验用）
 // 这一段在演示：CommonJS 导出的是「值的拷贝」。
 // 注意 count 是模块内部的局部变量，module.exports 里写的 count 只是导出那一刻的快照。
 // 之后 increase() 改的是内部的那个 count，外界通过 require 拿到的 count 永远停在 0。

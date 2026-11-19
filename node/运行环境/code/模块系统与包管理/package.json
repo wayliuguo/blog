@@ -4,12 +4,9 @@
   "description": "Node.js 后端知识体系 - 《模块系统与包管理》配套实验（CommonJS/ESM 语义、互操作、缓存与陷阱）",
   "type": "commonjs",
   "scripts": {
-    "value-copy": "node src/value-copy.cjs",
-    "live-binding": "node src/live-binding.mjs",
-    "cache": "node src/module-cache.cjs",
-    "trap": "node src/exports-trap.cjs",
-    "dynimp": "node src/dynamic-import.cjs",
-    "typeswitch": "node src/type-switch/run.cjs"
+    "value-copy": "node src/value-copy/value-copy.cjs",
+    "live-binding": "node src/live-binding/live-binding.mjs",
+    "cache": "node src/module-cache/module-cache.cjs"
   },
   "license": "MIT"
 }
