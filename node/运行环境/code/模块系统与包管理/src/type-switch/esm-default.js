@@ -1,4 +1,4 @@
-// 08-type-switch/esm-default.js —— 后缀是普通的 .js，但同目录的 package.json 声明了 "type": "module"
+// type-switch/esm-default.js —— 后缀是普通的 .js，但同目录的 package.json 声明了 "type": "module"
 // 这一段在演示：包级开关（type 字段）如何决定一个 .js 文件的解析方式。
 import { fileURLToPath } from 'node:url'
 

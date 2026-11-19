@@ -1,9 +1,9 @@
 // 02 CommonJS 侧：require 同步加载 · module.exports 导出
-// 与 02-module-esm.mjs 互为对照，两个文件各只做两件事：
+// 与 live-binding.mjs 互为对照，两个文件各只做两件事：
 //   ① 亮出自己的本质特征（CommonJS 导出的是「值的拷贝」）
 //   ② 互相导入（这里演示 CJS 怎么引 ESM）
-// 运行：node src/02-module-cjs.cjs
-//      node src/02-module-esm.mjs   ← 换一个入口跑，输出逐行相同
+// 运行：node src/value-copy.cjs
+//      node src/live-binding.mjs   ← 换一个入口跑，输出逐行相同
 
 let count = 0
 
@@ -25,7 +25,7 @@ console.log('[CJS 模块体] 执行完毕，导出 =', Object.keys(module.export
 // 互相导入：CJS 引 ESM。
 // require 是同步的，等不到异步求值的 ESM，所以这里只能走动态 import()，
 // 它返回 Promise，是渐进迁移时 CJS 触达 ESM 的桥。
-import('./02-module-esm.mjs').then(esm => {
+import('./live-binding.mjs').then(esm => {
     console.log('[互操作 CJS→ESM] 活绑定：调用前 count =', esm.count)
     esm.inc()
     console.log('[互操作 CJS→ESM] 调 inc() 后 count =', esm.count, '（立刻同步）')

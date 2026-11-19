@@ -1,4 +1,4 @@
-# 08-type-switch：`type` 字段与后缀强制
+# type-switch：`type` 字段与后缀强制
 
 这一组文件专门演示同一个目录下两套模块系统怎么共存。
 
@@ -16,18 +16,18 @@
 在 `node/运行环境/code/模块系统与包管理` 目录下：
 
 ```bash
-npm run mr08
-# 等价于 node src/02-module-realm/08-type-switch/run.cjs
+npm run typeswitch
+# 等价于 node src/type-switch/run.cjs
 ```
 
 也可以单独看某一个文件被解析成了什么：
 
 ```bash
-node src/02-module-realm/08-type-switch/esm-default.js
-node src/02-module-realm/08-type-switch/cjs-forced.cjs
+node src/type-switch/esm-default.js
+node src/type-switch/cjs-forced.cjs
 ```
 
-注意：直接 `node src/02-module-realm/08-type-switch/esm-default.js` 会按 ESM 解析，
+注意：直接 `node src/type-switch/esm-default.js` 会按 ESM 解析，
 但如果把这个文件复制到别的、没有 `"type": "module"` 的目录里，它会被当成 CommonJS 并因 `import` 语法报错。
 决定权在「离它最近的 package.json」，不是文件名。
 

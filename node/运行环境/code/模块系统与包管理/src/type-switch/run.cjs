@@ -1,6 +1,6 @@
-// 08-type-switch/run.cjs —— 入口脚本（自己也是 .cjs，所以即使在 "type": "module" 的目录里也按 CJS 跑）
+// type-switch/run.cjs —— 入口脚本（自己也是 .cjs，所以即使在 "type": "module" 的目录里也按 CJS 跑）
 // 这一段在演示：同一个目录、同一个 package.json，「整包开关」和「后缀强制」分别把文件指到了哪套模块系统。
-// 运行方式：node src/02-module-realm/08-type-switch/run.cjs
+// 运行方式：node src/type-switch/run.cjs
 const { spawnSync } = require('node:child_process')
 const path = require('node:path')
 

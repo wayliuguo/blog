@@ -1,4 +1,4 @@
-// 08-type-switch/cjs-forced.cjs —— .cjs 后缀优先级高于 package.json 的 "type"
+// type-switch/cjs-forced.cjs —— .cjs 后缀优先级高于 package.json 的 "type"
 // 这一段在演示：文件后缀是最高优先级的判定依据，哪怕所在包声明了 "type": "module" 也照样按 CJS 解析。
 const path = require('node:path')
 
