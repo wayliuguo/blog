@@ -46,7 +46,7 @@ onMounted(() => me.load())
             <van-cell title="接口地址" :value="ENV.apiBase" />
             <van-cell title="资源域名" :value="ENV.assetBase" />
             <van-cell title="API Token" :value="tokenState" />
-            <van-cell title="构建工具" value="Vite 8" />
+            <van-cell title="构建工具" :value="ENV.bundler" />
         </van-cell-group>
 
         <p v-if="!ENV.apiToken" class="tip">{{ TOKEN_HINT }}</p>

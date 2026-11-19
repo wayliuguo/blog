@@ -7,37 +7,37 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/shows',
         name: 'shows',
-        component: () => import(/* webpackChunkName: "list" */ './views/shows/ListView.vue'),
+        component: () => import('./views/shows/ListView.vue'),
         meta: { title: '演出' }
     },
     {
         path: '/shows/new',
         name: 'show-create',
-        component: () => import(/* webpackChunkName: "edit" */ './views/shows/EditView.vue'),
+        component: () => import('./views/shows/EditView.vue'),
         meta: { title: '新增演出' }
     },
     {
         path: '/shows/:id',
         name: 'show-detail',
-        component: () => import(/* webpackChunkName: "detail" */ './views/shows/DetailView.vue'),
+        component: () => import('./views/shows/DetailView.vue'),
         meta: { title: '演出详情' }
     },
     {
         path: '/shows/:id/edit',
         name: 'show-edit',
-        component: () => import(/* webpackChunkName: "edit" */ './views/shows/EditView.vue'),
+        component: () => import('./views/shows/EditView.vue'),
         meta: { title: '编辑演出' }
     },
     {
         path: '/stats',
         name: 'stats',
-        component: () => import(/* webpackChunkName: "stats" */ './views/stats/StatsView.vue'),
+        component: () => import('./views/stats/StatsView.vue'),
         meta: { title: '统计' }
     },
     {
         path: '/mine',
         name: 'mine',
-        component: () => import(/* webpackChunkName: "mine" */ './views/mine/MineView.vue'),
+        component: () => import('./views/mine/MineView.vue'),
         meta: { title: '我的' }
     }
 ]

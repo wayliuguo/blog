@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const API_TARGET = 'https://api.show-track.top'
 
 /**
- * 自己读 .env 文件：webpack 不像 Vite 自带 env 加载。
+ * 自己读 .env 文件：webpack 没有 .env 约定，加载逻辑得自己写。
  * 优先级 .env < .env.<mode> < .env.local，只取 VITE_ 前缀。
  */
 function loadEnvFiles(mode) {
@@ -65,7 +65,7 @@ export default (env, argv) => {
         module: {
             rules: [
                 { test: /\.vue$/, loader: 'vue-loader' },
-                // 只转译不查类型（transpileOnly），类型检查交给 vue-tsc，与 Vite 的分工一致
+                // 只转译不查类型（transpileOnly），类型检查交给独立的 vue-tsc 命令
                 {
                     test: /\.ts$/,
                     loader: 'ts-loader',
@@ -95,7 +95,7 @@ export default (env, argv) => {
                 // 按需引入的 Vant 组件样式来自不同 chunk，顺序告警无实际影响
                 ignoreOrder: true
             }),
-            // 环境变量的编译期替换：与 Vite 的 import.meta.env 是同一种机制
+            // 环境变量的编译期替换：值必须 JSON.stringify，替换的是代码文本
             new webpack.DefinePlugin({
                 __ENV__: JSON.stringify({
                     VITE_APP_TITLE: fileEnv.VITE_APP_TITLE || '赴演记 H5',

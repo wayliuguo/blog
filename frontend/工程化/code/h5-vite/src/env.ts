@@ -10,7 +10,8 @@ export const ENV = {
     apiBase: import.meta.env.VITE_API_BASE || '/api',
     assetBase: import.meta.env.VITE_ASSET_BASE || 'https://api.show-track.top',
     apiToken: import.meta.env.VITE_API_TOKEN || '',
-    isDev: import.meta.env.DEV
+    isDev: import.meta.env.DEV,
+    bundler: 'Vite 8'
 }
 
 /** 没配 token 时页面上的统一提示语 */

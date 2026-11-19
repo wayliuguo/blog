@@ -3,7 +3,8 @@ export const ENV = {
     apiBase: __ENV__.VITE_API_BASE || '/api',
     assetBase: __ENV__.VITE_ASSET_BASE || 'https://api.show-track.top',
     apiToken: __ENV__.VITE_API_TOKEN || '',
-    isDev: __ENV__.DEV
+    isDev: __ENV__.DEV,
+    bundler: 'webpack 5'
 }
 
 /** 没配 token 时页面上的统一提示语 */

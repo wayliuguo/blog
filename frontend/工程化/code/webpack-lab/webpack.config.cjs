@@ -11,8 +11,11 @@ const { VueLoaderPlugin } = require('vue-loader')
 const MiniHtmlPlugin = require('./plugins/mini-html-plugin.cjs')
 const MiniCssExtractPlugin = require('./plugins/mini-css-extract-plugin.cjs')
 const MiniTerserPlugin = require('./plugins/mini-terser-plugin.cjs')
+const MiniCleanPlugin = require('./plugins/mini-clean-plugin.cjs')
+const MiniDefinePlugin = require('./plugins/mini-define-plugin.cjs')
 
 const ROOT = __dirname
+const { version } = require('./package.json')
 
 /** @param {Record<string, any>} env webpack-cli 注入的环境对象 */
 module.exports = (env = {}) => {
@@ -33,7 +36,8 @@ module.exports = (env = {}) => {
             // asset 模块（本 demo 里的 svg）走这里
             assetModuleFilename: 'assets/[name].[contenthash:8][ext]',
             publicPath: '/',
-            clean: true
+            // 清理交给 MiniCleanPlugin（挂 emit 钩子，白名单外全删），不启用内置 clean
+            clean: false
         },
 
         resolve: { extensions: ['.js', '.json', '.vue'] },
@@ -42,6 +46,8 @@ module.exports = (env = {}) => {
             rules: [
                 // 官方 vue-loader 编译 .vue 单文件组件（template / script / style 三块分流）
                 { test: /\.vue$/, loader: 'vue-loader' },
+                // 手写 markdown-loader：.md → 导出 HTML 字符串的 JS 模块
+                { test: /\.md$/, use: [path.join(ROOT, 'loaders/markdown-loader.cjs')] },
                 {
                     // 生产链路：css-loader 产出 CSS 字符串，extract-css-loader 登记，插件汇总成独立文件
                     test: /\.css$/,
@@ -82,6 +88,10 @@ module.exports = (env = {}) => {
         },
 
         plugins: [
+            // emit 钩子上清掉上次构建遗留的旧 hash 文件
+            new MiniCleanPlugin(),
+            // 每个 .js 产物头部注入 window.__APP_VERSION__，并把它算进 chunk hash
+            new MiniDefinePlugin({ value: version }),
             // Vue 的 esm-bundler 产物把这三个开关留给构建方定义；
             // 定成字面量，Options API / devtools 的死代码才能被压缩器摇掉（Vite 是自动做的）
             new webpack.DefinePlugin({
