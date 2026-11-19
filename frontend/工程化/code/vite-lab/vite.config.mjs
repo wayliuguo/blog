@@ -11,6 +11,7 @@ import miniVirtual from './plugins/mini-virtual.mjs'
 import miniHtml from './plugins/mini-html.mjs'
 import miniSizeGate from './plugins/mini-size-gate.mjs'
 import miniMock from './plugins/mini-mock.mjs'
+import debugLog from './plugins/debug-log-plugin.mjs'
 
 const DIR = import.meta.dirname
 
@@ -32,7 +33,9 @@ export default defineConfig({
         miniVirtual(),
         miniHtml({ nonce: 'lab-nonce' }),
         // 只在 dev 生效（插件自己声明了 apply: 'serve'），build 时根本不加载
-        miniMock()
+        miniMock(),
+        // 间谍插件：DEBUG_VITE=1（或 VSCode 调试面板，launch.json 已注入）时打印各钩子的调用参数
+        debugLog()
     ],
 
     // 依赖预构建：把 CJS / 碎片化依赖预先转成 ESM 并合并

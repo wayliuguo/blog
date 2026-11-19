@@ -5,6 +5,7 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { VantResolver } from 'unplugin-vue-components/resolvers'
 import compression from 'vite-plugin-compression'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // 后端真实地址：dev / preview 由 Vite 代理转发，浏览器只看到同源的 /api
 const API_TARGET = 'https://api.show-track.top'
@@ -29,7 +30,10 @@ export default defineConfig(({ mode }) => ({
             dts: 'src/components.d.ts'
         }),
         // 产物另存一份 .gz，由 Nginx 直接送出
-        compression({ threshold: 1024, ext: '.gz', deleteOriginFile: false })
+        compression({ threshold: 1024, ext: '.gz', deleteOriginFile: false }),
+        // 产物分析：构建后生成 treemap（矩形面积即体积，按 gzip 计算），只在 build 阶段触发；
+        // 报告写到项目根目录（dist 里的 .html 会被 compression 插件误压一份 .gz）
+        visualizer({ filename: 'stats.html', gzipSize: true, brotliSize: false })
     ],
 
     resolve: {

@@ -239,7 +239,7 @@ dev 下 `main.ts` 的 import 会被改写成预构建产物：
 
 三个开关：
 
-- `optimizeDeps.include`：显式声明要预构建的依赖。动态 import、插件内部引入的依赖可能扫不到，提前写死可以避免 dev 中途重新预构建并刷新页面（`vite-lab` 的 `magic-string` 只在插件里被 import，就是这么加的）。
+- `optimizeDeps.include`：显式声明要预构建的依赖。动态 import、插件内部引入的依赖可能扫不到，提前写死可以避免 dev 中途重新预构建并刷新页面。
 - `optimizeDeps.exclude`：排除某个包。常见于本地 workspace 包——被预构建成一个文件后，这个节点对编辑不再敏感。
 - `optimizeDeps.force` / `--force`：忽略缓存重新预构建。改完 `vite.config` 里依赖相关配置后用它。
 
@@ -379,7 +379,7 @@ dist/assets/rolldown-runtime.….js     0.16 kB
 
 #### 产物分析
 
-上面的产物表肉眼可读，但增量对比需要工具。生态里最常用的是 `rollup-plugin-visualizer`：装上后当普通插件加进 `plugins`，构建结束会在 `outDir` 生成一份 `stats.html` 的 treemap——矩形面积即体积（可选按 gzip / brotli 计算），能直接看出「哪个包占掉了产物的大头」，再回头调整 `manualChunks` 或按需引入策略。
+上面的产物表肉眼可读，但增量对比需要工具。生态里最常用的是 `rollup-plugin-visualizer`：当普通插件加进 `plugins`，构建结束生成一份 `stats.html` 的 treemap——矩形面积即体积（可按 gzip 计算），能直接看出「哪个包占掉了产物的大头」，再回头调整 `manualChunks` 或按需引入策略。本工程已接入（`vite.config.ts` 里一行 `visualizer({ filename: 'stats.html', gzipSize: true })`），`pnpm build` 后打开项目根目录的 `stats.html` 即可；报告写在根目录而不是 `dist/`，是因为 `dist/` 里的 `.html` 会被 compression 插件误压一份 `.gz`。
 
 看图时两个提醒：
 
