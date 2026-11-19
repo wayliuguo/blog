@@ -6,9 +6,9 @@ Node.js 做服务端，面对的数据很多时候并不是字符串——而是
 
 官方定义里，Buffer 是一个**固定长度的字节序列**：创建时容量就定死了，不能无限往里加东西。现在（Node 4+）的 `Buffer` 已经是 JavaScript `Uint8Array` 的子类，所以它能和整个 TypedArray 体系互操作——`Buffer` 可以直接传给操作 `Uint8Array` 的 API，也能用 `ArrayBuffer` 的视图方法。
 
-> 本节（及全篇）的代码块均取自配套脚本，采用 CommonJS 写法（`require(...)`），与正文示例里的 `import ... from 'node:...'` 风格不同——`node-basics` 零依赖，直接用 `node` 运行即可。
+> 本节（及全篇）的代码块均取自配套脚本，采用 CommonJS 写法（`require(...)`），与正文示例里的 `import ... from 'node:...'` 风格不同——配套脚本零依赖，直接用 `node` 运行即可。
 
-> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+> 摘自 `./code/Buffer 与 Stream/src/05-buffer.js`（运行：`npm run 05buffer`）
 
 ```javascript
 const buf1 = Buffer.from('hello')
@@ -31,7 +31,7 @@ console.log('  buf1 instanceof Uint8Array =', buf1 instanceof Uint8Array, '（�
 | l | 6c | 108 |
 | o | 6f | 111 |
 
-> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+> 摘自 `./code/Buffer 与 Stream/src/05-buffer.js`（运行：`npm run 05buffer`）
 
 ```javascript
 console.log('\n=== 2) 十六进制与字符串互转 ===')
@@ -51,7 +51,7 @@ console.log("  buf1.toString('base64')      →", buf1.toString('base64'), '（�
 - `Buffer.alloc(n)`：分配 **n 个字节并清零**，拿到的是一段干净的、全 0 的内存，适合作为"待填充的缓冲区"。
 - `Buffer.from(x)`：从**已有的数据**构造——可以是字符串、数组、`ArrayBuffer` 等，不会清零，而是把现有内容编码进去。
 
-> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+> 摘自 `./code/Buffer 与 Stream/src/05-buffer.js`（运行：`npm run 05buffer`）
 
 ```javascript
 const zeroed = Buffer.alloc(5)
@@ -65,7 +65,7 @@ console.log("  Buffer.from('hello') →", Buffer.from('hello'), '（从已有数
 
 这是 Buffer 与 String 最容易踩、也最该记住的区别：
 
-> 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+> 摘自 `./code/Buffer 与 Stream/src/05-buffer.js`（运行：`npm run 05buffer`）
 
 ```javascript
 const buf2 = Buffer.from('你好')
@@ -114,7 +114,7 @@ console.log('  Buffer.from("你好").length =', buf2.length, '（UTF-8 下每个
    Buffer（密文）
    ```
 5. **Base64 编解码**：把任意二进制安全地塞进只认文本的协议（如邮件、JSON、Data URL）。
-   > 摘自 `./code/node-basics/src/05-buffer.js`（运行：`npm run 05buffer`）
+   > 摘自 `./code/Buffer 与 Stream/src/05-buffer.js`（运行：`npm run 05buffer`）
 
    ```javascript
    console.log("  buf1.toString('base64')      →", buf1.toString('base64'), '（把二进制安全地塞进只认文本的协议）')
@@ -228,7 +228,7 @@ Duplex 就是 `Readable` 与 `Writable` 的能力叠加，**两边的 API、属�
 - `objectMode: true` 时 chunk 不再是 `Buffer`，可以是任意 JS 值（`readableObjectMode` / `writableObjectMode` 会同时变成 `true`），适合在流水线上传对象。
 - `PassThrough` 是 Transform 的最简实现：不做任何改动、原样透传，常用来"插一脚"观测数据。
 
-> 摘自 `./code/node-basics/src/05-stream-types.js`（运行：`npm run 05types`）
+> 摘自 `./code/Buffer 与 Stream/src/05-stream-types.js`（运行：`npm run 05types`）
 
 ```javascript
 const { Readable, Writable, Duplex, Transform, PassThrough } = require('node:stream')
@@ -251,7 +251,7 @@ const upper = new Transform({
 
 先给一个"炸内存"版本——把整个文件读进来再写出去：
 
-> 摘自 `./code/node-basics/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
+> 摘自 `./code/Buffer 与 Stream/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
 
 ```javascript
 const data = await fs.promises.readFile(SRC)
@@ -261,7 +261,7 @@ await fs.promises.writeFile(OUT_ALL, data)
 
 再给 Stream 版本，内存占用恒定：
 
-> 摘自 `./code/node-basics/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
+> 摘自 `./code/Buffer 与 Stream/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
 
 ```javascript
 const rs = fs.createReadStream(SRC)
@@ -384,7 +384,7 @@ Producer ── chunk ──▶ [Writable 内部缓冲] ──▶ Consumer
 
 阈值越小，内存越省但搬运次数越多（系统调用更多）；阈值越大则相反。
 
-> 摘自 `./code/node-basics/src/05-stream-flow-control.js`（运行：`npm run 05flow`）
+> 摘自 `./code/Buffer 与 Stream/src/05-stream-flow-control.js`（运行：`npm run 05flow`）
 
 ```javascript
 const slow = new Writable({
@@ -407,7 +407,7 @@ const slow = new Writable({
 
 因此更推荐 `pipeline()`（来自 `node:stream/promises`）。它会在任意一环出错时**统一销毁所有流并抛出错误**，还能顺序串联多个 Transform（比如"读 → 压缩 → 加密 → 写"）。生产代码里它比 `pipe` 更安全：
 
-> 摘自 `./code/node-basics/src/05-stream-flow-control.js`（运行：`npm run 05flow`）
+> 摘自 `./code/Buffer 与 Stream/src/05-stream-flow-control.js`（运行：`npm run 05flow`）
 
 ```javascript
 const { pipeline } = require('node:stream/promises')
@@ -447,7 +447,7 @@ await pipeline(fs.createReadStream(SRC), zlib.createGzip(), fs.createWriteStream
 
 正确做法是把数据源做成 Readable Stream，**边产生边推**：
 
-> 摘自 `./code/node-basics/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
+> 摘自 `./code/Buffer 与 Stream/src/05-stream-vs-buffered.js`（运行：`npm run 05vsbuffered`）
 
 ```javascript
 for (let i = 0; i < BLOCKS; i++) {
@@ -486,7 +486,7 @@ res.end()
 
 Buffer 和 Stream 讲完，把它们落到最常用的 `fs` 模块上。`fs` 提供文件读写、目录操作等能力，常用 API 如下：
 
-> 摘自 `./code/node-basics/src/05-fs-dir.js`（运行：`npm run 05fs`）
+> 摘自 `./code/Buffer 与 Stream/src/05-fs-dir.js`（运行：`npm run 05fs`）
 
 ```javascript
 const fs = require('node:fs/promises')
@@ -538,7 +538,7 @@ async function copy(src, dest) {
 
 目录遍历有两种常见写法。一种是递归（自己处理子目录），另一种更推荐——用 `fs.readdir` 加 `withFileTypes`，拿到 `Dirent` 后判断类型，避免反复 `stat`：
 
-> 摘自 `./code/node-basics/src/05-fs-dir.js`（运行：`npm run 05fs`）
+> 摘自 `./code/Buffer 与 Stream/src/05-fs-dir.js`（运行：`npm run 05fs`）
 
 ```javascript
 async function scanMarkdown(dir) {
@@ -615,13 +615,13 @@ path.resolve('/etc', 'x');    // '/etc/x'（遇到绝对路径 /etc 即停止）
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |
-| `./code/node-basics/src/05-buffer.js` | Buffer 到底是什么：固定长度的字节序列 · 十六进制与字符串互转：从 hello 看字节 · Buffer.alloc 与 Buffer.from 的区别 · 字符长度 ≠ 字节长度：Content-Length 的坑 | Buffer 的创建与 `Uint8Array` 子类身份、三种解读视角（十六进制 / utf8 / base64）、`alloc` 清零 vs `from` 编码、字符长度与字节长度之差（`'你好'` 2 vs 6、`'中文abc'` 5 vs 9） |
-| `./code/node-basics/src/05-stream-types.js` | Stream 是什么：一块一块地流动 · Stream 与 Buffer 的关系：水桶与水管 · 四种 Stream：一张表看明白 | 手写四种流的最小实现：`readableFlowing` 从 `null` 到 `true` 再到 `false`、`cork()` / `uncork()` 与 `writev` 合并、真实 TCP 两端的 Duplex、`transform()` / `flush()` / `objectMode`、`end()` 后再 `write()` 的报错码 |
-| `./code/node-basics/src/05-stream-vs-buffered.js` | 实战：复制大文件 · 流式推送为什么必须用 Stream | 磁盘：`readFile` 同时在手 64MB vs `pipe` 只有 128KB（两种方式各起独立子进程，避免内存互相污染）；网络：`/all` 首字节 752ms vs `/stream` 4ms |
-| `./code/node-basics/src/05-stream-flow-control.js` | 背压：Stream 真正高级的地方 · pipe 为什么重要，以及为什么更推荐 pipeline | 背压：`write()` 返回 `false` 时的 `writableLength` / `writableNeedDrain` 与 `drain` 恢复；`pipe` 出错不销毁链路 vs `pipeline` 统一销毁；`read → gzip → write` 多级链路 |
-| `./code/node-basics/src/05-fs-dir.js` | 落地到 fs：读、写、目录与遍历 | `fs` 目录遍历 + `path` 组合路径 |
+| `./code/Buffer 与 Stream/src/05-buffer.js` | Buffer 到底是什么：固定长度的字节序列 · 十六进制与字符串互转：从 hello 看字节 · Buffer.alloc 与 Buffer.from 的区别 · 字符长度 ≠ 字节长度：Content-Length 的坑 | Buffer 的创建与 `Uint8Array` 子类身份、三种解读视角（十六进制 / utf8 / base64）、`alloc` 清零 vs `from` 编码、字符长度与字节长度之差（`'你好'` 2 vs 6、`'中文abc'` 5 vs 9） |
+| `./code/Buffer 与 Stream/src/05-stream-types.js` | Stream 是什么：一块一块地流动 · Stream 与 Buffer 的关系：水桶与水管 · 四种 Stream：一张表看明白 | 手写四种流的最小实现：`readableFlowing` 从 `null` 到 `true` 再到 `false`、`cork()` / `uncork()` 与 `writev` 合并、真实 TCP 两端的 Duplex、`transform()` / `flush()` / `objectMode`、`end()` 后再 `write()` 的报错码 |
+| `./code/Buffer 与 Stream/src/05-stream-vs-buffered.js` | 实战：复制大文件 · 流式推送为什么必须用 Stream | 磁盘：`readFile` 同时在手 64MB vs `pipe` 只有 128KB（两种方式各起独立子进程，避免内存互相污染）；网络：`/all` 首字节 752ms vs `/stream` 4ms |
+| `./code/Buffer 与 Stream/src/05-stream-flow-control.js` | 背压：Stream 真正高级的地方 · pipe 为什么重要，以及为什么更推荐 pipeline | 背压：`write()` 返回 `false` 时的 `writableLength` / `writableNeedDrain` 与 `drain` 恢复；`pipe` 出错不销毁链路 vs `pipeline` 统一销毁；`read → gzip → write` 多级链路 |
+| `./code/Buffer 与 Stream/src/05-fs-dir.js` | 落地到 fs：读、写、目录与遍历 | `fs` 目录遍历 + `path` 组合路径 |
 
-运行方式（`code/node-basics` 目录下）：`npm run 05types` / `npm run 05vsbuffered` / `npm run 05flow` / `npm run 05buffer` / `npm run 05fs`，脚本各自建临时文件并在结束时清理。
+运行方式（`code/Buffer 与 Stream` 目录下）：`npm run 05types` / `npm run 05vsbuffered` / `npm run 05flow` / `npm run 05buffer` / `npm run 05fs`，脚本各自建临时文件并在结束时清理。
 
 ## 参考
 

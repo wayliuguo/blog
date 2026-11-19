@@ -13,7 +13,7 @@
 
 ## 怎么跑
 
-在仓库 `node-basics` 目录下：
+在 `node/运行环境/code/模块系统与包管理` 目录下：
 
 ```bash
 npm run mr08

@@ -26,7 +26,7 @@ For help, see: https://nodejs.org/en/docs/inspector
 
 `--inspect` 的代码等价形态是 `node:inspector` 模块的 `open()`——不借助命令行参数，在代码里打开端口：
 
-> 摘自 `./code/node-basics/src/07-debug/07-inspector-runtime.cjs`（运行：`npm run 07inspector`）
+> 摘自 `./code/VSCode 调试 Node：inspect 协议、launch 配置与断点绑定/src/07-debug/07-inspector-runtime.cjs`（运行：`npm run 07inspector`）
 
 ```js
 // 程序内打开 inspect 端口：`--inspect` 的代码等价形态。
@@ -199,8 +199,8 @@ npm scripts / nest CLI 都会派生**子进程**承载真正的应用（终端�
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |
-| `./code/node-basics/src/07-debug/07-inspector-runtime.cjs` | 调试的本质（`npm run 07inspector`） | 程序内 `node:inspector.open()` 打开 9229——`--inspect` 的代码等价形态；`/json/list` 可列出本进程 |
-| `./code/node-basics/src/07-debug/07-inspect-brk.cjs` | 调试的本质（`node --inspect-brk` 运行） | `--inspect-brk` 首行前挂起等调试器；不带参数直跑时 `debugger` 语句是空操作 |
+| `./code/VSCode 调试 Node：inspect 协议、launch 配置与断点绑定/src/07-debug/07-inspector-runtime.cjs` | 调试的本质（`npm run 07inspector`） | 程序内 `node:inspector.open()` 打开 9229——`--inspect` 的代码等价形态；`/json/list` 可列出本进程 |
+| `./code/VSCode 调试 Node：inspect 协议、launch 配置与断点绑定/src/07-debug/07-inspect-brk.cjs` | 调试的本质（`node --inspect-brk` 运行） | `--inspect-brk` 首行前挂起等调试器；不带参数直跑时 `debugger` 语句是空操作 |
 
 ## 参考
 

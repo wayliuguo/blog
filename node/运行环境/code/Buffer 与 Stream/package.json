@@ -1,0 +1,14 @@
+{
+  "name": "buffer-and-stream",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 《Buffer 与 Stream》配套实验（字节视角、四种流、背压、fs 目录遍历）",
+  "type": "commonjs",
+  "scripts": {
+    "05buffer": "node src/05-buffer.js",
+    "05types": "node src/05-stream-types.js",
+    "05vsbuffered": "node src/05-stream-vs-buffered.js",
+    "05flow": "node src/05-stream-flow-control.js",
+    "05fs": "node src/05-fs-dir.js"
+  },
+  "license": "MIT"
+}

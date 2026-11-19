@@ -1,0 +1,22 @@
+{
+  "name": "module-system-and-packages",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 《模块系统与包管理》配套实验（CommonJS/ESM 语义、互操作、缓存与陷阱）",
+  "type": "commonjs",
+  "scripts": {
+    "02cjs": "node src/02-module-cjs.cjs",
+    "02esm": "node src/02-module-esm.mjs",
+
+    "mr01": "node src/02-module-realm/01-cache.cjs",
+    "mr02": "node src/02-module-realm/02-exports-trap.cjs",
+    "mr03": "node src/02-module-realm/03-cjs-value-vs-esm-binding.mjs",
+    "mr04": "node src/02-module-realm/04-esm-import-cjs.mjs",
+    "mr05": "node src/02-module-realm/05-cjs-require-esm.cjs",
+    "mr06": "node src/02-module-realm/06-dynamic-import.cjs",
+    "mr07": "node src/02-module-realm/07-resolve-path.cjs",
+    "mr08": "node src/02-module-realm/08-type-switch/run.cjs",
+    "mr09": "node src/02-module-realm/09-parse-time.mjs",
+    "mr10": "node src/02-module-realm/10-sync-vs-async.mjs"
+  },
+  "license": "MIT"
+}

@@ -2,7 +2,7 @@
 
 ## 一次 API 请求，时间到底花在哪
 
-先不谈概念，算一笔真实的账。假设后端收到一个"获取首页信息流"的请求，需要聚合并行多个下游环节，一次完整处理链路大致是这样：
+假设后端收到一个"获取首页信息流"的请求，需要聚合并行多个下游环节，一次完整处理链路大致是这样，整条链路要 **两三秒**：
 
 ```
 用户请求
@@ -20,12 +20,9 @@
 返回结果
 ```
 
-把时间加起来，整条链路要 **两三秒**。这还是每个环节串行等待的保守估计——现实中这些等待往往会叠加，单请求两秒出头是常态。
+**这两三秒里，绝大部分时间不是"算"出来的，而是"等"出来的**
 
-注意这一节要建立的第一个直觉：**这两三秒里，绝大部分时间不是"算"出来的，而是"等"出来的**。这一点会在下一节被拆开验证。
-
-## CPU 真算了两三秒吗：理解 I/O 密集型
-
+## 理解 I/O 密集型
 两秒多的总耗时里，有一个非常关键的问题值得单独拎出来问：
 
 > Node.js 的 CPU 真正计算了这两三秒吗？
@@ -49,74 +46,6 @@ CPU 在那些等待窗口里，要么被阻塞（阻塞模型下），要么干�
 **I/O 密集型（I/O Bound）服务**——指一次请求中，真正消耗在 CPU 计算上的时间极短，绝大部分耗时来自磁盘、网络、外部服务等输入/输出等待的服务。
 
 聚合网关、接口编排、实时推送、BFF 层、数据中转这些后端场景天然就是这个形态：MySQL、Redis、下游服务、第三方 API 几乎都走网络 I/O。所以这类后端本质上就是一个非常典型的 I/O 密集型应用。
-
-下面这段摘自配套脚本，把上面那笔账真正跑一遍——用 `setTimeout` 模拟各段等待、用 `process.cpuUsage()` 量出 CPU 的真实占用：
-
-> 摘自 `./code/node-basics/src/01-io-cost.js`（运行：`npm run 01`）
-
-```js
-// SCALE 缩放系数：真实总等待约 2165ms（30+100+2000+5+30），演示按 1/4 缩放，避免读者干等 2 秒
-// 想看真实时长，把 SCALE 改成 1 即可（总耗时约 2.2 秒）。
-const SCALE = 0.25
-
-// 真实各段耗时(ms)。演示时实际等待 = ms * SCALE
-const REAL_STAGES = [
-    { name: '查询数据库', ms: 30 },
-    { name: '调用下游服务', ms: 100 },
-    { name: '请求第三方 API', ms: 2000 },
-    { name: '查询缓存', ms: 5 },
-    { name: '写库', ms: 30 }
-]
-
-// 模拟一段 I/O 等待（Promise + setTimeout）。setTimeout 挂起期间 CPU 几乎不工作
-function wait(realMs) {
-    return new Promise(resolve => setTimeout(resolve, realMs * SCALE))
-}
-
-// 模拟该阶段真正执行的 JS（解析参数、拼装响应等），让 CPU 时间可见（约几毫秒）
-function cpuWork() {
-    let acc = 0
-    for (let i = 0; i < 3e6; i += 1) acc += Math.sqrt(i) * 0.5
-    return acc
-}
-
-// …
-
-    const endWall = process.hrtime.bigint()
-    const endCpu = process.cpuUsage(startCpu) // 与 startCpu 做差，得到区间 CPU 用量
-    const totalWallMs = Number(endWall - startWall) / 1e6
-    const totalCpuMs = (endCpu.user + endCpu.system) / 1000 // 微秒 → 毫秒
-
-    console.log('阶段 | 真实耗时(ms) | 演示耗时(ms)')
-    console.log('-'.repeat(48))
-    for (const r of rows) {
-        printRow([r.name, r.real, r.demo.toFixed(1)])
-    }
-    console.log('-'.repeat(48))
-    console.log(`总墙上时间   : ${totalWallMs.toFixed(1)} ms  （真实约 ${(totalWallMs / SCALE).toFixed(0)} ms）`)
-    console.log(`CPU 实际占用 : ${totalCpuMs.toFixed(2)} ms`)
-    const ratio = totalWallMs > 0 ? (totalCpuMs / totalWallMs) * 100 : 0
-    console.log(`CPU / 墙上   : ${ratio.toFixed(2)} %`)
-    console.log('\n结论：等待占绝大多数，CPU 真正执行 JS 只有几毫秒 —— 这正是 Node 适合 I/O 密集服务的根因。')
-```
-
-实测输出（`npm run 01`）：
-
-```
-阶段 | 真实耗时(ms) | 演示耗时(ms)
-------------------------------------------------
-查询数据库              | 30             | 48.6
-调用下游服务             | 100            | 36.0
-请求第三方 API          | 2000           | 512.6
-查询缓存               | 5              | 16.5
-写库                 | 30             | 15.9
-------------------------------------------------
-总墙上时间   : 629.8 ms  （真实约 2519 ms）
-CPU 实际占用 : 16.00 ms
-CPU / 墙上   : 2.54 %
-
-结论：等待占绝大多数，CPU 真正执行 JS 只有几毫秒 —— 这正是 Node 适合 I/O 密集服务的根因。
-```
 
 ## 三个并发请求：阻塞模型 vs 非阻塞模型
 
@@ -180,10 +109,8 @@ A 在等下游服务的两秒里，主线程已经把 B、C 都处理完了，�
 
 把上面"不等待、转去处理别的"的说法落到一个最经典的输出顺序题上——同步代码先一口气跑完，回调（宏任务）排在最后才执行：
 
-> 摘自 `./code/node-basics/src/03-eventloop-order.js`（运行：`npm run 03order`）
 
 ```js
-// 03 经典事件循环输出顺序题
 // 关键心智模型（阶段顺序）：同步代码 -> nextTick 队列 -> 微任务(Promise.then) -> timer
 console.log('start') // 同步代码，最先执行
 
@@ -203,7 +130,7 @@ process.nextTick(() => {
 console.log('end') // 同步代码
 ```
 
-实测输出（`npm run 03order`）：
+实测输出：
 
 ```
 start
@@ -215,7 +142,7 @@ timeout
 
 一句话概括全篇的锚点：
 
-> **Node.js 擅长的不是"计算得快"，而是"等待的时候不闲着"。**
+**Node.js 擅长的不是"计算得快"，而是"等待的时候不闲着"。**
 
 一个主线程就能同时照看成千上万个正在"等 I/O"的请求——因为它们大部分时间不需要 CPU，只需要在 I/O 就绪时有人"叫它一声"。而"叫它一声"这件事，由操作系统内核（epoll / kqueue / IOCP）替我们做了。
 
@@ -336,15 +263,6 @@ Node.js 是**运行环境**，不是后端框架。它提供的是 JS 运行时�
 上面这笔账回答了一个关键问题：**为什么后端场景会选 Node.js**——因为它把"等待"这件事从主线程手里交了出去，让一个线程能在大量 I/O 等待期间始终保持忙碌。
 
 但"不闲着"只是一种能力，真正要把服务写出来，还得回到代码本身：你的 `fs`、`http`、`crypto` 这些能力，在 `.js` 文件里是怎么被引入、被拆分、被复用的？Node.js 提供了 CommonJS 与 ES Module 两套模块系统，它们决定了你如何组织一个可维护的项目。下一篇就来讲模块系统，以及两套机制的核心区别与加载时机。
-
-## 配套代码
-
-本篇的机制性结论可以在 `./code/node-basics/src/01-io-cost.js` 里亲手复现：它模拟一次真实请求的各段等待，并把"墙上时间"与"CPU 时间"分开打印出来。
-
-| 文件 | 对应小节 | 演示什么 |
-| --- | --- | --- |
-| `./code/node-basics/src/01-io-cost.js` | 一次 API 请求，时间到底花在哪 | 一次请求的耗时账：等待时间占绝大多数，CPU 真正执行的只有几毫秒 |
-| `./code/node-basics/src/03-eventloop-order.js` | 三个并发请求：阻塞模型 vs 非阻塞模型 | 主线程在等待期间并没有闲着：同步代码与回调的实际执行顺序 |
 
 ## 参考
 
