@@ -49,7 +49,13 @@ export default function debugLogPlugin(options = {}) {
         // configResolved(resolved)：配置已定稿（此处只能读，改了也不生效）
         configResolved(resolved) {
             log('configResolved', [
-                { root: resolved.root, base: resolved.base, mode: resolved.mode, command: resolved.command, plugins: resolved.plugins.map(p => p.name) }
+                {
+                    root: resolved.root,
+                    base: resolved.base,
+                    mode: resolved.mode,
+                    command: resolved.command,
+                    plugins: resolved.plugins.map(p => p.name)
+                }
             ])
         },
 
