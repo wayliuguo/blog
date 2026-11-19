@@ -13,6 +13,8 @@ const MiniCssExtractPlugin = require('./plugins/mini-css-extract-plugin.cjs')
 const MiniTerserPlugin = require('./plugins/mini-terser-plugin.cjs')
 const MiniCleanPlugin = require('./plugins/mini-clean-plugin.cjs')
 const MiniDefinePlugin = require('./plugins/mini-define-plugin.cjs')
+// 钩子间谍插件：DEBUG_WP=1 时挂上，打印各阶段钩子参数（见 .vscode/launch.json 调试入口）
+const DebugLogPlugin = require('./plugins/debug-log-plugin.cjs')
 
 const ROOT = __dirname
 const { version } = require('./package.json')
@@ -88,6 +90,8 @@ module.exports = (env = {}) => {
         },
 
         plugins: [
+            // 调试用：DEBUG_WP=1 时先挂间谍插件，时间线钩子逐行打印
+            ...(process.env.DEBUG_WP === '1' ? [new DebugLogPlugin()] : []),
             // emit 钩子上清掉上次构建遗留的旧 hash 文件
             new MiniCleanPlugin(),
             // 每个 .js 产物头部注入 window.__APP_VERSION__，并把它算进 chunk hash

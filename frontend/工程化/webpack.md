@@ -1,13 +1,6 @@
 # webpack
 
-本篇配两个工程，各管一半：
-
-| 工程 | 是什么 | 用在哪 |
-| --- | --- | --- |
-| `./code/h5-webpack/` | 「赴演记 H5」：Vue 3 + TS + Vue Router + Vant + Axios + Pinia，接真实后端 | 使用层 |
-| `./code/webpack-lab/` | Loader / Plugin 实验工程：手写 markdown-loader、css-loader、抽离 loader 与五个产物插件 | 插件 & Loader 原理 |
-
-## 一、使用层（业务落地，简历 / 基础面试）
+## 使用层
 
 ### 核心概念
 
@@ -57,27 +50,6 @@ Compiler     一次 webpack 进程的入口，持有配置与钩子（只创建�
 
 ### 基础配置
 
-`h5-webpack` 的依赖清单（pnpm 管理）：
-
-| 类型 | 包 | 作用 |
-| --- | --- | --- |
-| 运行时 | `vue`、`vue-router`、`pinia` | 视图、路由、状态 |
-| 运行时 | `vant` | 移动端组件库 |
-| 运行时 | `axios` | 请求后端 |
-| 编译 | `webpack`、`webpack-cli`、`webpack-dev-server` | 构建器、命令行、dev server |
-| 编译 | `vue-loader`、`@vue/compiler-sfc`、`ts-loader` | SFC 与 TS 转译（只转译，不查类型） |
-| 编译 | `css-loader`、`mini-css-extract-plugin` | CSS 解析与抽离 |
-| 产物 | `html-webpack-plugin`、`compression-webpack-plugin`、`terser-webpack-plugin` | HTML、gzip、压缩 |
-| 其他 | `typescript`、`vue-tsc`、`unplugin-auto-import`、`unplugin-vue-components` | 类型检查与按需引入 |
-
-| 命令 | 做什么 | 端口 / 产物 |
-| --- | --- | --- |
-| `pnpm dev` | `webpack serve --mode development`，内存产物 + HMR，`/api` 走代理 | 5185 |
-| `pnpm build` | `vue-tsc --noEmit` + `webpack --mode production` | `dist/` |
-| `pnpm build:only` | 跳过类型检查直接构建 | `dist/` |
-| `pnpm preview` | 以 production 配置起 dev server | 5185（内存产物） |
-| `pnpm typecheck` | 只跑类型检查 | — |
-
 配置只有五类：
 
 | 类别 | 作用 | 关键项 |
@@ -90,17 +62,21 @@ Compiler     一次 webpack 进程的入口，持有配置与钩子（只创建�
 
 `mode` 不是「环境名」，而是一组默认配置的开关：`production` 默认开压缩、作用域提升、`sideEffects` 分析，并通过内置 `DefinePlugin` 把 `process.env.NODE_ENV` 定成 `'production'`。
 
-完整配置（ESM，因为 `package.json` 里有 `"type": "module"`）：
-
-> 摘自 `./code/h5-webpack/webpack.config.mjs`（运行：`pnpm build`）
+一份典型 Vue + TS 项目的骨架（`webpack.config.mjs`）：
 
 ```js
+import path from 'node:path'
+import webpack from 'webpack'
+import HtmlWebpackPlugin from 'html-webpack-plugin'
+import MiniCssExtractPlugin from 'mini-css-extract-plugin'
+import CompressionPlugin from 'compression-webpack-plugin'
+
+// 自己读 .env 文件（webpack 没有 .env 约定，见「环境变量」）
+// const fileEnv = loadEnvFiles(mode)
+
 export default (env, argv) => {
     const mode = argv.mode || 'development'
     const isProd = mode === 'production'
-    const fileEnv = loadEnvFiles(mode)
-    // 命令行 / CI 注入的真实 token 优先于 .env.local
-    const apiToken = process.env.VITE_API_TOKEN ?? fileEnv.VITE_API_TOKEN ?? ''
 
     return {
         mode,
@@ -113,7 +89,7 @@ export default (env, argv) => {
             clean: true
         },
         resolve: {
-            // .mjs 必须显式列出：Vant 的 ESM 产物是 .mjs，目录入口是 index.mjs
+            // ESM 包的产物常是 .mjs、目录入口是 index.mjs，必须显式列出
             extensions: ['.mjs', '.ts', '.js', '.vue', '.json'],
             alias: { '@': path.resolve(__dirname, 'src') }
         },
@@ -127,6 +103,7 @@ export default (env, argv) => {
                     options: { transpileOnly: true, appendTsSuffixTo: [/\.vue$/] }
                 },
                 { test: /\.css$/, use: [MiniCssExtractPlugin.loader, 'css-loader'] },
+                // asset module：小于 4KB 内联成 data URL，更大的输出成独立文件
                 {
                     test: /\.(png|jpe?g|gif|svg|webp)$/i,
                     type: 'asset',
@@ -135,27 +112,19 @@ export default (env, argv) => {
             ]
         },
         plugins: [
-            new VueLoaderPlugin(),
-            AutoImport({ imports: ['vue', 'vue-router', 'pinia'], dts: 'src/auto-imports.d.ts' }),
-            Components({ resolvers: [VantResolver()], dts: 'src/components.d.ts' }),
             new HtmlWebpackPlugin({ template: 'public/index.html' }),
             new MiniCssExtractPlugin({
                 filename: 'assets/[name].[contenthash:8].css',
-                // 按需引入的 Vant 组件样式来自不同 chunk，顺序告警无实际影响
+                // 组件库样式来自不同 chunk，顺序告警无实际影响
                 ignoreOrder: true
             }),
             // 环境变量的编译期替换：值必须 JSON.stringify，替换的是代码文本
             new webpack.DefinePlugin({
                 __ENV__: JSON.stringify({
-                    VITE_APP_TITLE: fileEnv.VITE_APP_TITLE || '赴演记 H5',
-                    VITE_API_BASE: fileEnv.VITE_API_BASE || '/api',
-                    VITE_ASSET_BASE: fileEnv.VITE_ASSET_BASE || 'https://api.show-track.top',
-                    VITE_API_TOKEN: apiToken,
+                    VITE_APP_TITLE: 'My App',
+                    VITE_API_BASE: '/api',
                     DEV: !isProd
-                }),
-                __VUE_OPTIONS_API__: JSON.stringify(true),
-                __VUE_PROD_DEVTOOLS__: JSON.stringify(false),
-                __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: JSON.stringify(false)
+                })
             }),
             ...(isProd
                 ? [
@@ -171,11 +140,10 @@ export default (env, argv) => {
         optimization: { /* 略，见「代码分割」 */ },
         devtool: isProd ? false : 'eval-cheap-module-source-map',
         devServer: {
-            port: 5185,
             hot: true,
             historyApiFallback: true,
             client: { overlay: true },
-            proxy: [{ context: ['/api'], target: API_TARGET, changeOrigin: true }]
+            proxy: [{ context: ['/api'], target: 'https://api.example.com', changeOrigin: true }]
         },
         performance: { hints: false },
         stats: 'minimal'
@@ -183,12 +151,12 @@ export default (env, argv) => {
 }
 ```
 
-五处是搭 Vue + TS + Vant 项目最容易踩的：
+五处是搭 Vue + TS + 组件库项目最容易踩的：
 
-1. **`resolve.extensions` 必须包含 `.mjs`**。Vant 的 ESM 产物是 `.mjs`，目录入口是 `index.mjs`；漏了它，`import 'vant/es/toast/style'` 会直接报 `Can't resolve`。
+1. **`resolve.extensions` 必须包含 `.mjs`**。组件库的 ESM 产物常是 `.mjs`，目录入口是 `index.mjs`；漏了它，`import 'vant/es/toast/style'` 这类引入直接报 `Can't resolve`。
 2. **`ts-loader` 开 `transpileOnly` + `appendTsSuffixTo`**。前者把类型检查留给独立的 `vue-tsc` 命令，后者让 `.vue` 里的 `<script lang="ts">` 也能走这条规则。
-3. **`DefinePlugin` 只注入一个 `__ENV__` 对象**。散着注 5 个全局变量会让类型声明和业务代码都变脏，收成一个对象后 `src/env.ts` 只改一处。
-4. **`MiniCssExtractPlugin` 要 `ignoreOrder: true`**。Vant 的组件样式来自不同 chunk，拼接顺序不稳定，默认会刷一屏 `Conflicting order` 警告——这不是错误。
+3. **`DefinePlugin` 只注入一个 `__ENV__` 对象**。散着注 5 个全局变量会让类型声明和业务代码都变脏，收成一个对象后业务侧只改一处。
+4. **`MiniCssExtractPlugin` 要 `ignoreOrder: true`**。组件库的样式来自不同 chunk，拼接顺序不稳定，默认会刷一屏 `Conflicting order` 警告——这不是错误。
 5. **`devServer.proxy` 是数组形式**，`context` 写明前缀。写成对象形式是 webpack-dev-server 4 的老语法。
 
 三个出口项决定「能不能长缓存」：`[contenthash:8]` 让文件名随内容变，内容不变 CDN 就一直命中；`chunkFilename` 管懒加载切出来的 chunk；`clean: true` 保证每次构建先清空 `dist/`。
@@ -202,9 +170,7 @@ webpack 没有 `.env` 约定，环境变量分两类：
 | `process.env.NODE_ENV` | `mode: 'production'` 内置注入 | 源码里直接读，生产分支才会保留 |
 | 自定义变量 | 自己写 `loadEnvFiles` + `DefinePlugin` | 值必须 `JSON.stringify` |
 
-`loadEnvFiles` 是工程里唯一一段「自己造轮子」的配置代码：
-
-> 摘自 `./code/h5-webpack/webpack.config.mjs`（运行：`pnpm build`）
+自己造轮子的最小实现（读 `.env` / `.env.<mode>` / `.env.local`，只取 `VITE_` 前缀）：
 
 ```js
 /**
@@ -230,7 +196,7 @@ function loadEnvFiles(mode) {
 }
 ```
 
-顺序即优先级：后读的文件覆盖先读的，`.env.local` 天然最大。而 `process.env.VITE_API_TOKEN ?? fileEnv.VITE_API_TOKEN` 让 CI 注入的值再压过本地文件——token 只从环境变量走，仓库里只有 `.env.local.example`。
+顺序即优先级：后读的文件覆盖先读的，`.env.local` 天然最大。而 `process.env.VITE_API_TOKEN ?? fileEnv.VITE_API_TOKEN` 让 CI 注入的值再压过本地文件——token 这类敏感值只从进程环境变量走，仓库里只放 `.example` 模板。
 
 `DefinePlugin` 的三条机制要记牢：
 
@@ -240,16 +206,12 @@ function loadEnvFiles(mode) {
 
 业务侧同样收口到一处：
 
-> 摘自 `./code/h5-webpack/src/env.ts`
-
 ```ts
+// src/env.ts —— 全项目唯一出现全局注入变量的地方
 export const ENV = {
-    appTitle: __ENV__.VITE_APP_TITLE || '赴演记 H5',
+    appTitle: __ENV__.VITE_APP_TITLE || 'My App',
     apiBase: __ENV__.VITE_API_BASE || '/api',
-    assetBase: __ENV__.VITE_ASSET_BASE || 'https://api.show-track.top',
-    apiToken: __ENV__.VITE_API_TOKEN || '',
-    isDev: __ENV__.DEV,
-    bundler: 'webpack 5'
+    isDev: __ENV__.DEV
 }
 ```
 
@@ -264,13 +226,13 @@ webpack 5 用**asset modules** 取代了 `file-loader` / `url-loader`：
 | `asset/source` | 导出文件内容字符串 | `raw-loader` |
 | `asset` | 按 `parser.dataUrlCondition.maxSize` 自动二选一 | `url-loader` + limit |
 
-本工程的 `maxSize: 4096` 意为：小于 4KB 的图片直接内联成 data URL，省一次请求；更大的输出成独立文件、拿到带 hash 的 URL。海报这类后端地址不走 asset module，仍由 `posterOf()` 拼 `VITE_ASSET_BASE`（见「环境变量」）。
+`maxSize: 4096` 意为：小于 4KB 的图片直接内联成 data URL，省一次请求；更大的输出成独立文件、拿到带 hash 的 URL。后端拼好的图片地址不经过构建器，不走 asset module。
 
 #### CSS
 
 | 需求 | 方案 |
 | --- | --- |
-| 普通 CSS | `MiniCssExtractPlugin.loader` + `css-loader`（本工程） |
+| 普通 CSS | `MiniCssExtractPlugin.loader` + `css-loader` |
 | CSS Modules | `css-loader` 的 `modules: true`，`import s from './a.css'` |
 | Sass / Less | 在 `use` 数组末尾加 `sass-loader` / `less-loader` |
 | PostCSS | 在 `use` 数组里加 `postcss-loader` + `postcss.config.js` |
@@ -278,23 +240,19 @@ webpack 5 用**asset modules** 取代了 `file-loader` / `url-loader`：
 
 SFC 里的 `<style>` 不需要单独配规则：`VueLoaderPlugin` 会把 `.css` 规则克隆成带 `?vue&type=style` 的版本，`style.css` 与各组件的样式最后汇总进 `main.css` / 各页面的 `.css`。
 
-Vant 的样式同样分两种入口：模板里用到的组件由 `VantResolver` 注入；`showToast` / `showConfirmDialog` 这类函数式组件不经过模板解析，要手动引：
-
-> 摘自 `./code/h5-webpack/src/main.ts`
+组件库的样式通常有两种入口：模板里用到的组件由按需引入插件注入；`showToast` / `showConfirmDialog` 这类函数式 API 不经过模板解析，要手动引样式：
 
 ```ts
-import 'vant/es/toast/style'
+import 'vant/es/toast/style'    // 函数式 API 的样式要手动引
 import 'vant/es/dialog/style'
 import './styles/index.css'
 ```
 
-### 性能优化（高级前端重点）
+### 性能优化
 
 #### 代码分割
 
-`optimization` 决定产物怎么切。本工程的四个组按依赖来源划分，priority 从高到低：
-
-> 摘自 `./code/h5-webpack/webpack.config.mjs`（运行：`pnpm build`）
+`optimization` 决定产物怎么切。常见的四个组按依赖来源划分，priority 从高到低：
 
 ```js
 optimization: {
@@ -327,7 +285,7 @@ optimization: {
 ```
 
 - **`runtimeChunk: 'single'`**：把 webpack 运行时（模块注册表、`require` 实现）单独成文件。不拆的话，运行时一变，所有 chunk 的 hash 全变，CDN 缓存全废。
-- **`chunks: 'all'`**：懒加载 chunk 里用到的依赖也要抽出来，否则 `vant` 会被复制进每个页面 chunk。
+- **`chunks: 'all'`**：懒加载 chunk 里用到的依赖也要抽出来，否则组件库会被复制进每个页面 chunk。
 - **`priority` 决定归属**：`vant` 的路径同时命中 `vendor` 的正则，priority 高的先生效；没写 priority 时由 `minSize` 和默认值兜底，结果不可控。
 - **`drop_console` / `drop_debugger`**：生产产物里没有调试残留。
 
@@ -339,8 +297,6 @@ optimization: {
 #### 路由懒加载与 chunk 名
 
 靠 `webpackChunkName` 让产物可读：
-
-> 摘自 `./code/h5-webpack/src/router.ts`（运行：`pnpm build`）
 
 ```ts
 {
@@ -367,7 +323,7 @@ optimization: {
 | `[chunkhash]` | 同一 chunk 内共享 | chunk 里任何一个模块变，整个 chunk 的文件名变 |
 | `[contenthash]` | 只看文件自身内容 | 适合产物命名：JS / CSS 内容不变，文件名就不变 |
 
-本工程全用 `[contenthash:8]`，再配 `runtimeChunk: 'single'`：运行时单独成文件后，业务 chunk 的内容与运行时解耦，改页面不会让所有 chunk 的 hash 跟着动。
+产物命名统一用 `[contenthash:8]`，再配 `runtimeChunk: 'single'`：运行时单独成文件后，业务 chunk 的内容与运行时解耦，改页面不会让所有 chunk 的 hash 跟着动。
 
 第二层是**构建本身的缓存**。webpack 5 内置持久化缓存，dev 默认开（内存），production 要显式打开：
 
@@ -387,11 +343,11 @@ cache: {
 - **externals + CDN**：把大依赖（Vue、element-ui 这类）排除出 bundle，用 `<script>` 从 CDN 引入，`import` 指向全局变量。代价是失去按需引入与版本锁定，React/Vue 全家桶场景慎用。
 - **DllPlugin（老方案）**：webpack 4 时代把不常变的依赖预打包成 dll，dev 增量编译不再重复处理它们。webpack 5 的持久化缓存 + 预构建已覆盖其价值，新项目不推荐。
 - **devtool 选择**：生产 `false`（不出 sourcemap），dev 用 `eval-cheap-module-source-map`——这是 dev 下页面能秒开的原因之一。
-- **performance.hints**：默认对超过 244KB 的产物告警；本工程 `vue.js` 有 111KB、`vant` 一组超过 200KB，显式关掉避免噪音——**关掉提示不等于没有体积问题**，生产里应该用门禁（构建期量 gzip，超预算直接报错，见原理篇的 `MiniTerserPlugin` 一节配套思路）。
+- **performance.hints**：默认对超过 244KB 的产物告警，大项目普遍超限，显式关掉避免噪音——**关掉提示不等于没有体积问题**，生产里应该用门禁（构建期量 gzip，超预算直接报错，见原理篇的 `MiniTerserPlugin` 一节配套思路）。
 
 ### 开发体验：devServer 与 HMR
 
-devServer 关键项（本工程配置）：`hot: true` 开热更新；`historyApiFallback` 让 `/shows/123` 这类前端路由回退到 `index.html`；`client.overlay` 把编译错误盖在页面上；`proxy` 把 `/api` 转到真实后端，浏览器全程同源。
+devServer 关键项：`hot: true` 开热更新；`historyApiFallback` 让 `/shows/123` 这类前端路由回退到 `index.html`；`client.overlay` 把编译错误盖在页面上；`proxy` 把 `/api` 转到真实后端，浏览器全程同源。
 
 **HMR 是模块粒度的热替换，不是全量刷新**。流程四步：
 
@@ -421,7 +377,7 @@ if (module.hot) {
 
 #### preview 的真实形态
 
-`pnpm preview` 不是「静态服务 + 磁盘产物」：`webpack serve` 总是构建到内存，`--mode production` 只保证产物是生产版本。要验证真实 `dist/` 目录，用任意静态服务器（`npx serve dist`）。
+`webpack serve` 不是「静态服务 + 磁盘产物」：它总是构建到内存，`--mode production` 只保证产物是生产版本。要验证真实 `dist/` 目录，用任意静态服务器（`npx serve dist`）。
 
 ### 产物分析
 
@@ -467,7 +423,7 @@ index.html                 630 B
 
 面试中最常被追问的是第一条与第三条：**持久化缓存让「老项目构建慢」的标准答案从 DllPlugin 变成开 filesystem cache**；**移除 polyfill 让「升级后莫名报错」的标准排查动作变成看 `resolve.fallback`**。
 
-## 二、插件 & Loader 原理（面试重头戏）
+## 插件与 Loader 原理
 
 使用层里的 loader / plugin 全是现成的。这一节换到 `./code/webpack-lab`：除 `vue-loader` 外，CSS 链路与全部产物收尾都是手写，另加两个最简插件（清目录、注入全局变量），用来把「模块怎么变、产物怎么来」看清。
 
@@ -724,6 +680,8 @@ class MyPlugin {
 
 背时间线的口诀：**先配入口（entryOption），再开始编译（compile），从入口长出依赖图（make），长完封包（seal），定稿写盘（emit），写完收工（done）**。
 
+不必背这条时间线：挂上配套工程里的 `debug-log-plugin`（`DEBUG_WP=1` 开启），就能看到这些钩子在一次真实构建里逐行打印。
+
 产物阶段的操作几乎都挂在 `compilation.hooks.processAssets`，靠 `stage` 数值排队：
 
 | stage | 数值 | 典型用途 |
@@ -960,24 +918,13 @@ module.exports = MiniDefinePlugin
 
 ### h5-webpack
 
-「赴演记 H5」的 webpack 版：Vue 3 + TypeScript + Vue Router + Vant + Axios + Pinia，接真实后端 `https://api.show-track.top`，只做核心闭环五页（列表 / 详情 / 新增 + 编辑 / 统计 / 我的）。
+「赴演记 H5」的 webpack 版：源码与 `h5-vite` 是同一份业务实现，差异只在构建侧——本文「产物分析」的读数即来自它的一次 `pnpm build:only`。
 
-| 文件 | 作用 | 对应小节 |
-| --- | --- | --- |
-| `./code/h5-webpack/package.json` | 五个命令：`dev` / `build` / `build:only` / `preview` / `typecheck` | 基础配置 |
-| `./code/h5-webpack/webpack.config.mjs` | **唯一配置**：loader、插件、分组、代理、gzip | 基础配置、代码分割 |
-| `./code/h5-webpack/public/index.html` | HTML 模板（入口由 `HtmlWebpackPlugin` 注入，不手写 `<script>`） | 基础配置 |
-| `./code/h5-webpack/.env`、`.env.development`、`.env.production` | 环境变量（由 `loadEnvFiles` 读取） | 环境变量 |
-| `./code/h5-webpack/.env.local.example` | token 模板（复制为 `.env.local`，已被 gitignore） | 环境变量 |
-| `./code/h5-webpack/src/env.ts`、`env.d.ts` | 读 `__ENV__`，全项目唯一注入点 | 环境变量 |
-| `./code/h5-webpack/src/main.ts` | 入口脚本：Pinia、Router、Vant 函数式样式 | CSS |
-| `./code/h5-webpack/src/router.ts` | 五条路由 + `webpackChunkName` | 路由懒加载与 chunk 名 |
-| `./code/h5-webpack/src/views/` | 列表 / 详情 / 新增+编辑 / 统计 / 我的 | 性能优化 |
-| `./code/h5-webpack/src/api/` | `client.ts`（拦截器 + 响应解包）+ `show` / `stats` / `user` | 性能优化 |
-| `./code/h5-webpack/src/stores/me.ts` | Pinia store | 性能优化 |
-| `./code/h5-webpack/src/utils/format.ts` | 金额、费用口径、艺人文本、海报地址、日期倒计时 | 静态资源 |
-| `./code/h5-webpack/src/components/ShowCard.vue` | 列表卡片 | — |
-| `./code/h5-webpack/src/styles/index.css` | 全局样式 | CSS |
+| 文件 | 作用 |
+| --- | --- |
+| `./code/h5-webpack/webpack.config.mjs` | 唯一配置：`loadEnvFiles`、loader、插件、分组、代理、gzip |
+| `./code/h5-webpack/.env*` | 环境变量三份（`loadEnvFiles` 读取；token 在 `.env.local`，已被 gitignore） |
+| `./code/h5-webpack/src/env.ts`、`env.d.ts` | 读 `__ENV__`，全项目唯一注入点 |
 
 运行：
 
@@ -991,7 +938,7 @@ pnpm build      # 类型检查 + 产物到 dist/
 
 ### webpack-lab
 
-Loader / Plugin 实验工程：单入口 + 手写 loader 链 + 五个手写插件，`mode` 恒为 `production`。
+Loader / Plugin 实验工程：单入口 + 手写 loader 链 + 五个手写插件，`mode` 恒为 `production`。所有 loader 与插件都能在 VSCode 里断点单步（把 `webpack-lab` 文件夹单独打开，用「调试 webpack build」入口）。
 
 | 文件 | 作用 | 对应小节 |
 | --- | --- | --- |
@@ -1010,6 +957,8 @@ Loader / Plugin 实验工程：单入口 + 手写 loader 链 + 五个手写插�
 | `./code/webpack-lab/plugins/mini-css-extract-plugin.cjs` | 手写 CSS 汇总插件 | MiniCssExtractPlugin |
 | `./code/webpack-lab/plugins/mini-html-plugin.cjs` | 手写 HTML 生成插件 | MiniHtmlPlugin |
 | `./code/webpack-lab/plugins/mini-terser-plugin.cjs` | 手写压缩插件 | stage 表 |
+| `./code/webpack-lab/plugins/debug-log-plugin.cjs` | 钩子间谍插件：打印各阶段参数，`DEBUG_WP=1` 开启 | 常用钩子与一次编译的时间线 |
+| `./code/webpack-lab/.vscode/launch.json` | 两个调试入口（build / dev），断点直接打在 `loaders/` 与 `plugins/` | 插件 & Loader 原理 |
 
 运行：
 
@@ -1019,12 +968,3 @@ npm install
 npm run build
 npm run preview   # http://localhost:5180
 ```
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 相关篇：[Vite](./Vite.md)
-- [webpack 官方文档](https://webpack.js.org/)
-- [webpack 插件 API](https://webpack.js.org/api/plugins/)
-- [loader-runner](https://github.com/webpack/loader-runner)
-- [Tapable](https://github.com/webpack/tapable)

@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "调试 webpack build（断点打在 loaders/ 与 plugins/ 里）",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/node_modules/webpack-cli/bin/cli.js",
+            "args": ["build"],
+            "env": { "DEBUG_WP": "1" },
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            "name": "调试 webpack serve",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/node_modules/webpack-cli/bin/cli.js",
+            "args": ["serve"],
+            "env": { "DEBUG_WP": "1" },
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ]
+}
