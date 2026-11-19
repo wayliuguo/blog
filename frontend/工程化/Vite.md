@@ -379,9 +379,31 @@ dist/assets/rolldown-runtime.….js     0.16 kB
 
 #### 产物分析
 
-上面的产物表肉眼可读，但增量对比需要工具。生态里最常用的是 `rollup-plugin-visualizer`：当普通插件加进 `plugins`，构建结束生成一份 `stats.html` 的 treemap——矩形面积即体积（可按 gzip 计算），能直接看出「哪个包占掉了产物的大头」，再回头调整 `manualChunks` 或按需引入策略。本工程已接入（`vite.config.ts` 里一行 `visualizer({ filename: 'stats.html', gzipSize: true })`），`pnpm build` 后打开项目根目录的 `stats.html` 即可；报告写在根目录而不是 `dist/`，是因为 `dist/` 里的 `.html` 会被 compression 插件误压一份 `.gz`。
+上面的产物表肉眼可读，但增量对比需要工具。生态里最常用的是 `rollup-plugin-visualizer`，当普通插件加进 `plugins` 即可：
 
-看图时两个提醒：
+```ts
+// vite.config.ts
+import { visualizer } from 'rollup-plugin-visualizer'
+
+export default defineConfig({
+    plugins: [
+        // 构建结束后生成一份 treemap 报告
+        visualizer({
+            filename: 'stats.html', // 报告输出位置
+            gzipSize: true,         // 矩形面积按 gzip 体积计算
+            brotliSize: false       // 也可以换成 brotli 口径
+        })
+    ]
+})
+```
+
+构建结束后打开 `stats.html`，是一张 treemap，这样看：
+
+- **矩形面积 = 体积**（配了 `gzipSize` 就是 gzip 后的体积），一眼看出「哪个包占掉了产物的大头」
+- **逐层下钻**：点击大矩形展开它包含的模块，路径名直接标在矩形里，能看到「体积被哪些文件吃掉了」
+- **切换口径**：报告顶部可在 raw / gzip / brotli 三种算法间切换，对 CDN 场景看 gzip 才是真实流量
+
+看完图回头调整 `manualChunks` 或按需引入策略。两个提醒：
 
 1. 面积大的包不等于「该删」——组件库这种固定成本看的是「用到了多少」，该优化的是按需引入，不是换包。
 2. 想持续盯着增量，把「量 gzip + 阈值告警」做成构建门禁更实际，见插件篇的 `mini-size-gate`。
