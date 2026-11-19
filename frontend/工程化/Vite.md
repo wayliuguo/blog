@@ -410,8 +410,6 @@ export default defineConfig({
 
 ## 插件体系
 
-使用篇里的插件全是现成的（`@vitejs/plugin-vue`、两个 unplugin、compression）。这一节换到 `./code/vite-lab`，手写四个插件，把钩子的触发时机、参数与顺序看清。
-
 ### 插件结构
 
 一个插件就是一个对象；唯一必填字段是 `name`，其余全是钩子：
@@ -462,7 +460,20 @@ Vite 的钩子有**两条正交的轴**：**归属**（通用还是 Vite 专有�
 2. **不是所有钩子都会在你的项目里跑**。`configurePreviewServer` 只在 `vite preview` 时触发；表里的空行也是信息。
 3. **钩子不触发先查 `apply`**。`apply: 'serve'` 的插件在 build 里根本不加载。
 
-### 顺序与门禁
+一次完整构建里，这些钩子按下面的顺序触发：
+
+```text
+config → configResolved                     配置阶段（configResolved 里只能读，改了不生效）
+configureServer                             dev 才有；build 时跳过
+transformIndexHtml → buildStart             构建开始
+  └ 每个模块依次：resolveId → load → transform → moduleParsed
+buildEnd                                    依赖图建完
+generateBundle → writeBundle → closeBundle  产物阶段（build 才有）
+```
+
+不必背这条时间线：挂上插件篇的 `debug-log-plugin` 跑一次 build，就能看到它逐行打印出来。
+
+### 顺序
 
 Vite 的排序分三层：
 
@@ -470,15 +481,50 @@ Vite 的排序分三层：
 | --- | --- | --- | --- |
 | 1 | 不用排 | 跨钩子 | `resolveId → load → transform` 天然有先后 |
 | 2 | `enforce: 'pre' \| 'normal' \| 'post'` | **跨插件、同一个钩子** | 想抢在内置转换前看源码就用 `pre` |
-| 3 | `order: 'pre' \| 'normal' \| 'post'` | **同插件、同一钩子的多个 handler** | `mini-html` 的 `transformIndexHtml: { order: 'post', handler }` |
+| 3 | `order: 'pre' \| 'normal' \| 'post'` | **同插件、同一钩子的多个 handler** | `transformIndexHtml: { order: 'post', handler }` |
 
-官方顺序链：
+第 2 层（跨插件）——同一个钩子（比如 `transform`），插件间的执行顺序由 `enforce` 决定，与 `plugins` 数组里的书写顺序无关：
 
+```ts
+// vite.config.ts
+plugins: [
+    postPlugin(),    // 书写顺序故意打乱，用于对照
+    prePlugin(),
+    normalPlugin()
+]
+
+// postPlugin：  { name: 'post-plugin',   enforce: 'post' }
+// prePlugin：   { name: 'pre-plugin',    enforce: 'pre'  }
+// normalPlugin：{ name: 'normal-plugin' }                  ← 不写 = normal
+// transform 的实际执行顺序：pre-plugin → normal-plugin → post-plugin
 ```
-alias → pre → vite core → normal → vite build → post → vite build post
+
+第 3 层（插件内部）——同一个插件给同一钩子写了多个 handler 时，用 `order` 排这些 handler：
+
+```ts
+{ name: 'my-plugin',
+  transformIndexHtml: {
+    order: 'pre',            // 本 handler 排进 pre 段
+    handler(html) { /* … */ }
+  } }
+// order 只管「这个钩子的多个 handler」之间的先后；插件整体在哪一层仍由 enforce 决定
+```
+
+**官方顺序链是什么**：所有插件自始至终排在同一条执行队列里，`enforce` 不是「切到另一条链」，而是决定你的插件**插进这条单链的哪个位置**。链上每一段的构成：
+
+```text
+alias            Vite 开箱即用的路径别名，永远最前
+pre              enforce: 'pre' 的用户插件
+vite core        Vite 内置的解析 / 转换插件
+normal           未写 enforce 的用户插件（默认层）
+vite build       构建期内置插件
+post             enforce: 'post' 的用户插件
+vite build post  构建期收尾内置插件
 ```
 
 三层能表达「我在内置之前 / 之后」；需要更细的控制时，把逻辑挪到更早或更晚的钩子里，而不是靠排序硬挤。
+
+### 门禁
 
 门禁一律用 `apply`，不要在钩子里判 `command`：
 
