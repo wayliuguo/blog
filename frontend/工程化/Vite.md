@@ -430,18 +430,36 @@ type Plugin = {
 
 Vite 的钩子有**两条正交的轴**：**归属**（通用还是 Vite 专有）与**生效端**（dev / build / 两者 / preview）。判「能不能换个工具复用」看归属，判「什么时候触发」看生效端。
 
+#### 钩子总览
+
+一次完整构建里，钩子按下面的顺序触发：
+
+```text
+config → configResolved                     配置阶段（configResolved 只读，改了不生效）
+configureServer                             dev 才有；build 时跳过
+transformIndexHtml → buildStart             构建开始：index.html 是入口，
+                                            处理它时 transformIndexHtml 被调用，随后 buildStart 启动
+  └ buildStart 后从入口遍历依赖图——每解析到一个模块，就跑一轮
+    resolveId → load → transform → moduleParsed；
+    模块里发现的新 import 再进队列，递归直到整张图收口
+buildEnd                                    依赖图建完
+generateBundle → writeBundle → closeBundle  产物阶段（build 才有）
+```
+
+不必背这条时间线：挂上插件篇的 `debug-log-plugin` 跑一次 build，就能看到它逐行打印出来。
+
 #### 通用钩子（Rollup / Rolldown 兼容）
 
-| 钩子 | 参数 | 生效端 | 此刻能看到 | 用途 |
-| --- | --- | --- | --- | --- |
-| `buildStart` | `(options)` | 两者 | 解析完的 input 配置 | 初始化、计时 |
-| `resolveId` | `(source, importer)` | 两者 | 说明符与发起方（例见下方代码块） | 解析导入路径：别名、虚拟模块都在这里认领 |
-| `load` | `(id)` | 两者 | 解析后的 id（`'\0virtual:build-info'`） | 读文件；虚拟模块在这里生成模块源码 |
-| `transform` | `(code, id)` | 两者 | 上一棒产出的源码全文 + id | 转译替换：返回新 code 即替换源码 |
-| `buildEnd` | `(error?)` | 两者 | 成功 / 第一个报错 | 收尾、上报 |
-| `renderChunk` | `(code, chunk)` | **build** | 每个产物 chunk 的代码 | 逐 chunk 改产物（注入代码、改写路径） |
-| `generateBundle` | `(options, bundle)` | **build** | 完整 bundle，key 即文件名 | 拿全部产物做检查 |
-| `closeBundle` | `()` | **build** | 已写盘的产物 | 清理、通知 |
+| 钩子 | 参数 | 生效端 | 此刻能看到 | 用途 | 例子 |
+| --- | --- | --- | --- | --- | --- |
+| `buildStart` | `(options)` | 两者 | 一轮构建开始，Rollup 拿到 input，准备从入口遍历依赖图 | 初始化、计时 | `buildStart({ input: 'index.html', … })` |
+| `resolveId` | `(source, importer)` | 两者 | 链上插件被逐个询问「这个导入说明符归你管吗」，谁先返回非 null 谁认领；null = 放行给下一棒 | 解析导入路径：别名、虚拟模块都在这里认领 | `resolveId('virtual:build-info', '/src/main.ts')` → 返回 `'\0virtual:build-info'` |
+| `load` | `(id)` | 两者 | id 已定稿，要拿出模块源码；磁盘文件由默认 loader 读，虚拟模块由插件返回字符串 | 读文件；虚拟模块在这里生成源码 | `load('\0virtual:build-info')` → 返回 `export const BUILD_INFO = {…}` |
+| `transform` | `(code, id)` | 两者 | 上一棒产出的完整源码 + 模块 id；返回新 code 即替换源码，null 即放行 | 转译替换源码 | `transform('<script setup>…', '/src/App.vue')` |
+| `buildEnd` | `(error?)` | 两者 | 整张依赖图收口（或第一个报错） | 收尾、上报 | `buildEnd(null)` / `buildEnd(new Error('…'))` |
+| `renderChunk` | `(code, chunk)` | **build** | 每个产物 chunk 的代码已就绪 | 逐 chunk 改产物（注入代码、改写路径） | `renderChunk('import …', { fileName: 'index.js' })` |
+| `generateBundle` | `(options, bundle)` | **build** | 所有 chunk / asset 已生成但未写盘，可整体检阅、增删、改写 | 拿全部产物做检查 | `generateBundle(options, { 'index.js': …, 'style.css': … })` |
+| `closeBundle` | `()` | **build** | 产物已写盘，构建收尾 | 清理、通知 | `closeBundle()` |
 
 虚拟模块插件被触发时，两个钩子的真实参数长这样：
 
@@ -462,33 +480,20 @@ Vite 的钩子有**两条正交的轴**：**归属**（通用还是 Vite 专有�
 
 #### Vite 专有钩子
 
-| 钩子 | 参数 | 生效端 | 此刻能看到 | 用途 |
-| --- | --- | --- | --- | --- |
-| `config` | `(config, env)` | 两者 | 用户配置 + `{ mode, command }` | 改配置（返回 partial 会合并进最终配置） |
-| `configResolved` | `(config)` | 两者 | 最终配置（只读，改了不生效） | 读定稿配置；mini-virtual 在这里缓存 `mode` |
-| `configureServer` | `(server)` | **dev** | dev server 实例 | 挂中间件、WebSocket；mini-mock 的 mock 接口就这么加的 |
-| `configurePreviewServer` | `(server)` | **preview** | preview server 实例 | 预览期加中间件（如代理） |
-| `transformIndexHtml` | `(html, ctx)` | 两者 | HTML 入口全文（build 侧有 `ctx.bundle`） | 改 HTML；mini-html 在这里注入产物引用 |
-| `hotUpdate` | `(ctx)` | **dev** | 变更文件与受影响模块 | HMR 时决定让哪些模块失效（原理见「HMR」） |
+| 钩子 | 参数 | 生效端 | 此刻能看到 | 用途 | 例子 |
+| --- | --- | --- | --- | --- | --- |
+| `config` | `(config, env)` | 两者 | 用户配置 + `{ mode, command }`；返回 partial 会被合并进最终配置 | 改配置 | `config({ resolve: { alias: {…} } }, { mode: 'production', command: 'build' })` |
+| `configResolved` | `(config)` | 两者 | 定稿的最终配置（只读，改了不生效） | 读定稿配置 | `configResolved({ mode: 'production', root: '…/vite-lab' })`；mini-virtual 在这里缓存 `mode` |
+| `configureServer` | `(server)` | **dev** | dev server 实例；钩子里挂的中间件先于 Vite 内部转换执行 | 挂中间件、WebSocket | `server.middlewares.use('/api', mockMiddleware)`——mini-mock 的 mock 接口就这么加的 |
+| `configurePreviewServer` | `(server)` | **preview** | preview server 实例 | 预览期加中间件 | `server.middlewares.use(…)`，如给 preview 配代理 |
+| `transformIndexHtml` | `(html, ctx)` | 两者 | HTML 入口全文；build 侧 `ctx.bundle` 里是全部产物 | 改 HTML | `transformIndexHtml('<!DOCTYPE html>…', { path: '/index.html' })`——mini-html 在这里注入产物引用 |
+| `hotUpdate` | `(ctx)` | **dev** | 变更文件 + 受影响的模块集合 | HMR 时决定让哪些模块失效 | `hotUpdate({ file: '/src/App.vue', server })`（原理见「HMR」） |
 
 三条读表纪律：
 
 1. **「两端都跑」不等于「含义相同」**。`resolveId` / `load` / `transform` 在 dev 只处理被请求到的模块，在 build 处理整张依赖图。
 2. **不是所有钩子都会在你的项目里跑**。`configurePreviewServer` 只在 `vite preview` 时触发，`renderChunk` / `generateBundle` / `closeBundle` 只在 build 时触发。
 3. **钩子不触发先查 `apply`**。`apply: 'serve'` 的插件在 build 里根本不加载。
-
-一次完整构建里，这些钩子按下面的顺序触发：
-
-```text
-config → configResolved                     配置阶段（configResolved 里只能读，改了不生效）
-configureServer                             dev 才有；build 时跳过
-transformIndexHtml → buildStart             构建开始
-  └ 每个模块依次：resolveId → load → transform → moduleParsed
-buildEnd                                    依赖图建完
-generateBundle → writeBundle → closeBundle  产物阶段（build 才有）
-```
-
-不必背这条时间线：挂上插件篇的 `debug-log-plugin` 跑一次 build，就能看到它逐行打印出来。
 
 ### 顺序
 
