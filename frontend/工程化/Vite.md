@@ -38,7 +38,6 @@ dev 侧维护的结构叫**模块图**（module graph）：一个 URL 对应一�
 
 还有一个容易被忽略的约定：**Vite 的入口写在 HTML 里**。`index.html` 是构建起点，不是产物模板；下面这句就是 entry：
 
-> 摘自 `./code/h5-vite/index.html`
 
 ```html
 <script type="module" src="/src/main.ts"></script>
@@ -46,41 +45,17 @@ dev 侧维护的结构叫**模块图**（module graph）：一个 URL 对应一�
 
 ### 基础使用
 
-真实项目的初始化只有两步：装依赖、写配置。`h5-vite` 的依赖清单（pnpm 管理）：
-
-| 类型 | 包 | 作用 |
-| --- | --- | --- |
-| 运行时 | `vue`、`vue-router`、`pinia` | 视图、路由、状态 |
-| 运行时 | `vant` | 移动端组件库 |
-| 运行时 | `axios` | 请求后端 |
-| 开发 | `vite`、`@vitejs/plugin-vue` | 构建器与 SFC 编译 |
-| 开发 | `typescript`、`vue-tsc` | 类型检查（`vue-tsc` 挂在 `build` 前） |
-| 开发 | `unplugin-auto-import`、`unplugin-vue-components` | API / 组件按需自动引入 |
-| 开发 | `vite-plugin-compression` | 产物另存 `.gz` |
-
-脚本（端口不指定，用默认值——dev 5173、preview 4173，被占用时自动 +1）：
-
-| 命令 | 做什么 | 端口 / 产物 |
-| --- | --- | --- |
-| `pnpm dev` | dev server，按请求即时转换，`/api` 转发到真实后端 | 默认 5173 |
-| `pnpm build` | `vue-tsc --noEmit` 类型检查 + production 构建 | `dist/` |
-| `pnpm build:only` | 跳过类型检查直接构建（量产物读数用） | `dist/` |
-| `pnpm preview` | **先 `pnpm build` 再起静态服务**预览 `dist/`，仍保留 `/api` 代理 | 默认 4173 |
-| `pnpm typecheck` | 只跑类型检查 | — |
-
 配置本身只有五类：
 
-| 类别 | 配置项 | h5-vite 里对应什么 |
-| --- | --- | --- |
-| 入口 | `root` + `index.html` 里的 `<script type="module">` | `main.ts` |
-| 出口 | `build.outDir` / `rollupOptions.output.*` | `dist/assets/[name].[hash:8].js` |
-| 转换 | 内置（按文件类型自动分流）+ 官方语言插件 | `@vitejs/plugin-vue` 等 |
-| 扩展 | `plugins` | AutoImport / Components / compression |
-| 优化 | `manualChunks` / `minify` / `target` | vant / axios / vue / vendor 分组 |
+| 类别 | 作用与关键项 |
+| --- | --- |
+| 入口 | `root` 定位项目根，入口是 `index.html` 里的 `<script type="module">`，不是配置里的路径 |
+| 出口 | `build.outDir`（默认 `dist`）；`rollupOptions.output.*FileNames` 决定产物命名 |
+| 转换 | 内置按文件类型自动分流（TS / CSS / 图片）；`.vue`、JSX 这类语言文件交给官方语言插件 |
+| 扩展 | `plugins` 数组，复用 Rollup 插件接口 |
+| 优化 | `manualChunks` 分组、`minify` 压缩、`target` 兼容目标 |
 
-下面是完整的生产配置——本工程没有第二个配置文件：
-
-> 摘自 `./code/h5-vite/vite.config.ts`（运行：`pnpm build`）
+下面是完整的生产参考配置：
 
 ```ts
 const API_TARGET = 'https://api.show-track.top'
@@ -162,7 +137,7 @@ export default defineConfig(({ mode }) => ({
 | 配置 | 默认值 | 作用 |
 | --- | --- | --- |
 | `root` | `process.cwd()` | 项目根；`index.html`、`.env*`、`public/` 都相对它解析 |
-| `base` | `'/'` | 公共路径前缀，dev 与 build 都生效；部署到子目录时改成 `'/blog/'` |
+| `base` | `'/'` | 公共路径前缀，dev 与 build 都生效` |
 | `publicDir` | `'public'` | 原样复制到产物根，用 `/logo.svg` 引用，不参与构建 |
 | `build.outDir` | `'dist'` | 产物目录，相对 `root` |
 | `build.rollupOptions` | `{}` | 直接透传给 Rollup / Rolldown：`input`、`output`、`plugins` 都在这里 |
@@ -171,56 +146,41 @@ export default defineConfig(({ mode }) => ({
 
 #### 环境变量
 
+Vite 从 `.env` 文件读环境变量，**哪些文件被加载由 mode 决定**：
+
 ```
 .env                  所有模式都加载
-.env.development      只在 dev 加载
-.env.production       只在 build 加载
+.env.development      只在 mode=development 时加载
+.env.production       只在 mode=production 时加载
 .env.local            本地覆盖，通常 gitignore
 .env.[mode].local     优先级最高
 ```
 
+**mode 怎么定**：`vite`（dev）默认 `development`，`vite build` 默认 `production`；用 `--mode` 显式指定任意值。mode 是 env 命中的开关——`vite build --mode staging` 会加载 `.env` + `.env.staging`（外加各自的 `.local` 变体），同时 `import.meta.env.MODE` 变成 `'staging'`。
+
 同一变量在多份文件里出现时，**mode 专属 > 通用，`.local` > 非 `.local`**；已经存在的进程环境变量优先级最高。
 
-读变量的入口是 `import.meta.env`。Vite 默认往里放五个内置常量——`MODE`（当前模式）、`DEV` / `PROD`（互斥布尔）、`BASE_URL`（就是 `base`）、`SSR`；`.env*` 文件里 `envPrefix`（默认 `VITE_`）前缀的变量也会进来。三条必须记住的规则：
+读变量的入口是 `import.meta.env`，Vite 默认往里放五个内置常量——`MODE`（当前模式）、`DEV` / `PROD`（互斥布尔）、`BASE_URL`（就是 `base`）、`SSR`；`.env*` 文件里 `envPrefix`（默认 `VITE_`）前缀的变量也会进来。三条必须记住的规则：
 
 1. **前缀是闸门**，防止把数据库密码打进前端产物。
 2. **替换是字面量内联**，所以 `if (import.meta.env.PROD) {...}` 的假分支能被压缩器删掉。
 3. **不能动态拼接 key**，构建期不知道 `key` 是什么，`import.meta.env[key]` 替换不了。
 
-本工程的 `.env` 写 `VITE_APP_TITLE=赴演记 H5`，`.env.development` 把它覆盖成 `赴演记 H5 (dev)`。dev 下请求 `/src/env.ts`，server 返回的第一行就是注入的环境对象：
-
-```
-import.meta.env = {"BASE_URL": "/", "DEV": true, "MODE": "development", "PROD": false, "SSR": false,
-  "VITE_API_BASE": "/api", "VITE_APP_TITLE": "赴演记 H5 (dev)", "VITE_ASSET_BASE": "https://api.show-track.top"};
-```
-
-注意里面**没有 `VITE_API_TOKEN`**：token 只写在 `.env.local`（已 gitignore），仓库里提交的是 `.env.local.example`。没配这一项，对象里就根本没有这个 key，代码里的 `|| ''` 兜底才会生效：
-
-> 摘自 `./code/h5-vite/src/env.ts`
-
-```ts
-export const ENV = {
-    appTitle: import.meta.env.VITE_APP_TITLE || '赴演记 H5',
-    apiBase: import.meta.env.VITE_API_BASE || '/api',
-    assetBase: import.meta.env.VITE_ASSET_BASE || 'https://api.show-track.top',
-    apiToken: import.meta.env.VITE_API_TOKEN || '',
-    isDev: import.meta.env.DEV
-}
-```
-
-收口成 `ENV` 的意义：业务代码里只有这一处出现 `import.meta.env`，换构建器时只改这个文件。
-
-build 后产物里**不存在 `import.meta.env` 这个对象**，全部是字面量——`dist/assets/*.js` 里能搜到 `赴演记 H5` 与 `"/api"`，而 `import.meta.env.DEV` 出现的地方已被折叠成假值、整段删掉。
-
-token 的放法（只走环境变量，不进配置文件、不进 git）：
+值的使用就两步：文件里声明，代码里读。
 
 ```bash
-cp .env.local.example .env.local
-# 编辑 .env.local：VITE_API_TOKEN=你的 token
-pnpm dev
+# .env.staging —— 为自定义模式准备的变量
+VITE_API_BASE=https://staging.example.com
+VITE_APP_TITLE=赴演记 (staging)
 ```
 
-token 会被编译进产物，因此只用于本地调试；真实的线上鉴权应由网关下发。
+```ts
+// 业务代码统一从 import.meta.env 读；变量没配时对象里根本没有这个 key，用 || 默认值兜底
+const apiBase = import.meta.env.VITE_API_BASE || '/api'
+const appTitle = import.meta.env.VITE_APP_TITLE
+```
+
+注意 `DEV` / `PROD` 由命令决定（`vite` 恒为 `DEV: true`，`vite build` 恒为 `PROD: true`），mode 名只是个标签——`--mode staging` 不会改变 `PROD` 的值。
 
 #### 静态资源
 
@@ -235,20 +195,6 @@ token 会被编译进产物，因此只用于本地调试；真实的线上鉴�
 
 是否内联由 `build.assetsInlineLimit` 决定（默认 4096 字节）；`?inline` / `?no-inline` 可以显式覆盖它。
 
-本工程的海报来自后端，是运行时拼出来的绝对地址，所以不走 import——`/uploads/xxx` 这类相对路径要补上资源域名：
-
-> 摘自 `./code/h5-vite/src/utils/format.ts`
-
-```ts
-export function posterOf(show: ShowRecord): string {
-    const url = show.posterOssUrl || show.posterOriginalUrl || show.posterUrl
-    if (!url) return ''
-    return url.startsWith('/') ? `${ENV.assetBase}${url}` : url
-}
-```
-
-`ENV.assetBase` 就是 `.env` 里的 `VITE_ASSET_BASE`——同一份代码在 dev 与线上取到同一个域名前缀。
-
 #### CSS
 
 | 需求 | 写法 | 说明 |
@@ -262,41 +208,13 @@ export function posterOf(show: ShowRecord): string {
 
 `.vue` 的编译不在内置转换里，必须装 `@vitejs/plugin-vue`——所谓「配置全手写」针对的是产物收尾，不是语言编译。
 
-Vant 的样式分两种入口：模板里用到的组件由 `VantResolver` 自动注入样式；`showToast` / `showConfirmDialog` 这类函数式组件不经过模板解析，必须手动引一次：
-
-> 摘自 `./code/h5-vite/src/main.ts`
-
-```ts
-import 'vant/es/toast/style'
-import 'vant/es/dialog/style'
-import './styles/index.css'
-```
-
-#### 框架模板
-
-`create-vite` 是官方脚手架，每个框架一个模板族（各带 TS 变体）：`vanilla` / `vue` / `react` / `preact` / `svelte` / `lit`。模板之间的差异不在 Vite 本身，而在**各家的语言插件**——Vite 核心只做通用转换（TS、CSS、静态资源），`.vue` / JSX / Svelte 这类语言文件全部交给官方插件编译：
-
-| 框架 | 语言插件 | 它负责什么 |
-| --- | --- | --- |
-| Vue | `@vitejs/plugin-vue` | `.vue` SFC 编译：template 转渲染函数、scoped style、自定义块；HMR 的 accept 边也由它生成 |
-| React | `@vitejs/plugin-react` | esbuild 转译 JSX / TSX；注入 Fast Refresh 代码，组件状态在热更新后保留 |
-| Svelte | `@sveltejs/vite-plugin-svelte` | `.svelte` 文件编译与 HMR |
-| Vue JSX | `@vitejs/plugin-vue-jsx` | Vue 里的 JSX 写法（本工程没用到） |
-
-两个高频问题：
-
-1. **为什么 `.vue` 不内置支持？** 语言编译是框架语义，不是构建器语义；插件模式让 Vite 保持中立，框架升级（比如 Vue 3.4 的编译优化）不用等 Vite 发版。
-2. **React 模板 dev 下页面为什么能保留状态？** `@vitejs/plugin-react` 给每个组件注入了 `react-refresh` 的注册调用——它做的是 React 的 Fast Refresh，和 Vue 插件生成的 accept 边是同一思想：**框架插件负责声明「这个文件变了该怎么热替换」**。
-
 ### 工程化 & 性能
 
 #### 预构建（`optimizeDeps`）
 
-**为什么需要预构建**：`node_modules` 里的包大量是 CommonJS，浏览器不认；即使是 ESM，一个包也可能拆成几百个小文件，浏览器逐个请求会形成请求瀑布。预构建把依赖提前转成**单个 ESM 文件**并合并，一次解决两件事。
+- **为什么需要预构建**：`node_modules` 里的包大量是 CommonJS，浏览器不认；即使是 ESM，一个包也可能拆成几百个小文件，浏览器逐个请求会形成请求瀑布。预构建把依赖提前转成**单个 ESM 文件**并合并，一次解决两件事。
 
-产物落在 `node_modules/.vite/deps/`，并带一份元数据（节选）：
-
-> 摘自 `./code/h5-vite/node_modules/.vite/deps/_metadata.json`（运行：`pnpm dev`）
+- 产物落在 `node_modules/.vite/deps/`，并带一份元数据`node_modules/.vite/deps/_metadata.json`：
 
 ```json
 {
@@ -304,14 +222,7 @@ import './styles/index.css'
   "optimized": {
     "axios": { "src": "../../.pnpm/axios@1.21.1/node_modules/axios/index.js", "file": "axios.js" },
     "pinia": { "src": "../../.pnpm/pinia@3.0.4_.../node_modules/pinia/dist/pinia.mjs", "file": "pinia.js" },
-    "vant": { "src": "../../.pnpm/vant@4.10.2_.../node_modules/vant/es/index.mjs", "file": "vant.js" },
-    "vant/es": { "src": "../../.pnpm/vant@4.10.2_.../node_modules/vant/es/index.mjs", "file": "vant_es.js" },
-    "vant/es/toast/style": {
-      "src": "../../.pnpm/vant@4.10.2_.../node_modules/vant/es/toast/style/index.mjs",
-      "file": "vant_es_toast_style.js"
-    },
-    "vue-router": { "src": "../../.pnpm/vue-router@4.6.5_.../node_modules/vue-router/dist/vue-router.mjs", "file": "vue-router.js" },
-    "vue": { "src": "../../.pnpm/vue@3.5.45_.../node_modules/vue/dist/vue.runtime.esm-bundler.js", "file": "vue.js" }
+    ...
   },
   "chunks": {
     "es-CqdtDXc6": { "file": "es-CqdtDXc6.js", "isDynamicEntry": false },
@@ -319,22 +230,12 @@ import './styles/index.css'
   }
 }
 ```
-
-`optimized` 共 27 项，其中 21 项是 `vant/es/*/style/index`——Vant 按需引入的样式子路径也被逐个预构建了，所以 dev 下点开一个按钮不会突然卡一下。
-
 dev 下 `main.ts` 的 import 会被改写成预构建产物：
 
-```
-import { createApp } from "/node_modules/.vite/deps/vue.js?v=55f00eac";
-import { createPinia } from "/node_modules/.vite/deps/pinia.js?v=55f00eac";
-import "/node_modules/.vite/deps/vant_es_toast_style.js?v=55f00eac";
-import "/node_modules/.vite/deps/vant_es_dialog_style.js?v=55f00eac";
-import "/src/styles/index.css";
-import App from "/src/App.vue";
-import router from "/src/router.ts";
-```
+- 裸导入会指向 `.vite/deps`，`?v=` 是预构建的缓存戳，依赖变了才会变，所以这一串 URL 可以被浏览器一直缓存到下次重新预构建
+- 源码路径仍是 `/src/*` 原样返回
 
-只有裸导入会指向 `.vite/deps`，源码路径仍是 `/src/*` 原样返回；`?v=` 是预构建的缓存戳，依赖变了才会变，所以这一串 URL 可以被浏览器一直缓存到下次重新预构建。
+![image-20261119120803327](image-20261119120803327.png)
 
 三个开关：
 
@@ -342,13 +243,32 @@ import router from "/src/router.ts";
 - `optimizeDeps.exclude`：排除某个包。常见于本地 workspace 包——被预构建成一个文件后，这个节点对编辑不再敏感。
 - `optimizeDeps.force` / `--force`：忽略缓存重新预构建。改完 `vite.config` 里依赖相关配置后用它。
 
+统一演示：
+
+```ts
+// vite.config.ts
+export default defineConfig({
+    optimizeDeps: {
+        // 扫描发现不了的依赖（动态 import、插件内部引入）显式声明，避免 dev 中途重新预构建
+        include: ['esm-dep > cjs-dep'],
+        // 本地 workspace 包不走预构建，保持源码引用、对编辑敏感
+        exclude: ['@my/workspace-pkg']
+    }
+})
+```
+
+```bash
+# 忽略缓存强制重新预构建（也可以删掉 node_modules/.vite 再起 dev）
+vite --force
+```
+
 #### 依赖缓存（`node_modules/.vite`）
 
-预构建产物不丢弃：它们连同 `_metadata.json` 一起缓存在 `node_modules/.vite/deps/`，下一次 `pnpm dev` 若判定「依赖没变」，直接用缓存、跳过预构建，冷启动更快。
+- 预构建产物不丢弃：它们连同 `_metadata.json` 一起缓存在 `node_modules/.vite/deps/`，下一次 `pnpm dev` 若判定「依赖没变」，直接用缓存、跳过预构建，冷启动更快。
 
-判定依据是元数据里的 `hash`，它由这些输入算出来：lockfile 内容、patch-package 的 `patches/`、`vite.config` 里与依赖相关的字段（如 `resolve.alias`、`optimizeDeps.*`）、`NODE_ENV`。任一变了，hash 变，重新预构建。
+- 判定依据是元数据里的 `hash`，它由这些输入算出来：lockfile 内容、patch-package 的 `patches/`、`vite.config` 里与依赖相关的字段（如 `resolve.alias`、`optimizeDeps.*`）、`NODE_ENV`。任一变了，hash 变，重新预构建。
 
-缓存有**两层**，别混：
+缓存有**两层**：
 
 | 层 | 位置 | 失效条件 |
 | --- | --- | --- |
@@ -382,49 +302,48 @@ if (import.meta.hot) {
 - **代码分割**：`build.rollupOptions.output.manualChunks` 按模块 id 分组；路由表里的 `() => import()` 自动切 chunk。
 - **tree-shaking**：Rollup / Rolldown 的能力，前提是 ESM；包自己的 `sideEffects` 声明决定「没被引用的模块能不能整块删」。
 - **压缩**：`build.minify` 默认 `'esbuild'`；要更激进的压缩可换 `'terser'`（需装 `terser`）。
-- **兼容**：`build.target` 默认按浏览器基线（`baseline-widely-available`），要兼容旧浏览器时显式写 `es2015` / `es2017` 等。本工程写死 `es2020`。
+- **兼容**：`build.target` 默认按浏览器基线（`baseline-widely-available`），要兼容旧浏览器时显式写 `es2015` / `es2017` 等。
 - **资源内联**：`build.assetsInlineLimit` 控制小文件是否变 data URL。
 - **CSS 拆分**：`build.cssCodeSplit` 让异步 chunk 的 CSS 随 chunk 加载。
 - **组件按需**：`unplugin-vue-components` + `VantResolver` 让模板里的 `<van-button>` 自动 import 组件与样式；产物 CSS 里只有用到的组件。
 
-`manualChunks` 只接受函数形式（Rolldown 下写对象会报 `Invalid type: Expected Function but received Object`）。本工程按来源分四组：
-
-> 摘自 `./code/h5-vite/vite.config.ts`（运行：`pnpm build`）
+四个关键项收进一个配置里：
 
 ```ts
-manualChunks(id) {
-    if (!id.includes('node_modules')) return null
-    if (id.includes('node_modules/vant')) return 'vant'
-    if (id.includes('node_modules/axios')) return 'axios'
-    if (
-        id.includes('node_modules/vue') ||
-        id.includes('node_modules/@vue') ||
-        id.includes('node_modules/pinia')
-    ) {
-        return 'vue'
+// vite.config.ts
+export default defineConfig({
+    build: {
+        // 兼容目标：默认 baseline-widely-available；要兼容旧浏览器时显式写 es2015 / es2017
+        target: 'es2020',
+        // 压缩器：默认 'esbuild'（更快）；要更激进的压缩可换 'terser'（需装 terser）
+        minify: 'esbuild',
+        // 异步 chunk 的 CSS 随 chunk 加载
+        cssCodeSplit: true,
+        rollupOptions: {
+            output: {
+                // manualChunks 按模块 id 分组——代码分割的主开关
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) return null
+                    if (id.includes('node_modules/vant')) return 'vant'
+                    if (id.includes('node_modules/axios')) return 'axios'
+                    if (
+                        id.includes('node_modules/vue') ||
+                        id.includes('node_modules/@vue') ||
+                        id.includes('node_modules/pinia')
+                    ) {
+                        return 'vue'
+                    }
+                    return 'vendor'
+                },
+                // 想自定义 chunk 名在这里改，默认自带 hash
+                chunkFileNames: 'assets/[name].[hash:8].js'
+            }
+        }
     }
-    return 'vendor'
-}
+})
 ```
 
-路由级懒加载是最自然的分割点，五个页面各一个 chunk：
-
-> 摘自 `./code/h5-vite/src/router.ts`（运行：`pnpm build`）
-
-```ts
-{
-    path: '/shows',
-    name: 'shows',
-    component: () => import('./views/shows/ListView.vue')
-},
-{
-    path: '/shows/new',
-    name: 'show-create',
-    component: () => import('./views/shows/EditView.vue')
-}
-```
-
-`import()` 是原生语法，不需要任何魔法注释——chunk 名直接取文件名（`ListView`），想要自定义名就在 `rollupOptions.output.chunkFileNames` 里改。
+路由级懒加载是最自然的分割点——路由表里写 `component: () => import('./views/ListView.vue')`，每个页面各一个 chunk。`import()` 是原生语法，不需要任何魔法注释，chunk 名直接取文件名。
 
 一次 `pnpm build:only` 的产物（gzip 取 `dist/assets/*.gz` 的实测字节）：
 
@@ -466,17 +385,6 @@ dist/assets/rolldown-runtime.….js     0.16 kB
 
 1. 面积大的包不等于「该删」——组件库这种固定成本看的是「用到了多少」，该优化的是按需引入，不是换包。
 2. 想持续盯着增量，把「量 gzip + 阈值告警」做成构建门禁更实际，见插件篇的 `mini-size-gate`。
-
-#### 命令与 preview
-
-| 命令 | 做什么 | 服务 / 产物 |
-| --- | --- | --- |
-| `pnpm dev` | 起 dev server，按请求即时转换 | 默认端口 5173 |
-| `pnpm build` | 类型检查 + production 构建 | `dist/` |
-| `pnpm build:only` | 只构建 | `dist/` |
-| `pnpm preview` | 先 `build` 再起纯静态服务预览真实产物 | 默认端口 4173 |
-
-`vite preview` **不是 dev server**：没有 HMR、不做任何转换，它服务的就是 `build` 写盘的 `dist/`——预览到的和要上线的完全一致。本工程的 `preview` 脚本先跑 `pnpm build` 再托管，保证预览的永远是最新产物；它还多配了一份 `/api` 代理，否则预览时列表页会 404。
 
 ## 插件体系
 
@@ -894,9 +802,3 @@ npm run build
 npm run preview   # http://localhost:5181
 ```
 
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 相关篇：[Webpack](./webpack.md)
-- [Vite 官方文档](https://vite.dev/)
-- [Vite 插件 API](https://vite.dev/guide/api-plugin.html)
