@@ -5,7 +5,7 @@
 // 发起 10 个 pbkdf2，会看到前 4 个同时跑、第 5 个起要等线程释放 —— 排队可见。
 //
 // 想验证扩容效果，用下面命令再跑一次对比（注意：必须在进程启动前设置，运行时改无效）：
-//   UV_THREADPOOL_SIZE=8 node src/03-uv-threadpool.js
+//   UV_THREADPOOL_SIZE=8 node src/uv-threadpool.js
 
 const crypto = require('node:crypto')
 

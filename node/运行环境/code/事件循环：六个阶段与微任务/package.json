@@ -4,10 +4,10 @@
   "description": "Node.js 后端知识体系 - 《事件循环：六个阶段与微任务》配套实验（阶段观测、微任务检查点、线程池）",
   "type": "commonjs",
   "scripts": {
-    "03phases": "node src/03-eventloop-phases.js",
-    "03check": "node src/03-microtask-checkpoint.js",
-    "03starve": "node src/03-nexttick-starve.js",
-    "03pool": "node src/03-uv-threadpool.js"
+    "phases": "node src/eventloop-phases.js",
+    "check": "node src/microtask-checkpoint.js",
+    "starve": "node src/nexttick-starve.js",
+    "pool": "node src/uv-threadpool.js"
   },
   "license": "MIT"
 }

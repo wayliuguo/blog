@@ -12,7 +12,7 @@
 // 另外还有两条"插队"队列，它们不属于任何阶段，而是在每个回调返回处被清空：
 //   process.nextTick 队列（优先级更高）与 Promise 微任务队列
 //
-// 运行：node src/03-eventloop-phases.js
+// 运行：node src/eventloop-phases.js
 // 本机 Node 22 实测输出与阶段归属见文件末尾注释。
 
 const fs = require('node:fs')
@@ -90,7 +90,8 @@ console.log('==== 同步代码结束 ====')
 //   [nextTick] 顶层 nextTick                     <- nextTick 队列，优先级最高
 //   [对照] 无连接 server 的 close                 <- 也是 nextTick 队列里的（见文末说明）
 //   [微任务] 顶层 promise then                    <- Promise 微任务队列
-//   [timers] setTimeout callback                 <- 进入事件循环，第一个 timers 阶段
+//   [timers] setTimeout callback                 <- 进 loop 前的"首次 timers"（libuv 1.45 兼容规则：
+//                                                   顶层注册且已到期的 timer 在进入事件循环前先跑一次）
 //   [微任务] setTimeout promise then              <- 每个回调返回处都是微任务检查点
 //   [check] 顶层 setImmediate                    <- 第一轮的 poll 没有就绪的 I/O，直接进 check
 //   [poll] fs.readFile I/O callback              <- 第二轮：文件读完了，回调在 poll 阶段执行
