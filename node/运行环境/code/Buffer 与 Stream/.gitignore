@@ -1,0 +1,4 @@
+# 复制大文件 demo 的复制产物（由脚本生成，不入库；源文件 src/source.txt 内容可自行修改，需入库）
+src/copy-manual/copy-manual.txt
+src/copy-pipe/copy-pipe.txt
+src/copy-pipeline/copy-pipeline.txt

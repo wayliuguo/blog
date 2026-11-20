@@ -1,14 +1,14 @@
 {
   "name": "buffer-and-stream",
   "version": "1.0.0",
-  "description": "Node.js 后端知识体系 - 《Buffer 与 Stream》配套实验（字节视角、四种流、背压、fs 目录遍历）",
+  "description": "Node.js 后端知识体系 - 《Buffer 与 Stream》配套实验（字节视角、四种流、背压复制大文件）",
   "type": "commonjs",
   "scripts": {
-    "05buffer": "node src/05-buffer.js",
-    "05types": "node src/05-stream-types.js",
-    "05vsbuffered": "node src/05-stream-vs-buffered.js",
-    "05flow": "node src/05-stream-flow-control.js",
-    "05fs": "node src/05-fs-dir.js"
+    "buffer": "node src/buffer.js",
+    "types": "node src/stream-types.js",
+    "copy-manual": "node src/copy-manual/copy-manual.js",
+    "copy-pipe": "node src/copy-pipe/copy-pipe.js",
+    "copy-pipeline": "node src/copy-pipeline/copy-pipeline.js"
   },
   "license": "MIT"
 }

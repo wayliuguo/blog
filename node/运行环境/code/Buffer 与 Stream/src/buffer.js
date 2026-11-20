@@ -1,6 +1,7 @@
-// 05 Buffer：Node 处理二进制数据的桥梁（JS 字符串是 UTF-16，网络/文件里是字节）
+// Buffer：Node 处理二进制数据的桥梁（JS 字符串是 UTF-16，网络/文件里是字节）
 // 对应文档《Buffer 与 Stream》→「Buffer 到底是什么」「十六进制与字符串互转」
 //   「Buffer.alloc 与 Buffer.from 的区别」「字符长度 ≠ 字节长度：Content-Length 的坑」
+// 运行命令：npm run buffer
 
 // 1) Buffer 就是固定长度的字节序列，且是 Uint8Array 的子类
 const buf1 = Buffer.from('hello')
