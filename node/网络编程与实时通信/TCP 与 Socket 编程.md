@@ -82,9 +82,7 @@ Hello Node.js
 JavaScript ── 你需要手动 .toString() 才能得到字符串
 ```
 
-Node.js 网络编程里 `socket.on('data', cb)` 拿到的 `data` 是 **Buffer**，而不是天然的字符串。本篇代码块均摘自配套脚本，脚本用 CommonJS 的 `require(...)` 写法（与正文示例里偶尔出现的 `import` 只是风格差异，能力一致）：
-
-> 摘自 `./code/net-lab/src/01-tcp-server.js`（运行：`npm run 01`，另开终端跑 `npm run 02` 发数据）
+> 摘自 `./code/TCP 与 Socket 编程/tcp-server.js`（运行：`npm run tcp-server`，另开终端跑 `npm run tcp-client` 发数据）
 
 ```js
 socket.on('data', chunk => {
@@ -98,10 +96,10 @@ socket.on('data', chunk => {
 
 同一段字节换个编码解读，结果完全不同——`utf8` 给出 `你好`，`hex` 给出 `e4bda0e5a5bd`（正是那 3 个汉字的 UTF-8 字节，每个汉字 3 字节）。平时 `console.log(buf)` 直接打印出的 `<Buffer 48 65 6c 6c 6f ...>` 就是这个 hex 形式（十六进制、无分隔符）：
 
-实测输出（`npm run 01` + `npm run 02`，服务端日志）：
+实测输出（`npm run tcp-server` + `npm run tcp-client`，服务端日志）：
 
 ```
-TCP 服务已启动，监听 4000。另开终端运行 `npm run 02` 连接本服务
+TCP 服务已启动，监听 4000。另开终端运行 `npm run tcp-client` 连接本服务
 客户端连入: ::ffff:127.0.0.1:60275
   收到数据(utf8): 你好
   收到数据(hex) : e4bda0e5a5bd
@@ -117,14 +115,14 @@ socket error: read ECONNRESET
 
 客户端快速连续调用发送：
 
-> 摘自 `./code/net-lab/src/03-sticky-packet.js`（运行：`npm run 03`）
+> 摘自 `./code/TCP 与 Socket 编程/sticky-packet.js`（运行：`npm run sticky-packet`）
 
 ```js
 client.write('hello')
 client.write('world')
 ```
 
-实测输出（`npm run 03`，脚本里客户端一次连发 3 条：`hello` / `world` / `node`）：
+实测输出（`npm run sticky-packet`，脚本里客户端一次连发 3 条：`hello` / `world` / `node`）：
 
 ```
 粘包实验服务已启动(4001)，客户端将快速连发 3 条短消息...
@@ -132,7 +130,7 @@ client.write('world')
 第 1 次 data 事件，本次收到 14 字节：<helloworldnode>
 
 （结果因机器/系统/网络而异，但“TCP 是字节流、没有消息边界”这一原理不变）
-想要稳定收消息，必须像 04 那样用「长度前缀」自己做分包
+想要稳定收消息，必须像 protocol-server 那样用「长度前缀」自己做分包
 ```
 
 3 次 `write` 被合并成 1 次 `data` 事件、14 字节（5 + 5 + 4），这就是粘包。
@@ -190,7 +188,7 @@ Socket（套接字）可以简单理解为：**应用程序使用操作系统网
 
 服务端：
 
-> 摘自 `./code/net-lab/src/01-tcp-server.js`（运行：`npm run 01`）
+> 摘自 `./code/TCP 与 Socket 编程/tcp-server.js`（运行：`npm run tcp-server`）
 
 ```js
 const net = require('node:net')
@@ -217,13 +215,13 @@ const server = net.createServer(socket => {
 })
 
 server.listen(4000, () => {
-    console.log('TCP 服务已启动，监听 4000。另开终端运行 `npm run 02` 连接本服务')
+    console.log('TCP 服务已启动，监听 4000。另开终端运行 `npm run tcp-client` 连接本服务')
 })
 ```
 
 客户端：
 
-> 摘自 `./code/net-lab/src/02-tcp-client.js`（运行：`npm run 02`）
+> 摘自 `./code/TCP 与 Socket 编程/tcp-client.js`（运行：`npm run tcp-client`）
 
 ```js
 const net = require('node:net')
@@ -247,7 +245,7 @@ socket.on('end', () => {
 })
 ```
 
-实测输出（`npm run 01` + `npm run 02`，客户端日志）：
+实测输出（`npm run tcp-server` + `npm run tcp-client`，客户端日志）：
 
 ```
 已连接到服务端
@@ -389,7 +387,7 @@ Network I/O      某些其他任务
 
 回到 Stream。假设把一个大文件读出来通过网络发出去：
 
-> 摘自 `./code/net-lab/src/09-backpressure.js`（运行：`npm run 09`）
+> 摘自 `./code/TCP 与 Socket 编程/backpressure.js`（运行：`npm run backpressure`）
 
 ```js
 // 推荐写法：pipe 内部自动协调背压，无需手动管 write 返回值与 drain
@@ -415,7 +413,7 @@ Disk（生产 500 MB/s）
 
 `Writable` 提供了背压机制来化解：`socket.write(buffer)` 返回一个 **boolean**。
 
-> 摘自 `./code/net-lab/src/09-backpressure.js`（运行：`npm run 09`）
+> 摘自 `./code/TCP 与 Socket 编程/backpressure.js`（运行：`npm run backpressure`）
 
 ```js
 // write 返回 boolean：false 表示内部缓冲已到阈值，应当暂停生产、等 drain
@@ -425,7 +423,7 @@ if (!canContinue) console.log('  write 返回 false：内部缓冲到阈值，�
 
 返回 `false` 意味着 Writable 内部缓冲已经积压到阈值，**此时不应继续疯写**，而应等待 `'drain'` 事件——它表示缓冲已排空，可以继续写：
 
-> 摘自 `./code/net-lab/src/09-backpressure.js`（运行：`npm run 09`）
+> 摘自 `./code/TCP 与 Socket 编程/backpressure.js`（运行：`npm run backpressure`）
 
 ```js
 client.on('drain', () => console.log('drain 事件：缓冲已排空，可继续生产'))
@@ -433,7 +431,7 @@ client.on('drain', () => console.log('drain 事件：缓冲已排空，可继续
 
 `09-backpressure.js` 把一份 2MB 数据经 TCP 推给客户端、客户端每收到一片就回传一片，跑完两端字节数一致，说明背压之下不丢数据：
 
-实测输出（`npm run 09`）：
+实测输出（`npm run backpressure`）：
 
 ```
 客户端共收到 2097152 字节（≈ 文件大小，背压下不丢数据）
@@ -461,7 +459,7 @@ Producer 继续生产 ◀─┘
 
 上面的背压逻辑如果自己写，很容易写错：
 
-> 摘自 `./code/net-lab/src/12-pipe-vs-manual.js`（运行：`npm run 12`）
+> 摘自 `./code/TCP 与 Socket 编程/pipe-vs-manual.js`（运行：`npm run pipe-vs-manual`）
 
 ```js
 // 反例：write 返回 false 也不管，照样把下一片写进去
@@ -471,7 +469,7 @@ rs.on('end', () => socket.end())
 
 而 `pipe()` 会**内部协调**生产者与消费者的速度：下游（Socket）消费跟不上，就自动暂停上游读取；等 `drain` 后再继续。
 
-> 摘自 `./code/net-lab/src/12-pipe-vs-manual.js`（运行：`npm run 12`）
+> 摘自 `./code/TCP 与 Socket 编程/pipe-vs-manual.js`（运行：`npm run pipe-vs-manual`）
 
 ```js
 // 推荐写法：pipe 内部自动协调背压，无需手动管 write 返回值与 drain
@@ -480,7 +478,7 @@ rs.pipe(socket)
 
 同一份 4MB 数据、同一个「先停 800ms、之后每片歇 25ms」的慢速客户端，只换这一行写法，服务端发送缓冲的峰值积压差了 20 倍：
 
-实测输出（`npm run 12`）：
+实测输出（`npm run pipe-vs-manual`）：
 
 ```
 同一份 4MB 数据，同一个「先停 800ms、之后每片歇 25ms」的慢速客户端：
@@ -502,12 +500,12 @@ TCP 只给你一条可靠字节流，那"我要 `GET /users`"这层语义该由�
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `./code/net-lab/src/01-tcp-server.js` | 用 `node:net` 写最小 TCP Server，`data` 事件收到的是 Buffer |
-| `./code/net-lab/src/02-tcp-client.js` | TCP 客户端：`createConnection` + `write` + 接收响应 |
-| `./code/net-lab/src/03-sticky-packet.js` | 复现粘包：两次 `write` 被合并成一次 `data` |
-| `./code/net-lab/src/04-protocol-server.js` | 自定义分包协议服务端：`Length(4B) + Body(NB)` |
-| `./code/net-lab/src/04-protocol-client.js` | 自定义分包协议客户端：按长度边界正确切分消息 |
-| `./code/net-lab/src/09-backpressure.js` | 网络侧背压：`pipe` 托管背压、`write()` 返回值与 `drain` |
-| `./code/net-lab/src/12-pipe-vs-manual.js` | 手写 `on('data') + write` 与 `pipe` 的发送缓冲峰值积压对比 |
+| `./code/TCP 与 Socket 编程/tcp-server.js` | 用 `node:net` 写最小 TCP Server，`data` 事件收到的是 Buffer |
+| `./code/TCP 与 Socket 编程/tcp-client.js` | TCP 客户端：`createConnection` + `write` + 接收响应 |
+| `./code/TCP 与 Socket 编程/sticky-packet.js` | 复现粘包：两次 `write` 被合并成一次 `data` |
+| `./code/TCP 与 Socket 编程/protocol-server.js` | 自定义分包协议服务端：`Length(4B) + Body(NB)` |
+| `./code/TCP 与 Socket 编程/protocol-client.js` | 自定义分包协议客户端：按长度边界正确切分消息 |
+| `./code/TCP 与 Socket 编程/backpressure.js` | 网络侧背压：`pipe` 托管背压、`write()` 返回值与 `drain` |
+| `./code/TCP 与 Socket 编程/pipe-vs-manual.js` | 手写 `on('data') + write` 与 `pipe` 的发送缓冲峰值积压对比 |
 
-运行方式（`code/net-lab` 目录下）：`npm run 01`（服务端，常驻）/ `npm run 02`（客户端，另开终端）/ `npm run 03` / `npm run 04s` + `npm run 04c` / `npm run 09` / `npm run 12`，除 01、04s 外都会自动结束。
+运行方式（`code/TCP 与 Socket 编程` 目录下）：`npm run tcp-server`（服务端，常驻）/ `npm run tcp-client`（客户端，另开终端）/ `npm run sticky-packet` / `npm run protocol-server` + `npm run protocol-client` / `npm run backpressure` / `npm run pipe-vs-manual`，除 `tcp-server`、`protocol-server` 外都会自动结束。

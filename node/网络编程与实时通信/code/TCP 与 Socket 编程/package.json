@@ -1,0 +1,16 @@
+{
+  "name": "tcp-and-socket",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 《TCP 与 Socket 编程》配套实验（TCP 字节流、粘包拆包、网络侧背压）",
+  "type": "commonjs",
+  "scripts": {
+    "tcp-server": "node tcp-server.js",
+    "tcp-client": "node tcp-client.js",
+    "sticky-packet": "node sticky-packet.js",
+    "protocol-server": "node protocol-server.js",
+    "protocol-client": "node protocol-client.js",
+    "backpressure": "node backpressure.js",
+    "pipe-vs-manual": "node pipe-vs-manual.js"
+  },
+  "license": "MIT"
+}

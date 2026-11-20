@@ -1,4 +1,4 @@
-// 03 粘包/拆包复现实验（单文件即可跑，无需开两个终端）
+// 粘包/拆包复现实验（单文件即可跑，无需开两个终端）
 // 服务端收到 data 时打印「第 N 次 data 事件，本次收到 X 字节：<内容>」
 // 客户端快速连续 write 三次短消息（hello / world / node），
 // 读者很可能看到“3 次 write 被合并成 1 次 data 事件”（粘包）
@@ -26,7 +26,7 @@ server.listen(4001, () => {
     // 等一会儿观察结果后自动退出
     setTimeout(() => {
         console.log('\n（结果因机器/系统/网络而异，但“TCP 是字节流、没有消息边界”这一原理不变）')
-        console.log('想要稳定收消息，必须像 04 那样用「长度前缀」自己做分包')
+        console.log('想要稳定收消息，必须像 protocol-server 那样用「长度前缀」自己做分包')
         server.close()
         client.end()
         process.exit(0)

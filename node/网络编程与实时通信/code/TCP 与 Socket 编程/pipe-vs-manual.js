@@ -1,6 +1,6 @@
-// 12 背压对比：手写 on('data') + write（不检查返回值）与 pipe（自动协调）
+// 背压对比：手写 on('data') + write（不检查返回值）与 pipe（自动协调）
 // 同一份 2MB 数据、同一个慢速客户端，看「服务端发送缓冲峰值积压」差多少
-// 运行方式：`npm run 12`，单文件自包含，跑完自动退出
+// 运行方式：`npm run pipe-vs-manual`，单文件自包含，跑完自动退出
 const net = require('node:net')
 const fs = require('node:fs')
 const path = require('node:path')

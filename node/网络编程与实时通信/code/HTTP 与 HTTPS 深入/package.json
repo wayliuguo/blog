@@ -1,0 +1,14 @@
+{
+  "name": "http-and-https",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 《HTTP 与 HTTPS 深入》配套实验（原生 http、Keep-Alive、HTTPS、三个超时、chunked）",
+  "type": "commonjs",
+  "scripts": {
+    "http-server": "node http-server.js",
+    "keepalive": "node keepalive.js",
+    "https-server": "node https-server.js",
+    "keepalive-timeouts": "node keepalive-timeouts.js",
+    "http-response": "node http-response.js"
+  },
+  "license": "MIT"
+}

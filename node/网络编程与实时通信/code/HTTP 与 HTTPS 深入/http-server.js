@@ -1,6 +1,6 @@
-// 05 用 node:http 手写最小 HTTP Server
+// 用 node:http 手写最小 HTTP Server
 // 要点：req 是可读流（请求体要像流一样累积），res 是可写流（用 end 写出响应）
-// 运行方式：`npm run 05`，另开终端用 curl 测试
+// 运行方式：`npm run http-server`，另开终端用 curl 测试
 const http = require('node:http')
 
 const server = http.createServer((req, res) => {

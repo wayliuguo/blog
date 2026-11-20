@@ -46,7 +46,7 @@ IP      （网络层：寻址与路由）
 
 Node.js 内置 `node:http` 就能直接起一个 HTTP Server。本篇代码块均摘自配套脚本，脚本是 CommonJS 的 `require(...)` 写法：
 
-> 摘自 `./code/net-lab/src/05-http-server.js`（运行：`npm run 05`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/http-server.js`（运行：`npm run http-server`）
 
 ```js
 const http = require('node:http')
@@ -76,7 +76,7 @@ server.listen(3000, () => {
 })
 ```
 
-实测输出（`npm run 05`，服务端日志）：
+实测输出（`npm run http-server`，服务端日志）：
 
 ```
 最小 HTTP 服务已启动: http://localhost:3000
@@ -123,7 +123,7 @@ Operating System  （内核 / 网卡）
 
 `req` 是**可读流（Readable）**。客户端发来的请求体可能很大、分多次到达，Node 用 `data` 事件逐块推给你：
 
-> 摘自 `./code/net-lab/src/05-http-server.js`（运行：`npm run 05`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/http-server.js`（运行：`npm run http-server`）
 
 ```js
         // 请求体是流：用 chunks[] 累积，结束后再 Buffer.concat 起来
@@ -138,7 +138,7 @@ Operating System  （内核 / 网卡）
 
 `chunks.push(c)` 里的 `c` 是 Buffer，所以最后要用 `Buffer.concat(chunks).toString('utf8')` 才能拼回字符串。实测一次 `POST /api/echo`：
 
-实测输出（`npm run 05`，请求 `POST /api/echo -d "hello"`）：
+实测输出（`npm run http-server`，请求 `POST /api/echo -d "hello"`）：
 
 ```
 收到请求: POST /api/echo
@@ -147,7 +147,7 @@ body: {"echo":"hello","len":5}
 
 `res` 是**可写流（Writable）**。你可以分多次写入，最后用 `end()` 收尾：
 
-> 摘自 `./code/net-lab/src/13-http-response.js`（运行：`npm run 13`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/http-response.js`（运行：`npm run http-response`）
 
 ```js
         // 分多次 write，最后用 end() 收尾；没给 Content-Length，Node 改用 chunked
@@ -159,7 +159,7 @@ body: {"echo":"hello","len":5}
 
 多次 `write` 而没给 `Content-Length`，Node 会自动改用分块传输：
 
-实测输出（`npm run 13`，请求 `/chunks` 一路）：
+实测输出（`npm run http-response`，请求 `/chunks` 一路）：
 
 ```
 /chunks
@@ -190,7 +190,7 @@ JavaScript（你的 data / end 回调拿到 Buffer）
 
 当响应体是一次性算出来的（比如 `JSON.stringify(...)`），服务端可以在 `writeHead` 里带上 `Content-Length`，告诉客户端"我总共发这么多字节，收齐就结束"：
 
-> 摘自 `./code/net-lab/src/13-http-response.js`（运行：`npm run 13`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/http-response.js`（运行：`npm run http-response`）
 
 ```js
         // 响应体一次性算出来：可以提前给出 Content-Length
@@ -218,7 +218,7 @@ Transfer-Encoding: chunked
 
 同一份服务，三条路径各请求一次，两个头此消彼长——有 `Content-Length` 就没有 `Transfer-Encoding`，反之亦然：
 
-实测输出（`npm run 13`）：
+实测输出（`npm run http-response`）：
 
 ```
 /once
@@ -280,7 +280,7 @@ requestTimeout     整个请求（含处理）的最长允许时间
 
 设置建议（毫秒）：
 
-> 摘自 `./code/net-lab/src/11-keepalive-timeouts.js`（运行：`npm run 11`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/keepalive-timeouts.js`（运行：`npm run keepalive-timeouts`）
 
 ```js
 const server = http.createServer((req, res) => res.end('ok'))
@@ -291,7 +291,7 @@ server.requestTimeout = 30000     // 单请求最多 30s
 
 把这三行配上后启动一次，可以把实测值（含 Node 的默认值）读回来核对：
 
-实测输出（`npm run 11`）：
+实测输出（`npm run keepalive-timeouts`）：
 
 ```
 keepAliveTimeout  = 5000
@@ -342,7 +342,7 @@ HTTP 数据开始加密传输
 
 在 Node 里起一个 HTTPS 服务，只是把 `http` 换成 `https` 并带上证书：
 
-> 摘自 `./code/net-lab/src/10-https-server.js`（运行：`npm run 10`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/https-server.js`（运行：`npm run https-server`）
 
 ```js
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0' // 仅演示：跳过自签证书校验，便于 fetch 连上来
@@ -358,9 +358,9 @@ const server = https.createServer(
 )
 ```
 
-`server.key` / `server.cert` 由 `openssl` 现场生成（见 `code/net-lab/README.md`），是自签证书，所以脚本里临时关掉了证书校验——生产环境不能这么干：
+`server.key` / `server.cert` 由 `openssl` 现场生成（见 `code/HTTP 与 HTTPS 深入/README.md`），是自签证书，所以脚本里临时关掉了证书校验——生产环境不能这么干：
 
-实测输出（`npm run 10`）：
+实测输出（`npm run https-server`）：
 
 ```
 HTTPS 服务已启动(3443)，内部用 fetch 走一次 TLS 握手验证...
@@ -468,10 +468,10 @@ TLS 安全能力 （加密与身份认证内建）
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `./code/net-lab/src/05-http-server.js` | 原生 `node:http`：路由判断、`req` 收集 Body、`res` 流式写入 |
-| `./code/net-lab/src/06-keepalive.js` | Keep-Alive 观测：连接复用与三个超时的实际效果 |
-| `./code/net-lab/src/10-https-server.js` | HTTPS：把 `http` 换成 `https` + `key`/`cert`，走一次真实 TLS 握手 |
-| `./code/net-lab/src/11-keepalive-timeouts.js` | `keepAliveTimeout` / `headersTimeout` / `requestTimeout` 三个超时的取值与相对关系 |
-| `./code/net-lab/src/13-http-response.js` | 三种响应写法：`Content-Length` vs `Transfer-Encoding: chunked` |
+| `./code/HTTP 与 HTTPS 深入/http-server.js` | 原生 `node:http`：路由判断、`req` 收集 Body、`res` 流式写入 |
+| `./code/HTTP 与 HTTPS 深入/keepalive.js` | Keep-Alive 观测：连接复用与三个超时的实际效果 |
+| `./code/HTTP 与 HTTPS 深入/https-server.js` | HTTPS：把 `http` 换成 `https` + `key`/`cert`，走一次真实 TLS 握手 |
+| `./code/HTTP 与 HTTPS 深入/keepalive-timeouts.js` | `keepAliveTimeout` / `headersTimeout` / `requestTimeout` 三个超时的取值与相对关系 |
+| `./code/HTTP 与 HTTPS 深入/http-response.js` | 三种响应写法：`Content-Length` vs `Transfer-Encoding: chunked` |
 
-运行方式（`code/net-lab` 目录下）：`npm run 05` / `npm run 06` / `npm run 10` / `npm run 11` / `npm run 13`，除 05 需手动 Ctrl+C 外都会自动结束；`10` 依赖同目录的 `server.key` / `server.cert`。
+运行方式（`code/HTTP 与 HTTPS 深入` 目录下）：`npm run http-server` / `npm run keepalive` / `npm run https-server` / `npm run keepalive-timeouts` / `npm run http-response`，除 `http-server` 需手动 Ctrl+C 外都会自动结束；`https-server` 依赖同目录的 `server.key` / `server.cert`。

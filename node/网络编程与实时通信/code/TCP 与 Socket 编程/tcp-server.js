@@ -1,5 +1,5 @@
-// 01 TCP 服务端：打印连接/断开，把收到数据以 hex 和 utf8 两种形式打印，并回执
-// 运行方式：先在终端 A 跑 `npm run 01`，再到终端 B 跑 `npm run 02`
+// TCP 服务端：打印连接/断开，把收到数据以 hex 和 utf8 两种形式打印，并回执
+// 运行方式：先在终端 A 跑 `npm run tcp-server`，再到终端 B 跑 `npm run tcp-client`
 const net = require('node:net')
 
 const server = net.createServer(socket => {
@@ -24,5 +24,5 @@ const server = net.createServer(socket => {
 })
 
 server.listen(4000, () => {
-    console.log('TCP 服务已启动，监听 4000。另开终端运行 `npm run 02` 连接本服务')
+    console.log('TCP 服务已启动，监听 4000。另开终端运行 `npm run tcp-client` 连接本服务')
 })

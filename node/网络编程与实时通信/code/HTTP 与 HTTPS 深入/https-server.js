@@ -1,4 +1,4 @@
-// 10 HTTPS 服务演示：把 http 换成 https，并带上 key（私钥）与 cert（证书）
+// HTTPS 服务演示：把 http 换成 https，并带上 key（私钥）与 cert（证书）
 // 证书由 openssl 现场生成（见 README）；生产环境 TLS 通常在网关终止，Node 跑内部明文 HTTP
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0' // 仅演示：跳过自签证书校验，便于 fetch 连上来
 

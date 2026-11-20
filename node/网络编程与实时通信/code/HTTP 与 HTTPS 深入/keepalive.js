@@ -1,4 +1,4 @@
-// 06 HTTP Keep-Alive 对比：复用同一个 socket 与否
+// HTTP Keep-Alive 对比：复用同一个 socket 与否
 // 用 agent 分别开启/关闭 keepAlive 各发多次请求，观察 req.socket.localPort 是否变化
 // （localPort 是客户端这侧的本地端口，复用时端口不变；不复用时每次都新建连接、端口变化）
 const http = require('node:http')

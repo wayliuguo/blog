@@ -1,5 +1,5 @@
-// 04 自定义分包协议客户端：按 Length(4 字节大端) + Body 编码，发送多条消息
-// 运行方式：先启动 04-protocol-server.js，再跑本文件
+// 自定义分包协议客户端：按 Length(4 字节大端) + Body 编码，发送多条消息
+// 运行方式：先启动 protocol-server.js，再跑本文件
 const net = require('node:net')
 
 // 与服务端一致的编码函数

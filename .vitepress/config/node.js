@@ -1,6 +1,6 @@
 export default [
     {
-        text: '模块一 · 运行环境',
+        text: '运行环境',
         collapsed: false,
         items: [
             { text: 'Node.js 是什么', link: '/node/运行环境/Node.js 是什么' },
@@ -14,17 +14,16 @@ export default [
         ]
     },
     {
-        text: '模块二 · 网络底层',
+        text: '网络底层',
         collapsed: false,
         items: [
             { text: 'TCP 与 Socket 编程', link: '/node/网络编程与实时通信/TCP 与 Socket 编程' },
             { text: 'HTTP 与 HTTPS 深入', link: '/node/网络编程与实时通信/HTTP 与 HTTPS 深入' },
             { text: 'WebSocket 与 SSE 实时通信', link: '/node/网络编程与实时通信/WebSocket 与 SSE 实时通信' },
-            { text: '一次请求完整经历了什么', link: '/node/网络编程与实时通信/一次请求完整经历了什么' },
         ]
     },
     {
-        text: '模块三 · Web 框架基础',
+        text: 'Web 框架基础',
         collapsed: false,
         items: [
             { text: 'Express 快速入门', link: '/node/Express 与 Koa/Express 快速入门' },
@@ -36,7 +35,7 @@ export default [
         ]
     },
     {
-        text: '模块四 · 数据与缓存',
+        text: '数据与缓存',
         collapsed: false,
         items: [
             {
@@ -66,7 +65,7 @@ export default [
         ]
     },
     {
-        text: '模块五 · 后端架构',
+        text: '后端架构',
         collapsed: false,
         items: [
             {
@@ -106,7 +105,7 @@ export default [
         ]
     },
     {
-        text: '模块六 · 工程化与拓展',
+        text: '工程化与拓展',
         collapsed: true,
         items: [
             {

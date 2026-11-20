@@ -1,4 +1,4 @@
-// 08 WebSocket 服务端 + 自动客户端演示（基于 ws 库）
+// WebSocket 服务端 + 自动客户端演示（基于 ws 库）
 // 服务端处理 connection / message / close，并实现 Ping/Pong 心跳保活
 // 启动后自动创建一个客户端连上去发 3 条消息并打印回显，5 秒后关闭退出
 const { WebSocketServer, WebSocket } = require('ws')

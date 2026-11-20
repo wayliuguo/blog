@@ -1,4 +1,4 @@
-// 11 HTTP Keep-Alive 三个超时配置演示
+// HTTP Keep-Alive 三个超时配置演示
 // 关键硬约束：headersTimeout 必须 > keepAliveTimeout，否则会出现竞态导致 ECONNRESET / socket hang up
 const http = require('node:http')
 

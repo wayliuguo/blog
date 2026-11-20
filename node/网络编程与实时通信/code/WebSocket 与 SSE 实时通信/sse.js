@@ -1,4 +1,4 @@
-// 07 SSE（Server-Sent Events）完整示例，单文件即可跑通
+// SSE（Server-Sent Events）完整示例，单文件即可跑通
 // 服务端用 text/event-stream 持续推送；启动后本文件自动作为客户端用 fetch 读取流并打印
 // 这是"服务端持续推送"的原型：一条长连接，服务端不断推 data（日志、进度、监控数据都适用）
 const http = require('node:http')

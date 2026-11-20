@@ -1,5 +1,5 @@
-// 13 三种响应写法对比：一次性带 Content-Length、分多次 write、流式 chunked
-// 运行方式：`npm run 13`，单文件自包含，内部用 fetch 各请求一次后退出
+// 三种响应写法对比：一次性带 Content-Length、分多次 write、流式 chunked
+// 运行方式：`npm run http-response`，单文件自包含，内部用 fetch 各请求一次后退出
 const http = require('node:http')
 
 const server = http.createServer((req, res) => {

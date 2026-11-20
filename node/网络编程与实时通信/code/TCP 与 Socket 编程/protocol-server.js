@@ -1,6 +1,6 @@
-// 04 自定义分包协议服务端：Length(4 字节大端) + Body
+// 自定义分包协议服务端：Length(4 字节大端) + Body
 // 处理半包与粘包：用「缓冲区累积 + while 循环解析」反复从 buffer 里拆出完整消息
-// 运行方式：终端 A 跑 `npm run 04s`，终端 B 跑 `npm run 04c`
+// 运行方式：终端 A 跑 `npm run protocol-server`，终端 B 跑 `npm run protocol-client`
 const net = require('node:net')
 
 // 编码：4 字节大端长度 + 包体
@@ -34,6 +34,6 @@ const server = net.createServer(socket => {
 })
 
 server.listen(4002, () => {
-    console.log('分包协议服务已启动(4002)，运行 `npm run 04c` 发送消息。')
+    console.log('分包协议服务已启动(4002)，运行 `npm run protocol-client` 发送消息。')
     console.log('无论客户端是分别发还是一次性粘着发，服务端都能正确拆成 3 条。')
 })

@@ -1,4 +1,4 @@
-// 02 TCP 客户端：连接 01 的服务，连续发送 3 条消息
+// TCP 客户端：连接 tcp-server 的服务，连续发送 3 条消息
 // 要点：TCP 是“字节流”而不是“消息协议”——它不保证一次 write 对应对端一次 data 事件
 const net = require('node:net')
 
