@@ -10,7 +10,7 @@ export default [
             { text: 'Buffer 与 Stream', link: '/node/运行环境/Buffer 与 Stream' },
             { text: '进程线程与优雅退出', link: '/node/运行环境/进程线程与优雅退出' },
             { text: '环境变量与常用内置模块', link: '/node/运行环境/环境变量与常用内置模块' },
-            { text: 'VSCode 调试 Node', link: '/node/运行环境/VSCode 调试 Node' },
+            { text: 'VSCode 调试 Node', link: '/node/运行环境/VSCode 调试 Node' }
         ]
     },
     {
@@ -19,7 +19,7 @@ export default [
         items: [
             { text: 'TCP 与 Socket 编程', link: '/node/网络编程与实时通信/TCP 与 Socket 编程' },
             { text: 'HTTP 与 HTTPS 深入', link: '/node/网络编程与实时通信/HTTP 与 HTTPS 深入' },
-            { text: 'WebSocket 与 SSE 实时通信', link: '/node/网络编程与实时通信/WebSocket 与 SSE 实时通信' },
+            { text: 'WebSocket 与 SSE 实时通信', link: '/node/网络编程与实时通信/WebSocket 与 SSE 实时通信' }
         ]
     },
     {
@@ -31,7 +31,7 @@ export default [
             { text: 'Express 项目模板', link: '/node/Express 与 Koa/Express 项目模板' },
             { text: 'Express 源码分析', link: '/node/Express 与 Koa/Express 源码分析' },
             { text: 'Koa 项目模板', link: '/node/Express 与 Koa/Koa 项目模板' },
-            { text: 'Koa 源码分析', link: '/node/Express 与 Koa/Koa 源码分析' },
+            { text: 'Koa 源码分析', link: '/node/Express 与 Koa/Koa 源码分析' }
         ]
     },
     {
@@ -61,7 +61,7 @@ export default [
                     { text: 'Redis 缓存实战', link: '/node/Redis/Redis 缓存实战' },
                     { text: 'Redis 进阶', link: '/node/Redis/Redis 进阶' }
                 ]
-            },
+            }
         ]
     },
     {
@@ -101,7 +101,7 @@ export default [
                     },
                     { text: 'IoC 与依赖注入原理', link: '/node/NestJS 进阶/IoC 与依赖注入原理' }
                 ]
-            },
+            }
         ]
     },
     {
@@ -140,7 +140,7 @@ export default [
                     { text: '系统设计', link: '/node/进阶主题/系统设计' },
                     { text: 'Git 与协作', link: '/node/进阶主题/Git 与协作' }
                 ]
-            },
+            }
         ]
     }
 ]
