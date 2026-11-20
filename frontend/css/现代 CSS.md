@@ -546,9 +546,3 @@ prefers-reduced-motion: reduce = true  → .pulse animation-name = none
 ```
 
 `@supports selector(...)` 可以直接把选择器能力当条件，比"靠 UA 判断"可靠得多。查基线用 caniuse 或 MDN 页脚的兼容表；构建侧可以用 Browserslist 把目标浏览器的范围固化成配置。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[BEM 与 CSS 规范](./BEM%20与%20CSS%20规范.md)
-- 下一篇：[综合实战](./综合实战.md)

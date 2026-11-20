@@ -214,9 +214,3 @@ docker compose -f docker-compose.infra.prod.yml --env-file .env.production up -d
 # 日常部署应用
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Docker 容器化](./Docker%20容器化)
-- 下一篇：[Nginx 反向代理与网关](./Nginx%20反向代理与网关)

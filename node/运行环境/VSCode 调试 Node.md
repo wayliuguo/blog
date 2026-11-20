@@ -135,8 +135,3 @@ launch.json 是工程调试的固定入口（配置可入库团队共享）。�
 | --- | --- | --- |
 | `./code/VSCode 调试 Node/src/server.js` | 四种调试入口（`npm run demo`，常驻服务） | 共用调试目标：最小 HTTP 服务，调试器在场时 `curl http://127.0.0.1:3000/sum` 会停在 `reduce` 断点上 |
 | `./code/VSCode 调试 Node/.vscode/launch.json` | attach Debug 与 launch.json Debug（把项目文件夹作为工作区打开后按 F5） | 三条配置：program 直启、runtimeExecutable 走 npm scripts、attach 连 9229 |
-
-## 参考
-
-- Node.js 官方文档：[Debugging Guide](https://nodejs.org/en/learn/getting-started/debugging)（--inspect / --inspect-brk / CDP）
-- VSCode 官方文档：[Debugging in Visual Studio Code](https://code.visualstudio.com/docs/debugtest/debugging)（launch.json / attach / 断点类型）

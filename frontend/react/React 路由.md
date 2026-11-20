@@ -488,9 +488,3 @@ function App() {
 | `./code/site/vdom-diff.html` | 路由切换为何不是整页重建（轻量虚拟 DOM diff） | 路由原理 |
 
 启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[React Hooks](./React%20Hooks.md)
-- 下一篇：[React 状态管理](./React%20状态管理.md)

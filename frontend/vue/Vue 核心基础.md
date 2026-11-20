@@ -517,9 +517,3 @@ const formatPrice = (val) => '¥ ' + Number(val).toFixed(2)
 - `:` 是 `v-bind` 的简写。
 - `@` 是 `v-on` 的简写。
 - `v-model` 是表单双向绑定的专用指令，无简写形式。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[React 使用 CSS](../react/React%20使用%20CSS.md)
-- 下一篇：[Vue 组件](./Vue%20组件.md)

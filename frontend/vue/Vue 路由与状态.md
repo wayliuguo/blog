@@ -575,8 +575,3 @@ const cartStore = useCartStore()
 - **getter 的等价物**：Pinia getter ≈ Redux selector，都用于"派生、记忆化、避免重复计算"。
 
 掌握这张对照表后，在 Vue 与 React 两个框架之间切换时，路由与状态管理的思路是高度相通的。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Vue 组件](./Vue%20组件.md)

@@ -448,9 +448,3 @@ const increase = useBearStore((s) => s.increase)
 | `./code/site/hooks-demo.html` | 状态按调用顺序存取 | 为何需要状态管理 |
 
 启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[React 路由](./React%20路由.md)
-- 下一篇：[React 使用 TS](./React%20使用%20TS.md)

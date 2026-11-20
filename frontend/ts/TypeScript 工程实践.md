@@ -523,8 +523,3 @@ export function createStore<S, A>(
 | `./code/check.ts` | 类型编译校验入口：汇总结构类型、联合/交叉、泛型、infer、工具类型等示例，用 `npx tsc --noEmit` 验证类型错误 | 五、类型体操技巧 |
 
 启动方式：HTML demo 在 `code` 目录执行 `node server.js`（即 `npm start`）打开 `http://localhost:5186/`；`check.ts` 用 `npx tsc --noEmit check.ts` 检查类型。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[TypeScript 类型系统](./TypeScript%20类型系统.md)

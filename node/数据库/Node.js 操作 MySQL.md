@@ -287,9 +287,3 @@ export class OrderService {
 运行方式见 `mysql-demo/README.md`；TypeORM 部分见 `typeorm-demo/README.md`（`npm run typecheck` 校验装饰器与类型，`npx ts-node src/data-source.ts` 需要本地 MySQL）。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[MySQL 高级实战](./MySQL%20高级实战)
-- 下一篇：[MongoDB 入门](./MongoDB%20入门)

@@ -147,9 +147,3 @@ LEFT JOIN orders ON users.id = orders.user_id;
 运行方式见 `mysql-demo/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Koa 源码分析](../Express%20与%20Koa/Koa%20源码分析)
-- 下一篇：[MySQL 进阶](./MySQL%20进阶)

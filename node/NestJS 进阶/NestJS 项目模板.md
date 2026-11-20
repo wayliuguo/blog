@@ -1165,9 +1165,3 @@ npm run start:prod
 运行方式见 `advanced-lab2/README.md` 与 `nestjs-template/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](../NestJS%20入门/总结.md)
-- 上一篇：[NestJS 源码分析](./NestJS%20源码分析)
-- 下一篇：[认证进阶：双 Token 与多设备会话](./认证进阶-双Token与多设备会话)

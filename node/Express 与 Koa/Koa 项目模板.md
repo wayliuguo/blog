@@ -574,9 +574,3 @@ npm run dev
 运行方式见 `koa-template/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Express 源码分析](./Express%20源码分析)
-- 下一篇：[Koa 源码分析](./Koa%20源码分析)

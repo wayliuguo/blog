@@ -532,9 +532,3 @@ const alertFn = () => {
 | `./code/site/hooks-demo.html` | 用普通数组实现极简 useState / useEffect，演示 hooks 每次渲染按固定顺序调用的原理 | 使用 Hooks 的三条规则 |
 
 启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[React 核心概念](./React%20核心概念.md)
-- 下一篇：[React 路由](./React%20路由.md)

@@ -352,9 +352,3 @@ async function slidingWindow(key, limit, total) {
 运行方式见 `redis-demo/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](../数据库/总结.md)
-- 上一篇：[Node.js 操作 Redis](./Node.js%20操作%20Redis)
-- 下一篇：[Redis 进阶](./Redis%20进阶)

@@ -3013,8 +3013,3 @@ demo 入口：`./code/vue3/mini-vue/demo/demo-app.html`
 | `./code/vue3/mini-vue/demo/demo-compiler.html` | 编辑模板实时产出 AST / 静态标记 / render 代码三份产物 | 2.2 · 2.3 · 5.1 |
 | `./code/vue3/mini-vue/demo/demo-reactivity.html` | ref / reactive 深层属性 / computed 缓存读数 / watch 建立与 stop，四行 effect 驱动数值 | 3.1~3.9 · 5.2 |
 | `./code/vue3/mini-vue/demo/demo-app.html` | 官网 CDN 用法整体运行：in-DOM 模板 + `@click` / `v-for` / `:key` 编译挂载，页面层按钮触发改 message（含 nextTick 前后读 DOM 对照）/ 一次改三项（批处理）/ 乱序 + 插删（keyed diff 全算法：双端同步 + key 索引 + LIS）/ 新列表更长 / 旧列表更长（③④ 快速通道）/ 卸载 | 4.1~4.5 · 5.3 |
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 下一篇：[React 原理](../react/React%20原理.md)

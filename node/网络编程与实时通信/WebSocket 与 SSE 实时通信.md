@@ -306,9 +306,3 @@ Node.js 是一个基于 Chrome V8 的运行时
 | `./code/net-lab/src/08-websocket.js` | WebSocket：HTTP Upgrade → 101 之后的双向收发与心跳 |
 
 运行方式（`code/net-lab` 目录下）：`npm run 01`（服务端，常驻）/ `npm run 07` / `npm run 08`；`08` 依赖 `ws`，先 `npm install`。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[HTTP 与 HTTPS 深入](./HTTP%20与%20HTTPS%20深入.md)
-- 下一篇：[一次请求完整经历了什么](./一次请求完整经历了什么.md)

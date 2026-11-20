@@ -93,10 +93,6 @@ export default [
                                 link: '/ai/agent-development/MCP入门实战'
                             }
                         ]
-                    },
-                    {
-                        text: 'Agent 模块总结',
-                        link: '/ai/agent-development/总结'
                     }
                 ]
             }

@@ -412,9 +412,3 @@ controller.abort('用户离开页面') // 一处调用，fetch 取消 + 监听�
 | `AbortSignal.timeout(ms)` | `TimeoutError` | 超时 |
 
 两者都表示"**被我方取消**"，不是网络故障：把 `AbortError` 当异常上报，用户每点一次取消就产生一条假告警。正确做法是按 `error.name` 分型——`AbortError` 静默处理（属于预期），`TimeoutError` 才值得提示用户或重试。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[内存管理与垃圾回收](./内存管理与垃圾回收.md)
-- 下一篇：[手写实现与源码](./手写实现与源码.md)

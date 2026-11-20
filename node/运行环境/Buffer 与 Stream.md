@@ -407,9 +407,3 @@ await pipeline(fs.createReadStream(SRC), ws)
 | `./code/Buffer 与 Stream/src/copy-pipeline/copy-pipeline.js` | 实战：复制大文件（背压版）· 版本三 | `await pipeline(rs, ws)` 复制：`await` 一次收尾，背压与错误兜底全自动，监听 `drain` 打印背压次数 |
 
 运行方式（`code/Buffer 与 Stream` 目录下）：`npm run buffer` / `npm run types` / `npm run copy-manual` / `npm run copy-pipe` / `npm run copy-pipeline`。copy 三版本的源文件是 `src/source.txt`（内容可自行修改，复制产物保留在版本目录里、已 gitignore）。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[异步编程与事件驱动](./异步编程与事件驱动.md)
-- 下一篇：[进程、线程与优雅退出](./进程线程与优雅退出.md)

@@ -331,11 +331,3 @@ const dts = emitDts(src)
 | `./code/runtime-lab/publish/mathlib.ts` | 被发布的带类型库源文件 | 九 |
 | `./code/runtime-lab/publish/mathlib.d.ts` | 由源文件 emit 出的声明文件 | 九 |
 | `./code/runtime-lab/run.cjs` | 转译并执行全部 demo，node:assert 自检 | 全篇 |
-
-## 参考
-
-- [TypeScript 模块总结](./总结)
-- [TypeScript 类型系统](./TypeScript%20类型系统)（结构类型 / 可赋值性 / 收窄的基础）
-- [TypeScript 类型体操](./TypeScript%20类型体操)（复杂类型为 schema 做类型推导）
-- [TypeScript 官方 Handbook：Type Compatibility](https://www.typescriptlang.org/docs/handbook/type-compatibility.html)
-- [zod 文档](https://zod.dev/)（schema 即单一事实源的代表实现）

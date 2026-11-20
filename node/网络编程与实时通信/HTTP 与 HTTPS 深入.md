@@ -475,9 +475,3 @@ TLS 安全能力 （加密与身份认证内建）
 | `./code/net-lab/src/13-http-response.js` | 三种响应写法：`Content-Length` vs `Transfer-Encoding: chunked` |
 
 运行方式（`code/net-lab` 目录下）：`npm run 05` / `npm run 06` / `npm run 10` / `npm run 11` / `npm run 13`，除 05 需手动 Ctrl+C 外都会自动结束；`10` 依赖同目录的 `server.key` / `server.cert`。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[TCP 与 Socket 编程](./TCP%20与%20Socket%20编程.md)
-- 下一篇：[WebSocket 与 SSE 实时通信](./WebSocket%20与%20SSE%20实时通信.md)

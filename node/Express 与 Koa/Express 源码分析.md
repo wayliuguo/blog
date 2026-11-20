@@ -346,9 +346,3 @@ executeMiddlewareChain(req, res, middlewares, callback)
 建议对照本篇的讲解顺序读源码，先看 `app.use`，再看 `next` 递归。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Express 项目模板](./Express%20项目模板)
-- 下一篇：[Koa 项目模板](./Koa%20项目模板)

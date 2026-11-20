@@ -5,8 +5,7 @@ export default [
         items: [
             { text: 'HTML 语义化与结构', link: '/frontend/html/HTML%20语义化与结构' },
             { text: '表单与标签', link: '/frontend/html/表单与标签' },
-            { text: '无障碍与可访问性', link: '/frontend/html/无障碍与可访问性' },
-            { text: '模块总结（HTML 基础）', link: '/frontend/html/总结' }
+            { text: '无障碍与可访问性', link: '/frontend/html/无障碍与可访问性' }
         ]
     },
     {
@@ -20,7 +19,6 @@ export default [
             { text: 'BEM 与 CSS 规范', link: '/frontend/css/BEM%20与%20CSS%20规范' },
             { text: '现代 CSS', link: '/frontend/css/现代%20CSS' },
             { text: '综合实战', link: '/frontend/css/综合实战' },
-            { text: '模块总结（CSS）', link: '/frontend/css/总结' }
         ]
     },
     {
@@ -34,7 +32,6 @@ export default [
             { text: '内存管理与垃圾回收', link: '/frontend/js/内存管理与垃圾回收' },
             { text: 'DOM 与浏览器 API', link: '/frontend/js/DOM%20与浏览器%20API' },
             { text: '手写实现与源码', link: '/frontend/js/手写实现与源码' },
-            { text: '模块总结（JavaScript 核心）', link: '/frontend/js/总结' }
         ]
     },
     {
@@ -43,7 +40,6 @@ export default [
         items: [
             { text: 'HTTP 协议与缓存体系', link: '/frontend/网络/HTTP%20协议与缓存体系' },
             { text: '前端安全', link: '/frontend/网络/前端安全' },
-            { text: '模块总结（网络）', link: '/frontend/网络/总结' }
         ]
     },
     {
@@ -52,7 +48,6 @@ export default [
         items: [
             { text: '浏览器渲染原理', link: '/frontend/浏览器原理/浏览器渲染原理' },
             { text: '浏览器存储与本地缓存', link: '/frontend/浏览器原理/浏览器存储与本地缓存' },
-            { text: '模块总结（浏览器原理）', link: '/frontend/浏览器原理/总结' }
         ]
     },
     {
@@ -63,7 +58,6 @@ export default [
             { text: 'Vue 组件', link: '/frontend/vue/Vue%20组件' },
             { text: 'Vue 路由与状态', link: '/frontend/vue/Vue%20路由与状态' },
             { text: 'Vue3 原理', link: '/frontend/vue/Vue3%20原理' },
-            { text: '模块总结（Vue）', link: '/frontend/vue/总结' }
         ]
     },
     {
@@ -78,7 +72,6 @@ export default [
             { text: 'React 使用 CSS', link: '/frontend/react/React%20使用%20CSS' },
             { text: 'React 原理', link: '/frontend/react/React%20原理' },
             { text: 'React 性能优化', link: '/frontend/react/React%20性能优化' },
-            { text: '模块总结（React）', link: '/frontend/react/总结' }
         ]
     },
     {
@@ -89,7 +82,6 @@ export default [
             { text: 'TypeScript 工程实践', link: '/frontend/ts/TypeScript%20工程实践' },
             { text: 'TypeScript 类型体操', link: '/frontend/ts/TypeScript%20类型体操' },
             { text: 'TypeScript 类型与运行时', link: '/frontend/ts/TypeScript%20类型与运行时' },
-            { text: '模块总结（TypeScript）', link: '/frontend/ts/总结' }
         ]
     },
     {
@@ -99,7 +91,6 @@ export default [
             { text: 'pnpm', link: '/frontend/工程化/pnpm' },
             { text: 'Vite', link: '/frontend/工程化/Vite' },
             { text: 'Webpack', link: '/frontend/工程化/webpack' },
-            { text: '模块总结（工程化）', link: '/frontend/工程化/总结' }
         ]
     },
     {
@@ -112,7 +103,6 @@ export default [
             { text: '组件测试', link: '/frontend/测试体系/组件测试' },
             { text: 'E2E 与稳定性', link: '/frontend/测试体系/E2E%20与稳定性' },
             { text: '测试基建与门禁', link: '/frontend/测试体系/测试基建与门禁' },
-            { text: '模块总结（测试体系）', link: '/frontend/测试体系/总结' }
         ]
     },
     {
@@ -125,7 +115,6 @@ export default [
         collapsed: false,
         items: [
             { text: '监控 SDK 设计与实现', link: '/frontend/前端监控/监控SDK设计与实现' },
-            { text: '模块总结（前端监控）', link: '/frontend/前端监控/总结' }
         ]
     },
     {
@@ -139,7 +128,6 @@ export default [
             { text: '请求层与缓存设计', link: '/frontend/工程实践与架构/请求层与缓存设计' },
             { text: '大文件上传与断点续传', link: '/frontend/工程实践与架构/大文件上传与断点续传' },
             { text: '虚拟滚动与大数据渲染', link: '/frontend/工程实践与架构/虚拟滚动与大数据渲染' },
-            { text: '模块总结（工程实践与架构）', link: '/frontend/工程实践与架构/总结' }
         ]
     }
 ]

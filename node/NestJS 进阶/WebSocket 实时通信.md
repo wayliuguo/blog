@@ -193,9 +193,3 @@ export class NotificationService {
 运行方式：`code/advanced-lab` 目录下 `npm install` 后 `npm run 05gateway`；原生版在 `code/net-lab` 下 `npm run 08`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](../NestJS%20入门/总结.md)
-- 上一篇：[文件上传实战](./文件上传实战)
-- 下一篇：[定时任务与队列](./定时任务与队列)

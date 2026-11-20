@@ -172,9 +172,3 @@ type Merge<A, B> = { [K in keyof A | keyof B]: K extends keyof B ? B[K] : K exte
 - `npm run gym`：检查答案版，应当 0 错误
 - `npm run gym:todo`：检查未解版，应当出现 61 处类型错误（50 道题，部分有多条断言）
 - `npm run check`：顺带验证同目录的 `type-lab` 示例
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[TypeScript 类型系统](./TypeScript%20类型系统.md)（类型即集合、收窄、泛型、推断）
-- 下一篇：[TypeScript 工程实践](./TypeScript%20工程实践.md)（配置、声明文件、构建集成、JS 迁移）

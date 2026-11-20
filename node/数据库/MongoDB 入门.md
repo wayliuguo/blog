@@ -393,9 +393,3 @@ await Post.updateOne(
 运行方式（在 `code/mongo-demo` 目录下，先 `cp .env.example .env` 再 `npm install`）：`npm run connect` / `crud` / `objectid` / `mconnect` / `model` / `embed` / `logs` / `comments`；其中 `objectid` 不需要 MongoDB 服务。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Node.js 操作 MySQL](./Node.js%20操作%20MySQL)
-- 下一篇：[MongoDB 进阶](./MongoDB%20进阶)

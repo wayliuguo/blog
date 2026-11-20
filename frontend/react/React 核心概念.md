@@ -334,9 +334,3 @@ npm create vite@latest react-demo -- --template react-ts
 | `./code/site/mini-runtime.html` | 手写极简渲染器 createElement + render + onUpdate，演示虚拟 DOM 与声明式更新 | JSX 语法与规则 · 组件与 Props |
 
 启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[前端安全](../网络/前端安全.md)
-- 下一篇：[React Hooks](./React%20Hooks.md)

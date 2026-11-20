@@ -331,9 +331,3 @@ model AuthSession {
 运行方式见 `advanced-lab2/README.md` 与 `nestjs-template/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](../NestJS%20入门/总结.md)
-- 上一篇：[NestJS 项目模板](./NestJS%20项目模板)
-- 下一篇：[IoC 与依赖注入原理](./IoC%20与依赖注入原理)

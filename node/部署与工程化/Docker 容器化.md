@@ -261,9 +261,3 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 |--------|--------|
 | [Docker Compose 编排](./Docker%20Compose%20编排) | Dockerfile 是"单容器怎么造"，Compose 是"多容器怎么编排" |
 | [生产部署实战](./生产部署实战) | 完整部署链路：构建 → 迁移 → 启动 → 健康检查 |
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[PM2 进程管理](./PM2%20进程管理)
-- 下一篇：[Docker Compose 编排](./Docker%20Compose%20编排)

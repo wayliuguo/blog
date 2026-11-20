@@ -879,8 +879,3 @@ declare const maybeStr: string | undefined
 - `npm run check:errors`：解封所有 `//ERR` 演示行，打印真实报错
 - `npm run erase`：展示类型擦除后的编译产物
 - `npm start`：启动 `http://localhost:5186/`，查看浏览器 demo
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 下一篇：[TypeScript 工程实践](./TypeScript%20工程实践.md)

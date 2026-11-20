@@ -229,9 +229,3 @@ export class AppController {
 运行方式见 `nestjs-mini/README.md`、`nestjs-basics/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[快速上手](./快速上手)
-- 下一篇：[模块与提供器](./模块与提供器)

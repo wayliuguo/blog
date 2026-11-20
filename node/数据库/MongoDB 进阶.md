@@ -400,9 +400,3 @@ const pendingPlan = await orders.find({ status: 'pending' }).explain('executionS
 运行方式（在 `code/mongo-demo` 目录下，先 `cp .env.example .env` 再 `npm install`）：`npm run index` / `explain` / `aggregate` / `tx` / `readpref` / `pagination`；其中 `readpref` 的第 3 节不需要 MongoDB 服务。**本机没有 MongoDB 服务，需要连库的部分均未实跑**，`readpref` 的实测输出已贴在上面「读写分离配置」小节。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[MongoDB 入门](./MongoDB%20入门)
-- 下一篇：[PostgreSQL 与 pgvector](./PostgreSQL%20与%20pgvector)

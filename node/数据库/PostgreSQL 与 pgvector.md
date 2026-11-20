@@ -416,9 +416,3 @@ async function search(queryVector: number[], topK = 5) {
 运行方式（在 `code/pg-demo` 目录下，先建库、`cp .env.example .env` 再 `npm install`）：`npm run schema` / `insert` / `search` / `distances`；`prisma/` 下两份文件不属于 `npm install` 的依赖范围，需要 `npm i @prisma/client prisma && npx prisma generate`。**本机没有 PostgreSQL 服务，以上均未实跑。**
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[MongoDB 进阶](./MongoDB%20进阶)
-- 下一篇：[Redis 基础与数据类型](../Redis/Redis%20基础与数据类型)

@@ -226,9 +226,3 @@ const { value, toggle } = useToggle({ initial: true })
 | `./code/site/react-types.ts` | 函数组件 props 类型（interface + FC）、泛型组件、hooks 泛型（useState/useRef）、事件对象类型、自定义 hook 的入参与返回值类型 | 函数组件的类型定义 · 函数组件的泛型 · hooks 的泛型 · 事件与 ref 的类型 · hooks 封装时的类型处理 |
 
 启动方式：HTML demo 在 `code` 目录执行 `node server.js`（即 `npm start`）打开 `http://localhost:5180/`；`react-types.ts` 用 `npx tsc --noEmit react-types.ts` 检查类型。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[React 状态管理](./React%20状态管理.md)
-- 下一篇：[React 使用 CSS](./React%20使用%20CSS.md)

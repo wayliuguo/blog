@@ -246,9 +246,3 @@ INFO replication
 运行方式见 `redis-demo/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](../数据库/总结.md)
-- 上一篇：[Redis 缓存实战](./Redis%20缓存实战)
-- 下一篇：[学习地图与边界：NestJS 该学到什么程度](../NestJS%20入门/学习地图与边界)

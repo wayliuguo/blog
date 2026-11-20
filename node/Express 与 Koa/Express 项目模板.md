@@ -556,9 +556,3 @@ npm run dev
 运行方式见 `express-template/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Koa 快速入门](./Koa%20快速入门)
-- 下一篇：[Express 源码分析](./Express%20源码分析)

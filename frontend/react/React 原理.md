@@ -1853,11 +1853,3 @@ unmount()
 | 一页跑完全部链路 | `./code/react/mini-react/demo/demo-app.html` | 六个按钮依次对应 5.1~5.6 的链路 |
 
 加载顺序即依赖顺序：`shared.js → scheduler.js → hooks.js → reconciler.js → dom.js → index.js`，全部经 `window.MiniReact` 统一使用。demo 的「断点标注」面板给出了与五章一一对应的断点清单，照着五章边点边跟即可。
-
-## 参考
-
-- 上一篇：[React 使用 CSS](./React%20使用%20CSS.md)
-- 下一篇：[React 性能优化](./React%20性能优化.md)
-- 本模块总结：[总结](./总结.md)
-- React 官方文档（架构与并发渲染）：[react.dev](https://react.dev)
-- React 源码仓库：[facebook/react](https://github.com/facebook/react)——`packages/scheduler`、`packages/react-reconciler`、`packages/react-dom`

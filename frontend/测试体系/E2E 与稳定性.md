@@ -315,11 +315,3 @@ E2E 套件变大后，靠加机器比靠优化用例更有效：
 | `./code/test-lab/package.json` | `test:flaky`（默认顺序）/ `test:shuffle`（打乱顺序） | 五、为什么 flaky：四个可复现根因 |
 
 运行：`cd code/test-lab && npm install && npm run test:flaky`，再跑几次 `npm run test:shuffle` 观察时红时绿。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[组件测试](./组件测试.md)
-- 下一篇：[测试基建与门禁](./测试基建与门禁.md)
-- [Playwright 官方文档](https://playwright.dev/docs/intro)
-- [Vitest 测试顺序与 shuffle](https://vitest.dev/config/#sequence)

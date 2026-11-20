@@ -787,9 +787,3 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 运行方式见 `mysql-demo/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[MySQL 基础](./MySQL%20基础)
-- 下一篇：[MySQL 高级实战](./MySQL%20高级实战)

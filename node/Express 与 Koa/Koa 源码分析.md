@@ -379,9 +379,3 @@ dispatch(0)  ← 启动递归
 建议先读 `compose` 与 `dispatch`，再读 `createContext` 与 `respond`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[Koa 项目模板](./Koa%20项目模板)
-- 下一篇：[MySQL 基础](../数据库/MySQL%20基础)

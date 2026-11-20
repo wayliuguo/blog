@@ -174,10 +174,3 @@ function App() {
 ```
 
 `lazy` 让 React 知道"这个组件要动态加载"，`Suspense` 提供加载中的 fallback（占位 UI）。配合 React Router 的 `lazy` 即可实现**路由级懒加载**（进入路由时才下载对应页面代码）。
-
-## 参考
-
-- 上一篇：[React 原理](./React%20原理.md)
-- 下一篇：[总结](./总结.md)
-- React 官方文档 · 性能优化：<https://react.dev/learn/render-and-commit>
-- React 官方文档 · 使用 Suspense 实现懒加载：<https://react.dev/reference/react/lazy>

@@ -1000,10 +1000,3 @@ NestJS 利用 TypeScript 的 `emitDecoratorMetadata` 和 `reflect-metadata` 库�
 运行方式见 `nestjs-mini/README.md`；前置知识脚本见 `advanced-lab2/README.md`。
 
 ---
-
-## 参考
-
-- 本模块总结：[总结](../NestJS%20入门/总结.md)
-- 源码：`nestjs-mini/package.json`（完整目录见 `blog/node/NestJS 入门/code/nestjs-mini/`）
-- 上一篇：[切换 Fastify 平台](./切换Fastify平台)
-- 下一篇：[NestJS 项目模板](./NestJS%20项目模板)

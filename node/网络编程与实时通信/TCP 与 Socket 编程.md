@@ -511,9 +511,3 @@ TCP 只给你一条可靠字节流，那"我要 `GET /users`"这层语义该由�
 | `./code/net-lab/src/12-pipe-vs-manual.js` | 手写 `on('data') + write` 与 `pipe` 的发送缓冲峰值积压对比 |
 
 运行方式（`code/net-lab` 目录下）：`npm run 01`（服务端，常驻）/ `npm run 02`（客户端，另开终端）/ `npm run 03` / `npm run 04s` + `npm run 04c` / `npm run 09` / `npm run 12`，除 01、04s 外都会自动结束。
-
-## 参考
-
-- 本模块总结：[总结](./总结.md)
-- 上一篇：[VSCode 调试 Node](../运行环境/VSCode%20调试%20Node.md)
-- 下一篇：[HTTP 与 HTTPS 深入](./HTTP%20与%20HTTPS%20深入.md)
