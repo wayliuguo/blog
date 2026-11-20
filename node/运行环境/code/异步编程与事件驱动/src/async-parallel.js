@@ -16,5 +16,5 @@ function fetchKnowledgeBase() {
     const cost = Date.now() - start
     console.log('并行执行结果:', a, b, c)
     console.log(`总耗时约 ${cost}ms（≈ 最慢的一个 500ms）`)
-    console.log('对比 04-async-serial.js 的串行写法：从约 700ms 降到约 500ms，省掉了两次排队等待')
+    console.log('对比 async-serial.js 的串行写法：从约 700ms 降到约 500ms，省掉了两次排队等待')
 })()

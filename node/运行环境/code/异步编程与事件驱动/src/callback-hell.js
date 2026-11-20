@@ -4,7 +4,7 @@ const os = require('node:os')
 const path = require('node:path')
 
 // —— 片段一：error-first 约定（回调第一个参数永远是 error）——
-const tmpFile = path.join(os.tmpdir(), '04-callback-hell-tmp.txt')
+const tmpFile = path.join(os.tmpdir(), 'callback-hell-tmp.txt')
 fs.writeFileSync(tmpFile, 'Hello from callback demo')
 
 fs.readFile(tmpFile, 'utf8', (err, data) => {

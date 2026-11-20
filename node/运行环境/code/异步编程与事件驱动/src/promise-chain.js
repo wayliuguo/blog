@@ -1,4 +1,4 @@
-// 04 Promise：把嵌套拍平成链
+// Promise：把嵌套拍平成链
 function getUser() {
     return Promise.resolve({ id: 1, name: 'Alice' })
 }
@@ -11,8 +11,14 @@ function getProducts(orders) {
 
 // 链式调用：每个 .then 回传的 Promise 被自动展开
 getUser()
-    .then(user => getOrders(user)) // 返回新 Promise，自动往下传
-    .then(orders => getProducts(orders))
+    .then(user => {
+        console.log('user =', user)
+        return getOrders(user)
+    }) // 返回新 Promise，自动往下传
+    .then(orders => {
+        console.log('orders =', orders)
+        return getProducts(orders)
+    })
     .then(products => {
         console.log('最终结果：', products)
     })
@@ -26,6 +32,7 @@ getUser()
 // 错误传播：在 .then 里 throw 会被自动转成 rejected，catch 一定能接住
 getUser()
     .then(() => {
+        console.log('throw Error')
         throw new Error('第 2 步炸了')
     })
     .then(() => console.log('这行不会执行'))

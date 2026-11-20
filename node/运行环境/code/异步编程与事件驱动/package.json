@@ -4,14 +4,14 @@
   "description": "Node.js 后端知识体系 - 《异步编程与事件驱动》配套实验（callback/Promise/async-await、EventEmitter、解耦）",
   "type": "commonjs",
   "scripts": {
-    "04serial": "node src/04-async-serial.js",
-    "04parallel": "node src/04-async-parallel.js",
-    "04callback": "node src/04-callback-hell.js",
-    "04promise": "node src/04-promise-chain.js",
-    "04await": "node src/04-async-await.js",
-    "04settled": "node src/04-all-settled.js",
-    "04emitter": "node src/04-eventemitter.js",
-    "04eventdriven": "node src/04-event-driven.js"
+    "serial": "node src/async-serial.js",
+    "parallel": "node src/async-parallel.js",
+    "callback": "node src/callback-hell.js",
+    "promise": "node src/promise-chain.js",
+    "await": "node src/async-await.js",
+    "settled": "node src/all-settled.js",
+    "emitter": "node src/eventemitter.js",
+    "eventdriven": "node src/event-driven.js"
   },
   "license": "MIT"
 }
