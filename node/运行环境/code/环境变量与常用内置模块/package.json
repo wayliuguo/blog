@@ -1,0 +1,13 @@
+{
+  "name": "env-and-common-modules",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 《环境变量与常用内置模块》配套实验（环境变量、os 机器信息、path 路径处理、fs 读写与目录遍历）",
+  "type": "commonjs",
+  "scripts": {
+    "env": "node --env-file=src/env/.env src/env/env.js",
+    "os": "node src/os/os.js",
+    "path": "node src/path/path.js",
+    "fs": "node src/fs/fs.js"
+  },
+  "license": "MIT"
+}

@@ -1,4 +1,4 @@
-// fork 子进程（被 06-child-process.js 通过 fork 调用）
+// fork 子进程（被 fork/fork.js 通过 fork 调用）
 // 通过 process.on('message') 收父进程消息，用 process.send 回传，走 IPC 通道
 console.log('[fork 子进程] 启动')
 

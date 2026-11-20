@@ -1,18 +1,17 @@
-// 06 Worker Pool + 任务队列：生产环境为什么不能“每个请求 new Worker”
+// Worker Pool + 任务队列：生产环境为什么不能“每个请求 new Worker”
 // 对应文档《进程、线程与优雅退出》
 // 反例：20 个任务各 new Worker —— 线程创建/调度开销与内存随并发线性膨胀
 // 正例：预创建 4 个 Worker，任务进队列，空闲 Worker 取任务，跑完回收再接下一个
 // Pool 结构：任务队列 -> 空闲 Worker 标记 -> 派发 -> 回收
 
 const { Worker } = require('node:worker_threads')
-const os = require('node:os')
 const path = require('node:path')
 
 const TASKS = 20
 const N = 5e7 // 单任务 CPU 计算量
 // 为演示清晰固定为 4（生产可换成 os.availableParallelism() 按核数自适应）
 const POOL_SIZE = 4
-const childPath = path.join(__dirname, '06-worker-pool-child.js')
+const childPath = path.join(__dirname, 'worker-pool-child.js')
 
 // 采样 RSS 峰值
 function samplePeak(intervalMs = 5) {

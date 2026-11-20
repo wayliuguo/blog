@@ -1,0 +1,10 @@
+{
+  "name": "vscode-debug-node",
+  "version": "1.0.0",
+  "description": "Node.js 后端知识体系 - 《VSCode 调试 Node》配套实验（四种调试入口共用的调试目标 + 可 F5 体验的 launch.json）",
+  "type": "commonjs",
+  "scripts": {
+    "demo": "node src/server.js"
+  },
+  "license": "MIT"
+}

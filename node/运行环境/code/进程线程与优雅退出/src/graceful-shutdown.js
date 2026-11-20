@@ -1,4 +1,4 @@
-// 06 优雅关闭：收到 SIGTERM/SIGINT 时不立刻退出
+// 优雅关闭：收到 SIGTERM/SIGINT 时不立刻退出
 // ① server.close() 停止接收新连接 ② 等待在途请求结束（这里有个 2 秒慢接口）
 // ③ 关闭模拟的数据库连接 ④ 日志后 process.exit(0)
 const http = require('node:http')

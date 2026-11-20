@@ -1,0 +1,39 @@
+{
+    // attach Debug 与 launch.json Debug 的实操配置：F5 选对应配置即可（需把本目录作为 VSCode 工作区打开）
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // launch.json Debug 的 program 直启形态：VSCode 拉起进程，出生即带调试器
+            "type": "node",
+            "request": "launch",
+            "name": "launch：program 直启 src/server.js",
+            "program": "${workspaceFolder}/src/server.js",
+            "skipFiles": ["<node_internals>/**"],
+            "console": "integratedTerminal"
+        },
+        {
+            // launch.json Debug 的 npm scripts 形态：与 package.json 的 scripts 完全对齐（工程调试正解）
+            "type": "node",
+            "request": "launch",
+            "name": "launch：npm run demo（F5 全包）",
+            "runtimeExecutable": "npm",
+            "windows": {
+                "runtimeExecutable": "npm.cmd"
+            },
+            "runtimeArgs": ["run", "demo"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            // attach Debug：先自己跑 node --inspect src/server.js，再 F5 选这条连上去
+            "type": "node",
+            "request": "attach",
+            "name": "attach：连接已运行的 9229",
+            "address": "127.0.0.1",
+            "port": 9229,
+            "restart": true,
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ]
+}

@@ -1,4 +1,4 @@
-// 06 对比：① 主线程直接跑 CPU 密集任务（阻塞心跳）② 放进 Worker（不阻塞）
+// worker_threads 对比：① 主线程直接跑 CPU 密集任务（阻塞心跳）② 放进 Worker（不阻塞）
 const { Worker } = require('node:worker_threads')
 const path = require('node:path')
 
@@ -27,7 +27,7 @@ setTimeout(() => {
     // 让心跳再跳几拍，再跑 Worker 方案
     setTimeout(() => {
         console.log('\n=== 方案②：放进 Worker（心跳应持续跳动）===')
-        const w = new Worker(path.join(__dirname, '06-worker-thread-child.js'))
+        const w = new Worker(path.join(__dirname, 'worker-thread-child.js'))
         w.on('message', msg => {
             console.log('Worker 返回结果（尾 6 位）:', String(msg.result).slice(-6))
             console.log('可见：主线程心跳始终在跳，重活交给了另一条线程')

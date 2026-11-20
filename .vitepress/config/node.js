@@ -9,11 +9,8 @@ export default [
             { text: '异步编程与事件驱动', link: '/node/运行环境/异步编程与事件驱动' },
             { text: 'Buffer 与 Stream', link: '/node/运行环境/Buffer 与 Stream' },
             { text: '进程线程与优雅退出', link: '/node/运行环境/进程线程与优雅退出' },
-            { text: '运行机制收束', link: '/node/运行环境/运行机制收束' },
-            {
-                text: 'VSCode 调试 Node：inspect 协议、launch 配置与断点绑定',
-                link: '/node/运行环境/VSCode 调试 Node：inspect 协议、launch 配置与断点绑定'
-            },
+            { text: '环境变量与常用内置模块', link: '/node/运行环境/环境变量与常用内置模块' },
+            { text: 'VSCode 调试 Node', link: '/node/运行环境/VSCode 调试 Node' },
             { text: '模块总结（运行环境）', link: '/node/运行环境/总结' }
         ]
     },

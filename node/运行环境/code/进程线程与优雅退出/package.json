@@ -1,14 +1,16 @@
 {
   "name": "process-thread-and-shutdown",
   "version": "1.0.0",
-  "description": "Node.js 后端知识体系 - 《进程线程与优雅退出》配套实验（child_process、worker_threads、线程池、优雅关闭）",
+  "description": "Node.js 后端知识体系 - 《进程线程与优雅退出》配套实验（child_process 四把刀、worker_threads 与线程池、优雅关闭）",
   "type": "commonjs",
   "scripts": {
-    "06child": "node src/06-child-process.js",
-    "06worker": "node src/06-worker-thread.js",
-    "06pool": "node src/06-worker-pool.js",
-    "06shutdown": "node src/06-graceful-shutdown.js",
-    "06fallback": "node src/06-error-fallback.js"
+    "spawn": "node src/spawn/spawn.js",
+    "exec": "node src/exec/exec.js",
+    "exec-file": "node src/exec-file/exec-file.js",
+    "fork": "node src/fork/fork.js",
+    "worker": "node src/worker-thread/worker-thread.js",
+    "pool": "node src/worker-pool/worker-pool.js",
+    "shutdown": "node src/graceful-shutdown.js"
   },
   "license": "MIT"
 }

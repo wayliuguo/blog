@@ -1,4 +1,4 @@
-// Worker 线程（被 06-worker-thread.js 通过 new Worker 调用）
+// Worker 线程（被 worker-thread/worker-thread.js 通过 new Worker 调用）
 // 在独立线程跑 CPU 密集任务，通过 parentPort 与主线程通信
 const { parentPort } = require('node:worker_threads')
 
