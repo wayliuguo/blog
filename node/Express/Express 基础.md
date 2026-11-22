@@ -1,8 +1,6 @@
 # Express 基础
 
-## 先接上模块二：Express 站在哪一层
-
-模块二里我们用 `node:http` 手写过最小服务器（下面这段逐字摘自配套脚本 `code/Express 基础`，本篇代码块均为 CommonJS 写法）：
+## Express 站在哪一层
 
 > 摘自 `./code/Express 基础/src/http-baseline.js`（运行：`npm run http`）
 
@@ -43,13 +41,13 @@ node:http 版本运行在 http://localhost:3000
 
 Express 做的事，就是把上面这些重复劳动收敛成约定：
 
-| 你在 `node:http` 里要手写的 | Express 的写法 | 对应模块二的哪一节 |
-|---|---|---|
-| `if (req.url === ...)` 手写路由分发 | `app.get('/user', handler)` | HTTP 与 HTTPS 深入 |
-| `chunks.push(chunk)` + `Buffer.concat` 读请求体 | `express.json()` 中间件 | HTTP 与 HTTPS 深入（`req` 是可读流） |
-| 每处手写日志 / 鉴权 / 跨域 | `app.use(fn)` 中间件链 | —— |
-| 手动 `res.setHeader` + `res.end` | `res.json()` / `res.status()` | HTTP 与 HTTPS 深入（`res` 是可写流） |
-| 手动 404 分支 | 兜底中间件 | —— |
+| 你在 `node:http` 里要手写的 | Express 的写法 |
+|---|---|
+| `if (req.url === ...)` 手写路由分发 | `app.get('/user', handler)` |
+| `chunks.push(chunk)` + `Buffer.concat` 读请求体 | `express.json()` 中间件 |
+| 每处手写日志 / 鉴权 / 跨域 | `app.use(fn)` 中间件链 |
+| 手动 `res.setHeader` + `res.end` | `res.json()` / `res.status()` |
+| 手动 404 分支 | 兜底中间件 |
 
 > 心智模型：**Express 不提供新能力，它把原生 `http` 的常用写法标准化了。** 后面 `Express 原理` 会带你把这一层亲手实现一遍 —— 那时你会发现，Express 的核心其实就是一个"中间件数组 + 一次遍历调用"。
 
