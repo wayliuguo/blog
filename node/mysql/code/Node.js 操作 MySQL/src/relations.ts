@@ -1,4 +1,4 @@
-// 03-relations.ts：一对多 / 多对一——关系写在装饰器上，数据库里落成外键列
+// relations.ts：一对多 / 多对一——关系写在装饰器上，数据库里落成外键列
 // @OneToMany 那一侧是"虚拟字段"（库里没有这一列），真正的外键列由 @Column 或 @JoinColumn 建出来
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 

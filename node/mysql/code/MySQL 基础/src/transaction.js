@@ -1,4 +1,4 @@
-// 05-transaction.js：事务——要么全成功，要么全失败（本项目重点）
+// transaction.js：事务——要么全成功，要么全失败（本项目重点）
 // 场景：用户购买服务 -> 扣余额 -> 创建订单 -> 写流水，三步必须原子
 // 运行： npm run tx
 const { pool } = require('./db')

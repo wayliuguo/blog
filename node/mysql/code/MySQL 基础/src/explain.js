@@ -1,4 +1,4 @@
-// 04-explain.js：逐条 EXPLAIN，读懂执行计划（本项目重点）
+// explain.js：逐条 EXPLAIN，读懂执行计划（本项目重点）
 // 只突出 6 列：type / possible_keys / key / rows / filtered / Extra
 // 运行： npm run explain
 const { query, pool } = require('./db')

@@ -1,4 +1,4 @@
-// 08-pool-stats.js：连接池参数、计数与容量估算
+// pool-stats.js：连接池参数、计数与容量估算
 // 只建池、不发查询，所以本机没装 MySQL 也能跑——它演示的是"池本身"的配置与观测
 // 运行： npm run pool
 const mysql = require('mysql2/promise')

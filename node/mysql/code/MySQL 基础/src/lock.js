@@ -1,4 +1,4 @@
-// 07-lock.js：乐观锁 vs 悲观锁
+// lock.js：乐观锁 vs 悲观锁
 // 运行： npm run lock
 const { pool, query } = require('./db')
 

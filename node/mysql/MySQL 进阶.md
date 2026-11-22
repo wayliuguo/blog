@@ -809,9 +809,9 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `03-index.js` | 无索引 vs 有索引的耗时对比（10 万行） |
-| `04-explain.js` | EXPLAIN 六列读法 |
-| `03-explain-cases.sql` | 10 条典型 SQL 的索引验证清单 |
+| `index` | 无索引 vs 有索引的耗时对比（10 万行） |
+| `explain` | EXPLAIN 六列读法 |
+| `explain-cases` | 10 条典型 SQL 的索引验证清单 |
 
 运行方式见 `MySQL 基础/README.md`。
 

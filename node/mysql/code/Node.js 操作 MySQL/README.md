@@ -14,7 +14,7 @@
 
 - Node.js 18+
 - MySQL 8.0+（只有 `src/data-source.ts` 的 `main()` 会真连库；其余文件都是结构定义与用法示范）
-- 建表：直接用 TypeORM 的 `synchronize: true` 临时建，或把 `MySQL 基础/sql/01-schema.sql` 拿来建库
+- 建表：直接用 TypeORM 的 `synchronize: true` 临时建，或把 `MySQL 基础/sql/schema.sql` 拿来建库
 
 ---
 
@@ -28,7 +28,7 @@ npx ts-node src/data-source.ts   # 连上库会打印 users 条数；连不上�
 ```
 
 想亲眼看到 N+1 多发了几条 SQL：`src/data-source.ts` 里的 `logging` 已打开 `query`，调
-`src/04-n-plus-one.ts` 的两个函数对比控制台打印的 SQL 条数即可。
+`src/n-plus-one.ts` 的两个函数对比控制台打印的 SQL 条数即可。
 
 ---
 
@@ -36,11 +36,11 @@ npx ts-node src/data-source.ts   # 连上库会打印 users 条数；连不上�
 
 | 文件 | 演示什么 | 正文对应小节 |
 | --- | --- | --- |
-| `src/01-entity.ts` | `@Entity('users')` / `@PrimaryGeneratedColumn()` / `@Column({ length, default, unique })` | TypeORM 入门 · Entity 定义 |
-| `src/02-users.service.ts` | Repository 模式：`@InjectRepository(User)` 注入，`find` / `findOneBy` / `create`+`save` / `update` / `delete` | TypeORM 入门 · Repository 模式 |
-| `src/03-relations.ts` | `@OneToMany` + `@ManyToOne` + `@JoinColumn({ name: 'user_id' })`，外键列与关系字段并存 | TypeORM 入门 · 实体关系 |
-| `src/04-n-plus-one.ts` | N+1 的反面写法（循环里 `find`）与两种正面写法（`relations` / `QueryBuilder`） | N+1 查询问题（问题描述 / 解决方案） |
-| `src/05-order-transaction.service.ts` | QueryRunner 事务：`connect` → `startTransaction` → `manager.decrement` / `manager.save` → `commit` / `rollback` / `release` | 事务与 QueryRunner |
+| `src/entity.ts` | `@Entity('users')` / `@PrimaryGeneratedColumn()` / `@Column({ length, default, unique })` | TypeORM 入门 · Entity 定义 |
+| `src/users.service.ts` | Repository 模式：`@InjectRepository(User)` 注入，`find` / `findOneBy` / `create`+`save` / `update` / `delete` | TypeORM 入门 · Repository 模式 |
+| `src/relations.ts` | `@OneToMany` + `@ManyToOne` + `@JoinColumn({ name: 'user_id' })`，外键列与关系字段并存 | TypeORM 入门 · 实体关系 |
+| `src/n-plus-one.ts` | N+1 的反面写法（循环里 `find`）与两种正面写法（`relations` / `QueryBuilder`） | N+1 查询问题（问题描述 / 解决方案） |
+| `src/order-transaction.service.ts` | QueryRunner 事务：`connect` → `startTransaction` → `manager.decrement` / `manager.save` → `commit` / `rollback` / `release` | 事务与 QueryRunner |
 | `src/data-source.ts` | `DataSource` 配置：`.env` 读账号、`synchronize: false`、`logging: ['error','query']` | 事务与 QueryRunner（配合观察 SQL） |
 
 ---

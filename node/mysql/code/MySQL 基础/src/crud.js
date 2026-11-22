@@ -1,4 +1,4 @@
-// 01-crud.js：最基础的增删改查（CRUD）
+// crud.js：最基础的增删改查（CRUD）
 // 用 mysql2 原生 driver，每条 SQL 都看得见、改得动
 // 运行： npm run crud
 const { query, pool } = require('./db')

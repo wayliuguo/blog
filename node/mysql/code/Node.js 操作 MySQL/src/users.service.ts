@@ -1,9 +1,9 @@
-// 02-users.service.ts：Repository 模式——注入 Repository，用方法调用替代手写 SQL
+// users.service.ts：Repository 模式——注入 Repository，用方法调用替代手写 SQL
 // 每个实体都对应一个 Repository，它把"表"包装成"可调用的对象"
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
-import { User } from './01-entity'
+import { User } from './entity'
 
 // 在 Service 中注入 Repository
 @Injectable()

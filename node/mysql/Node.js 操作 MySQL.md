@@ -42,9 +42,9 @@ async function query(sql, params) {
 
 ### 参数化查询（防止 SQL 注入）
 
-配套脚本 `01-crud.js` 里每一条 SQL 都走 `?` 占位符——值交给驱动去转义，绝不把变量拼进 SQL 字符串：
+配套脚本 `crud` 里每一条 SQL 都走 `?` 占位符——值交给驱动去转义，绝不把变量拼进 SQL 字符串：
 
-> 摘自 `./code/MySQL 基础/src/01-crud.js`（运行：`npm run crud`）
+> 摘自 `./code/MySQL 基础/src/crud.js`（运行：`npm run crud`）
 
 ```javascript
 // 1. 查询：条件 + 排序 + 限制，这是日常最高频的读操作
@@ -81,7 +81,7 @@ TypeORM 是 NestJS 官方推荐的 ORM（对象关系映射）框架，让开发
 
 下面这段逐字摘自 `Node.js 操作 MySQL`，`@Entity` 指定表名、`@PrimaryGeneratedColumn` 指定自增主键，其余都是普通列：
 
-> 摘自 `./code/Node.js 操作 MySQL/src/01-entity.ts`（运行：`npm run typecheck`）
+> 摘自 `./code/Node.js 操作 MySQL/src/entity.ts`（运行：`npm run typecheck`）
 
 ```typescript
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm'
@@ -109,7 +109,7 @@ export class User {
 
 ### Repository 模式
 
-> 摘自 `./code/Node.js 操作 MySQL/src/02-users.service.ts`（运行：`npm run typecheck`）
+> 摘自 `./code/Node.js 操作 MySQL/src/users.service.ts`（运行：`npm run typecheck`）
 
 ```typescript
 // 在 Service 中注入 Repository
@@ -151,7 +151,7 @@ export class UserService {
 
 关系写在装饰器上，**外键列由 `@JoinColumn({ name: 'user_id' })` 指定**；`@OneToMany` 那一侧是虚拟字段，库里并没有这一列：
 
-> 摘自 `./code/Node.js 操作 MySQL/src/03-relations.ts`（运行：`npm run typecheck`）
+> 摘自 `./code/Node.js 操作 MySQL/src/relations.ts`（运行：`npm run typecheck`）
 
 ```typescript
 @Entity()
@@ -194,7 +194,7 @@ export class Order {
 
 N+1 的"1"是先查主表拿到 N 条记录，"N"是循环里为每条记录再查一次关联表——用户越多，SQL 越多：
 
-> 摘自 `./code/Node.js 操作 MySQL/src/04-n-plus-one.ts`（运行：`npm run typecheck`）
+> 摘自 `./code/Node.js 操作 MySQL/src/n-plus-one.ts`（运行：`npm run typecheck`）
 
 ```typescript
 // 查询所有用户及其订单
@@ -213,7 +213,7 @@ for (const user of users) {
 
 两种写法都能压成 1 次查询：`relations` 最省事，QueryBuilder 更灵活（能继续加筛选、排序、只取部分列）：
 
-> 摘自 `./code/Node.js 操作 MySQL/src/04-n-plus-one.ts`（运行：`npm run typecheck`）
+> 摘自 `./code/Node.js 操作 MySQL/src/n-plus-one.ts`（运行：`npm run typecheck`）
 
 ```typescript
 // 使用 Relations 一次查询
@@ -234,7 +234,7 @@ const usersViaQueryBuilder = await userRepository
 
 QueryRunner 是"手动挡"：连接、开事务、提交/回滚、释放都要自己来——好处是同一个事务里的操作都走它自己的 manager。
 
-> 摘自 `./code/Node.js 操作 MySQL/src/05-order-transaction.service.ts`（运行：`npm run typecheck`）
+> 摘自 `./code/Node.js 操作 MySQL/src/order-transaction.service.ts`（运行：`npm run typecheck`）
 
 ```typescript
 @Injectable()
@@ -275,13 +275,13 @@ export class OrderService {
 | 文件 | 演示什么 |
 | --- | --- |
 | `./code/MySQL 基础/src/db.js` | mysql2 连接池封装（账号密码走 `.env`）与 `query()` 便捷函数 |
-| `./code/MySQL 基础/src/01-crud.js` | 参数化查询：SELECT / INSERT / UPDATE / DELETE |
-| `./code/MySQL 基础/src/02-join.js` | INNER / LEFT JOIN 与关联聚合 |
-| `./code/Node.js 操作 MySQL/src/01-entity.ts` | TypeORM Entity 定义与列选项（`@Entity` / `@PrimaryGeneratedColumn` / `@Column`） |
-| `./code/Node.js 操作 MySQL/src/02-users.service.ts` | Repository 模式：注入 `Repository<User>` 并封装 find / create+save / update / delete |
-| `./code/Node.js 操作 MySQL/src/03-relations.ts` | `@OneToMany` / `@ManyToOne` 与 `@JoinColumn({ name: 'user_id' })` 外键列 |
-| `./code/Node.js 操作 MySQL/src/04-n-plus-one.ts` | N+1 的反面写法（循环里查询）与两种正面写法（`relations` / QueryBuilder） |
-| `./code/Node.js 操作 MySQL/src/05-order-transaction.service.ts` | QueryRunner 事务：扣余额 + 建订单的 commit / rollback / release |
+| `./code/MySQL 基础/src/crud.js` | 参数化查询：SELECT / INSERT / UPDATE / DELETE |
+| `./code/MySQL 基础/src/join.js` | INNER / LEFT JOIN 与关联聚合 |
+| `./code/Node.js 操作 MySQL/src/entity.ts` | TypeORM Entity 定义与列选项（`@Entity` / `@PrimaryGeneratedColumn` / `@Column`） |
+| `./code/Node.js 操作 MySQL/src/users.service.ts` | Repository 模式：注入 `Repository<User>` 并封装 find / create+save / update / delete |
+| `./code/Node.js 操作 MySQL/src/relations.ts` | `@OneToMany` / `@ManyToOne` 与 `@JoinColumn({ name: 'user_id' })` 外键列 |
+| `./code/Node.js 操作 MySQL/src/n-plus-one.ts` | N+1 的反面写法（循环里查询）与两种正面写法（`relations` / QueryBuilder） |
+| `./code/Node.js 操作 MySQL/src/order-transaction.service.ts` | QueryRunner 事务：扣余额 + 建订单的 commit / rollback / release |
 | `./code/Node.js 操作 MySQL/src/data-source.ts` | `DataSource` 配置：`.env` 读账号、`synchronize: false`、`logging` 观察 SQL |
 
 运行方式见 `MySQL 基础/README.md`；TypeORM 部分见 `Node.js 操作 MySQL/README.md`（`npm run typecheck` 校验装饰器与类型，`npx ts-node src/data-source.ts` 需要本地 MySQL）。

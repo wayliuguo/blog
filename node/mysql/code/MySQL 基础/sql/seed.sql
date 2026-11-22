@@ -1,6 +1,6 @@
 -- ============================================================
--- 02-seed.sql  造测试数据（纯 SQL，不依赖任何外部工具）
--- 运行： mysql -u root -p mysql_demo < sql/02-seed.sql
+-- seed.sql  造测试数据（纯 SQL，不依赖任何外部工具）
+-- 运行： mysql -u root -p mysql_demo < sql/seed.sql
 -- 量级： users 10 万行 / products 1000 行 / orders 1 万行 / order_items 2 万行
 -- ============================================================
 

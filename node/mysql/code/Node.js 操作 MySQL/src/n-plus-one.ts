@@ -1,8 +1,8 @@
-// 04-n-plus-one.ts：N+1 问题与它的两种解法
+// n-plus-one.ts：N+1 问题与它的两种解法
 // N+1 = 先查 1 次拿到 N 条主记录，再为每条记录各查 1 次关联表，一共 1 + N 次往返
 import { Repository } from 'typeorm'
-import { User } from './01-entity'
-import { Order } from './03-relations'
+import { User } from './entity'
+import { Order } from './relations'
 
 // ---------- 反面写法：循环里发查询 ----------
 export async function loopQuery(userRepository: Repository<User>, orderRepository: Repository<Order>) {

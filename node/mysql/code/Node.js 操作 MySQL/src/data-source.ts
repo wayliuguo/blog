@@ -3,8 +3,8 @@
 import 'reflect-metadata'
 import * as dotenv from 'dotenv'
 import { DataSource } from 'typeorm'
-import { User } from './01-entity'
-import { Order } from './03-relations'
+import { User } from './entity'
+import { Order } from './relations'
 
 dotenv.config() // 必须在读 process.env 之前调用
 

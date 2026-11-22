@@ -20,13 +20,13 @@
 第一步：建库 + 建表
 
 ```bash
-mysql -u root -p < sql/01-schema.sql
+mysql -u root -p < sql/schema.sql
 ```
 
 第二步：造测试数据（10 万用户 / 1000 商品 / 1 万订单 / 2 万明细，纯 SQL，无需外部工具）
 
 ```bash
-mysql -u root -p mysql_demo < sql/02-seed.sql
+mysql -u root -p mysql_demo < sql/seed.sql
 ```
 
 第三步：配置并安装依赖，然后挑一个脚本运行
@@ -38,7 +38,7 @@ npm install
 npm run crud              # 或 npm run join / index / explain / tx / oversell / lock
 ```
 
-想手动看执行计划，可把 `sql/03-explain-cases.sql` 里任意一条 SQL 前加 `EXPLAIN` 在 MySQL 客户端执行。
+想手动看执行计划，可把 `sql/explain-cases.sql` 里任意一条 SQL 前加 `EXPLAIN` 在 MySQL 客户端执行。
 
 ---
 
@@ -46,13 +46,13 @@ npm run crud              # 或 npm run join / index / explain / tx / oversell /
 
 | 脚本 | 演示什么 | 运行命令 | 你该观察到什么 |
 | --- | --- | --- | --- |
-| `src/01-crud.js` | SELECT / INSERT / UPDATE / DELETE 基础增删改查 | `npm run crud` | 控制台打印 4 段操作与结果；插入 `affectedRows=1`、拿到 `insertId`；文末解释 `affectedRows` 含义 |
-| `src/02-join.js` | INNER JOIN、LEFT JOIN + IS NULL、关联聚合 | `npm run join` | 第 1 段只出现下过单的用户；第 2 段能捞出“从没下过单”的用户；第 3 段按用户汇总订单数与金额 |
-| `src/03-index.js` | 无索引 vs 有索引的等值查询性能对照 | `npm run index` | 10 万行上 100 次查询：无索引平均约几十 ms、有索引平均约 1 ms 以内，提速数十倍（具体数值随机器浮动） |
-| `src/04-explain.js` | 逐条 EXPLAIN，读执行计划 6 列 | `npm run explain` | 9 条用例打印 `type/possible_keys/key/rows/filtered/Extra`；唯一索引 `const`、范围 `range`、跳过最左前缀和左模糊 `ALL` |
-| `src/05-transaction.js` | 事务：扣余额+建订单+写流水，提交与回滚两分支 | `npm run tx` | 分支一余额减少对应金额并提交；分支二余额不足整体回滚，余额不变，证明原子性 |
-| `src/06-oversell.js` | 防超卖：错误 SELECT 再 UPDATE vs 正确 UPDATE 带条件 | `npm run oversell` | 错误做法库存剩余非 0、成功次数 >100（超卖）；正确做法成功 100 次、库存剩余 0，数字自洽 |
-| `src/07-lock.js` | 乐观锁（version + CAS + 重试）vs 悲观锁（FOR UPDATE） | `npm run lock` | 乐观锁 version 自增、冲突时重试；悲观锁在事务内锁行，提交后释放 |
+| `src/crud.js` | SELECT / INSERT / UPDATE / DELETE 基础增删改查 | `npm run crud` | 控制台打印 4 段操作与结果；插入 `affectedRows=1`、拿到 `insertId`；文末解释 `affectedRows` 含义 |
+| `src/join.js` | INNER JOIN、LEFT JOIN + IS NULL、关联聚合 | `npm run join` | 第 1 段只出现下过单的用户；第 2 段能捞出“从没下过单”的用户；第 3 段按用户汇总订单数与金额 |
+| `src/index.js` | 无索引 vs 有索引的等值查询性能对照 | `npm run index` | 10 万行上 100 次查询：无索引平均约几十 ms、有索引平均约 1 ms 以内，提速数十倍（具体数值随机器浮动） |
+| `src/explain.js` | 逐条 EXPLAIN，读执行计划 6 列 | `npm run explain` | 9 条用例打印 `type/possible_keys/key/rows/filtered/Extra`；唯一索引 `const`、范围 `range`、跳过最左前缀和左模糊 `ALL` |
+| `src/transaction.js` | 事务：扣余额+建订单+写流水，提交与回滚两分支 | `npm run tx` | 分支一余额减少对应金额并提交；分支二余额不足整体回滚，余额不变，证明原子性 |
+| `src/oversell.js` | 防超卖：错误 SELECT 再 UPDATE vs 正确 UPDATE 带条件 | `npm run oversell` | 错误做法库存剩余非 0、成功次数 >100（超卖）；正确做法成功 100 次、库存剩余 0，数字自洽 |
+| `src/lock.js` | 乐观锁（version + CAS + 重试）vs 悲观锁（FOR UPDATE） | `npm run lock` | 乐观锁 version 自增、冲突时重试；悲观锁在事务内锁行，提交后释放 |
 
 ---
 
@@ -134,7 +134,7 @@ npm run crud              # 或 npm run join / index / explain / tx / oversell /
 
 ## 预期输出
 
-- 前置：需本地 MySQL 8.0+；先 `mysql -u root -p < sql/01-schema.sql` 建库建表、`< sql/02-seed.sql` 造数据，再 `cp .env.example .env` 填密码并 `npm install`。
+- 前置：需本地 MySQL 8.0+；先 `mysql -u root -p < sql/schema.sql` 建库建表、`< sql/seed.sql` 造数据，再 `cp .env.example .env` 填密码并 `npm install`。
 - `npm run crud` 打印增删改查四段结果（插入 `affectedRows=1`、拿到 `insertId`），文末解释 `affectedRows` 含义。
 - `npm run index` 在 10 万行上对比：无索引查询约几十 ms、有索引约 1ms 以内，提速数十倍（数值随机器浮动）。
 - `npm run tx` 分支一回滚、余额不变，证明事务原子性；`npm run oversell` / `lock` 演示并发控制（正确做法库存剩余 0、乐观/悲观锁行为符合预期）。

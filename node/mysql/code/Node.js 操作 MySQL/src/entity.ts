@@ -1,4 +1,4 @@
-// 01-entity.ts：一张表 ↔ 一个带装饰器的类
+// entity.ts：一张表 ↔ 一个带装饰器的类
 // @Entity('users') 指定表名，@PrimaryGeneratedColumn 指定自增主键，@Column 的选项最终变成建表 DDL
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm'
 

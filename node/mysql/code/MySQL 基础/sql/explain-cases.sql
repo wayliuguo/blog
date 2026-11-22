@@ -1,5 +1,5 @@
 -- ============================================================
--- 03-explain-cases.sql  10 条典型 SQL，配套博客「看到一条 SQL 脑子里能想到什么」
+-- explain-cases.sql  10 条典型 SQL，配套博客「看到一条 SQL 脑子里能想到什么」
 -- 用法：在 MySQL 客户端里对每条 SQL 手工加 EXPLAIN 执行，例如：
 --        EXPLAIN SELECT * FROM users WHERE email = 'user50000@example.com';
 -- 每条注释说明：验证什么 / 预期是否走索引 / 预期 type

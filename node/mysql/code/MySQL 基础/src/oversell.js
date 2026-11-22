@@ -1,4 +1,4 @@
-// 06-oversell.js：防超卖（对应博客「防超卖」一节，本项目重点）
+// oversell.js：防超卖（对应博客「防超卖」一节，本项目重点）
 // 错误做法：先 SELECT 再判断再 UPDATE（读-改-写非原子，并发会超卖）
 // 正确做法：UPDATE ... WHERE stock >= 1，用 affectedRows 判断是否真的扣到
 // 运行： npm run oversell

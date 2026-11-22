@@ -1,4 +1,4 @@
-// 03-index.js：索引对比实验（本项目重点之一）
+// index.js：索引对比实验（本项目重点之一）
 // 同一句等值查询，无索引 vs 有索引，计时 100 次，直观感受“走没走索引”
 // 运行： npm run index
 const { query, pool } = require('./db')

@@ -1,4 +1,4 @@
-// 02-join.js：JOIN 实战
+// join.js：JOIN 实战
 // 对应博客「为什么 JOIN 必须真正学会」一节：会 ORM 不等于会关联查询
 // 运行： npm run join
 const { query, pool } = require('./db')

@@ -141,8 +141,8 @@ LEFT JOIN orders ON users.id = orders.user_id;
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `01-schema.sql` | 建库建表与索引设计 |
-| `01-crud.js` | CRUD 与 affectedRows |
+| `schema` | 建库建表与索引设计 |
+| `crud` | CRUD 与 affectedRows |
 
 运行方式见 `MySQL 基础/README.md`。
 

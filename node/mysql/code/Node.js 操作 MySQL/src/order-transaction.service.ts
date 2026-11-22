@@ -1,10 +1,10 @@
-// 05-order-transaction.service.ts：事务与 QueryRunner
+// order-transaction.service.ts：事务与 QueryRunner
 // QueryRunner 是"手动挡"：连接、开事务、提交、回滚、释放都要自己来，好处是同一个事务里的操作都走它
 import { Injectable } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
 import { DataSource } from 'typeorm'
-import { User } from './01-entity'
-import { Order } from './03-relations'
+import { User } from './entity'
+import { Order } from './relations'
 
 @Injectable()
 export class OrderService {
