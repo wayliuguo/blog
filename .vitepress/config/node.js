@@ -23,15 +23,21 @@ export default [
         ]
     },
     {
-        text: 'Web 框架基础',
+        text: 'Express',
         collapsed: false,
         items: [
-            { text: 'Express 快速入门', link: '/node/Express 与 Koa/Express 快速入门' },
-            { text: 'Koa 快速入门', link: '/node/Express 与 Koa/Koa 快速入门' },
-            { text: 'Express 项目模板', link: '/node/Express 与 Koa/Express 项目模板' },
-            { text: 'Express 源码分析', link: '/node/Express 与 Koa/Express 源码分析' },
-            { text: 'Koa 项目模板', link: '/node/Express 与 Koa/Koa 项目模板' },
-            { text: 'Koa 源码分析', link: '/node/Express 与 Koa/Koa 源码分析' }
+            { text: 'Express 基础', link: '/node/Express/Express 基础' },
+            { text: 'Express 模板', link: '/node/Express/Express 模板' },
+            { text: 'Express 原理', link: '/node/Express/Express 原理' }
+        ]
+    },
+    {
+        text: 'Koa',
+        collapsed: false,
+        items: [
+            { text: 'Koa 基础', link: '/node/Koa/Koa 基础' },
+            { text: 'Koa 模板', link: '/node/Koa/Koa 模板' },
+            { text: 'Koa 原理', link: '/node/Koa/Koa 原理' }
         ]
     },
     {
