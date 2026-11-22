@@ -4,11 +4,13 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0' // 仅演示：跳过自签证书
 
 const https = require('node:https')
 const fs = require('node:fs')
+const path = require('node:path')
 
+// 证书在项目根目录（与 src 同级），用 __dirname 锚定，任意 cwd 下运行都能找到
 const server = https.createServer(
     {
-        key: fs.readFileSync('./server.key'), // 私钥
-        cert: fs.readFileSync('./server.cert') // 证书（含公钥）
+        key: fs.readFileSync(path.join(__dirname, '..', 'server.key')), // 私钥
+        cert: fs.readFileSync(path.join(__dirname, '..', 'server.cert')) // 证书（含公钥）
     },
     (req, res) => {
         res.end('hello over TLS')

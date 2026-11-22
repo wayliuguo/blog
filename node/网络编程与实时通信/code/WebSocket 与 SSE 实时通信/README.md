@@ -10,8 +10,8 @@ npm run <脚本>       # 见下方清单；依赖 `ws` 的脚本先 `npm install
 
 | 脚本 | 运行命令 |
 | --- | --- |
-| `sse.js` | `npm run sse` |
-| `websocket.js` | `npm run websocket` |
+| `src/sse.js` | `npm run sse` |
+| `src/websocket.js` | `npm run websocket` |
 
 ## 注意事项
 

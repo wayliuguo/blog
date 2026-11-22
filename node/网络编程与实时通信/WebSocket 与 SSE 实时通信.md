@@ -71,7 +71,7 @@ WebSocket（应用层协议）
 
 TCP 是**传输层**协议，WebSocket 是**应用层**协议，经典关系是 `WebSocket → TCP → IP`。如果你绕过 WebSocket，直接用 `net.createServer()` 基于 TCP 写一套通信：
 
-> 摘自 `./code/TCP 与 Socket 编程/tcp-server.js`（运行：`npm run tcp-server`）
+> 摘自 `./code/TCP 与 Socket 编程/src/tcp-server.js`（运行：`npm run tcp-server`）
 
 ```js
 const net = require('node:net')
@@ -177,7 +177,7 @@ retry: 重连间隔(ms)  —— 建议浏览器多久重连一次
 
 因为 `res` 本身就是可写流（呼应第 02 篇）——你只需要把一段段事件 `write` 进这条流，浏览器侧的 `EventSource` 就会逐条触发 `onmessage`。
 
-> 摘自 `./code/WebSocket 与 SSE 实时通信/sse.js`（运行：`npm run sse`）
+> 摘自 `./code/WebSocket 与 SSE 实时通信/src/sse.js`（运行：`npm run sse`）
 
 ```js
 const http = require('node:http')
@@ -210,7 +210,7 @@ const server = http.createServer((req, res) => {
 })
 ```
 
-`07-sse.js` 自己既是服务端、又用 `fetch` 当客户端读流，单文件就能跑出「服务端每 500ms 推一条」的完整效果：
+`src/sse.js` 自己既是服务端、又用 `fetch` 当客户端读流，单文件就能跑出「服务端每 500ms 推一条」的完整效果：
 
 实测输出（`npm run sse`）：
 
@@ -301,8 +301,8 @@ Node.js 是一个基于 Chrome V8 的运行时
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `./code/TCP 与 Socket 编程/tcp-server.js` | 对照项：裸 TCP 只给字节流，消息边界/心跳都要自己定 |
-| `./code/WebSocket 与 SSE 实时通信/sse.js` | SSE：`text/event-stream` + 持续 `write` + 客户端自动重连 |
-| `./code/WebSocket 与 SSE 实时通信/websocket.js` | WebSocket：HTTP Upgrade → 101 之后的双向收发与心跳 |
+| `./code/TCP 与 Socket 编程/src/tcp-server.js` | 对照项：裸 TCP 只给字节流，消息边界/心跳都要自己定 |
+| `./code/WebSocket 与 SSE 实时通信/src/sse.js` | SSE：`text/event-stream` + 持续 `write` + 客户端自动重连 |
+| `./code/WebSocket 与 SSE 实时通信/src/websocket.js` | WebSocket：HTTP Upgrade → 101 之后的双向收发与心跳 |
 
 运行方式（`code/WebSocket 与 SSE 实时通信` 目录下）：`npm run sse` / `npm run websocket`；`websocket` 依赖 `ws`，先 `npm install`。TCP 对照项在本模块 `code/TCP 与 Socket 编程` 目录下：`npm run tcp-server`（服务端，常驻）。

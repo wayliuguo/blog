@@ -46,7 +46,7 @@ IP      （网络层：寻址与路由）
 
 Node.js 内置 `node:http` 就能直接起一个 HTTP Server。本篇代码块均摘自配套脚本，脚本是 CommonJS 的 `require(...)` 写法：
 
-> 摘自 `./code/HTTP 与 HTTPS 深入/http-server.js`（运行：`npm run http-server`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/src/http-server.js`（运行：`npm run http-server`）
 
 ```js
 const http = require('node:http')
@@ -123,7 +123,7 @@ Operating System  （内核 / 网卡）
 
 `req` 是**可读流（Readable）**。客户端发来的请求体可能很大、分多次到达，Node 用 `data` 事件逐块推给你：
 
-> 摘自 `./code/HTTP 与 HTTPS 深入/http-server.js`（运行：`npm run http-server`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/src/http-server.js`（运行：`npm run http-server`）
 
 ```js
         // 请求体是流：用 chunks[] 累积，结束后再 Buffer.concat 起来
@@ -147,7 +147,7 @@ body: {"echo":"hello","len":5}
 
 `res` 是**可写流（Writable）**。你可以分多次写入，最后用 `end()` 收尾：
 
-> 摘自 `./code/HTTP 与 HTTPS 深入/http-response.js`（运行：`npm run http-response`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/src/http-response.js`（运行：`npm run http-response`）
 
 ```js
         // 分多次 write，最后用 end() 收尾；没给 Content-Length，Node 改用 chunked
@@ -190,7 +190,7 @@ JavaScript（你的 data / end 回调拿到 Buffer）
 
 当响应体是一次性算出来的（比如 `JSON.stringify(...)`），服务端可以在 `writeHead` 里带上 `Content-Length`，告诉客户端"我总共发这么多字节，收齐就结束"：
 
-> 摘自 `./code/HTTP 与 HTTPS 深入/http-response.js`（运行：`npm run http-response`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/src/http-response.js`（运行：`npm run http-response`）
 
 ```js
         // 响应体一次性算出来：可以提前给出 Content-Length
@@ -280,7 +280,7 @@ requestTimeout     整个请求（含处理）的最长允许时间
 
 设置建议（毫秒）：
 
-> 摘自 `./code/HTTP 与 HTTPS 深入/keepalive-timeouts.js`（运行：`npm run keepalive-timeouts`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/src/keepalive-timeouts.js`（运行：`npm run keepalive-timeouts`）
 
 ```js
 const server = http.createServer((req, res) => res.end('ok'))
@@ -342,15 +342,15 @@ HTTP 数据开始加密传输
 
 在 Node 里起一个 HTTPS 服务，只是把 `http` 换成 `https` 并带上证书：
 
-> 摘自 `./code/HTTP 与 HTTPS 深入/https-server.js`（运行：`npm run https-server`）
+> 摘自 `./code/HTTP 与 HTTPS 深入/src/https-server.js`（运行：`npm run https-server`）
 
 ```js
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0' // 仅演示：跳过自签证书校验，便于 fetch 连上来
 // …
 const server = https.createServer(
     {
-        key: fs.readFileSync('./server.key'),  // 私钥
-        cert: fs.readFileSync('./server.cert') // 证书（含公钥）
+        key: fs.readFileSync(path.join(__dirname, '..', 'server.key')),  // 私钥（项目根目录）
+        cert: fs.readFileSync(path.join(__dirname, '..', 'server.cert')) // 证书（含公钥）
     },
     (req, res) => {
         res.end('hello over TLS')
@@ -468,10 +468,10 @@ TLS 安全能力 （加密与身份认证内建）
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `./code/HTTP 与 HTTPS 深入/http-server.js` | 原生 `node:http`：路由判断、`req` 收集 Body、`res` 流式写入 |
-| `./code/HTTP 与 HTTPS 深入/keepalive.js` | Keep-Alive 观测：连接复用与三个超时的实际效果 |
-| `./code/HTTP 与 HTTPS 深入/https-server.js` | HTTPS：把 `http` 换成 `https` + `key`/`cert`，走一次真实 TLS 握手 |
-| `./code/HTTP 与 HTTPS 深入/keepalive-timeouts.js` | `keepAliveTimeout` / `headersTimeout` / `requestTimeout` 三个超时的取值与相对关系 |
-| `./code/HTTP 与 HTTPS 深入/http-response.js` | 三种响应写法：`Content-Length` vs `Transfer-Encoding: chunked` |
+| `./code/HTTP 与 HTTPS 深入/src/http-server.js` | 原生 `node:http`：路由判断、`req` 收集 Body、`res` 流式写入 |
+| `./code/HTTP 与 HTTPS 深入/src/keepalive.js` | Keep-Alive 观测：连接复用与三个超时的实际效果 |
+| `./code/HTTP 与 HTTPS 深入/src/https-server.js` | HTTPS：把 `http` 换成 `https` + `key`/`cert`，走一次真实 TLS 握手 |
+| `./code/HTTP 与 HTTPS 深入/src/keepalive-timeouts.js` | `keepAliveTimeout` / `headersTimeout` / `requestTimeout` 三个超时的取值与相对关系 |
+| `./code/HTTP 与 HTTPS 深入/src/http-response.js` | 三种响应写法：`Content-Length` vs `Transfer-Encoding: chunked` |
 
-运行方式（`code/HTTP 与 HTTPS 深入` 目录下）：`npm run http-server` / `npm run keepalive` / `npm run https-server` / `npm run keepalive-timeouts` / `npm run http-response`，除 `http-server` 需手动 Ctrl+C 外都会自动结束；`https-server` 依赖同目录的 `server.key` / `server.cert`。
+运行方式（`code/HTTP 与 HTTPS 深入` 目录下）：`npm run http-server` / `npm run keepalive` / `npm run https-server` / `npm run keepalive-timeouts` / `npm run http-response`，除 `http-server` 需手动 Ctrl+C 外都会自动结束；`https-server` 依赖项目根目录（与 `src/` 同级）的 `server.key` / `server.cert`。

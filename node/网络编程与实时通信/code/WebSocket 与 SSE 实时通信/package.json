@@ -4,8 +4,8 @@
   "description": "Node.js 后端知识体系 - 《WebSocket 与 SSE 实时通信》配套实验（SSE 单向推流、WebSocket 双向通道与心跳）",
   "type": "commonjs",
   "scripts": {
-    "sse": "node sse.js",
-    "websocket": "node websocket.js"
+    "sse": "node src/sse.js",
+    "websocket": "node src/websocket.js"
   },
   "dependencies": { "ws": "^8.18.0" },
   "license": "MIT"

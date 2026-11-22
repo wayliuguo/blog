@@ -82,7 +82,7 @@ Hello Node.js
 JavaScript ── 你需要手动 .toString() 才能得到字符串
 ```
 
-> 摘自 `./code/TCP 与 Socket 编程/tcp-server.js`（运行：`npm run tcp-server`，另开终端跑 `npm run tcp-client` 发数据）
+> 摘自 `./code/TCP 与 Socket 编程/src/tcp-server.js`（运行：`npm run tcp-server`，另开终端跑 `npm run tcp-client` 发数据）
 
 ```js
 socket.on('data', chunk => {
@@ -115,7 +115,7 @@ socket error: read ECONNRESET
 
 客户端快速连续调用发送：
 
-> 摘自 `./code/TCP 与 Socket 编程/sticky-packet.js`（运行：`npm run sticky-packet`）
+> 摘自 `./code/TCP 与 Socket 编程/src/sticky-packet.js`（运行：`npm run sticky-packet`）
 
 ```js
 client.write('hello')
@@ -188,7 +188,7 @@ Socket（套接字）可以简单理解为：**应用程序使用操作系统网
 
 服务端：
 
-> 摘自 `./code/TCP 与 Socket 编程/tcp-server.js`（运行：`npm run tcp-server`）
+> 摘自 `./code/TCP 与 Socket 编程/src/tcp-server.js`（运行：`npm run tcp-server`）
 
 ```js
 const net = require('node:net')
@@ -221,7 +221,7 @@ server.listen(4000, () => {
 
 客户端：
 
-> 摘自 `./code/TCP 与 Socket 编程/tcp-client.js`（运行：`npm run tcp-client`）
+> 摘自 `./code/TCP 与 Socket 编程/src/tcp-client.js`（运行：`npm run tcp-client`）
 
 ```js
 const net = require('node:net')
@@ -387,7 +387,7 @@ Network I/O      某些其他任务
 
 回到 Stream。假设把一个大文件读出来通过网络发出去：
 
-> 摘自 `./code/TCP 与 Socket 编程/backpressure.js`（运行：`npm run backpressure`）
+> 摘自 `./code/TCP 与 Socket 编程/src/backpressure.js`（运行：`npm run backpressure`）
 
 ```js
 // 推荐写法：pipe 内部自动协调背压，无需手动管 write 返回值与 drain
@@ -413,7 +413,7 @@ Disk（生产 500 MB/s）
 
 `Writable` 提供了背压机制来化解：`socket.write(buffer)` 返回一个 **boolean**。
 
-> 摘自 `./code/TCP 与 Socket 编程/backpressure.js`（运行：`npm run backpressure`）
+> 摘自 `./code/TCP 与 Socket 编程/src/backpressure.js`（运行：`npm run backpressure`）
 
 ```js
 // write 返回 boolean：false 表示内部缓冲已到阈值，应当暂停生产、等 drain
@@ -423,13 +423,13 @@ if (!canContinue) console.log('  write 返回 false：内部缓冲到阈值，�
 
 返回 `false` 意味着 Writable 内部缓冲已经积压到阈值，**此时不应继续疯写**，而应等待 `'drain'` 事件——它表示缓冲已排空，可以继续写：
 
-> 摘自 `./code/TCP 与 Socket 编程/backpressure.js`（运行：`npm run backpressure`）
+> 摘自 `./code/TCP 与 Socket 编程/src/backpressure.js`（运行：`npm run backpressure`）
 
 ```js
 client.on('drain', () => console.log('drain 事件：缓冲已排空，可继续生产'))
 ```
 
-`09-backpressure.js` 把一份 2MB 数据经 TCP 推给客户端、客户端每收到一片就回传一片，跑完两端字节数一致，说明背压之下不丢数据：
+`src/backpressure.js` 把一份 2MB 数据经 TCP 推给客户端、客户端每收到一片就回传一片，跑完两端字节数一致，说明背压之下不丢数据：
 
 实测输出（`npm run backpressure`）：
 
@@ -459,7 +459,7 @@ Producer 继续生产 ◀─┘
 
 上面的背压逻辑如果自己写，很容易写错：
 
-> 摘自 `./code/TCP 与 Socket 编程/pipe-vs-manual.js`（运行：`npm run pipe-vs-manual`）
+> 摘自 `./code/TCP 与 Socket 编程/src/pipe-vs-manual.js`（运行：`npm run pipe-vs-manual`）
 
 ```js
 // 反例：write 返回 false 也不管，照样把下一片写进去
@@ -469,7 +469,7 @@ rs.on('end', () => socket.end())
 
 而 `pipe()` 会**内部协调**生产者与消费者的速度：下游（Socket）消费跟不上，就自动暂停上游读取；等 `drain` 后再继续。
 
-> 摘自 `./code/TCP 与 Socket 编程/pipe-vs-manual.js`（运行：`npm run pipe-vs-manual`）
+> 摘自 `./code/TCP 与 Socket 编程/src/pipe-vs-manual.js`（运行：`npm run pipe-vs-manual`）
 
 ```js
 // 推荐写法：pipe 内部自动协调背压，无需手动管 write 返回值与 drain
@@ -500,12 +500,12 @@ TCP 只给你一条可靠字节流，那"我要 `GET /users`"这层语义该由�
 
 | 文件 | 演示什么 |
 | --- | --- |
-| `./code/TCP 与 Socket 编程/tcp-server.js` | 用 `node:net` 写最小 TCP Server，`data` 事件收到的是 Buffer |
-| `./code/TCP 与 Socket 编程/tcp-client.js` | TCP 客户端：`createConnection` + `write` + 接收响应 |
-| `./code/TCP 与 Socket 编程/sticky-packet.js` | 复现粘包：两次 `write` 被合并成一次 `data` |
-| `./code/TCP 与 Socket 编程/protocol-server.js` | 自定义分包协议服务端：`Length(4B) + Body(NB)` |
-| `./code/TCP 与 Socket 编程/protocol-client.js` | 自定义分包协议客户端：按长度边界正确切分消息 |
-| `./code/TCP 与 Socket 编程/backpressure.js` | 网络侧背压：`pipe` 托管背压、`write()` 返回值与 `drain` |
-| `./code/TCP 与 Socket 编程/pipe-vs-manual.js` | 手写 `on('data') + write` 与 `pipe` 的发送缓冲峰值积压对比 |
+| `./code/TCP 与 Socket 编程/src/tcp-server.js` | 用 `node:net` 写最小 TCP Server，`data` 事件收到的是 Buffer |
+| `./code/TCP 与 Socket 编程/src/tcp-client.js` | TCP 客户端：`createConnection` + `write` + 接收响应 |
+| `./code/TCP 与 Socket 编程/src/sticky-packet.js` | 复现粘包：两次 `write` 被合并成一次 `data` |
+| `./code/TCP 与 Socket 编程/src/protocol-server.js` | 自定义分包协议服务端：`Length(4B) + Body(NB)` |
+| `./code/TCP 与 Socket 编程/src/protocol-client.js` | 自定义分包协议客户端：按长度边界正确切分消息 |
+| `./code/TCP 与 Socket 编程/src/backpressure.js` | 网络侧背压：`pipe` 托管背压、`write()` 返回值与 `drain` |
+| `./code/TCP 与 Socket 编程/src/pipe-vs-manual.js` | 手写 `on('data') + write` 与 `pipe` 的发送缓冲峰值积压对比 |
 
 运行方式（`code/TCP 与 Socket 编程` 目录下）：`npm run tcp-server`（服务端，常驻）/ `npm run tcp-client`（客户端，另开终端）/ `npm run sticky-packet` / `npm run protocol-server` + `npm run protocol-client` / `npm run backpressure` / `npm run pipe-vs-manual`，除 `tcp-server`、`protocol-server` 外都会自动结束。

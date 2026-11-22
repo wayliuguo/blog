@@ -10,13 +10,13 @@ npm run <脚本>       # 见下方清单；本项目零依赖，无需安装
 
 | 脚本 | 运行命令 |
 | --- | --- |
-| `tcp-server.js` | `npm run tcp-server` |
-| `tcp-client.js` | `npm run tcp-client` |
-| `sticky-packet.js` | `npm run sticky-packet` |
-| `protocol-server.js` | `npm run protocol-server` |
-| `protocol-client.js` | `npm run protocol-client` |
-| `backpressure.js` | `npm run backpressure` |
-| `pipe-vs-manual.js` | `npm run pipe-vs-manual` |
+| `src/tcp-server.js` | `npm run tcp-server` |
+| `src/tcp-client.js` | `npm run tcp-client` |
+| `src/sticky-packet.js` | `npm run sticky-packet` |
+| `src/protocol-server.js` | `npm run protocol-server` |
+| `src/protocol-client.js` | `npm run protocol-client` |
+| `src/backpressure.js` | `npm run backpressure` |
+| `src/pipe-vs-manual.js` | `npm run pipe-vs-manual` |
 
 ## 注意事项
 
