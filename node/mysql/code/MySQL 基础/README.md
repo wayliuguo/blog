@@ -1,7 +1,6 @@
-# mysql-demo
+# MySQL 基础
 
-《Node.js 后端知识体系》模块四「数据与缓存 / 数据库」7 篇文章的配套代码，对应博客目录
-`node/数据库/MySQL 基础` 到 `node/数据库/PostgreSQL 与 pgvector`。
+《Node.js 后端知识体系》「数据与缓存」MySQL 模块（《MySQL 基础》《MySQL 进阶》《Node.js 操作 MySQL》）的配套代码。
 
 一句话定位：**刻意不用 ORM**，直接用 `mysql2` 原生驱动，让每一条 SQL 都可见、可改、可观察。
 主线理念是「会用 ORM ≠ 会数据库」——看到一条 SQL，脑子里能想到：走没走索引？回表了吗？

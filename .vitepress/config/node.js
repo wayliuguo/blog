@@ -45,27 +45,39 @@ export default [
         collapsed: false,
         items: [
             {
-                text: '数据库',
+                text: 'MySQL',
                 collapsed: false,
                 items: [
-                    { text: 'MySQL 基础', link: '/node/数据库/MySQL 基础' },
-                    { text: 'MySQL 进阶', link: '/node/数据库/MySQL 进阶' },
-                    { text: 'MySQL 高级实战', link: '/node/数据库/MySQL%20高级实战' },
-                    { text: 'Node.js 操作 MySQL', link: '/node/数据库/Node.js 操作 MySQL' },
-                    { text: 'MongoDB 入门', link: '/node/数据库/MongoDB 入门' },
-                    { text: 'MongoDB 进阶', link: '/node/数据库/MongoDB 进阶' },
-                    { text: 'PostgreSQL 与 pgvector', link: '/node/数据库/PostgreSQL 与 pgvector' }
+                    { text: 'MySQL 基础', link: '/node/mysql/MySQL 基础' },
+                    { text: 'MySQL 进阶', link: '/node/mysql/MySQL 进阶' },
+                    { text: 'Node.js 操作 MySQL', link: '/node/mysql/Node.js 操作 MySQL' }
+                ]
+            },
+            {
+                text: 'PostgreSQL',
+                collapsed: false,
+                items: [
+                    { text: 'PostgreSQL 基础', link: '/node/postgresql/PostgreSQL 基础' },
+                    { text: 'Node.js 操作 PostgreSQL', link: '/node/postgresql/Node.js 操作 PostgreSQL' }
+                ]
+            },
+            {
+                text: 'MongoDB',
+                collapsed: false,
+                items: [
+                    { text: 'MongoDB 基础', link: '/node/mongodb/MongoDB 基础' },
+                    { text: 'MongoDB 进阶', link: '/node/mongodb/MongoDB 进阶' },
+                    { text: 'Node.js 操作 MongoDB', link: '/node/mongodb/Node.js 操作 MongoDB' }
                 ]
             },
             {
                 text: 'Redis',
                 collapsed: false,
                 items: [
-                    { text: 'Redis 基础与数据类型', link: '/node/Redis/Redis 基础与数据类型' },
-                    { text: 'Redis 持久化与淘汰策略', link: '/node/Redis/Redis 持久化与淘汰策略' },
-                    { text: 'Node.js 操作 Redis', link: '/node/Redis/Node.js 操作 Redis' },
-                    { text: 'Redis 缓存实战', link: '/node/Redis/Redis 缓存实战' },
-                    { text: 'Redis 进阶', link: '/node/Redis/Redis 进阶' }
+                    { text: 'Redis 基础', link: '/node/redis/Redis 基础' },
+                    { text: 'Redis 进阶', link: '/node/redis/Redis 进阶' },
+                    { text: 'Redis 缓存实战', link: '/node/redis/Redis 缓存实战' },
+                    { text: 'Node.js 操作 Redis', link: '/node/redis/Node.js 操作 Redis' }
                 ]
             }
         ]

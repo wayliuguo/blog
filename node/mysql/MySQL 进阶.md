@@ -774,9 +774,38 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 □ 优化后验证：rows 是否明显减少，Extra 是否更优
 ```
 
+## 运维常识：知道有这回事
+
+以下内容属于 DBA/运维的深水区，全栈工程师做到「概念清楚、真遇到再查」即可，不必深钻。
+
+### 主从复制与读写分离
+
+**一句话原理**：主库把变更写入 Binlog（二进制日志），从库拉取后重放（Relay Log → SQL 线程），从而保持一致；应用侧把写请求走主库、读请求走从库，就是读写分离。
+
+```
+写入 ──→ 主库(Binlog) ──dump 线程──→ 从库(Relay Log ──SQL 线程重放──→ 只读服务)
+```
+
+要点：
+- Binlog 格式生产推荐 `ROW`（最精确，主从完全一致），代价是日志量大
+- **什么时候轮到你**：单库读压力撑不住了（QPS 明显受限于读）才上读写分离；而且应用层要面对「主从延迟」——写入主库后立刻读从库可能读到旧数据，延迟敏感的读必须强制走主库
+- 排查延迟：从库 `SHOW SLAVE STATUS\G` 看 `Seconds_Behind_Master`；常见原因是主库大事务（如一次 DELETE 百万行）拖慢重放
+
+### 备份与恢复
+
+| 方案 | 说明 | 适用 |
+| --- | --- | --- |
+| `mysqldump` | 逻辑备份，导出 SQL | 小库（< 50GB）、迁移，一条命令搞定 |
+| XtraBackup | 物理备份，文件级复制 | 大库生产环境 |
+| Binlog | 增量，按需回放 | 时间点恢复（PITR） |
+
+- 最小可用动作：`mysqldump -u root -p --single-transaction dbname > backup.sql`，恢复时 `mysql dbname < backup.sql`
+- **时间点恢复（PITR）**：先恢复最近全量备份，再用 `mysqlbinlog --stop-datetime="误操作前一刻"` 回放 Binlog——这是「误删表还能救回来」的关键，前提是 Binlog 在备份机上留着
+- 检查清单（精简版）：全量每周至少 1 次 / Binlog 保留 7 天以上 / **备份必须异地存放** / **每周做一次恢复测试**——没验证过的备份等于没有备份
+
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/数据库/code/mysql-demo`。
+本篇的可运行示例在仓库 `node/mysql/code/MySQL 基础`。
 
 | 文件 | 演示什么 |
 | --- | --- |
@@ -784,6 +813,6 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 | `04-explain.js` | EXPLAIN 六列读法 |
 | `03-explain-cases.sql` | 10 条典型 SQL 的索引验证清单 |
 
-运行方式见 `mysql-demo/README.md`。
+运行方式见 `MySQL 基础/README.md`。
 
 ---

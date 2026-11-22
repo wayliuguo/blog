@@ -2,11 +2,11 @@
 
 ## 索引与查询优化
 
-> 本篇示例几乎都逐字摘自配套工程 `mongo-demo`（官方 `mongodb` 驱动 + Mongoose，见 `./code/mongo-demo/README.md`）。**本机没有 MongoDB 服务，需要连库的脚本均未实跑**；`readpref` 一段的枚举校验不连库，下方给出实测输出。唯一例外是「分片键常见坑点」——`sh.shardCollection(...)` 是 `mongosh` 的分片集群管理命令，驱动里没有对应 API，只能标为示意片段。
+> 本篇示例几乎都逐字摘自配套工程 `MongoDB 基础`（官方 `mongodb` 驱动 + Mongoose，见 `./code/MongoDB 基础/README.md`）。**本机没有 MongoDB 服务，需要连库的脚本均未实跑**；`readpref` 一段的枚举校验不连库，下方给出实测输出。唯一例外是「分片键常见坑点」——`sh.shardCollection(...)` 是 `mongosh` 的分片集群管理命令，驱动里没有对应 API，只能标为示意片段。
 
 ### 创建索引
 
-> 摘自 `./code/mongo-demo/src/09-index.js`（运行：`npm run index`）
+> 摘自 `./code/MongoDB 基础/src/09-index.js`（运行：`npm run index`）
 
 ```javascript
 // 单字段索引
@@ -25,7 +25,7 @@ await users.createIndex({ email: 1 }, { unique: true })
 
 ### 使用 explain() 分析查询
 
-> 摘自 `./code/mongo-demo/src/10-explain.js`（运行：`npm run explain`）
+> 摘自 `./code/MongoDB 基础/src/10-explain.js`（运行：`npm run explain`）
 
 ```javascript
 const plan = await users.find({ age: { $gt: 18 } }).explain('executionStats')
@@ -51,7 +51,7 @@ console.log('  executionStats.executionTimeMillis   =', plan.executionStats.exec
 
 ### 慢查询优化
 
-> 摘自 `./code/mongo-demo/src/10-explain.js`（运行：`npm run explain`）
+> 摘自 `./code/MongoDB 基础/src/10-explain.js`（运行：`npm run explain`）
 
 ```javascript
 // 启用慢查询日志
@@ -69,7 +69,7 @@ const level = await db.command({ profile: -1 })
 
 ### 常用阶段
 
-> 摘自 `./code/mongo-demo/src/11-aggregate.js`（运行：`npm run aggregate`）
+> 摘自 `./code/MongoDB 基础/src/11-aggregate.js`（运行：`npm run aggregate`）
 
 ```javascript
 const topBuyers = await orders.aggregate([
@@ -96,7 +96,7 @@ const topBuyers = await orders.aggregate([
 
 ### 常见聚合场景
 
-> 摘自 `./code/mongo-demo/src/11-aggregate.js`（运行：`npm run aggregate`）
+> 摘自 `./code/MongoDB 基础/src/11-aggregate.js`（运行：`npm run aggregate`）
 
 ```javascript
 // 按月份统计订单总额
@@ -137,7 +137,7 @@ const spent = await orders.aggregate([
 
 ### 多文档事务
 
-> 摘自 `./code/mongo-demo/src/12-transaction.js`（运行：`npm run tx`）
+> 摘自 `./code/MongoDB 基础/src/12-transaction.js`（运行：`npm run tx`）
 
 ```javascript
 // 一次下单要改两个文档：扣库存 + 建订单，中途失败必须整笔撤销
@@ -198,7 +198,7 @@ Secondary（仲裁节点）→ 参与选举，不存储数据
 
 ### 生产场景：读写分离配置
 
-> 摘自 `./code/mongo-demo/src/13-read-preference.js`（运行：`npm run readpref`）
+> 摘自 `./code/MongoDB 基础/src/13-read-preference.js`（运行：`npm run readpref`）
 
 ```javascript
 // Node.js Mongoose 配置读写分离
@@ -285,7 +285,7 @@ sh.shardCollection('myapp.orders', { region: 1, created_at: 1 })
 
 ### 生产场景：跨分片分页查询
 
-> 摘自 `./code/mongo-demo/src/14-pagination.js`（运行：`npm run pagination`）
+> 摘自 `./code/MongoDB 基础/src/14-pagination.js`（运行：`npm run pagination`）
 
 ```javascript
 // 优化方案 1：查询条件带上分片键，能只查一个分片
@@ -308,7 +308,7 @@ await orders.find({ _id: { $gt: lastId } }).sort({ _id: 1 }).limit(10).toArray()
 
 ### 常见索引失效场景
 
-> 摘自 `./code/mongo-demo/src/09-index.js`（运行：`npm run index`）
+> 摘自 `./code/MongoDB 基础/src/09-index.js`（运行：`npm run index`）
 
 ```javascript
 // 复合索引最左前缀原则和 MySQL 一样
@@ -343,7 +343,7 @@ await orders.find({
 
 ### 覆盖索引优化
 
-> 摘自 `./code/mongo-demo/src/09-index.js`（运行：`npm run index`）
+> 摘自 `./code/MongoDB 基础/src/09-index.js`（运行：`npm run index`）
 
 ```javascript
 // 如果查询只需要索引中包含的字段，不需要回表
@@ -361,7 +361,7 @@ const coveredPlan = await orders
 
 ### 生产场景：慢查询排查
 
-> 摘自 `./code/mongo-demo/src/10-explain.js`（运行：`npm run explain`）
+> 摘自 `./code/MongoDB 基础/src/10-explain.js`（运行：`npm run explain`）
 
 ```javascript
 // 启用慢查询日志
@@ -384,19 +384,19 @@ const pendingPlan = await orders.find({ status: 'pending' }).explain('executionS
 
 ## 配套代码
 
-本篇的示例在仓库 `node/数据库/code/mongo-demo`（官方 `mongodb` 驱动 + Mongoose，与上篇 [MongoDB 入门](./MongoDB%20入门) 共用同一个工程）。
+本篇的示例在仓库 `node/mongodb/code/MongoDB 基础`（官方 `mongodb` 驱动 + Mongoose，与上篇 [MongoDB 基础](./MongoDB%20基础) 共用同一个工程）。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
-| `./code/mongo-demo/src/09-index.js` | 索引创建、最左前缀与索引失效场景、覆盖索引（一串 `explain` 逐条验结论） | 索引与查询优化 · 常见索引失效场景 · 覆盖索引优化 |
-| `./code/mongo-demo/src/10-explain.js` | `explain('executionStats')` 三列读法、profiling 慢查询日志与 `system.profile` | 索引与查询优化 · 生产场景：慢查询排查 |
-| `./code/mongo-demo/src/11-aggregate.js` | 聚合管道：`$match` / `$group` / `$sort` / `$project` / `$limit`、`$month` 按月分组、`$lookup` + `$unwind` | 聚合管道（常用阶段 / 常见聚合场景） |
-| `./code/mongo-demo/src/12-transaction.js` | 多文档事务：`startSession` / `startTransaction` / `commit` / `abort` / `endSession` 与回滚验证 | 事务与原子性 · 多文档事务 |
-| `./code/mongo-demo/src/13-read-preference.js` | 副本集连接串、`mongoose.connect` 读写分离；`readPreference` 五个合法值的枚举校验（不需要服务端） | 副本集与高可用 · 生产场景：读写分离配置 |
-| `./code/mongo-demo/src/14-pagination.js` | `skip/limit` 的代价、分片键路由、游标分页 | 分片集群与水平扩展 · 生产场景：跨分片分页查询 |
-| `./code/mongo-demo/src/lib.js` | 公共工具：从 `.env` 读连接串、`withDb()` 统一开关连接 | -- |
-| `./code/mongo-demo/README.md` | 工程说明与命令清单 | -- |
+| `./code/MongoDB 基础/src/09-index.js` | 索引创建、最左前缀与索引失效场景、覆盖索引（一串 `explain` 逐条验结论） | 索引与查询优化 · 常见索引失效场景 · 覆盖索引优化 |
+| `./code/MongoDB 基础/src/10-explain.js` | `explain('executionStats')` 三列读法、profiling 慢查询日志与 `system.profile` | 索引与查询优化 · 生产场景：慢查询排查 |
+| `./code/MongoDB 基础/src/11-aggregate.js` | 聚合管道：`$match` / `$group` / `$sort` / `$project` / `$limit`、`$month` 按月分组、`$lookup` + `$unwind` | 聚合管道（常用阶段 / 常见聚合场景） |
+| `./code/MongoDB 基础/src/12-transaction.js` | 多文档事务：`startSession` / `startTransaction` / `commit` / `abort` / `endSession` 与回滚验证 | 事务与原子性 · 多文档事务 |
+| `./code/MongoDB 基础/src/13-read-preference.js` | 副本集连接串、`mongoose.connect` 读写分离；`readPreference` 五个合法值的枚举校验（不需要服务端） | 副本集与高可用 · 生产场景：读写分离配置 |
+| `./code/MongoDB 基础/src/14-pagination.js` | `skip/limit` 的代价、分片键路由、游标分页 | 分片集群与水平扩展 · 生产场景：跨分片分页查询 |
+| `./code/MongoDB 基础/src/lib.js` | 公共工具：从 `.env` 读连接串、`withDb()` 统一开关连接 | -- |
+| `./code/MongoDB 基础/README.md` | 工程说明与命令清单 | -- |
 
-运行方式（在 `code/mongo-demo` 目录下，先 `cp .env.example .env` 再 `npm install`）：`npm run index` / `explain` / `aggregate` / `tx` / `readpref` / `pagination`；其中 `readpref` 的第 3 节不需要 MongoDB 服务。**本机没有 MongoDB 服务，需要连库的部分均未实跑**，`readpref` 的实测输出已贴在上面「读写分离配置」小节。
+运行方式（在 `code/MongoDB 基础` 目录下，先 `cp .env.example .env` 再 `npm install`）：`npm run index` / `explain` / `aggregate` / `tx` / `readpref` / `pagination`；其中 `readpref` 的第 3 节不需要 MongoDB 服务。**本机没有 MongoDB 服务，需要连库的部分均未实跑**，`readpref` 的实测输出已贴在上面「读写分离配置」小节。
 
 ---

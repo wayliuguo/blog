@@ -1,11 +1,11 @@
-# mongo-demo
+# MongoDB 基础
 
-《Node.js 后端知识体系》模块 数据库里 MongoDB 两篇（`MongoDB 入门`、`MongoDB 进阶`）的配套代码。
+《Node.js 后端知识体系》MongoDB 模块三篇（`MongoDB 基础`、`MongoDB 进阶`、`Node.js 操作 MongoDB`）的配套代码。
 
 一句话定位：**用官方 `mongodb` 驱动 + Mongoose 各写一遍**——`mongosh` 里的 `db.users.find()` 在驱动里就是 `users.find()`，
 把 Shell 与 Node 代码的对应关系摆在一起，顺便回答"什么时候该用 ODM、什么时候直接上驱动"。
 
-正文里每个 JS 代码块上方都标了 `> 摘自 ./code/mongo-demo/src/xx.js`，可以逐块对照。
+正文里每个 JS 代码块上方都标了 `> 摘自 ./code/MongoDB 基础/src/xx.js`，可以逐块对照。
 
 ---
 

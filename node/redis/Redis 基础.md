@@ -1,4 +1,4 @@
-# Redis 基础与数据类型
+# Redis 基础
 
 ## Redis 是什么
 
@@ -137,12 +137,12 @@ ZRANGEBYSCORE leaderboard 100 200 # 按分数范围获取
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/Redis/code/redis-demo`。
+本篇的可运行示例在仓库 `node/redis/code/Redis 基础`。
 
 | 文件 | 演示什么 |
 | --- | --- |
 | `01-data-types.js` | 五种数据类型的后端用例 |
 
-运行方式见 `redis-demo/README.md`。
+运行方式见 `Redis 基础/README.md`。
 
 ---

@@ -1,4 +1,4 @@
-# typeorm-demo
+# Node.js 操作 MySQL
 
 《Node.js 后端知识体系》数据库「Node.js 操作 MySQL」里 **TypeORM 部分**的配套示例。
 
@@ -14,7 +14,7 @@
 
 - Node.js 18+
 - MySQL 8.0+（只有 `src/data-source.ts` 的 `main()` 会真连库；其余文件都是结构定义与用法示范）
-- 建表：直接用 TypeORM 的 `synchronize: true` 临时建，或把 `mysql-demo/sql/01-schema.sql` 拿来建库
+- 建表：直接用 TypeORM 的 `synchronize: true` 临时建，或把 `MySQL 基础/sql/01-schema.sql` 拿来建库
 
 ---
 

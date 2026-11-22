@@ -2,13 +2,13 @@
 
 ## 缓存场景实战
 
-本篇的代码块均取自配套脚本 `redis-demo`，采用 CommonJS 写法（`require(...)`）。
+本篇的代码块均取自配套脚本 `Redis 基础`，采用 CommonJS 写法（`require(...)`）。
 
 ### 缓存热点数据
 
 热点数据就是「查缓存 → 未命中查库 → 回写并设短 TTL」这套读写。配套脚本 `03-cache.js` 用一个约 100ms 的 `slowQuery` 模拟数据库，把命中前后的耗时都打了出来：
 
-> 摘自 `./code/redis-demo/src/03-cache.js`（运行：`npm run cache`）
+> 摘自 `./code/Redis 基础/src/03-cache.js`（运行：`npm run cache`）
 
 ```javascript
     async function getProduct(id) {
@@ -23,13 +23,13 @@
 
 热点列表这类数据给 5 分钟这种短 TTL（脚本里是 60 秒）即可，避免脏数据长期留在缓存里。
 
-（本机无 Redis 服务、`redis-demo` 依赖也未安装，本篇脚本均未实跑。）
+（本机无 Redis 服务、`Redis 基础` 依赖也未安装，本篇脚本均未实跑。）
 
 ### 缓存过期策略
 
 过期有两个来源：定时过期（写入时或事后设 TTL）与惰性/定期删除都由 Redis 负责，**数据变更时删缓存则是应用层的责任**。配套脚本 `02-expire.js` 把 `EXPIRE` / `TTL` / `PERSIST` / `SET ... EX` 的返回值都打了出来：
 
-> 摘自 `./code/redis-demo/src/02-expire.js`（运行：`npm run expire`）
+> 摘自 `./code/Redis 基础/src/02-expire.js`（运行：`npm run expire`）
 
 ```javascript
     const k1 = PREFIX + 'a'
@@ -59,7 +59,7 @@
 
 配套脚本 `03-cache.js` 里的做法是**缓存空值**：
 
-> 摘自 `./code/redis-demo/src/03-cache.js`（运行：`npm run cache`）
+> 摘自 `./code/Redis 基础/src/03-cache.js`（运行：`npm run cache`）
 
 ```javascript
     const missKey = PREFIX + 'product:999'
@@ -89,7 +89,7 @@
 
 解决方案是**互斥锁**：用 `SET NX EX` 只放一个请求去查库重建缓存，其余请求等待后重试。配套脚本 `03-cache.js` 把「抢到锁」和「没抢到锁」两条路径都跑了一遍：
 
-> 摘自 `./code/redis-demo/src/03-cache.js`（运行：`npm run cache`）
+> 摘自 `./code/Redis 基础/src/03-cache.js`（运行：`npm run cache`）
 
 ```javascript
     async function getHotWithLock(requester) {
@@ -122,7 +122,7 @@
 
 最直接的解法是给 TTL 加随机值。配套脚本 `03-cache.js` 用 10 个 key 对比了「统一 TTL」和「抖动 TTL」的过期时刻分布：
 
-> 摘自 `./code/redis-demo/src/03-cache.js`（运行：`npm run cache`）
+> 摘自 `./code/Redis 基础/src/03-cache.js`（运行：`npm run cache`）
 
 ```javascript
     const baseTTL = 60
@@ -161,7 +161,7 @@
 
 配套脚本 `09-cache-service.js` 把读、写两条路径写成了两个函数：
 
-> 摘自 `./code/redis-demo/src/09-cache-service.js`（运行：`npm run service`）
+> 摘自 `./code/Redis 基础/src/09-cache-service.js`（运行：`npm run service`）
 
 ```javascript
 // ===== Cache-Aside 读：查缓存 → 未命中查库并回写 =====
@@ -190,7 +190,7 @@ async function write(key, value) {
 
 系统上线前或大促前，提前将热点数据加载到缓存，避免请求直接打到数据库。配套脚本 `08-pipeline.js` 用一个 `fakeHotProducts(100)` 顶替数据库查询，剩下的就是 Pipeline 批量写入：
 
-> 摘自 `./code/redis-demo/src/08-pipeline.js`（运行：`npm run pipeline`）
+> 摘自 `./code/Redis 基础/src/08-pipeline.js`（运行：`npm run pipeline`）
 
 ```javascript
 // 缓存预热：用 Pipeline 把热点数据批量灌入 Redis
@@ -223,7 +223,7 @@ async function warmUpCache(products) {
 
 用 Redis `INCR` 生成全局唯一 ID，适用场景是订单号、流水号、分布式 ID。配套脚本 `10-idgen.js` 把它做成一个函数：
 
-> 摘自 `./code/redis-demo/src/10-idgen.js`（运行：`npm run idgen`）
+> 摘自 `./code/Redis 基础/src/10-idgen.js`（运行：`npm run idgen`）
 
 ```javascript
 // 生成 ID：前缀 + 日期 + 6 位自增序列，例如 ORDER20240101000001
@@ -259,7 +259,7 @@ key 里带日期，所以每天自然从 1 开始；只有 `seq === 1` 那一次
 
 加锁用 `SET key value NX EX ttl`（脚本里用 `PX` 毫秒粒度，语义相同），解锁**必须用 Lua 比对 value 再删**，否则会误删别人的锁。配套脚本 `04-lock.js` 把加锁、正常释放、以及「拿旧 token 释放」的反例都跑了一遍：
 
-> 摘自 `./code/redis-demo/src/04-lock.js`（运行：`npm run lock`）
+> 摘自 `./code/Redis 基础/src/04-lock.js`（运行：`npm run lock`）
 
 ```javascript
 // 安全释放脚本：只有当前锁的 token 与传入一致才删除，防止误删别人的锁
@@ -309,7 +309,7 @@ Redlock 是 Redis 官方推荐的分布式锁算法，适用于多 Redis 节点�
 
 用 ZSet 记录每次请求的时间戳，先把窗口外的记录裁掉，再看窗口内的数量是否超限。配套脚本 `05-rate-limit.js` 在 1 秒内模拟 200 次请求、阈值 50：
 
-> 摘自 `./code/redis-demo/src/05-rate-limit.js`（运行：`npm run limit`）
+> 摘自 `./code/Redis 基础/src/05-rate-limit.js`（运行：`npm run limit`）
 
 ```javascript
 // 滑动窗口：用 ZSet 记录每次请求时间戳，裁剪 1s 外的记录后看数量
@@ -337,18 +337,18 @@ async function slidingWindow(key, limit, total) {
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/Redis/code/redis-demo`。
+本篇的可运行示例在仓库 `node/redis/code/Redis 基础`。
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |
-| `./code/redis-demo/src/03-cache.js` | 缓存场景实战 · 缓存三大问题（穿透 / 击穿 / 雪崩） | 穿透 / 击穿 / 雪崩三种防护 |
-| `./code/redis-demo/src/02-expire.js` | 缓存场景实战 · 缓存过期策略 | `EXPIRE` / `TTL` / `PERSIST` / `SET ... EX` 的返回值，以及惰性删除与定期删除的观察 |
-| `./code/redis-demo/src/09-cache-service.js` | 缓存更新策略 · Cache Aside 模式（推荐） | Cache-Aside 的读透与写失效（先写库、再删缓存） |
-| `./code/redis-demo/src/08-pipeline.js` | 生产场景：缓存预热 | 用 Pipeline 批量 `setex` 灌入热点数据，TTL 带随机抖动 |
-| `./code/redis-demo/src/10-idgen.js` | 生产场景：全局 ID 生成器 | `INCR` 生成「前缀 + 日期 + 6 位自增」，首次自增时设 2 天过期 |
-| `./code/redis-demo/src/04-lock.js` | 分布式锁 · 使用 SET NX 实现 | `SET NX PX` 加锁、Lua 比对 token 安全释放、旧 token 释放返回 0 |
-| `./code/redis-demo/src/05-rate-limit.js` | 限流 · 滑动窗口限流 | 固定窗口 / 滑动窗口 / 令牌桶三种限流对比 |
+| `./code/Redis 基础/src/03-cache.js` | 缓存场景实战 · 缓存三大问题（穿透 / 击穿 / 雪崩） | 穿透 / 击穿 / 雪崩三种防护 |
+| `./code/Redis 基础/src/02-expire.js` | 缓存场景实战 · 缓存过期策略 | `EXPIRE` / `TTL` / `PERSIST` / `SET ... EX` 的返回值，以及惰性删除与定期删除的观察 |
+| `./code/Redis 基础/src/09-cache-service.js` | 缓存更新策略 · Cache Aside 模式（推荐） | Cache-Aside 的读透与写失效（先写库、再删缓存） |
+| `./code/Redis 基础/src/08-pipeline.js` | 生产场景：缓存预热 | 用 Pipeline 批量 `setex` 灌入热点数据，TTL 带随机抖动 |
+| `./code/Redis 基础/src/10-idgen.js` | 生产场景：全局 ID 生成器 | `INCR` 生成「前缀 + 日期 + 6 位自增」，首次自增时设 2 天过期 |
+| `./code/Redis 基础/src/04-lock.js` | 分布式锁 · 使用 SET NX 实现 | `SET NX PX` 加锁、Lua 比对 token 安全释放、旧 token 释放返回 0 |
+| `./code/Redis 基础/src/05-rate-limit.js` | 限流 · 滑动窗口限流 | 固定窗口 / 滑动窗口 / 令牌桶三种限流对比 |
 
-运行方式见 `redis-demo/README.md`。
+运行方式见 `Redis 基础/README.md`。
 
 ---

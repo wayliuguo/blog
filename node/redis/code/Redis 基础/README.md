@@ -1,6 +1,6 @@
-# redis-demo
+# Redis 基础
 
-《Node.js 后端知识体系》模块四「数据与缓存 / Redis」配套可运行示例，对应博客 `node/Redis/Redis 基础与数据类型` 到 `Redis 进阶` 五篇文章。每个脚本演示一种真实机制，读者可以亲手跑一遍，而不只是看 API。
+《Node.js 后端知识体系》模块四「数据与缓存 / Redis」配套可运行示例，对应博客 `node/redis` 下《Redis 基础》《Redis 进阶》《Redis 缓存实战》《Node.js 操作 Redis》四篇文章。每个脚本演示一种真实机制，读者可以亲手跑一遍，而不只是看 API。
 
 ## 环境要求
 

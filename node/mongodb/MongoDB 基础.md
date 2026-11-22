@@ -1,4 +1,4 @@
-# MongoDB 入门
+# MongoDB 基础
 
 ## 什么是 NoSQL 与文档型数据库
 
@@ -35,7 +35,7 @@ MongoDB 的文档是 **BSON（Binary JSON）** 格式，支持嵌套对象和数
 
 `_id` 不用自己生成：驱动在插入前用 `ObjectId` 造好。它一共只有 12 个字节，前 4 字节是创建时间戳，所以**按 `_id` 排序 ≈ 按插入时间排序**（这也是后面游标分页敢拿 `_id` 当游标的原因）。这段不连库就能跑：
 
-> 摘自 `./code/mongo-demo/src/03-objectid.js`（运行：`npm run objectid`）
+> 摘自 `./code/MongoDB 基础/src/03-objectid.js`（运行：`npm run objectid`）
 
 ```javascript
 const { ObjectId } = require('mongodb')
@@ -71,11 +71,11 @@ console.log('  前 4 字节 =', hex.slice(0, 8), '→ 时间戳', id.getTimestam
 
 ## 基本 CRUD
 
-> 本篇的代码块都逐字摘自配套工程 `mongo-demo`（官方 `mongodb` 驱动 + Mongoose，见 `./code/mongo-demo/README.md`）。`mongosh` 里的 `db.users.find()` 在驱动里就是 `users.find()`——**方法同名**，只是 `db.users` 换成了 collection 对象。脚本按「插入 → 查询 → 更新 → 删除」的顺序跑，下面按知识点拆开看。**本机没有 MongoDB 服务，需要连库的脚本均未实跑**（不连库的两段例外，下方给出实测输出）。
+> 本篇的代码块都逐字摘自配套工程 `MongoDB 基础`（官方 `mongodb` 驱动 + Mongoose，见 `./code/MongoDB 基础/README.md`）。`mongosh` 里的 `db.users.find()` 在驱动里就是 `users.find()`——**方法同名**，只是 `db.users` 换成了 collection 对象。脚本按「插入 → 查询 → 更新 → 删除」的顺序跑，下面按知识点拆开看。**本机没有 MongoDB 服务，需要连库的脚本均未实跑**（不连库的两段例外，下方给出实测输出）。
 
 ### 查询
 
-> 摘自 `./code/mongo-demo/src/02-crud.js`（运行：`npm run crud`）
+> 摘自 `./code/MongoDB 基础/src/02-crud.js`（运行：`npm run crud`）
 
 ```javascript
 const users = db.collection('users')
@@ -92,7 +92,7 @@ const inList = await users.find({ age: { $in: [18, 20] } }).toArray()
 
 ### 插入
 
-> 摘自 `./code/mongo-demo/src/02-crud.js`（运行：`npm run crud`）
+> 摘自 `./code/MongoDB 基础/src/02-crud.js`（运行：`npm run crud`）
 
 ```javascript
 const one = await users.insertOne({ name: '张三', age: 25, city: '北京' })
@@ -109,7 +109,7 @@ const many = await users.insertMany([
 
 ### 更新
 
-> 摘自 `./code/mongo-demo/src/02-crud.js`（运行：`npm run crud`）
+> 摘自 `./code/MongoDB 基础/src/02-crud.js`（运行：`npm run crud`）
 
 ```javascript
 const upd = await users.updateOne({ name: '张三' }, { $set: { age: 26 } })
@@ -122,7 +122,7 @@ const updMany = await users.updateMany({ age: { $lt: 18 } }, { $set: { status: '
 
 ### 删除
 
-> 摘自 `./code/mongo-demo/src/02-crud.js`（运行：`npm run crud`）
+> 摘自 `./code/MongoDB 基础/src/02-crud.js`（运行：`npm run crud`）
 
 ```javascript
 const del = await users.deleteOne({ name: '张三' })
@@ -145,7 +145,7 @@ npm install mongoose
 
 ### 连接数据库
 
-> 摘自 `./code/mongo-demo/src/04-mongoose-connect.js`（运行：`npm run mconnect`）
+> 摘自 `./code/MongoDB 基础/src/04-mongoose-connect.js`（运行：`npm run mconnect`）
 
 ```javascript
 const mongoose = require('mongoose')
@@ -164,7 +164,7 @@ mongoose.connect(uri)
 
 ### Schema 定义
 
-> 摘自 `./code/mongo-demo/src/05-model.js`（运行：`npm run model`）
+> 摘自 `./code/MongoDB 基础/src/05-model.js`（运行：`npm run model`）
 
 ```javascript
 const userSchema = new mongoose.Schema({
@@ -185,7 +185,7 @@ const User = mongoose.model('User', userSchema)
 
 ### CRUD 操作
 
-> 摘自 `./code/mongo-demo/src/05-model.js`（运行：`npm run model`）
+> 摘自 `./code/MongoDB 基础/src/05-model.js`（运行：`npm run model`）
 
 ```javascript
 // 创建
@@ -210,7 +210,7 @@ await User.deleteOne({ _id: created._id })
 
 ### 嵌入（Embedding）
 
-> 摘自 `./code/mongo-demo/src/06-embed-vs-ref.js`（运行：`npm run embed`）
+> 摘自 `./code/MongoDB 基础/src/06-embed-vs-ref.js`（运行：`npm run embed`）
 
 ```javascript
 // 将地址直接嵌入用户文档
@@ -230,7 +230,7 @@ const userSchema = new mongoose.Schema({
 
 ### 引用（Reference）
 
-> 摘自 `./code/mongo-demo/src/06-embed-vs-ref.js`（运行：`npm run embed`）
+> 摘自 `./code/MongoDB 基础/src/06-embed-vs-ref.js`（运行：`npm run embed`）
 
 ```javascript
 // 订单引用用户 ID
@@ -276,7 +276,7 @@ MongoDB 的文档结构和无 Schema 特性，使其非常适合存储日志数�
 
 ### TTL 索引自动过期
 
-> 摘自 `./code/mongo-demo/src/07-logs.js`（运行：`npm run logs`）
+> 摘自 `./code/MongoDB 基础/src/07-logs.js`（运行：`npm run logs`）
 
 ```javascript
 const accessLogs = db.collection('access_logs')
@@ -301,7 +301,7 @@ await accessLogs.insertOne({
 
 ### 生产场景：日志分表策略
 
-> 摘自 `./code/mongo-demo/src/07-logs.js`（运行：`npm run logs`）
+> 摘自 `./code/MongoDB 基础/src/07-logs.js`（运行：`npm run logs`）
 
 ```javascript
 // 按日期分集合存储日志
@@ -333,7 +333,7 @@ MongoDB 的嵌套文档非常适合存储评论和回复。
 
 ### 嵌入式评论设计
 
-> 摘自 `./code/mongo-demo/src/08-comments.js`（运行：`npm run comments`）
+> 摘自 `./code/MongoDB 基础/src/08-comments.js`（运行：`npm run comments`）
 
 ```javascript
 // 文章评论，直接将回复嵌入
@@ -376,20 +376,20 @@ await Post.updateOne(
 
 ## 配套代码
 
-本篇的示例在仓库 `node/数据库/code/mongo-demo`（官方 `mongodb` 驱动 + Mongoose）。
+本篇的示例在仓库 `node/mongodb/code/MongoDB 基础`（官方 `mongodb` 驱动 + Mongoose）。
 
 | 文件 | 说明 | 对应小节 |
 | --- | --- | --- |
-| `./code/mongo-demo/src/01-connect.js` | 连接、`ping` 与集合操作（`listCollections` / `createCollection` / `drop`） | 什么是 NoSQL 与文档型数据库 |
-| `./code/mongo-demo/src/02-crud.js` | 插入（`insertOne` / `insertMany`）、查询（`$gt` / 正则 / `$in`）、更新（`$set`）、删除 | 基本 CRUD（查询 / 插入 / 更新 / 删除） |
-| `./code/mongo-demo/src/03-objectid.js` | `_id` 与 `ObjectId`：12 字节结构、时间戳、字符串互转、非法值报错 | 文档示例 |
-| `./code/mongo-demo/src/04-mongoose-connect.js` | `mongoose.connect()`、`readyState` 与 `disconnect()` | Mongoose 在 Node.js 中使用 · 连接数据库 |
-| `./code/mongo-demo/src/05-model.js` | Schema 与 `mongoose.model()`、Model 上的 CRUD、`required` / `unique` / `default` 何时生效 | Schema 定义 · CRUD 操作 |
-| `./code/mongo-demo/src/06-embed-vs-ref.js` | 嵌入 vs 引用：一次查询拿全 vs 两次查询、`populate` 的本质 | 文档关系设计（嵌入 / 引用） |
-| `./code/mongo-demo/src/07-logs.js` | TTL 索引自动过期、按日期分集合、历史集合整体 `drop()` | 生产场景：日志系统（TTL 索引自动过期 / 日志分表策略） |
-| `./code/mongo-demo/src/08-comments.js` | 嵌套评论与回复：`$push` 追加、`comments.$` 定位、条件漏写时的落空 | 生产场景：评论/回复系统 |
-| `./code/mongo-demo/src/lib.js` | 公共工具：从 `.env` 读连接串、`withDb()` 统一开关连接 | -- |
+| `./code/MongoDB 基础/src/01-connect.js` | 连接、`ping` 与集合操作（`listCollections` / `createCollection` / `drop`） | 什么是 NoSQL 与文档型数据库 |
+| `./code/MongoDB 基础/src/02-crud.js` | 插入（`insertOne` / `insertMany`）、查询（`$gt` / 正则 / `$in`）、更新（`$set`）、删除 | 基本 CRUD（查询 / 插入 / 更新 / 删除） |
+| `./code/MongoDB 基础/src/03-objectid.js` | `_id` 与 `ObjectId`：12 字节结构、时间戳、字符串互转、非法值报错 | 文档示例 |
+| `./code/MongoDB 基础/src/04-mongoose-connect.js` | `mongoose.connect()`、`readyState` 与 `disconnect()` | Mongoose 在 Node.js 中使用 · 连接数据库 |
+| `./code/MongoDB 基础/src/05-model.js` | Schema 与 `mongoose.model()`、Model 上的 CRUD、`required` / `unique` / `default` 何时生效 | Schema 定义 · CRUD 操作 |
+| `./code/MongoDB 基础/src/06-embed-vs-ref.js` | 嵌入 vs 引用：一次查询拿全 vs 两次查询、`populate` 的本质 | 文档关系设计（嵌入 / 引用） |
+| `./code/MongoDB 基础/src/07-logs.js` | TTL 索引自动过期、按日期分集合、历史集合整体 `drop()` | 生产场景：日志系统（TTL 索引自动过期 / 日志分表策略） |
+| `./code/MongoDB 基础/src/08-comments.js` | 嵌套评论与回复：`$push` 追加、`comments.$` 定位、条件漏写时的落空 | 生产场景：评论/回复系统 |
+| `./code/MongoDB 基础/src/lib.js` | 公共工具：从 `.env` 读连接串、`withDb()` 统一开关连接 | -- |
 
-运行方式（在 `code/mongo-demo` 目录下，先 `cp .env.example .env` 再 `npm install`）：`npm run connect` / `crud` / `objectid` / `mconnect` / `model` / `embed` / `logs` / `comments`；其中 `objectid` 不需要 MongoDB 服务。
+运行方式（在 `code/MongoDB 基础` 目录下，先 `cp .env.example .env` 再 `npm install`）：`npm run connect` / `crud` / `objectid` / `mconnect` / `model` / `embed` / `logs` / `comments`；其中 `objectid` 不需要 MongoDB 服务。
 
 ---

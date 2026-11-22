@@ -1,6 +1,6 @@
-# pg-demo
+# Node.js 操作 PostgreSQL
 
-《Node.js 后端知识体系》数据库「PostgreSQL 与 pgvector」的配套代码。
+《Node.js 后端知识体系》PostgreSQL 模块《Node.js 操作 PostgreSQL》（pgvector 向量检索与 Prisma 集成）的配套代码。
 
 一句话定位：**用 `pg` 驱动把 pgvector 的「建表 → 写入 → 相似度检索」跑通**，SQL 一律放在 `sql/*.sql`
 （既能在 `psql` 里直接执行，也能被脚本读入执行，正文里的 SQL 就是从这些文件里摘的）；

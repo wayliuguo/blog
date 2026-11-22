@@ -137,13 +137,13 @@ LEFT JOIN orders ON users.id = orders.user_id;
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/数据库/code/mysql-demo`。
+本篇的可运行示例在仓库 `node/mysql/code/MySQL 基础`。
 
 | 文件 | 演示什么 |
 | --- | --- |
 | `01-schema.sql` | 建库建表与索引设计 |
 | `01-crud.js` | CRUD 与 affectedRows |
 
-运行方式见 `mysql-demo/README.md`。
+运行方式见 `MySQL 基础/README.md`。
 
 ---

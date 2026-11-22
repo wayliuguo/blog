@@ -10,11 +10,11 @@ npm install ioredis
 
 ### 基本使用
 
-本篇的代码块均取自配套脚本 `redis-demo`，采用 CommonJS 写法（`require(...)`），与正文示例里的 `import ... from 'ioredis'` 风格不同——连接、序列化等细节都收在 `src/client.js` 里。
+本篇的代码块均取自配套脚本 `Redis 基础`，采用 CommonJS 写法（`require(...)`），与正文示例里的 `import ... from 'ioredis'` 风格不同——连接、序列化等细节都收在 `src/client.js` 里。
 
 先看连接。`src/client.js` 把 `host` / `port` / `db` 与断线重连策略收成一份配置，并挂上连接与错误日志：
 
-> 摘自 `./code/redis-demo/src/client.js`
+> 摘自 `./code/Redis 基础/src/client.js`
 
 ```javascript
 const options = {
@@ -40,7 +40,7 @@ redis.on('error', err => {
 
 拿到这个 `redis` 实例后，业务侧直接用它的命令方法读写：
 
-> 摘自 `./code/redis-demo/src/01-data-types.js`（运行：`npm run types`）
+> 摘自 `./code/Redis 基础/src/01-data-types.js`（运行：`npm run types`）
 
 ```javascript
     const userKey = PREFIX + 'user:1001'
@@ -51,7 +51,7 @@ redis.on('error', err => {
 
 这里用 `SET key value EX 60` 写缓存——与 `SETEX key 60 value` 等价，只是把过期时间写在同一条命令里；读回来拿到的还是字符串，要自己 `JSON.parse`。
 
-（本机无 Redis 服务、`redis-demo` 依赖也未安装，以上脚本均未实跑。）
+（本机无 Redis 服务、`Redis 基础` 依赖也未安装，以上脚本均未实跑。）
 
 ### 连接池
 
@@ -79,7 +79,7 @@ const cluster = new Redis.Cluster([
 
 String 既能存 JSON（缓存），也能当计数器。缓存 JSON 的写法见上一节；计数器用 `INCR` / `INCRBY`，在服务端原子自增：
 
-> 摘自 `./code/redis-demo/src/01-data-types.js`（运行：`npm run types`）
+> 摘自 `./code/Redis 基础/src/01-data-types.js`（运行：`npm run types`）
 
 ```javascript
     const counterKey = PREFIX + 'view:article:42'
@@ -95,7 +95,7 @@ String 既能存 JSON（缓存），也能当计数器。缓存 JSON 的写法�
 
 Hash 适合存「字段会被单独更新」的对象：
 
-> 摘自 `./code/redis-demo/src/01-data-types.js`（运行：`npm run types`）
+> 摘自 `./code/Redis 基础/src/01-data-types.js`（运行：`npm run types`）
 
 ```javascript
     const hashKey = PREFIX + 'profile:1001'
@@ -112,7 +112,7 @@ Hash 适合存「字段会被单独更新」的对象：
 
 List 用 `LPUSH` + `RPOP` 就能做出 FIFO 队列：
 
-> 摘自 `./code/redis-demo/src/01-data-types.js`（运行：`npm run types`）
+> 摘自 `./code/Redis 基础/src/01-data-types.js`（运行：`npm run types`）
 
 ```javascript
     const queueKey = PREFIX + 'queue:tasks'
@@ -129,7 +129,7 @@ List 用 `LPUSH` + `RPOP` 就能做出 FIFO 队列：
 
 Set 用来去重与做标签：
 
-> 摘自 `./code/redis-demo/src/01-data-types.js`（运行：`npm run types`）
+> 摘自 `./code/Redis 基础/src/01-data-types.js`（运行：`npm run types`）
 
 ```javascript
     const onlineKey = PREFIX + 'online'
@@ -146,7 +146,7 @@ Set 用来去重与做标签：
 
 ZSet 的成员带分数、按分数排序，是排行榜的标准做法：
 
-> 摘自 `./code/redis-demo/src/01-data-types.js`（运行：`npm run types`）
+> 摘自 `./code/Redis 基础/src/01-data-types.js`（运行：`npm run types`）
 
 ```javascript
     const rankKey = PREFIX + 'scores'
@@ -197,7 +197,7 @@ export class RedisModule {}
 
 Service 通过 `constructor(@Inject('REDIS') private redis: Redis) {}` 拿到连接之后，业务方法本身就是标准的 Cache-Aside：先查缓存，命中就返回；没有再查库并回写。配套脚本 `03-cache.js` 里的 `getProduct` 就是这段逻辑的最小可运行版本：
 
-> 摘自 `./code/redis-demo/src/03-cache.js`（运行：`npm run cache`）
+> 摘自 `./code/Redis 基础/src/03-cache.js`（运行：`npm run cache`）
 
 ```javascript
     async function getProduct(id) {
@@ -218,7 +218,7 @@ Service 通过 `constructor(@Inject('REDIS') private redis: Redis) {}` 拿到连
 
 业务侧不该到处手写 `JSON.parse` / `JSON.stringify`，把序列化、TTL 分支和分布式锁收进一个「缓存服务」更清爽。配套脚本 `09-cache-service.js` 用普通对象给出了等价封装——搬到 NestJS 里就是加 `@Injectable()`、把 `redis` 换成 `@Inject('REDIS')` 注入的连接：
 
-> 摘自 `./code/redis-demo/src/09-cache-service.js`（运行：`npm run service`）
+> 摘自 `./code/Redis 基础/src/09-cache-service.js`（运行：`npm run service`）
 
 ```javascript
 const cache = {
@@ -265,7 +265,7 @@ const cache = {
 
 管道把多条命令攒在一起、一次网络往返发出去，省掉逐条命令的 RTT：
 
-> 摘自 `./code/redis-demo/src/08-pipeline.js`（运行：`npm run pipeline`）
+> 摘自 `./code/Redis 基础/src/08-pipeline.js`（运行：`npm run pipeline`）
 
 ```javascript
     const pipeline = redis.pipeline()
@@ -285,7 +285,7 @@ const cache = {
 
 Lua 脚本在 Redis 中原子执行，适用于需要保证多个命令原子性的场景。配套脚本用「判断库存 + 扣减」演示：
 
-> 摘自 `./code/redis-demo/src/12-lua-stock.js`（运行：`npm run lua`）
+> 摘自 `./code/Redis 基础/src/12-lua-stock.js`（运行：`npm run lua`）
 
 ```javascript
 // 扣减库存并检查：库存不足返回 0，扣减成功返回 1
@@ -312,7 +312,7 @@ const stockScript = `
 
 生产环境要盯住连接状态：定时 `PING` 探活，把 `INFO` 的文本解析成结构化字段，再对「连接数过千 / 内存超 1GB / 出现淘汰」三类情况告警：
 
-> 摘自 `./code/redis-demo/src/11-monitor.js`（运行：`npm run monitor`）
+> 摘自 `./code/Redis 基础/src/11-monitor.js`（运行：`npm run monitor`）
 
 ```javascript
 // 把 INFO 返回的多行文本按字段名解析成结构化数据
@@ -356,18 +356,18 @@ async function checkOnce() {
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/Redis/code/redis-demo`。
+本篇的可运行示例在仓库 `node/redis/code/Redis 基础`。
 
 | 文件 | 对应小节 | 演示什么 |
 | --- | --- | --- |
-| `./code/redis-demo/src/client.js` | 安装与连接 · 基本使用 | ioredis 连接封装 |
-| `./code/redis-demo/src/01-data-types.js` | 数据类型操作（String / Hash / List / Set / ZSet） | 五种数据类型的后端用例 |
-| `./code/redis-demo/src/03-cache.js` | NestJS 集成 · 使用 Redis | Cache-Aside 读写与命中率 |
-| `./code/redis-demo/src/09-cache-service.js` | NestJS 集成 · 封装 Redis 服务 | 缓存服务封装：JSON 序列化读写、TTL 分支、`SET NX EX` 加锁与解锁 |
-| `./code/redis-demo/src/08-pipeline.js` | 管道与批量操作 | `pipeline()` 攒命令 + `exec()` 一次往返，以及缓存预热（`setex` + TTL 抖动） |
-| `./code/redis-demo/src/12-lua-stock.js` | Lua 脚本 | 用 `eval` 执行「判断库存 + 扣减」脚本，验证原子性 |
-| `./code/redis-demo/src/11-monitor.js` | 生产场景：连接池监控 | PING 探活 + `INFO` 解析 + 连接数 / 内存 / 淘汰三类阈值告警 |
+| `./code/Redis 基础/src/client.js` | 安装与连接 · 基本使用 | ioredis 连接封装 |
+| `./code/Redis 基础/src/01-data-types.js` | 数据类型操作（String / Hash / List / Set / ZSet） | 五种数据类型的后端用例 |
+| `./code/Redis 基础/src/03-cache.js` | NestJS 集成 · 使用 Redis | Cache-Aside 读写与命中率 |
+| `./code/Redis 基础/src/09-cache-service.js` | NestJS 集成 · 封装 Redis 服务 | 缓存服务封装：JSON 序列化读写、TTL 分支、`SET NX EX` 加锁与解锁 |
+| `./code/Redis 基础/src/08-pipeline.js` | 管道与批量操作 | `pipeline()` 攒命令 + `exec()` 一次往返，以及缓存预热（`setex` + TTL 抖动） |
+| `./code/Redis 基础/src/12-lua-stock.js` | Lua 脚本 | 用 `eval` 执行「判断库存 + 扣减」脚本，验证原子性 |
+| `./code/Redis 基础/src/11-monitor.js` | 生产场景：连接池监控 | PING 探活 + `INFO` 解析 + 连接数 / 内存 / 淘汰三类阈值告警 |
 
-运行方式见 `redis-demo/README.md`。
+运行方式见 `Redis 基础/README.md`。
 
 ---
