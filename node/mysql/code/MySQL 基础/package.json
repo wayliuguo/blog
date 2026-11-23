@@ -1,17 +1,15 @@
 {
-  "name": "mysql-demo",
+  "name": "mysql-basics-demo",
   "version": "1.0.0",
-  "description": "《Node.js 后端知识体系》模块四「数据与缓存 / 数据库」MySQL 配套示例，刻意不用 ORM，直接用 mysql2 原生驱动。",
+  "description": "《Node.js 后端知识体系》「MySQL 基础」篇配套示例：CRUD、JOIN 与建表设计，刻意不用 ORM，直接用 mysql2 原生驱动。",
   "type": "commonjs",
   "main": "src/db.js",
   "scripts": {
-    "crud": "node src/crud.js",
-    "join": "node src/join.js",
-    "index": "node src/index.js",
-    "explain": "node src/explain.js",
-    "tx": "node src/transaction.js",
-    "oversell": "node src/oversell.js",
-    "lock": "node src/lock.js"
+    "select": "node src/select.js",
+    "insert": "node src/insert.js",
+    "update": "node src/update.js",
+    "delete": "node src/delete.js",
+    "join": "node src/join.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

@@ -6,7 +6,7 @@ const { pool, query } = require('./db')
 // 思路：更新时带上“我读到的版本号”，若期间被别人改过，version 对不上，affectedRows=0，则重试
 async function optimisticBuy(pid) {
     for (let attempt = 1; attempt <= 3; attempt++) {
-        const [rows] = await query('SELECT stock, version FROM products WHERE id = ?', [pid])
+        const rows = await query('SELECT stock, version FROM products WHERE id = ?', [pid])
         const { stock, version } = rows[0]
         if (stock <= 0) return { ok: false, reason: '库存不足' }
         // 关键：WHERE 同时卡 stock>0 和 version 不变，保证“读到即写到”的原子性
@@ -27,7 +27,7 @@ async function optimisticBuy(pid) {
     await query('UPDATE products SET stock = 10, version = 1 WHERE id = ?', [pid])
     console.log('=== 乐观锁：基于 version 字段的 CAS 更新 ===')
     const res = await optimisticBuy(pid)
-    const [op] = await query('SELECT stock, version FROM products WHERE id = ?', [pid])
+    const op = await query('SELECT stock, version FROM products WHERE id = ?', [pid])
     console.log('扣减结果：', JSON.stringify(res), '，当前 stock =', op[0].stock, '，version =', op[0].version)
     console.log('解读：version 每成功一次 +1；冲突时 affectedRows=0，自动重试，最多 3 次。')
 

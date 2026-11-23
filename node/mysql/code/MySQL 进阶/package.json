@@ -1,0 +1,18 @@
+{
+  "name": "mysql-advanced-demo",
+  "version": "1.0.0",
+  "description": "《Node.js 后端知识体系》「MySQL 进阶」篇配套示例：索引对比、EXPLAIN、事务、防超卖与锁，刻意不用 ORM，直接用 mysql2 原生驱动。",
+  "type": "commonjs",
+  "main": "src/db.js",
+  "scripts": {
+    "index": "node src/index.js",
+    "explain": "node src/explain.js",
+    "tx": "node src/transaction.js",
+    "oversell": "node src/oversell.js",
+    "lock": "node src/lock.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.11.0"
+  }
+}

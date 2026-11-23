@@ -1,10 +1,12 @@
 {
   "name": "typeorm-demo",
   "version": "1.0.0",
-  "description": "《Node.js 后端知识体系》05-数据库「Node.js 操作 MySQL」里 TypeORM 部分的配套示例：Entity / Repository / 关系映射 / N+1 / QueryRunner。",
+  "description": "《Node.js 后端知识体系》「Node.js 操作 MySQL」篇配套示例：mysql2 原生驱动（连接池 / 参数化查询）与 TypeORM（Entity / Repository / 关系映射 / N+1 / QueryRunner）。",
   "type": "commonjs",
   "main": "src/data-source.ts",
   "scripts": {
+    "crud": "node src/crud.js",
+    "pool": "node src/pool-stats.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

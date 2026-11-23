@@ -30,7 +30,7 @@ const { query, pool } = require('./db')
 
     // 3. 关联聚合：每个用户的下单总数与总金额
     console.log('=== 3. 关联 + 聚合：按用户统计订单数与总金额（取前 10 条） ===')
-    console.log('说明：GROUP BY 必须出现在 SELECT 里的非聚合列；COUNT/DSUM 是聚合函数')
+    console.log('说明：GROUP BY 必须出现在 SELECT 里的非聚合列；COUNT/SUM 是聚合函数')
     const stat = await query(`
     SELECT u.id, u.username, COUNT(o.id) AS order_cnt, SUM(o.amount) AS total_amount
     FROM users u

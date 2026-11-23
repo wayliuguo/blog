@@ -12,9 +12,9 @@ npm install mysql2
 
 ### 创建连接池
 
-配套脚本 `MySQL 基础/src/db.js` 里的连接池是这样建的——账号密码等敏感信息交给 `.env`，并在池之上封装了一个只取行的 `query()` 便捷函数：
+配套脚本 `Node.js 操作 MySQL/src/db.js` 里的连接池是这样建的——账号密码等敏感信息交给 `.env`，并在池之上封装了一个只取行的 `query()` 便捷函数：
 
-> 摘自 `./code/MySQL 基础/src/db.js`（运行：`npm run crud`）
+> 摘自 `./code/Node.js 操作 MySQL/src/db.js`（运行：`npm run crud`）
 
 ```javascript
 require('dotenv').config()
@@ -40,11 +40,13 @@ async function query(sql, params) {
 
 > 使用连接池而不是单连接：连接池可以复用连接，避免频繁创建/销毁连接。
 
+想逐项核对池参数（哪些真正生效、哪些被 mysql2 忽略）、连接数怎么估算，配套脚本 `pool-stats.js` 不连库也能跑：`npm run pool`。
+
 ### 参数化查询（防止 SQL 注入）
 
 配套脚本 `crud` 里每一条 SQL 都走 `?` 占位符——值交给驱动去转义，绝不把变量拼进 SQL 字符串：
 
-> 摘自 `./code/MySQL 基础/src/crud.js`（运行：`npm run crud`）
+> 摘自 `./code/Node.js 操作 MySQL/src/crud.js`（运行：`npm run crud`）
 
 ```javascript
 // 1. 查询：条件 + 排序 + 限制，这是日常最高频的读操作
@@ -86,9 +88,9 @@ TypeORM 是 NestJS 官方推荐的 ORM（对象关系映射）框架，让开发
 ```typescript
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm'
 
-@Entity('users')  // 对应数据库的 users 表
+@Entity('users') // 对应数据库的 users 表
 export class User {
-    @PrimaryGeneratedColumn()  // 自增主键
+    @PrimaryGeneratedColumn() // 自增主键
     id: number
 
     @Column({ length: 50 })
@@ -101,7 +103,7 @@ export class User {
     email: string
 
     @Column({ type: 'int', default: 0 })
-    balance: number  // 订单事务里要扣的就是这一列，没有它 decrement 会直接落空
+    balance: number // 订单事务里要扣的就是这一列，没有它 decrement 会直接落空
 }
 ```
 
@@ -181,7 +183,7 @@ export class Order {
 
     // 多对一：多个订单属于同一个用户
     @ManyToOne(() => User, user => user.orders)
-    @JoinColumn({ name: 'user_id' })  // 指定外键列名，不写的话默认叫 userId
+    @JoinColumn({ name: 'user_id' }) // 指定外键列名，不写的话默认叫 userId
     user: User
 }
 ```
@@ -198,9 +200,10 @@ N+1 的"1"是先查主表拿到 N 条记录，"N"是循环里为每条记录再�
 
 ```typescript
 // 查询所有用户及其订单
-const users = await userRepository.find()  // 1 次查询
+const users = await userRepository.find() // 1 次查询
 for (const user of users) {
-    const orders = await orderRepository.find({  // N 次查询
+    const orders = await orderRepository.find({
+        // N 次查询
         where: { user: { id: user.id } }
     })
 }
@@ -270,20 +273,20 @@ export class OrderService {
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/mysql/code/MySQL 基础`。
+本篇的可运行示例在仓库 `node/mysql/code/Node.js 操作 MySQL`——mysql2 原生驱动与 TypeORM 两部分都在这一个工程里。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `./code/MySQL 基础/src/db.js` | mysql2 连接池封装（账号密码走 `.env`）与 `query()` 便捷函数 |
-| `./code/MySQL 基础/src/crud.js` | 参数化查询：SELECT / INSERT / UPDATE / DELETE |
-| `./code/MySQL 基础/src/join.js` | INNER / LEFT JOIN 与关联聚合 |
-| `./code/Node.js 操作 MySQL/src/entity.ts` | TypeORM Entity 定义与列选项（`@Entity` / `@PrimaryGeneratedColumn` / `@Column`） |
-| `./code/Node.js 操作 MySQL/src/users.service.ts` | Repository 模式：注入 `Repository<User>` 并封装 find / create+save / update / delete |
-| `./code/Node.js 操作 MySQL/src/relations.ts` | `@OneToMany` / `@ManyToOne` 与 `@JoinColumn({ name: 'user_id' })` 外键列 |
-| `./code/Node.js 操作 MySQL/src/n-plus-one.ts` | N+1 的反面写法（循环里查询）与两种正面写法（`relations` / QueryBuilder） |
-| `./code/Node.js 操作 MySQL/src/order-transaction.service.ts` | QueryRunner 事务：扣余额 + 建订单的 commit / rollback / release |
-| `./code/Node.js 操作 MySQL/src/data-source.ts` | `DataSource` 配置：`.env` 读账号、`synchronize: false`、`logging` 观察 SQL |
+| 脚本 | npm script | 对应小节 |
+| --- | --- | --- |
+| `./code/Node.js 操作 MySQL/src/db.js` | `npm run crud`（被 crud.js 引用） | 使用 mysql2 连接数据库 · 创建连接池 |
+| `./code/Node.js 操作 MySQL/src/crud.js` | `npm run crud` | 使用 mysql2 连接数据库 · 参数化查询（防止 SQL 注入） |
+| `./code/Node.js 操作 MySQL/src/pool-stats.js` | `npm run pool` | 使用 mysql2 连接数据库 · 创建连接池（参数核对 / 计数 / 容量估算） |
+| `./code/Node.js 操作 MySQL/src/entity.ts` | `npm run typecheck` | TypeORM 入门 · Entity 定义 |
+| `./code/Node.js 操作 MySQL/src/users.service.ts` | `npm run typecheck` | TypeORM 入门 · Repository 模式 |
+| `./code/Node.js 操作 MySQL/src/relations.ts` | `npm run typecheck` | TypeORM 入门 · 实体关系 |
+| `./code/Node.js 操作 MySQL/src/n-plus-one.ts` | `npm run typecheck` | N+1 查询问题（问题描述 / 解决方案） |
+| `./code/Node.js 操作 MySQL/src/order-transaction.service.ts` | `npm run typecheck` | 事务与 QueryRunner |
+| `./code/Node.js 操作 MySQL/src/data-source.ts` | `npx ts-node src/data-source.ts` | TypeORM 入门 / 事务与 QueryRunner（连库观察 SQL） |
 
-运行方式见 `MySQL 基础/README.md`；TypeORM 部分见 `Node.js 操作 MySQL/README.md`（`npm run typecheck` 校验装饰器与类型，`npx ts-node src/data-source.ts` 需要本地 MySQL）。
+运行方式见 `Node.js 操作 MySQL/README.md`（`npm run typecheck` 校验装饰器与类型，`npx ts-node src/data-source.ts` 需要本地 MySQL；mysql2 部分需先用 `MySQL 基础/sql` 建库建表造数）。
 
 ---

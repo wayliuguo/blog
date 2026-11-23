@@ -16,14 +16,14 @@ const { pool, query } = require('./db')
     await Promise.all(
         Array.from({ length: 200 }, async () => {
             // 注意：这里 SELECT 和 UPDATE 之间没有任何原子保证
-            const [rows] = await query('SELECT stock FROM products WHERE id = ?', [pid])
+            const rows = await query('SELECT stock FROM products WHERE id = ?', [pid])
             if (rows[0].stock > 0) {
                 await query('UPDATE products SET stock = stock - 1 WHERE id = ?', [pid])
                 wrongSuccess++
             }
         })
     )
-    const [w] = await query('SELECT stock FROM products WHERE id = ?', [pid])
+    const w = await query('SELECT stock FROM products WHERE id = ?', [pid])
     console.log('错误做法结果：声称成功 ' + wrongSuccess + ' 次，库存剩余 ' + w[0].stock)
     console.log('解读：剩余库存不是 0（可能为负），成功次数却 >100，说明已经超卖。')
 
@@ -41,7 +41,7 @@ const { pool, query } = require('./db')
             if (r.affectedRows === 1) rightSuccess++
         })
     )
-    const [r2] = await query('SELECT stock FROM products WHERE id = ?', [pid])
+    const r2 = await query('SELECT stock FROM products WHERE id = ?', [pid])
     console.log('正确做法结果：成功 ' + rightSuccess + ' 次，库存剩余 ' + r2[0].stock)
     console.log('解读：成功次数应恰好 =100，库存剩余应恰好 =0，数字自洽，未超卖。')
 

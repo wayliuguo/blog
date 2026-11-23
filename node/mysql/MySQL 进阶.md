@@ -19,22 +19,32 @@ CREATE INDEX idx_name ON users(name);
 
 ### 联合索引最左前缀原则
 
+配套库的订单表建了联合索引 `idx_user_created (user_id, created_at)`（建表语句见第 1 篇表设计）。最左前缀意味着：只有从最左列 `user_id` 开始的查询才用得上它。
+
+> 摘自 `code/MySQL 进阶/sql/explain-cases.sql`（在 MySQL 客户端逐条执行）
+
 ```sql
--- 创建联合索引
-CREATE INDEX idx_name_age ON users(name, age);
+-- ③ 联合索引最左前缀【命中】：user_id 等值 + created_at 范围
+--    预期：走 idx_user_created，type = range（等值+范围都能用上联合索引）
+EXPLAIN SELECT * FROM orders WHERE user_id = 50000 AND created_at > '2024-01-01';
 
--- 能用到索引的查询
-SELECT * FROM users WHERE name = '张三';                 -- 用到了（最左列）
-SELECT * FROM users WHERE name = '张三' AND age = 25;    -- 用到了
-SELECT * FROM users WHERE age = 25;                      -- 用不到（没有 name）
-
--- 联合索引相当于先按 name 排序，name 相同的再按 age 排序
+-- ④ 联合索引最左前缀【不命中】：跳过 user_id，只用 created_at
+--    预期：idx_user_created 无法用于第二列，type = ALL（全表扫描）
+EXPLAIN SELECT * FROM orders WHERE created_at > '2024-01-01';
 ```
+
+原因：联合索引相当于先按 `user_id` 排序，`user_id` 相同的再按 `created_at` 排序——跳过最左列，索引的有序性就帮不上忙了。
 
 ### EXPLAIN 分析慢查询
 
+任何拿不准的 SQL，先 EXPLAIN 一下（用例逐字来自配套清单，10 万行 users 数据可直接跑）：
+
+> 摘自 `code/MySQL 进阶/sql/explain-cases.sql`（在 MySQL 客户端逐条执行）
+
 ```sql
-EXPLAIN SELECT * FROM users WHERE name = '张三'\G
+-- ① 等值查询（唯一索引）：验证 email 唯一索引命中
+--    预期：走 uq_email，type = const（唯一索引等值，最多一行）
+EXPLAIN SELECT * FROM users WHERE email = 'user50000@example.com';
 ```
 
 重点关注：
@@ -44,6 +54,8 @@ EXPLAIN SELECT * FROM users WHERE name = '张三'\G
 | `type` | ALL（全表扫描）、ref（索引查找）、eq_ref（唯一索引） |
 | `rows` | 预估扫描行数，越小越好 |
 | `Extra` | Using index（覆盖索引）、Using filesort（需要排序） |
+
+不想一条条手工跑，`npm run explain` 会把 9 条典型用例的 `type / possible_keys / key / rows / filtered / Extra` 打成表格（脚本见文末配套代码）。
 
 ## MySQL 执行顺序
 
@@ -285,6 +297,31 @@ LIMIT 10;
 | 隔离性（Isolation） | 并发事务互不干扰 | 两个用户同时转账不会互相影响 |
 | 持久性（Durability） | 提交后数据永久保存 | 系统崩溃后不丢失已提交的数据 |
 
+原子性落到代码里长这样——配套脚本把「扣余额 → 建订单 → 写流水」三步放进同一个事务，任何一步失败整体回滚：
+
+> 摘自 `code/MySQL 进阶/src/transaction.js`（运行：`npm run tx`）
+
+```javascript
+await conn.beginTransaction() // 1. 开启事务
+// …
+// 2. 扣余额
+await conn.query('UPDATE users SET balance = balance - ? WHERE id = ?', [price, userId])
+// 3. 创建订单
+const [r] = await conn.query(
+    'INSERT INTO orders (user_id, amount, status, created_at) VALUES (?, ?, 1, NOW())',
+    [userId, price]
+)
+const orderId = r.insertId
+// 4. 写流水（与扣款成对出现，账才平）
+await conn.query('INSERT INTO balance_log (user_id, change_amount, type, created_at) VALUES (?, ?, ?, NOW())', [
+    userId,
+    -price,
+    'pay'
+])
+// …
+await conn.commit() // 5. 全部成功，提交
+```
+
 ### 四种隔离级别
 
 | 隔离级别 | 脏读 | 不可重复读 | 幻读 | 性能 |
@@ -315,7 +352,7 @@ SELECT * FROM users WHERE id = 1 FOR UPDATE;  -- 锁住 id=1 的行
 
 -- 表锁：锁住整张表
 -- 不走索引时，InnoDB 会锁住所有行（等价于表锁）
-SELECT * FROM users WHERE name = '张三' FOR UPDATE;  -- name 无索引 → 锁全表
+SELECT * FROM users WHERE username = 'user_50000' FOR UPDATE;  -- username 无索引 → 锁全表
 
 -- 间隙锁（Gap Lock）：锁住索引记录之间的间隙，防止幻读
 -- 只在可重复读（RR）级别生效
@@ -329,41 +366,42 @@ SELECT * FROM users WHERE id > 5 AND id <= 10 FOR UPDATE;
 
 ### 生产场景：库存扣减（行锁）
 
-#### 表结构
+表结构和测试数据直接用配套库的 `products` 表（商品表，`stock` 是库存列；1000 个商品由 `seed.sql` 造好，运行方式见文末配套代码）。
 
-**products 表（商品，含库存）**
+#### 事务流程（FOR UPDATE 悲观锁）
 
-| id | name | price | stock |
-|:---|:---|:---|:---|
-| `INT` 主键自增 | `VARCHAR(100)` 非空 | `DECIMAL(10,2)` 非空 | `INT` 非空 默认0 |
-
-#### 示例数据
-```sql
-INSERT INTO products (id, name, price, stock) VALUES
-  (1001, '无线蓝牙耳机', 199.0, 10),    -- 初始库存 10 件
-  (1002, '机械键盘', 399.0, 5);
-```
-
-#### 事务流程
 ```sql
 -- 正确的库存扣减方式（加行锁防止超卖）
 BEGIN;
 
 -- 1. 先锁住商品行（for update 加排他行锁）
-SELECT stock FROM products WHERE id = 1001 FOR UPDATE;
--- 返回：stock = 10
+SELECT stock FROM products WHERE id = 1 FOR UPDATE;
+-- 返回：stock = 100
 
 -- 2. 检查库存是否充足
 -- 业务逻辑校验
 
 -- 3. 扣减库存
-UPDATE products SET stock = stock - 1 WHERE id = 1001 AND stock > 0;
+UPDATE products SET stock = stock - 1 WHERE id = 1;
 
--- 4. 插入订单记录
-INSERT INTO orders (user_id, product_id, amount, status)
-VALUES (1, 1001, 199.0, 'pending');
+-- 4. 插入订单记录（orders 的真实列：user_id / amount / status）
+INSERT INTO orders (user_id, amount, status)
+VALUES (1, 199.0, 1);
 
 COMMIT;
+```
+
+JS 侧的逐字实现（重置库存 → 事务内锁行 → 扣减 → 提交释放）：
+
+> 摘自 `code/MySQL 进阶/src/lock.js`（运行：`npm run lock`）
+
+```javascript
+await conn.beginTransaction()
+// FOR UPDATE 对命中行加排他锁，期间他人无法修改也无法加锁
+const [rows] = await conn.query('SELECT stock FROM products WHERE id = ? FOR UPDATE', [pid])
+console.log('已对商品 ' + pid + ' 加行锁，当前库存 ' + rows[0].stock)
+await conn.query('UPDATE products SET stock = stock - 1 WHERE id = ?', [pid])
+await conn.commit() // 提交即释放锁
 ```
 
 ### 生产场景：死锁案例分析
@@ -471,16 +509,16 @@ SELECT balance FROM accounts WHERE id = 1 FOR UPDATE;  -- 当前读 + 排他锁
 
 ## 后端实战：库存/额度扣减防超卖
 
-业务系统常给用户发"调用额度"（如每月 1000 次接口调用），或电商秒杀扣库存。核心问题只有一个：高并发下不能扣成负数。
+业务系统常给用户发"调用额度"（如每月 1000 次接口调用），或电商秒杀扣库存。核心问题只有一个：高并发下不能扣成负数。配套脚本用商品库存做实验（机制对额度扣减完全通用）。
 
 反面做法：先 SELECT 再判断再 UPDATE（经典超卖）
 
 ```sql
--- 错误示范：两步之间别的请求插进来，会超卖
+-- 错误示范（对应 oversell.js 的「错误做法」实验）：两步之间别的请求插进来，会超卖
 BEGIN;
-SELECT balance FROM quotas WHERE user_id = 1;   -- 读到 1
--- 此时另一个请求也读到 1，两个都通过判断
-UPDATE quotas SET balance = balance - 1 WHERE user_id = 1;  -- 两个都 -1，变成 -1
+SELECT stock FROM products WHERE id = 1;             -- 读到 100
+-- 此时另一个请求也读到 100，两个都通过判断
+UPDATE products SET stock = stock - 1 WHERE id = 1;  -- 两个都 -1，库存被扣穿
 COMMIT;
 ```
 
@@ -488,16 +526,37 @@ COMMIT;
 
 ```sql
 -- 一条语句原子完成"判断 + 扣减"
-UPDATE quotas
-SET balance = balance - 1
-WHERE user_id = 1 AND balance >= 1;
+UPDATE products SET stock = stock - 1 WHERE id = 1 AND stock >= 1;
 
 -- 应用层检查受影响行数
 -- affectedRows = 1 → 扣减成功
--- affectedRows = 0 → 余额不足，无需再查
+-- affectedRows = 0 → 库存不足，无需再查
 ```
 
-为什么对：UPDATE 是当前读 + 行锁，多个并发请求串行化执行，`balance >= 1` 在数据库内部原子判断，不会出现两个请求都通过。
+两种做法在 200 并发下各跑一轮（初始库存 100）的逐字实现：
+
+> 摘自 `code/MySQL 进阶/src/oversell.js`（运行：`npm run oversell`）——错误做法
+
+```javascript
+// 注意：这里 SELECT 和 UPDATE 之间没有任何原子保证
+const rows = await query('SELECT stock FROM products WHERE id = ?', [pid])
+if (rows[0].stock > 0) {
+    await query('UPDATE products SET stock = stock - 1 WHERE id = ?', [pid])
+    wrongSuccess++
+}
+```
+
+> 摘自 `code/MySQL 进阶/src/oversell.js`（运行：`npm run oversell`）——正确做法
+
+```javascript
+// affectedRows=1 表示“确实有库存且成功扣了 1 件”，否则说明已售罄
+const [r] = await pool.query('UPDATE products SET stock = stock - 1 WHERE id = ? AND stock >= 1', [pid])
+if (r.affectedRows === 1) rightSuccess++
+```
+
+实测结果：错误做法成功次数超过 100、库存剩余不为 0（超卖）；正确做法恰好成功 100 次、库存剩余 0，数字自洽。
+
+为什么对：UPDATE 是当前读 + 行锁，多个并发请求串行化执行，`stock >= 1` 在数据库内部原子判断，不会出现两个请求都通过。
 
 乐观锁 vs 悲观锁的取舍：
 
@@ -508,6 +567,19 @@ WHERE user_id = 1 AND balance >= 1;
 | 悲观锁 FOR UPDATE | 先 `SELECT ... FOR UPDATE` 锁住行再 UPDATE | 逻辑直观、强一致 | 锁持有期间阻塞别人，易拖慢 | 扣减前需跨表校验 |
 
 > 决策模型：纯"扣减且不能超"用原子 UPDATE 最省事；扣减前还要跨表校验、或要读后做复杂分支，才上 `FOR UPDATE` 悲观锁；version 乐观锁适合"偶尔冲突、冲突即重试"的多字段更新。
+
+乐观锁的逐字实现（`version` 字段 + CAS + 冲突重试，FOR UPDATE 悲观锁的代码见上方库存扣减一节）：
+
+> 摘自 `code/MySQL 进阶/src/lock.js`（运行：`npm run lock`）
+
+```javascript
+// 关键：WHERE 同时卡 stock>0 和 version 不变，保证“读到即写到”的原子性
+const [r] = await pool.query(
+    'UPDATE products SET stock = stock - 1, version = version + 1 WHERE id = ? AND version = ?',
+    [pid, version]
+)
+if (r.affectedRows === 1) return { ok: true, attempt }
+```
 
 ## 索引失效实战
 
@@ -805,14 +877,19 @@ EXPLAIN SELECT * FROM orders WHERE created_at >= '2024-01-01'
 
 ## 配套代码
 
-本篇的可运行示例在仓库 `node/mysql/code/MySQL 基础`。
+本篇的可运行示例在仓库 `node/mysql/code/MySQL 进阶`（CRUD / JOIN 基础脚本在 `code/MySQL 基础`，TypeORM 工程在 `code/Node.js 操作 MySQL`）。
 
-| 文件 | 演示什么 |
-| --- | --- |
-| `index` | 无索引 vs 有索引的耗时对比（10 万行） |
-| `explain` | EXPLAIN 六列读法 |
-| `explain-cases` | 10 条典型 SQL 的索引验证清单 |
+| 脚本 | npm script | 对应小节 |
+| --- | --- | --- |
+| `code/MySQL 进阶/sql/schema.sql` | `mysql -u root -p < sql/schema.sql` | 全篇共用（建库建表与索引设计） |
+| `code/MySQL 进阶/sql/seed.sql` | `mysql -u root -p mysql_demo < sql/seed.sql` | 全篇共用（10 万行测试数据） |
+| `code/MySQL 进阶/sql/explain-cases.sql` | 在 MySQL 客户端逐条执行 | 索引原理：联合索引最左前缀 / EXPLAIN 分析慢查询 |
+| `code/MySQL 进阶/src/index.js` | `npm run index` | 索引原理（无索引 vs 有索引 10 万行实测） |
+| `code/MySQL 进阶/src/explain.js` | `npm run explain` | 索引原理：EXPLAIN 六列读法（9 条用例自动打印） |
+| `code/MySQL 进阶/src/transaction.js` | `npm run tx` | 事务与锁：ACID 原子性 |
+| `code/MySQL 进阶/src/lock.js` | `npm run lock` | 事务与锁：库存扣减（FOR UPDATE）/ 乐观锁 vs 悲观锁 |
+| `code/MySQL 进阶/src/oversell.js` | `npm run oversell` | 后端实战：库存/额度扣减防超卖（200 并发对照实验） |
 
-运行方式见 `MySQL 基础/README.md`。
+运行方式见 `MySQL 进阶/README.md`。
 
 ---
