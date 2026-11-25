@@ -324,13 +324,3 @@ npm create vite@latest react-demo -- --template react-ts
 ```
 
 > 补充：`create-react-app`（CRA）已停止维护，官方不再推荐用于新项目。它基于 webpack、启动慢且配置封闭，新项目直接用 Vite；需要 SSR / 路由约定等能力时考虑 Next.js。老项目迁移时主要工作是替换启动脚本、`index.html` 入口与环境变量前缀（`REACT_APP_` → `VITE_`）。
-
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
-
-| 文件 | 演示什么 | 对应小节 |
-| --- | --- | --- |
-| `./code/site/mini-runtime.html` | 手写极简渲染器 createElement + render + onUpdate，演示虚拟 DOM 与声明式更新 | JSX 语法与规则 · 组件与 Props |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。

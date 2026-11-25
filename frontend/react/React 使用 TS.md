@@ -99,7 +99,7 @@ React 的事件类型都是泛型，泛型参数填**绑定该事件的标签元
 
 示例：
 
-> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
+> 示意片段（无配套脚本）
 
 ```tsx
 type ChangeEvent<T> = { target: T }
@@ -113,7 +113,7 @@ const handleInput: ChangeEventHandler<HTMLInputElement> = event => {
 
 这里 `HTMLInputElement` 就是事件绑定的那个 `input` 元素。把 `T` 换成 `HTMLSelectElement`，`event.target` 就变成下拉框类型，取不到的属性会在编译期报错：
 
-> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
+> 示意片段（无配套脚本）
 
 ```tsx
 // const bad: ChangeEventHandler<HTMLInputElement> = (event) => event.target.selectedIndex
@@ -124,7 +124,7 @@ const handleInput: ChangeEventHandler<HTMLInputElement> = event => {
 
 ref 的类型同样填目标标签元素类型。注意 `current` 可能是 `null`，取用前必须判空：
 
-> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
+> 示意片段（无配套脚本）
 
 ```tsx
 interface RefObject<T> {
@@ -187,7 +187,7 @@ const store = useReducer<MyReducer, MyState>(reducer, initState) // reducer 泛�
 
 自定义 hook 要**同时导出类型**：入参与返回值各定义一个类型，随 hook 一起导出，调用方才能拿到完整约束。
 
-> 摘自 `./code/site/react-types.ts`（运行：`npx tsc --noEmit react-types.ts`）
+> 示意片段（无配套脚本）
 
 ```tsx
 interface UseToggleProps {
@@ -216,13 +216,3 @@ const { value, toggle } = useToggle({ initial: true })
 - 泛型 `<>` 与 JSX 标签存在解析歧义，因此在 `.tsx` 中定义泛型函数组件时，更推荐使用 `function` 声明，而不是箭头函数。
 - 事件对象、ref、DOM 元素的类型要在泛型中明确传入标签元素类型，以获得更精准的类型提示。
 - Props 的定义使用 `type` 或 `interface` 均可，选择一种保持一致即可。
-
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
-
-| 文件 | 演示什么 | 对应小节 |
-| --- | --- | --- |
-| `./code/site/react-types.ts` | 函数组件 props 类型（interface + FC）、泛型组件、hooks 泛型（useState/useRef）、事件对象类型、自定义 hook 的入参与返回值类型 | 函数组件的类型定义 · 函数组件的泛型 · hooks 的泛型 · 事件与 ref 的类型 · hooks 封装时的类型处理 |
-
-启动方式：HTML demo 在 `code` 目录执行 `node server.js`（即 `npm start`）打开 `http://localhost:5180/`；`react-types.ts` 用 `npx tsc --noEmit react-types.ts` 检查类型。

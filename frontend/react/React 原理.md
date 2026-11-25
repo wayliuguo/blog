@@ -1,7 +1,5 @@
 # React 原理
 
-> 本篇所有 `摘自` 代码块来自配套的可断点实现 `code/react/mini-react/lib/`——按 React 源码包结构分层拆分（`shared.js` → `scheduler.js` → `hooks.js` → `reconciler.js` → `dom.js` → `index.js`，纯 JS 零依赖，`<script>` 按序加载后经 `window.MiniReact` 统一使用，全量 JSDoc 注释）。正文每讲一个机制，就落到对应文件的函数上解析一次；demo 见 `code/react/mini-react/demo/demo-app.html`（官网 CDN 用法一页跑完挂载 → 调度 → hooks → keyed diff → 卸载）。demo 的组件用 `h`（即 `createElement`）直写、不引入 babel/JSX——真实 React 里 JSX 由构建工具编译成 `createElement` 调用，mini-react 从一开始就站在**编译产物层**，见 1.3。篇末「五、关键执行链路」与 demo 六个按钮逐节对齐，章节对照与断点建议见「配套代码」。
-
 ## 一、React 整体架构
 
 React 采用**分层 + 包拆分**设计，核心包按职责可以划分为四大类地图：
@@ -67,7 +65,7 @@ JSX ──构建工具编译──► createElement(type, props, children) = Rea
 
 `shared.js` 只放"人人都要用、自己却不依赖任何人"的常量与工具，所以被所有其他模块引用也不会形成循环依赖：
 
-> 摘自 `./code/react/mini-react/lib/shared.js`
+> 摘自 `./code/mini-react/lib/shared.js`
 
 ```js
 /**
@@ -86,7 +84,7 @@ const FiberTag = {
 }
 ```
 
-> 摘自 `./code/react/mini-react/lib/shared.js`
+> 摘自 `./code/mini-react/lib/shared.js`
 
 ```js
 /**
@@ -135,7 +133,7 @@ React.createElement(
 
 mini-react 不引入 babel，demo 直接写编译产物——`createElement` 提供短别名 `h`，读起来接近 JSX。它造出的 Element 就是"虚拟 DOM"的节点：一个普通 JS 对象。
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -185,7 +183,7 @@ const h = createElement
 
 孩子的归一化规则——文本变"文本元素"、空值直接丢、嵌套数组摊平：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -224,7 +222,7 @@ React 16 起的答案是：把"递归渲染"改写成**链表树上的循环**�
 
 ### 2.2 FiberNode：一个对象的三重角色
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -278,7 +276,7 @@ function createFiber(tag, props, key) {
 
 由 Element 建 fiber 时按 type 分派 tag：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -304,9 +302,11 @@ React 内部同时维护**两棵 Fiber 树**：
 - **current 树**：当前展示在屏幕上的树（它的宿主 fiber 的 `stateNode` 指着真实 DOM）。
 - **workInProgress 树**：正在内存中构建的新树。
 
+> 下文沿用源码与文档的统一习惯，把 workInProgress 简写作 **wip**（work in progress）——`wip fiber` 指 workInProgress 树上的 fiber，`wipRoot` 指 workInProgress 树的根（即 HostRoot 的 wip 副本）。
+
 双缓冲的核心动作只有一个函数——为 current fiber 造出 wip 副本（或反向）：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -351,7 +351,7 @@ function createWorkInProgress(current, props) {
 
 通道选择上，React 优先用 `MessageChannel` 而不是 `setTimeout`：postMessage 几乎立刻排进宏任务队列，且不像 `setTimeout` 有 4ms 以上的嵌套钳制，是浏览器里最快的"可让出"手段：
 
-> 摘自 `./code/react/mini-react/lib/scheduler.js`
+> 摘自 `./code/mini-react/lib/scheduler.js`
 
 ```js
 // React 选通道的优先级：MessageChannel > setTimeout。postMessage 几乎立刻排进
@@ -370,7 +370,7 @@ channel.port1.onmessage = performWorkUntilDeadline
 
 三个函数串起整个循环——`shouldYield` 问"该让了吗"、`performWorkUntilDeadline` 执行一个时间片、`scheduleCallback` 排任务：
 
-> 摘自 `./code/react/mini-react/lib/scheduler.js`
+> 摘自 `./code/mini-react/lib/scheduler.js`
 
 ```js
 /**
@@ -452,7 +452,7 @@ performWorkUntilDeadline()
 
 有了链表树和时间片，"递归渲染"就能改写成循环。`performUnitOfWork` 是循环的一步——处理一个 fiber，返回下一个：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -478,7 +478,7 @@ function performUnitOfWork(fiber) {
 }
 ```
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -517,7 +517,7 @@ Hooks 的全部秘密藏在一句话里：**每个函数组件的 Fiber 节点�
 
 beginWork 渲染函数组件时，先做一次"上下文切换"——记下当前正在渲染的 fiber，让 `useState` / `useEffect` 知道自己属于谁：
 
-> 摘自 `./code/react/mini-react/lib/hooks.js`
+> 摘自 `./code/mini-react/lib/hooks.js`
 
 ```js
 // 正在渲染函数组件的 wip fiber；renderWithHooks 进出时设置/清空。
@@ -567,7 +567,7 @@ renderWithHooks(fiber)
 
 挂载路径：新建 hook 接到 `fiber.memoizedState` 链尾；更新路径：从旧 fiber 的链上取"同位置"的 hook 配对：
 
-> 摘自 `./code/react/mini-react/lib/hooks.js`
+> 摘自 `./code/mini-react/lib/hooks.js`
 
 ```js
 /**
@@ -640,7 +640,7 @@ updateWorkInProgressHook()
 
 `useState` 的核心思路是**把"结算"推迟到下次 render**：dispatch 只记动作（push 进 `hook.queue.pendingActions`）+ 请求调度；真正把 action 依序"回放"成新 state 的时机，是下一次渲染时 `useState` 被再次调用的那一刻：
 
-> 摘自 `./code/react/mini-react/lib/hooks.js`
+> 摘自 `./code/mini-react/lib/hooks.js`
 
 ```js
 /**
@@ -716,7 +716,7 @@ dispatchSetState(hook, action)
 
 ### 3.4 useEffect：登记进收集区，commit 后先清后建
 
-> 摘自 `./code/react/mini-react/lib/hooks.js`
+> 摘自 `./code/mini-react/lib/hooks.js`
 
 ```js
 /**
@@ -816,7 +816,7 @@ useEffect(create, deps)
 
 beginWork 处理 fiber 的"向下"部分——按 tag 分派，算出孩子 elements 并交给 `reconcileChildren` diff 成孩子 fiber 链。它只建树和记账，不碰 DOM：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -864,7 +864,7 @@ beginWork(fiber)
 
 beginWork 返回 null（没孩子）后，completeWork 给 fiber"收尾"——宿主 fiber 在这里创建/复用 DOM 实例并记账。注意：**创建实例 ≠ 插入 DOM**——插入统一由 commit 按 Placement 执行：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -915,7 +915,7 @@ completeWork(fiber)
 
 #### 4.3.1 算法总览与复用判定
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -952,7 +952,7 @@ function reconcileChildren(wipFiber, elements) {
     }
 ```
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -994,7 +994,7 @@ reconcileChildren(wipFiber, elements)
 
 #### 4.3.2 头同步与两条快速通道
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
     // —— 第一轮：从头同步 ——
@@ -1034,7 +1034,7 @@ reconcileChildren(wipFiber, elements)
 
 两头都有剩余时，先把公共尾巴对齐（缩小乱序区），再进乱序区做 key 配对：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
     // 剩余旧 fibers 收进数组：单链表只能从头往后走，"从尾同步"需要反向下标
@@ -1058,7 +1058,7 @@ reconcileChildren(wipFiber, elements)
     // 尾巴 fibers 属于孩子链的"最后一段"，等乱序区追加完再倒序补上（tailFibers[0] 是最靠后的孩子）
 ```
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
     // —— 乱序区：newIdx..newEnd 与 remainingOld 里剩下的旧 fibers ——
@@ -1149,7 +1149,7 @@ Vue3 的 `patchKeyedChildren`（《Vue3 原理》5.3.4）与 React 的乱序区�
 
 reconciler 侧的调度状态机——`setState` 的终点不是渲染，而是"把待办挂到根上"：
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 // ============================================================
@@ -1165,7 +1165,7 @@ let isWorkScheduled = false // 是否已有一次 render 在调度管道里（�
 let renderCount = 0 // 教学观测：从根发起的 render 次数（demo 用它验证批处理）
 ```
 
-> 摘自 `./code/react/mini-react/lib/reconciler.js`
+> 摘自 `./code/mini-react/lib/reconciler.js`
 
 ```js
 /**
@@ -1174,7 +1174,9 @@ let renderCount = 0 // 教学观测：从根发起的 render 次数（demo 用�
  */
 function scheduleRootUpdate() {
     hasPendingRootWork = true
-    if (isWorkScheduled) return
+    if (isWorkScheduled) {
+        return // 管道里已有一次 render：只置上面的标记就返回（同一宏任务里的多次 setState 在此合并）
+    }
     isWorkScheduled = true
     scheduleCallback(performRootWorkAndRelease)
 }
@@ -1249,7 +1251,7 @@ performRootWork()
 
 render 阶段产出的 wip 树带着全套 flags 记账，commit 照单执行。commit 一旦开始**不可中断**——DOM 必须一次性落到一致状态：
 
-> 摘自 `./code/react/mini-react/lib/index.js`
+> 摘自 `./code/mini-react/lib/index.js`
 
 ```js
 /**
@@ -1277,7 +1279,7 @@ function commitRoot() {
 }
 ```
 
-> 摘自 `./code/react/mini-react/lib/index.js`
+> 摘自 `./code/mini-react/lib/index.js`
 
 ```js
 /**
@@ -1304,7 +1306,7 @@ function commitMutationEffects(fiber) {
 }
 ```
 
-> 摘自 `./code/react/mini-react/lib/index.js`
+> 摘自 `./code/mini-react/lib/index.js`
 
 ```js
 /**
@@ -1357,7 +1359,7 @@ commitMutationEffects(fiber)
 
 插入位置的关键是锚点——"插在谁前面"。`getHostSibling` 是 commit 里最绕的函数，三条规则：
 
-> 摘自 `./code/react/mini-react/lib/index.js`
+> 摘自 `./code/mini-react/lib/index.js`
 
 ```js
 /**
@@ -1415,7 +1417,7 @@ getHostSibling(fiber)
 
 删除则反向：**找到子树里第一个宿主节点，摘它一个 = 摘整棵 DOM 子树**，同时同步执行所有函数组件的 effect 清理：
 
-> 摘自 `./code/react/mini-react/lib/index.js`
+> 摘自 `./code/mini-react/lib/index.js`
 
 ```js
 /**
@@ -1463,7 +1465,7 @@ commitDeletion(fiber)
 
 passive 段执行 useEffect——遍历提交后的树，只处理"进了收集区"的 effect：
 
-> 摘自 `./code/react/mini-react/lib/index.js`
+> 摘自 `./code/mini-react/lib/index.js`
 
 ```js
 /**
@@ -1520,7 +1522,7 @@ clearPendingActions(fiber)
 
 最后一块拼图在 dom.js——commit 阶段的"手"。元素更新走属性 diff 三步：旧的没了 → 移除；新的多了/变了 → 写入；值没变的一律不碰：
 
-> 摘自 `./code/react/mini-react/lib/dom.js`
+> 摘自 `./code/mini-react/lib/dom.js`
 
 ```js
 /**
@@ -1559,7 +1561,7 @@ function commitUpdate(instance, prevProps, nextProps) {
 }
 ```
 
-> 摘自 `./code/react/mini-react/lib/dom.js`
+> 摘自 `./code/mini-react/lib/dom.js`
 
 ```js
 /**
@@ -1621,113 +1623,781 @@ setProperty(instance, key, value, prevValue)
 
 ## 五、关键执行链路
 
-本章把前面四章的机制串成"数据改动的完整旅程"，分镜走读。每条链路对应 demo（`code/react/mini-react/demo/demo-app.html`）的一个按钮，实测留痕与正文描述一致——建议开着 demo 点一遍，再在断点建议处单步跟一次。
+本章把前面四章的机制串成"数据改动的完整旅程"，分镜走读。每条链路对应 demo（`code/mini-react/demo/demo-app.html`）的一个按钮，实测留痕与正文描述一致——建议开着 demo 点一遍，再在断点观测处单步跟一次。
 
 demo 的组件是一个函数组件，`useState` 持有 message / count / todos，两个 useEffect 分别对应"挂载"与"[message] 依赖"；挂载后把三个 setState 通过 `onReady` prop 递给页面层，页面按钮因此能在组件外触发更新（组件内的 count + 1 按钮走 onClick 闭包，链路相同）。
 
+本章体例：**全景调用链标出关键阶段 → 逐阶段沿代码执行顺序细化**。每阶段先讲清"这一阶段在解决什么"，主流程图带实测值、标★重点；核心函数给**关键代码摘录**（真实源码，标文件与行号，删减注释处已注明）+ 紧凑块（目的 / 输入 / 输出 / 要点），阶段末尾给断点段。**挂载链路（5.1）是全章的完整版**——四阶段逐个展开；更新链路（5.2~5.6）的调用链完整给出，函数块只展开与挂载的差异——已讲解的函数标"见 5.1.x"。
+
 ### 5.1 挂载：createRoot().render(h(App)) → DOM 出现
 
-> 摘自 `./code/react/mini-react/lib/index.js`
+#### 5.1.0 全景调用链：一次挂载，代码走了四段
+
+```
+【阶段① 根准备】 同步执行 · index.js + reconciler.js
+createRoot(container) ──► root.render(element) ──► scheduleRootUpdate()
+  建 HostRoot fiber        记下根元素（单槽暂存）    置标记；管道空闲 → 交给调度
+                                                        │
+【阶段② 调度】 同步末尾 → 宏任务 · scheduler.js          ▼
+scheduleCallback(performRootWorkAndRelease) ──► port.postMessage(null)
+  只记回调，不占通道                 ═══ 同步代码到此结束，浏览器事件循环接管 ═══
+                                                            │ 宏任务出队
+performWorkUntilDeadline() ◄── port1.onmessage ◄────────────┘
+  deadline = now + 5ms（打开时间片）→ 执行回调
+                                                            │
+【阶段③ render】 宏任务内 · reconciler.js + hooks.js        ▼
+performRootWork ──► prepareFreshStack ──► workLoop ─────────┤
+  分流全新/续跑        造 wip 副本，游标就位    while 推进 fiber：
+                                                performUnitOfWork → beginWork 向下（diff 出孩子链）
+                                                                  → completeWork 向上（建 DOM 实例）
+                                                （时间片耗尽 → shouldYield 让出 → 回阶段②续排）
+                                                            │ 树跑完（nextUnitOfWork === null）
+【阶段④ commit】 同步一口气 · index.js                      ▼
+commitRoot ──► mutation（删除优先 → 先序插入/更新）──► passive（useEffect）──► 切 current
+```
+
+四段的产出分别是：① = 根 fiber + 待渲染元素（全局变量就位）；② = 一个排好队的宏任务；③ = 一棵带 flags 记账的 wip fiber 树（DOM 实例游离在文档外）；④ = 真实 DOM + 副作用执行 + 双缓冲交接。下面逐阶段展开——每阶段先讲清"这一阶段在解决什么"，再沿代码走主流程，函数给紧凑块，阶段末尾给断点段。
+
+#### 5.1.1 阶段① 根准备：备好三个"空位"（index.js + reconciler.js，同步执行）
+
+这一阶段不渲染任何东西——它准备的是后续所有阶段的**起点**，一共三个"空位"：
+
+```
+createRoot(container)                          index.js L232
+  │ 输入: <div id="app">
+  │ ① HostRoot fiber：createFiber(HostRoot, null, null)，stateNode = 容器
+  │    ★ 它自己不渲染任何东西——"挂载点身份"，整个 fiber 世界唯一的真根
+  │ ② current 空树：currentRootFiber = rootFiber
+  │    ★ 双缓冲的"已上屏侧"从此存在——空，但有根；每次 render 都从它造副本
+  │ 输出: { render, unmount }
+  ▼
+root.render(h(App, { onReady }))               index.js L243
+  │ ③ 单槽记账：pendingRootElement = element
+  │    ★ render 只记账不干活——单槽 = 同一宏任务里多次 render 只认最新
+  ▼
+scheduleRootUpdate()                           reconciler.js L419
+  │ hasPendingRootWork = true（"有活"）
+  │ isWorkScheduled false → true（"已排队"）→ scheduleCallback(performRootWorkAndRelease)
+  ▼ 交给阶段②
+```
+
+**`createRoot(container)`** —— index.js L232（机制见 4.4）
 
 ```js
-/**
- * 官网用法的第一半：createRoot(container) 拿到根。
- * 返回的对象上挂 render（初次挂载 + 后续全部更新的统一入口）与 unmount。
- *
- * 教学版支持单根（模块级全局状态，与真实 React 多 Root 并存不同）。
- *
- * @param {HTMLElement} container - 挂载容器
- * @returns {{render: Function, unmount: Function}}
- *
- * @example
- *   const root = MiniReact.createRoot(document.getElementById('app'))
- *   root.render(h(App, null))
- */
 function createRoot(container) {
     const rootFiber = createFiber(FiberTag.HostRoot, null, null)
     rootFiber.stateNode = container
     currentRootFiber = rootFiber // current 树的起点
-
     let isUnmounted = false
-    return {
-        /**
-         * 渲染 / 更新的统一入口：只记下最新的根元素并请求调度。
-         * 多次调用在调度层被合并（同一宏任务只 render 一次）。
-         */
-        render(element) {
-            if (isUnmounted) {
-                console.warn('MiniReact: root 已卸载，render 无效（重新加载页面可重看挂载）')
-                return
-            }
-            pendingRootElement = element
-            scheduleRootUpdate()
-        },
-        /** 卸载：执行所有 useEffect destroy + 摘除 DOM。之后 render 不再生效。 */
-        unmount() {
-            if (isUnmounted) return
-            isUnmounted = true
-            pendingRootElement = null
-            hasPendingRootWork = false
-            if (currentRootFiber.child !== null) {
-                commitDeletion(currentRootFiber.child) // destroy + 摘 DOM，一套逻辑复用删除链路
-            }
-            clearContainer(container)
-            wipRoot = null
-            nextUnitOfWork = null
+    return { /* render(element) {…}, unmount() {…} */ }
+}
+```
+
+```
+目的: 给容器配根——造 HostRoot fiber 并立为 current 树起点，返回 { render, unmount }
+输入: <div id="app"> ｜ 输出: HostRoot fiber{ stateNode: 容器, child: null } → currentRootFiber
+要点: 此刻 fiber 只有 tag 和 stateNode，child 是 null——"空但有根"，
+      整棵组件树要到阶段③才长出来
+```
+
+**`root.render(element)`** —— index.js L243
+
+```js
+render(element) {
+    if (isUnmounted) { console.warn('MiniReact: root 已卸载…'); return }
+    pendingRootElement = element   // 根元素暂存到全局单槽
+    scheduleRootUpdate()           // 请求一次根级 render
+}
+```
+
+```
+目的: 渲染/更新的统一入口——只记账不干活
+输入: { type: App, props: { onReady } } ｜ 输出: pendingRootElement 被赋值 → scheduleRootUpdate()
+要点: 单槽语义：同一宏任务里多次 render(element) 只保留最新（真实 React 同款）
+```
+
+**`scheduleRootUpdate()`** —— reconciler.js L419（机制见 4.4）
+
+```js
+function scheduleRootUpdate() {
+    hasPendingRootWork = true     // 有活要干（render 或任意 setState 都会置位）
+    if (isWorkScheduled) {
+        return   // 管道里已有一次 render → 只置标记就返回（合并！单独成行，方便直接断在 return 上）
+    }
+    isWorkScheduled = true
+    scheduleCallback(performRootWorkAndRelease) // 空闲才真正排任务
+}
+```
+
+```
+目的: 请求一次根级更新；只在管道空闲时真正排任务——5.3 批处理的合并判定就在这
+输入: 无 ｜ 输出: hasPendingRootWork = true；首次调用还把 isWorkScheduled 置 true 并交给调度器
+要点: 两个布尔分工——hasPendingRootWork 说"有活"，isWorkScheduled 说"已排队"；
+      前者挂载和 setState 都会置位，后者只由"真正排任务"置位、由 5.1.3 的 performRootWorkAndRelease 复位
+```
+
+断点：断 index.js 的 `currentRootFiber = rootFiber` 行——观测起点本身：fiber 只有 tag 和 stateNode，child 还是 null。等 commit 之后再回来看，"空但有根 → 36 节点成品树"的对照感会非常强。
+
+#### 5.1.2 阶段② 调度：切片循环的代码执行走读（scheduler.js）
+
+这一阶段只有两个函数和三处判断，全部围绕一个问题：**循环怎么转、什么时候停、停了从哪继续**。先把循环本身画出来：
+
+```
+宏任务出队（port1.onmessage → performWorkUntilDeadline，L49）← 每个宏任务命中一次
+  │ hostCallback 取出并清空单槽；isMessageLoopRunning 复位（通道让出，期间新 setState 能再排）
+  │ deadline = startTime + SLICE_SIZE        ★ 本片时间预算在这行打开（SLICE_SIZE = 5）
+  │
+  │ hasMoreWork = callback()  ════════════► 进入阶段③（整个 render 都发生在这次调用里）
+  │            │
+  │            └─ 返回后：
+  ▼
+finally 判断 hasMoreWork（L63-67）           ★ 切片循环的"续排开关"
+  ├─ true  → scheduleCallback(callback) → port.postMessage(null) → 下一个宏任务（回到最顶）
+  └─ false → 不续排，循环结束（commit 已在 callback 内部执行完，见阶段④）
+```
+
+执行侧的核心代码——切片的开窗与续排开关都在这一个函数里（scheduler.js L49-68，删减注释）：
+
+```js
+function performWorkUntilDeadline() {
+    if (hostCallback === null) { isMessageLoopRunning = false; return }
+    const callback = hostCallback
+    hostCallback = null           // 取出并清空单槽：同一个回调不会被跑两次
+    isMessageLoopRunning = false  // 通道让出：本片期间来的新 setState 能再排（5.3 的前提）
+    const startTime = performance.now()
+    deadline = startTime + SLICE_SIZE // ★ 打开 5ms 时间片窗口（SLICE_SIZE = 5，L26）
+    let hasMoreWork = false
+    try {
+        hasMoreWork = callback()  // 跑 render（阶段③），返回是否还有剩余
+    } finally {
+        if (hasMoreWork) {
+            scheduleCallback(callback) // ★ 切片续排：长任务被分片的机制本身
         }
     }
 }
 ```
 
+排队侧（同步代码末尾那一次调用）只有一个值得看代码的判定——**单槽 + 通道占用**：
+
+```js
+// scheduler.js L80-86
+function scheduleCallback(callback) {
+    hostCallback = callback        // 单槽：后来的覆盖先来的（5.3 批处理的底座）
+    if (!isMessageLoopRunning) {
+        isMessageLoopRunning = true
+        port.postMessage(null)     // 只在通道空闲时占一次——重复调用只刷新回调、不重复排队
+    }
+}
 ```
-挂载链路（触发：页面加载即执行 createRoot(...).render(h(App, { onReady })))
-createRoot(container)     建 HostRoot fiber（stateNode = 容器），current 树起点
-  └► render(h(App))       pendingRootElement = element → scheduleRootUpdate()
-      └► scheduler        scheduleCallback(performRootWorkAndRelease) → MessageChannel 宏任务
-          └► performRootWork
-              ├► prepareFreshStack     为 HostRoot 造 wip 副本（双缓冲起点），renderCount=1
-              ├► workLoop
-              │    ├► beginWork(HostRoot)        reconcileChildren：App 是全新 element
-              │    ├► beginWork(App)             函数组件 → renderWithHooks：
-              │    │                               useState ×3 建 hooks 链表
-              │    │                               useEffect ×2 登记进 updateQueue
-              │    ├► beginWork(div/p/button/ul) 宿主 fiber 逐个 diff（全是新建）
-              │    └► completeWork               createElement / createTextNode 建实例
-              │                                    （游离在文档外铺属性）+ 记 Placement
-              └► commitRoot
-                   ├► mutation   commitMutationEffects 先序遍历：每个宿主 fiber
-                   │             commitPlacement → getHostSibling 找锚点 → appendChild
-                   ├► passive    flushPassiveEffects：useEffect([]) 执行 → onReady 递出
-                   │             setState 集合；useEffect([message]) 执行 → lifeMark 留痕
-                   └► 切换 current  currentRootFiber = wipRoot，clearPendingActions
+
+**两个停止时机**——workLoop 退出的唯二出口（循环体见 5.1.3）：
+
+| 出口 | 判断逻辑 | 之后 |
+| --- | --- | --- |
+| 时间片到期 | `shouldYield()`（L41-43）：`performance.now() >= deadline`——墙钟比较，workLoop 每推进一个 fiber 前问一次 | workLoop 返回 true → finally 续排 → **游标 `nextUnitOfWork` 保持，下一片从它继续** |
+| 树跑完 | `nextUnitOfWork === null`——workLoop 的 while 第一个条件失效 | 返回 false → 不续排 → `performRootWork` 里 `if (!hasMoreWork) commitRoot()` 接力阶段④ |
+
+两个出口的判断代码（shouldYield 全文就 3 行——墙钟比较，scheduler.js L41-43）：
+
+```js
+function shouldYield() {
+    return performance.now() >= deadline   // 墙钟超过截止线 = 该让出了
+}
 ```
+
+断点：
+- **看"宏任务里构建的起点"**：断 `deadline = startTime + SLICE_SIZE`（L58）——每个宏任务命中一次，**第一次命中就是构建起点**，从这行 F11 步入直达阶段③；
+- 看"切片续排"：断 finally 里的 `scheduleCallback(callback)`——只有被切断的 render 才命中；
+- 注意别断在 `scheduleCallback`（排队函数）上：它每次排任务、每次续排都经过，起点和续排会混在一起——**入口断点选 onmessage 回调，别选排队函数**。
+
+#### 5.1.3 阶段③ render：一个切片内，fiber 树是怎么长出来的（reconciler.js + hooks.js）
+
+与阶段②的串联点就是 `callback()` 这一跳——阶段②交棒，本阶段全部内容都在 workLoop 的循环体里：
+
+```
+callback() = performRootWorkAndRelease（reconciler.js L432）
+  │ isWorkScheduled = false       ← 先松开管道：passive 阶段触发的调度要能排进来
+  ▼
+performRootWork（L442）
+  │ nextUnitOfWork === null 且 hasPendingRootWork → prepareFreshStack（L469）：
+  │     renderCount +1；wipRoot = createWorkInProgress(currentRootFiber, 根元素)
+  │     nextUnitOfWork = wipRoot  ★ 游标指向 HostRoot 的 wip 副本——树的起点
+  ▼
+workLoop（L482）                  ← 阶段② 的 while 在这里，循环体 = 本阶段全部内容
+```
+
+入场链路三个函数的代码（reconciler.js，删减注释）：
+
+```js
+function performRootWorkAndRelease() {   // L434
+    isWorkScheduled = false              // 先松开管道：passive 阶段触发的调度要能排进来
+    return performRootWork()
+}
+
+function performRootWork() {             // L444
+    if (nextUnitOfWork === null) {       // 游标为空 = 全新 render
+        if (!hasPendingRootWork) return false
+        hasPendingRootWork = false
+        prepareFreshStack(pendingRootElement !== null
+            ? pendingRootElement : currentRootFiber.props)
+        pendingRootElement = null
+    } else if (hasPendingRootWork) {
+        // 上一个 render 被时间片打断、期间又来了新更新：
+        // 丢弃进行中的 render 从头再算（action 都记在 hook 队列上，丢了 wip 也不丢更新）
+        hasPendingRootWork = false
+        prepareFreshStack(pendingRootElement !== null
+            ? pendingRootElement : currentRootFiber.props)
+        pendingRootElement = null
+    }
+    const hasMoreWork = workLoop()
+    if (!hasMoreWork) commitRoot()       // 树跑完 → 接力阶段④
+    return hasMoreWork                   // scheduler 的 finally 据此决定是否续排
+}
+
+function prepareFreshStack(element) {    // L471
+    renderCount++                        // 教学观测：每次"从根重渲染"计数 +1
+    wipRoot = createWorkInProgress(currentRootFiber, element)
+    wipRoot.flags = FiberFlags.NoFlags
+    deletions = []                       // 清空上一轮的删除清单
+    nextUnitOfWork = wipRoot             // ★ 游标指向 HostRoot 的 wip 副本——树的起点
+}
+```
+
+**一个切片内的旅程**（两种情形并列——切片与 render 的关系在此闭环）：
+
+```
+demo 的树小（36 个 fiber）：                        真实世界的树大：
+  deadline 打开 → workLoop 连推 36 圈                跑到某一圈 shouldYield() 变 true
+  → nextUnitOfWork 变 null → 返回 false              → workLoop 返回 true（游标保持）
+  → 不续排 → commitRoot 接力（阶段④）                → finally 续排 → 下一个宏任务从游标继续
+                                                    → ……直到推完，进入 commit
+```
+
+一句话：**切片是"预算"，render 是"花预算的活"，游标 `nextUnitOfWork` 是"跨切片的工作进度"**——三者对上，时间分片就通了。
+
+**循环体内每圈干什么**（生长轨迹——向下长结构、向上补实例）：
+
+```
+循环体 = performUnitOfWork(fiber)（L400）
+  │
+  ├─ 向下：beginWork(fiber)（L188）——长结构，diff 出孩子链
+  │     HostRoot          → reconcileChildren(fiber, [fiber.props])
+  │     FunctionComponent → renderWithHooks(fiber)（hooks.js L40）★ 执行组件函数：
+  │         currentlyRenderingFiber = fiber → fiber.type(fiber.props)
+  │         → hooks 链表按调用顺序建立（mountWorkInProgressHook L63，逐个接上 fiber.memoizedState 链尾）
+  │         → effect 进收集区 fiber.updateQueue（useEffect L176）
+  │     HostComponent     → reconcileChildren(fiber, [children])
+  │     HostText          → null（文本没有孩子）
+  │
+  ├─ 没孩子 → 向上：completeWork(fiber)（L216）——补 DOM 实例，从叶子开始
+  │     新建: stateNode = createInstance / createTextInstance（dom.js）+ setInitialProperties
+  │            ★ 趁节点游离在文档外铺属性 + 记 Placement
+  │     复用: alternate.stateNode 存在 → 记 Update（更新路径，5.2 出场）
+  │
+  └─ 找下一个: 有孩子深入孩子 → 有弟弟处理弟弟 → 都没有回父亲向上（链表回溯）
+```
+
+循环体五个函数的代码，按调用嵌套从外到里（reconciler.js，删减注释）：
+
+```js
+function workLoop() {                    // L484 —— 时间片循环本体
+    while (nextUnitOfWork !== null && !shouldYield()) {
+        nextUnitOfWork = performUnitOfWork(nextUnitOfWork) // 推进一个，游标挪到下一个
+    }
+    return nextUnitOfWork !== null       // true = 时间片耗尽、树还没跑完
+}
+
+function performUnitOfWork(fiber) {      // L400 —— 递归改循环的形态本体
+    const child = beginWork(fiber)       // 向下：diff 出孩子 fiber 链
+    if (child !== null) return child     // 有孩子 → 深入孩子
+    let completed = fiber
+    while (completed !== null) {
+        completeWork(completed)          // 向上：给宿主 fiber 补 DOM 实例
+        if (completed.sibling !== null) return completed.sibling // 有弟弟 → 弟弟
+        completed = completed.return     // 没弟弟 → 回父亲，找父亲的弟弟
+    }
+    return null                          // 整棵树跑完
+}
+
+function beginWork(fiber) {              // L188 —— 按 tag 分派"孩子从哪来"
+    switch (fiber.tag) {
+    case FiberTag.HostRoot:          return reconcileChildren(fiber, [fiber.props])
+    case FiberTag.FunctionComponent: return reconcileChildren(fiber, [renderWithHooks(fiber)])
+    case FiberTag.HostComponent:     return reconcileChildren(fiber, [fiber.props.children])
+    case FiberTag.HostText: default: return null   // 文本没有孩子
+    }
+}
+
+function renderWithHooks(fiber) {        // hooks.js L40 —— 组件函数的执行上下文
+    currentlyRenderingFiber = fiber      // Hooks 全靠它定位"我属于谁"
+    fiber.updateQueue = []               // 本次 render 的 effect 收集区
+    workInProgressHook = null; currentHook = null
+    const children = fiber.type(fiber.props) // ★ 执行组件函数，hooks 在此被调用
+    currentlyRenderingFiber = null; workInProgressHook = null; currentHook = null
+    return children
+}
+
+function completeWork(fiber) {           // L216 —— 自下而上补 DOM 实例并记账
+    if (fiber.tag === FiberTag.HostComponent) {
+        if (fiber.alternate !== null && fiber.alternate.stateNode !== null) {
+            fiber.flags |= FiberFlags.Update   // 复用旧实例：commit 时 diff 属性
+        } else {
+            fiber.stateNode = createInstance(fiber.type)       // dom.js：createElement
+            setInitialProperties(fiber.stateNode, fiber.props) // 趁节点游离在文档外铺属性
+            fiber.flags |= FiberFlags.Placement                // 新实例：commit 时插入
+        }
+    } else if (fiber.tag === FiberTag.HostText) {
+        /* 同构：createTextInstance(nodeValue) 或记 Update */
+    }
+}
+```
+
+**挂载期 reconcileChildren 的执行——fiber 树就是这样一层层长出来的**（reconciler.js L257-293，本节触发的路径）：
+
+```js
+function reconcileChildren(wipFiber, elements) {
+    // 扁平化嵌套数组 + 丢掉 null（JSX 里条件渲染 {ok && <X/>} 的常态）
+    const children = elements.flat(Infinity).filter(el => el !== null && el !== undefined)
+    const current = wipFiber.alternate
+    let oldFiber = current !== null ? current.child : null   // 对面树上"第一个旧孩子"
+
+    // head/tail 两个游标贯穿四个阶段，统一往结果链尾追加
+    let head = null
+    let tail = null
+    const append = fiber => {
+        if (tail === null) head = fiber
+        else tail.sibling = fiber
+        tail = fiber
+    }
+
+    // —— 第一轮：从头同步 ——
+    let newIdx = 0
+    for (; newIdx < children.length && oldFiber !== null; newIdx++) {
+        const element = children[newIdx]
+        if (!isReusable(oldFiber, element)) break // key 或 type 对不上 → 立即停
+        const newFiber = createWorkInProgress(oldFiber, element.props)
+        newFiber.index = newIdx
+        append(newFiber)
+        oldFiber = oldFiber.sibling
+    }
+
+    // ★ 快速通道①：旧链耗尽（挂载必然走这里——旧树"空但有根"，current.child === null）
+    if (oldFiber === null) {
+        for (; newIdx < children.length; newIdx++) {
+            const newFiber = createFiberFromElement(children[newIdx]) // Element → fiber
+            newFiber.index = newIdx
+            newFiber.flags |= FiberFlags.Placement                    // 全员记 Placement
+            append(newFiber)
+        }
+        return finishChildren(wipFiber, head)   // 链头挂到 wipFiber.child，各节点 return 回指
+    }
+    /* 快速通道② / 尾同步 / 乱序区 → 挂载不参与，见 5.4 / 5.5 */
+}
+```
+
+逐层执行走读（demo 实测——每层 beginWork 调一次 reconcileChildren，输入产出）：
+
+```
+beginWork(wipRoot)   elements = [App element]
+                     oldFiber = current.child = null  ← 旧树"空但有根"，HostRoot 的 current 没有孩子
+                     → 快速通道①：createFiberFromElement(App) → child 链 [App fiber · Placement]
+beginWork(App)       renderWithHooks 执行组件函数 → 产出 [div element]
+                     oldFiber = null（App 是新建 fiber，alternate 为 null）
+                     → 快速通道① → [div fiber · Placement]
+beginWork(div)       elements = [p, p, button, ul]（4 个孩子 element）
+                     → 快速通道① → child 链 [p, p, button, ul] 各带 Placement
+beginWork(p)         children 是文本 element → [HostText fiber · Placement]
+beginWork(文本 fiber) return null → 本层没有孩子，performUnitOfWork 转入 completeWork（转向上）
+```
+
+统一结论：**挂载期每层的 reconcileChildren 都走快速通道①**——对面树没有旧孩子（`oldFiber === null`），头同步循环一轮都不进。旧树"空但有根"让挂载期 diff 退化为**纯建链 + 全员 Placement**；keyed diff 的头同步 / 尾同步 / 乱序区要到 5.2~5.5 更新链路才逐个出场。每层产出的 fiber 链由 `finishChildren` 挂到父 fiber 的 child、节点 return 回指父 fiber——三指针串树，节点长什么样见下文 fiber 数据结构块。
+
+**beginWork 每圈怎么走——按四种 tag 分组看**（对应上面 beginWork 的 switch，"孩子从哪来"逐个展开）：
+
+- **HostRoot → `[fiber.props]`**：wipRoot 的 props 就是 `render()` 递进来的那个 App element（createRoot 装配时存进去的），reconcileChildren 拿 `[App element]` 建链。wipRoot 自己 flags 保持 NoFlags——容器没有 DOM 实例要插。
+- **FunctionComponent → `renderWithHooks(fiber)` 的返回值**：先切上下文（`currentlyRenderingFiber = fiber`）再执行 App——三个 useState 依次 `mountWorkInProgressHook` 接成 hooks 链、两个 useEffect 进 updateQueue 收集区，组件返回的 div element 成为唯一孩子。App fiber 也记 Placement，但它没有 stateNode，commitPlacement 会跳过它，真正落位的是宿主后代（成品树图下有注）。
+- **HostComponent → `[fiber.props.children]`**：div 的孩子是元素数组 [p, p, button, ul]；p 的孩子已被 createElement 的 normalizeChild 归一成文本元素（单孩子不包数组，reconciler.js L53）；li 的孩子是 ['#', t.id, ' ', t.text] 四个文本元素。每一层都撞上 `oldFiber === null` → 快速通道①纯建链。
+- **HostText → `null`**：default 分支直接返回——文本没有孩子。beginWork 返回 null 是遍历"到底了"的信号，performUnitOfWork 就地转入 completeWork 再回溯找弟弟（回溯细节见上面循环体）。
+
+**36 圈逐圈对账**（workLoop 每圈推进一个 fiber；深度优先——beginWork 的产出决定下一圈去哪）：
+
+| 圈 | fiber | tag | beginWork 产出 → 下一圈去哪 |
+|-----|-------|-----|---------------------------|
+| 1 | wipRoot | HostRoot | App fiber → 圈 2 |
+| 2 | App | FunctionComponent | div fiber → 圈 3（3 个 useState 的 hooks 链 + 2 个 effect 收集就在本圈建立） |
+| 3 | div | HostComponent | p/p/button/ul 四条 fiber → 圈 4 |
+| 4 | p | HostComponent | 1 个文本 fiber → 圈 5 |
+| 5 | 文本 "Hello React!" | HostText | null → completeWork 向上回溯，圈 6 落到弟弟 p |
+| 6 | p | HostComponent | 2 个文本 fiber → 圈 7 |
+| 7~8 | 文本 "count = " / "0" | HostText | null → 回溯，圈 9 落到 button |
+| 9 | button | HostComponent | 1 个文本 fiber → 圈 10 |
+| 10 | button 文本 | HostText | null → 回溯，圈 11 落到 ul |
+| 11 | ul | HostComponent | 5 个 li fiber（key 1~5）→ 圈 12 |
+| 12 | li(key:1) | HostComponent | 4 个文本 fiber → 圈 13 |
+| 13~16 | "#" / "1" / " " / "a" | HostText | null → 回溯，圈 17 落到 li(key:2) |
+| 17~36 | li(key:2..5) 及各自 4 个文本 | 同上节奏 | 每个 li 占 5 圈（1 圈建链 + 4 圈文本）→ 圈 36 跑完整棵树 |
+
+账目核对：**12 个非文本 fiber（wipRoot + App + div + 2×p + button + ul + 5×li）+ 24 个文本 fiber（1 + 2 + 1 + 5×4）= 36 圈**。非文本圈建结构，文本圈只是"到底信号"——大半圈数花在叶子文本上，这正是深度优先"叶子最重"的直观体现；对照断点里 `performUnitOfWork` 的 36 次命中，一圈不多一圈不少。
+
+**每个节点是什么——fiber 的数据结构**（上面五个函数操作的"对象"长这样，reconciler.js L106-122 全文）：
+
+```js
+function createFiber(tag, props, key) {
+    return {
+        tag,                 // 类型：0=函数组件 3=HostRoot 5=DOM元素 6=纯文本（shared.js L22）
+        type: null,          // 元素类型：'div' 这类标签名；函数组件时是组件函数本身
+        key,                 // 复用标识（keyed diff 的配对依据）
+        props,               // 本轮属性（真实 React 区分 pendingProps/memoizedProps，教学版合一）
+        stateNode: null,     // 宿主 fiber 指向 DOM 实例；HostRoot 指向容器；函数组件没有
+        return: null,        // 父 fiber
+        child: null,         // 第一个孩子
+        sibling: null,       // 右兄弟 —— return/child/sibling 三指针把树链表化，深度遍历不依赖递归栈
+        index: 0,            // 在兄弟中的位次（keyed diff 的移动判定读它）
+        alternate: null,     // 双缓冲指针：指向对面树上"同位置"的 fiber
+        flags: FiberFlags.NoFlags, // 给 commit 的记账：Placement=2 / Update=4 / Deletion=8（位运算叠加）
+        memoizedState: null, // 函数组件：hooks 链表头；宿主 fiber：无
+        updateQueue: null    // 函数组件：本次 render 收集的 effect 数组
+    }
+}
+```
+
+填上 demo 实测值，挂载成品树里的两个典型节点：
+
+```js
+// App fiber（函数组件——hooks 链表挂在它身上）
+{
+    tag: 0, type: App, key: null,
+    props: { onReady: fn },
+    stateNode: null,                    // 函数组件没有 DOM 实例
+    return: wipRoot, child: div fiber, sibling: null,
+    alternate: 旧 App fiber,            // 有旧影子 → 更新路径的判断依据
+    memoizedState: message hook → count hook → todos hook → effect④ → effect⑤（hooks 链表）,
+    updateQueue: [effect④, effect⑤],   // 本次 render 的 effect 收集区
+    index: 0,
+    flags: Placement                    // 函数组件也记账；commitPlacement 会跳过它（无 stateNode）
+}
+
+// div fiber（宿主组件——DOM 实例挂在它身上）
+{
+    tag: 5, type: 'div', key: null,
+    props: { children: [...] },
+    stateNode: <div>★游离在文档外（completeWork 建的，commit 才插入）,
+    return: App, child: p fiber, sibling: null,
+    alternate: null,                    // 首次挂载没有旧影子 → 新挂载
+    memoizedState: null, updateQueue: null,
+    index: 0,
+    flags: Placement
+}
+```
+
+回答一个容易被带过的问题：**wip 是什么？** `createWorkInProgress` 造出来的 wip 就是上面这个结构的一个实例——它内部第一行就是 `createFiber(...)`，然后从 current 那个 fiber 上继承 `type / stateNode / memoizedState`（2.3 的摘录）。所谓"wip 树"，就是一批 `createFiber` 对象用 return/child/sibling 三指针串起来的链表化树；`wipRoot` 只是树根那个 fiber 的变量名。
+
+**成品 fiber 树**（workLoop 跑完、commit 之前，wip 树长这样）：
+
+```
+wipRoot（HostRoot, stateNode = 容器, flags: NoFlags）
+└─ App（FunctionComponent, alternate = 旧 App, Placement）
+   │ memoizedState → hooks 链表（按调用顺序）:
+   │   ① message { 'Hello React!', queue:{pendingActions:[]} } → ② count { 0 } → ③ todos { [a..e] }
+   │   → ④ effect{ create: 递 onReady, deps: [] } → ⑤ effect{ create: 留痕, deps: ['Hello React!'] }
+   │ updateQueue = [effect④, effect⑤]（收集区，commit 的 passive 段消费）
+   └─ div（HostComponent, stateNode = <div>★游离在文档外, Placement）
+      ├─ p  → 文本 "Hello React!"（HostText, Placement）
+      ├─ p  → 文本 "count = " ＋ 文本 "0"（两个 HostText 孩子）
+      ├─ button（onClick 已铺, Placement）
+      └─ ul（Placement）
+         └─ li(key:1)→"#"·"1"·" "·"a"（4 个 HostText）… li(key:5)→…"e"（每个 li 4 个 HostText 孩子）
+
+全树 36 个 fiber：12 非文本 + 24 文本（逐圈对账见前面的账目表）；return 指针逐层连回 wipRoot（图中省略）。
+App 也带 Placement——函数组件没有 stateNode，commitPlacement 会跳过它，宿主孩子各自落位。
+```
+
+断点：
+- **构建起点**：断 scheduler.js L58（deadline 行），第一次命中按 F11 步入 → 直达第一圈 `performUnitOfWork`；
+- 单步看生长：断 reconciler.js 的 `performUnitOfWork` 首行——36 圈逐 fiber，观察向下 / 向上的推进顺序；
+- **看成品**：条件断点 `!hasMoreWork`（performRootWork 的 `if (!hasMoreWork)` 行）——停在 commit 入口前，此刻 wip 树是完整成品，Scope 面板从 `wipRoot.child` 逐层展开，对照上图核对节点数、hooks 链与 flags。
+
+#### 5.1.4 阶段④ commit：把账本上的树一次搬进文档（index.js，同步一口气跑完）
+
+核心设计先立住：**diff 期间只建不插**——树不能"半插半不插"，否则插入锚点的判定会被中间态污染。所以 render 阶段记三本账（结构账 = child/sibling/return 链；实例账 = stateNode 游离在文档外；变更账 = flags），commit 是**唯一的结算时刻**：
+
+```
+commitRoot（index.js L25）
+  │
+  ├─ ① 先删：for (const fiber of deletions) commitDeletion(fiber)
+  │      删除优先——锚点判定不被待删节点干扰（真实 React 同款顺序；walk 细节见 5.6 块①）
+  ├─ ② 再插/更新：commitMutationEffects(root.child)（L51）——先序遍历消费 flags
+  │      Placement → commitPlacement（L76）：getHostSibling（L115）找锚点 → insertBefore / appendChild
+  │          ★ 挂载期为什么大多 appendChild：先序遍历里"本节点后面"往往还没有已落位的宿主
+  │            → 找不到稳定锚点 → 兜底追加；已落位即清 Placement 标记，
+  │              右侧 fiber 找锚点时左侧才是稳定节点
+  │      Update → 文本 commitTextUpdate（只改 nodeValue）/ 元素 commitUpdate（diff 属性表）
+  │          ★ DOM 在这一段真实出现（Elements 面板可见）
+  ├─ ③ passive：flushPassiveEffects（L184）——遍历执行 updateQueue 收集的 effect
+  │      先旧 destroy 再新 create；此刻 DOM 已在文档中 → effect 里读 DOM / 绑监听才安全
+  │      demo：effect④ create 执行 → onReady 把三个 setState 递给页面层
+  └─ ④ 切 current：currentRootFiber = wipRoot；clearPendingActions（L203）清 action 队列
+          ★ 双缓冲交接：这棵 wip 树从此成为"已上屏侧"，下次 render 从它造副本
+```
+
+**`commitRoot()`** —— index.js L25（机制见 4.5）
+
+```js
+function commitRoot() {
+    const root = wipRoot
+    // —— mutation：删除优先（React 同款：先删后插，避免锚点被待删节点干扰）——
+    for (const fiber of deletions) commitDeletion(fiber)
+    if (root.child !== null) commitMutationEffects(root.child)
+    // —— passive：useEffect（真实 React 排到"绘制之后"，教学版就地执行）——
+    flushPassiveEffects(root.child)
+    // —— 切换 current：双缓冲交接 ——
+    currentRootFiber = root
+    wipRoot = null
+    deletions = []
+    clearPendingActions(root.child) // action 已结算进 memoizedState，队列清空防重放
+}
+```
+
+```
+目的: 三段式总控——mutation → passive → 切 current
+输入: 全局 wipRoot / deletions ｜ 输出（副作用）: DOM 出现、effect 执行、双缓冲交接
+要点: 删除先于插入；收尾 clearPendingActions——action 已结算进 memoizedState，
+      不清下次 render 会重放
+```
+
+**`commitMutationEffects(fiber)`** —— index.js L51
+
+```js
+function commitMutationEffects(fiber) {
+    if (fiber.flags & FiberFlags.Placement) {
+        commitPlacement(fiber)                // 新挂载 + "移动"是同一个动作
+        fiber.flags &= ~FiberFlags.Placement  // 已落位：清标记，后续锚点判定才当它"稳定"
+    } else if (fiber.flags & FiberFlags.Update) {
+        if (fiber.tag === FiberTag.HostText) {
+            commitTextUpdate(fiber.stateNode, fiber.props.nodeValue) // 文本：只改 nodeValue
+        } else if (fiber.tag === FiberTag.HostComponent) {
+            commitUpdate(fiber.stateNode, fiber.alternate.props, fiber.props) // 元素 diff 属性表
+        }
+        fiber.flags &= ~FiberFlags.Update
+    }
+    if (fiber.child !== null) commitMutationEffects(fiber.child)      // 先序：child 先于 sibling
+    if (fiber.sibling !== null) commitMutationEffects(fiber.sibling)
+}
+```
+
+```
+目的: 先序遍历消费 flags——Placement 插入/移动、Update 更新，账本清零
+要点: 先序保证"左边的兄弟先落位"；移动与挂载是同一个动作（Placement + insertBefore）；
+      getHostSibling 的跳过规则（带 Placement 的候选不作锚点）详见 4.5
+```
+
+**`flushPassiveEffects(fiber)`** —— index.js L184
+
+```js
+function flushPassiveEffects(fiber) {
+    if (fiber === null) return
+    if (fiber.tag === FiberTag.FunctionComponent && fiber.updateQueue !== null) {
+        for (const effect of fiber.updateQueue) {
+            if (isFunction(effect.destroy)) effect.destroy() // 先清理旧的
+            effect.destroy = effect.create() || null         // 再建立新的
+        }
+        fiber.updateQueue = null   // 下一轮 render 由 renderWithHooks 重建
+    }
+    if (fiber.child !== null) flushPassiveEffects(fiber.child)
+    if (fiber.sibling !== null) flushPassiveEffects(fiber.sibling)
+}
+```
+
+```
+目的: 执行收集区 effect——先旧 destroy 再新 create；deps 没变的根本不在收集区（依赖数组优化）
+输入: App fiber（updateQueue = [effect④, effect⑤]）
+输出（实测）: effect④ create → onReady({ setMessage, setCount, setTodos })；effect⑤ create → 留痕两条
+```
+
+**`clearPendingActions(fiber)`** —— index.js L203
+
+```js
+function clearPendingActions(fiber) {
+    if (fiber === null) return
+    if (fiber.tag === FiberTag.FunctionComponent) {
+        let hook = fiber.memoizedState        // hooks 链表头
+        while (hook !== null) {
+            hook.queue.pendingActions = []    // 逐 hook 清空
+            hook = hook.next
+        }
+    }
+    if (fiber.child !== null) clearPendingActions(fiber.child)
+    if (fiber.sibling !== null) clearPendingActions(fiber.sibling)
+}
+```
+
+```
+目的: 逐 hook 清空 action 队列
+要点: dispatch（写侧）→ 回放（结算）→ 此处（清账）——setState 变量"什么时候变"的完整闭环收于此
+```
+
+断点：断 commitRoot 首行——F8 三跳分别跨过 mutation / passive / 切 current；Elements 面板开在旁边，每跳看一批 DOM 出现；在 `effect.destroy = effect.create() || null` 行按 F11 步入会进 demo 的 useEffect 回调。
+
+#### 5.1.5 实测留痕与调试注意
 
 实测留痕（demo）：`#app` 渲染出 message / count / count + 1 按钮 / 五条列表；`useEffect 留痕`面板显示「挂载完成（useEffect([]) 已执行）」。
 
-断点建议：`scheduler.js` 的 `scheduleCallback`（看宏任务怎么排上）；`reconciler.js` 的 `performUnitOfWork`（单步看 fiber 逐个推进）；`hooks.js` 的 `mountWorkInProgressHook`（看 hooks 链表建立）。
+各阶段的断点位置已写进各阶段末尾的断点段。另有一个大坑与三个直达手段：
+
+> **调试注意**：不要在链路热函数（`scheduleCallback` / `performWorkUntilDeadline`）上设普通断点——断点暂停期间墙钟时间照走，恢复执行时 `shouldYield()`（`performance.now() >= deadline`）必然为 true，5ms 时间片早在单步过程中耗尽。于是 `workLoop` 每个时间片只推进 1 个 fiber 就让出，`scheduleCallback` 续排下一个宏任务，你的断点每圈必中，看起来像死循环。这不是死循环：每圈推进一个 fiber，圈数 = fiber 总数（demo 约 36 圈），树跑完 `nextUnitOfWork === null` 自然进入 commit。想直达下一阶段：
+>
+> ① **条件断点**：`reconciler.js` 的 `if (!hasMoreWork) commitRoot()` 行，条件填 `!hasMoreWork`——整个 render 只命中一次，正停在 commit 入口前；
+> ② 直接断 **`index.js` 的 `commitRoot()` 首行**；
+> ③ **日志点（Logpoint）**：在 `workLoop` 循环体内打日志输出 fiber.type，不暂停、不吃时间片，循环跑几圈一目了然。
 
 ### 5.2 更新 · 改 message：setState 同步读 vs 宏任务后
 
 触发方式：demo「改 message」按钮——`setMessage(m => (m === 'Hello React!' ? 'Hello MiniReact!' : 'Hello React!'))`。
 
+#### 调用流程图（与挂载共用的骨架见 5.1，这里只列差异）
+
 ```
-更新链路（与挂载共用的部分只列差异）
-dispatchSetState(hook, action)   action 入 hook.queue.pendingActions
-  └► scheduleRootUpdate          hasPendingRootWork = true；管道空闲 → scheduleCallback
-      └► performRootWork
-          ├► prepareFreshStack    为 current 根造 wip 副本；renderCount=2
-          ├► workLoop
-          │    ├► beginWork(App)  renderWithHooks 重新执行组件函数：
-          │    │                    useState → updateWorkInProgressHook 配对旧 hook，
-          │    │                    回放 pendingActions：message 结算成新值
-          │    │                    useEffect([message])：deps 变了 → 带旧 destroy 登记
-          │    │                    message 文本元素：type/key 相同 → 复用 fiber，记 Update
-          │    └► completeWork     文本 fiber 有旧影子 → 记 Update（实例继承，不重建）
-          └► commitRoot
-               ├► mutation         commitTextUpdate：只改 nodeValue——文本更新不换节点
-               ├► passive          先跑上一次的 destroy（「上一次 effect 的清理执行」）
-               │                   再跑新 create（「useEffect([message]) 触发：message=新值」）
-               └► 切换 current
+dispatchSetState(message hook, m => …)       hooks.js（3.3）
+  │ 输入: hook = ①号 hook（dispatch 闭包创建时抓住的就是它，与 render 次数无关）
+  │ 过程: hook.queue.pendingActions.push(action) → ['m => …']
+  │        scheduleRootUpdate()：hasPendingRootWork = true；管道空闲 → scheduleCallback
+  ▼ （同步读 window 里的 DOM 还是旧值——结算要等宏任务）
+performWorkUntilDeadline → performRootWork   scheduler.js + reconciler.js
+  ├► prepareFreshStack     nextUnitOfWork === null → 全新 render：renderCount = 2
+  │                         wipRoot = createWorkInProgress(currentRootFiber, …)
+  │                         wip 继承 current 的 memoizedState（hooks 链表头）与 stateNode
+  ├► workLoop
+  │    ├► beginWork(HostRoot)   root element 与上次是同一个对象 → type/key 匹配
+  │    │                          → createWorkInProgress 复用出 App wip（无 Placement）
+  │    ├► beginWork(App)        renderWithHooks：alternate ≠ null → 更新路径（hooks.js）
+  │    │    useState('Hello React!') → updateWorkInProgressHook 取同位置 hook（块②）
+  │    │      → 回放 pendingActions：state = ('Hello React!')(m => …) = 'Hello MiniReact!'
+  │    │    useState(0) / useState(todos)：队列为空 → 回放无动作，state 原值
+  │    │    useEffect([])（④号）：deps 没变 → 新链复用旧 effect，不进收集区
+  │    │    useEffect([message])（⑤号）：deps ['Hello MiniReact!'] vs ['Hello React!'] → 变了
+  │    │      → 新 effect { create, deps: 新值, destroy: 旧 destroy } → 进收集区
+  │    │    产出 elements：message 文本 nodeValue 变了，其余 element 与上次同 type/key
+  │    │    reconcileChildren(div, children)：逐位复用 → 无 Placement
+  │    │    completeWork（4.2）：alternate.stateNode 都存在 → 记 Update（实例继承，不重建）
+  │    └► workLoop 返回 false
+  └► commitRoot
+       ├► mutation    commitTextUpdate(textNode, 'Hello MiniReact!')：只改 nodeValue（块⑤）
+       │               其余 fiber 的 Update 走属性 diff，值没变 → 零实际改动
+       ├► passive     收集区只有 effect⑤：先 destroy()（上一次留痕的清理）再 create()（新留痕）
+       └► 切 current   clearPendingActions：message hook 的队列清空（已结算，防重放）
+```
+
+#### 阶段差异函数块
+
+与挂载共用的骨架标"见 5.1.x"：`scheduleRootUpdate` 见 5.1.1；切片循环见 5.1.2；`performRootWork` / `prepareFreshStack` / `workLoop` 见 5.1.3；commit 三段式见 5.1.4。这里只展开更新路径真正不同的 5 个函数。
+
+**块① `dispatchSetState(hook, action)`** —— hooks.js L154（机制见 3.3）
+
+```js
+function dispatchSetState(hook, action) {
+    hook.queue.pendingActions.push(action)
+    scheduleRootUpdate() // reconciler 里定义：合并调度一次从根开始的 render
+}
+```
+
+```
+目的: setState 的真身——记动作 + 请求调度，两步，没有任何计算
+输入: hook = dispatch 闭包创建时抓住的那个（与 render 次数无关）；action = m => …
+输出（副作用）: pendingActions → ['m => …']，并 scheduleRootUpdate() 排上宏任务
+要点: queue 与旧 hook 共享——闭包里的 dispatch 永远写到"当前 render 正在读的那条队列"
+断点: push 行——点击瞬间命中，此刻 DOM 还是旧值；F8 后要等宏任务（本节开头"同步读旧值"的代码级解释）
+```
+
+**块② `updateWorkInProgressHook()`** —— hooks.js L82（机制见 3.2）
+
+```js
+function updateWorkInProgressHook() {
+    if (currentHook === null) {
+        // 本次 render 的第一个 hook：从旧 fiber 的链头开始
+        const currentFiber = currentlyRenderingFiber.alternate
+        currentHook = currentFiber ? currentFiber.memoizedState : null
+    } else {
+        currentHook = currentHook.next // 后续 hook：沿旧链往后走一格
+    }
+    if (currentHook === null) return mountWorkInProgressHook() // 旧链没有 → 兜底按挂载
+    // ★ queue 与旧 hook 共享同一对象——dispatch 写的 action 在这里被读到
+    const hook = { memoizedState: currentHook.memoizedState, queue: currentHook.queue, next: null }
+    if (workInProgressHook === null) {
+        currentlyRenderingFiber.memoizedState = hook // 链表头挂到 fiber 上
+    } else {
+        workInProgressHook.next = hook
+    }
+    workInProgressHook = hook
+    return hook
+}
+```
+
+```
+目的: 更新渲染时从旧 hook 链上取"同位置"的 hook，生成配对的新 hook
+输入: currentlyRenderingFiber.alternate（旧链头 = 上次提交的 hooks 链）
+输出: message 位次新 hook——{ memoizedState: 'Hello React!'（旧值，等回放）, queue: 与旧 hook 同一对象 }
+要点: queue 共享 + 链表按调用顺序逐位对齐，就是"Hooks 必须无条件调用"的底层原因；
+      currentHook 为 null（顺序变了）教学版兜底走挂载，真实 React 开发模式报警
+断点: const hook = { … } 行——对比 currentHook.memoizedState（旧值）与 hook.queue（同引用）
+```
+
+**块③ `useState` 的更新回放** —— hooks.js L129-139（机制见 3.3）
+
+```js
+} else {
+    // 回放：从"上次提交的 state"出发，把积累的所有 action 依序结算。
+    // 队列不在这一步清空——被中断的 render 丢弃后重放仍能算对，
+    // 等 commit 成功后由 clearPendingActions 统一清。
+    let state = hook.memoizedState
+    const actions = hook.queue.pendingActions
+    for (const action of actions) {
+        state = isFunction(action) ? action(state) : action // ★ 函数式 action 拿上一个结果
+    }
+    hook.memoizedState = state
+}
+```
+
+```
+目的: 从"上次提交的 state"出发，把积累的 action 依序结算
+输入: pendingActions = ['m => …']，起点 'Hello React!' ｜ 输出: memoizedState = 'Hello MiniReact!'
+要点: 回放循环 state = isFunction(action) ? action(state) : action——函数式 action 拿"回放链上的
+      上一个结果"（5.3 批处理的语义基础）；队列此刻不清（中断重放仍算对），commit 后统一清
+断点: hook.memoizedState = state 行——看回放后的新值，此刻 DOM 未动
+```
+
+**块④ `useEffect` 的更新分支** —— hooks.js L187-195（机制见 3.4）
+
+```js
+const oldEffect = currentHook.memoizedState
+if (areHookInputsEqual(deps, oldEffect.deps)) {
+    hook.memoizedState = oldEffect // deps 没变：新链直接复用旧 effect，不进收集区
+    return
+}
+// deps 变了：destroy 带着旧清理函数，flush 时"先 destroy 再 create"
+const effect = { create, deps: deps === undefined ? null : deps, destroy: oldEffect.destroy }
+hook.memoizedState = effect
+currentlyRenderingFiber.updateQueue.push(effect)
+```
+
+```
+目的: 先比 deps——没变什么都不记（旧 effect 原样保留）；变了把旧 destroy 带进新 effect
+输入（实测）: effect④ [] vs [] → 没变直接 return；effect⑤ ['Hello MiniReact!'] vs ['Hello React!'] → 变了
+输出: updateQueue = [effect⑤]——本轮 commit 只执行它（依赖数组优化的本体）
+断点: areHookInputsEqual（L206，逐位 Object.is）行——两个 effect 各命中一次，一个 return 一个 push
+```
+
+**块⑤ `commitTextUpdate(textInstance, newContent)`** —— dom.js L153
+
+```js
+function commitTextUpdate(textInstance, newContent) {
+    textInstance.nodeValue = newContent   // 全文就这一行：不换节点，浏览器无需重建
+}
+```
+
+```
+目的: 文本更新——复用同一个 Text 节点，只改 nodeValue（全文就一行：textInstance.nodeValue = newContent）
+输入: 上次挂载创建的 #text 节点 + 'Hello MiniReact!' ｜ 输出: 节点引用不变、内容变化——零重建成本
+断点: 这一行——Elements 面板盯住 #text 节点，看引用不变、内容变化
 ```
 
 实测留痕（demo 的 tickMark）：点击瞬间同步读 DOM——
@@ -1738,7 +2408,9 @@ dispatchSetState(hook, action)   action 入 hook.queue.pendingActions
 
 同步读到的还是旧值，因为 dispatch 只记了 action（3.3）；render+commit 发生在 MessageChannel 排的宏任务里，连页面自己的 `setTimeout(0)` 都排它后面。依赖数组的两个效果同屏可见：message 不变的 render（比如点「count + 1」）里 `[message]` effect 完全不执行；变了则先清后建。
 
-断点建议：`dispatchSetState`（看 action 入队）；`updateWorkInProgressHook`（看 queue 共享与回放）；`commitTextUpdate`（看文本更新只动 nodeValue）。
+#### 断点建议
+
+块① `dispatchSetState`（看 action 入队）；块②（看 queue 共享）；块③（看回放结算）；块⑤（看 nodeValue 直改）。调试注意同 5.1.5：本轮循环圈数 = 本次 diff 涉及的 fiber 数（很少，一个时间片绰绰有余），条件断点 `!hasMoreWork` 可直达 commit。
 
 ### 5.3 更新 · 一次改三项：批处理
 
@@ -1750,29 +2422,197 @@ appApi.setCount(c => c + 1)
 appApi.setTodos(t => t.slice(1))
 ```
 
+#### 调用流程图
+
 ```
-3 × dispatchSetState → 3 × scheduleRootUpdate
-    第 1 次：isWorkScheduled=false → scheduleCallback 排上任务
-    第 2、3 次：isWorkScheduled=true → 只置 hasPendingRootWork 就返回（4.4）
-宏任务 → performRootWork（只跑一次）
-    ├► prepareFreshStack        renderCount +1（只 +1！）
-    └► workLoop → commitRoot
-         各 useState 回放自己队列里积累的 action：
-           message：['批处理写入']       → '批处理写入'
-           count：[c => c + 1]          → 旧值 + 1（函数式更新拿的是回放结果）
-           todos：[t => t.slice(1)]     → 去掉首项 → keyed diff：头同步全命中
-                                          → 快速通道（旧链耗尽）→ 剩余全记 Placement
+dispatchSetState ×3                          hooks.js（3.3）
+  │ ① message hook: pendingActions → ['批处理写入']
+  │    scheduleRootUpdate：第 1 次，isWorkScheduled = false → scheduleCallback（任务排上管道）
+  │ ② count hook:   pendingActions → [c => c + 1]
+  │    scheduleRootUpdate：第 2 次，isWorkScheduled 已是 true → 只置 hasPendingRootWork 返回
+  │ ③ todos hook:   pendingActions → [t => t.slice(1)]
+  │    scheduleRootUpdate：第 3 次，同上（4.4：管道里已有任务 → 不重复排）
+  ▼ （只排出 1 个宏任务）
+performRootWork
+  ├► prepareFreshStack     renderCount +1（只 +1！这就是批处理的度量）
+  ├► workLoop
+  │    ├► beginWork(App)   renderWithHooks → 三个 useState 各自回放自己的队列（见 5.2 块③）：
+  │    │     message: ['批处理写入']     → '批处理写入'
+  │    │     count:   [c => c + 1]       → 0 + 1 = 1
+  │    │     todos:   [t => t.slice(1)]  → [b, c, d, e]
+  │    │     useEffect([])：deps 没变 → 跳过；useEffect([message])：变了 → 带旧 destroy 登记
+  │    │    reconcileChildren(ul, [li b, li c, li d, li e])：
+  │    │     头同步 b(2) vs a(1) key 不匹配 → 立即停（newIdx=0）
+  │    │     尾同步 e d c b 全命中 → 乱序区为空 → map 里剩 key1(a) → deletions
+  │    └► workLoop 返回 false
+  └► commitRoot
+       ├► mutation    deletions = [a fiber] → commitDeletion：li#1 内无函数组件
+       │               → 直接 removeChild（唯一的真实 DOM 变更）
+       │               b~e 记 Update → 属性/文本 diff 后值没变 → 无实际改动
+       ├► passive     effect⑤（[message]）先 destroy 再 create → 留痕两条
+       └► 切 current   clearPendingActions：三个 hook 的队列全部清空
 ```
+
+#### 阶段差异讲解（批处理没有新函数——复用的全是已讲的机制）
+
+**调度侧：`scheduleRootUpdate` 的合并判定（完整块见 5.1.1）**
+
+3 次 dispatch 的时序，`isWorkScheduled` 是唯一的裁判：
+
+```
+时点          动作                        hasPendingRootWork  isWorkScheduled   结果
+第 1 次 setMessage   push + scheduleRootUpdate   true           false → true   scheduleCallback 排上宏任务
+第 2 次 setCount     push + scheduleRootUpdate   true           true（已占用）  if 块内 return 直接返回
+第 3 次 setTodos     push + scheduleRootUpdate   true           true（已占用）  同上，直接返回
+```
+
+→ 3 个 action 分属 3 个 hook 的队列，却只排出 **1 个宏任务**。管道要到 `performRootWorkAndRelease`（5.1.3）里才复位——那之后来的新 setState 才会排下一轮。
+
+**render 侧：回放循环（完整块见 5.2 块③）**
+
+三个 hook 各自回放自己的队列（demo 实测）：
+
+```
+message: ['批处理写入']    → '批处理写入'   （直接值 action）
+count:   [c => c + 1]      → 0 + 1 = 1      （函数式 action 拿回放链上的上一个结果）
+todos:   [t => t.slice(1)] → [b, c, d, e]
+```
+
+回放发生在 `renderWithHooks` 重新执行组件函数时——一次函数体执行把三条队列全部结算完。
+
+**commit 侧**：无新差异——`deletions = [a]` 的删除走 `commitDeletion`（完整块见 5.6 块①），其余三段式见 5.1.4。
 
 实测留痕（demo 的 tickMark）：`3 次 setState → 从根 render 次数=1（批处理：合并为 1 次）`——`__internal.getRenderCount()` 的前后差值就是"从根 render"的次数。
 
 函数式更新在这里的价值：`c => c + 1` 回放时收到的是**回放链上的上一个结果**——即使三个 action 分属不同 hook 的队列，每个 hook 的多次 action 也依序结算，不会互相覆盖。
 
-断点建议：`scheduleRootUpdate`（看第 2、3 次调用被 `isWorkScheduled` 挡掉）；`useState` 的回放循环（看 3 个 action 依序结算）。
+#### 断点建议
+
+断 `scheduleRootUpdate` 的 if 块内 `return` 行（5.1.1 的断点段在这里落地：第 2、3 次调用停在这行 return 上）；断 5.2 块③的回放循环（看 3 个 action 依序结算）。调试注意同 5.1.5。
 
 ### 5.4 更新 · 乱序 + 插删：keyed diff 全算法
 
-触发方式：demo「乱序 + 插删（keyed diff 全算法）」按钮——todos `[a,b,c,d,e]` → `[a,d,f,b,e]`。算法逐幕推演已在 4.3.3 完整走读，这里补宿主视角：
+触发方式：demo「乱序 + 插删（keyed diff 全算法）」按钮——todos `[a,b,c,d,e]` → `[a,d,f,b,e]`。算法逐幕推演已在 4.3.3 完整走读，这里按代码调用顺序补宿主视角。
+
+#### 调用流程图
+
+```
+dispatchSetState(todos hook, t => [a,d,f,b,e]) → scheduleRootUpdate → 宏任务
+  ▼
+performRootWork
+  ├► prepareFreshStack     renderCount +1
+  ├► workLoop
+  │    ├► beginWork(App)   useState 回放 → todos.memoizedState = [a,d,f,b,e]（key 1,4,6,2,5）
+  │    └► reconcileChildren(ul, [li a, li d, li f, li b, li e])   （4.3，diff 主战场）
+  │         第一轮 头同步: a(1) vs a(1) 命中复用；d(4) vs b(2) key 不匹配 → 停（newIdx=1）
+  │         第二轮 尾同步: e(5) vs e(5) 命中；b(2) vs d(4) 不匹配 → 停（newEnd=3）
+  │         乱序区（newIdx=1..3，见块①）:
+  │           d 复用原地 → f 新建 Placement → b 复用但 1 < 3 → Placement（移动）
+  │           map 里没人认领的 c(3) → deletions
+  │         child 链定稿: [a, d, f, b, e]
+  └► commitRoot
+       ├► mutation    先删后插（4.5）：removeChild(c) 先执行（避免干扰后续锚点判定）
+       │               再先序遍历：f insertBefore（锚点见块②）→ b insertBefore
+       ├► passive     useEffect([message])：message 没变 → 收集区为空 → 零 effect 执行
+       └► 切 current
+```
+
+#### 阶段差异函数块
+
+本节的骨架函数（performRootWork / workLoop / commit 三段式）全部见 5.1.3 / 5.1.4——这条链路唯一的"新地方"是 `reconcileChildren` 走到了最复杂的路径：
+
+**块① `reconcileChildren(wipFiber, elements)` 的乱序区路径** —— reconciler.js L257（机制见 4.3，全算法骨架在 4.3.1~4.3.3）
+
+本节触发的路径代码（头同步停 → 尾同步摘走 e → 乱序区主战场，reconciler.js L323-358）：
+
+```js
+// —— 乱序区：newIdx..newEnd 与 remainingOld 里剩下的旧 fibers ——
+const existingFibers = new Map()
+for (let i = 0; i < remainingOld.length; i++) {
+    const f = remainingOld[i]
+    // 隐式 key = 旧列表中的位次（无 key 退化按位次配对）
+    existingFibers.set(f.key === null ? `__idx_${newIdx + i}` : f.key, f)
+}
+
+let lastPlacedIndex = 0 // 已处理复用节点在旧链中的最大 index——移动判定基准
+for (; newIdx <= newEnd; newIdx++) {
+    const element = children[newIdx]
+    const mapKey = element.key === null ? `__idx_${newIdx}` : element.key
+    const old = existingFibers.get(mapKey)
+    existingFibers.delete(mapKey)
+    let newFiber
+    if (old !== undefined && old.type === element.type) {
+        newFiber = createWorkInProgress(old, element.props)   // 复用
+        newFiber.index = newIdx
+        if (old.index < lastPlacedIndex) {
+            // ★ 复用节点"移动"也是 Placement：旧 index 小于基准 → 前面兄弟被动过 → 必须移动
+            newFiber.flags |= FiberFlags.Placement
+        } else {
+            lastPlacedIndex = old.index // 原地不动 → 抬高基准
+        }
+    } else {
+        newFiber = createFiberFromElement(element) // 全新挂载
+        newFiber.index = newIdx
+        newFiber.flags |= FiberFlags.Placement
+    }
+    append(newFiber)
+}
+for (let i = tailFibers.length - 1; i >= 0; i--) append(tailFibers[i]) // 尾巴段倒序补上
+existingFibers.forEach(fiber => deletions.push(fiber)) // map 里没人认领的 → 删除
+return finishChildren(wipFiber, head)
+```
+
+```
+目的: 孩子 elements diff 成 fiber 链——头同步 → 快速通道（5.5）→ 尾同步 → 乱序区 Map 配对
+输入（实测）: 乱序区 children [d, f, b]；existingFibers = { 2: b, 3: c, 4: d }
+              （头同步摘 a、尾同步摘 e 之后 Map 里的剩余旧 fiber）
+输出: child 链 [a, d, f, b, e]；lastPlacedIndex 终值 3；deletions += [c]
+要点: 头同步用 isReusable（L368，key 与 type 都相同才复用）逐位配对，对不上立即 break；
+      乱序区把剩余旧 fiber 收进 Map（无 key 退化按位次 __idx_）；移动判定——
+      复用节点的旧 index < lastPlacedIndex → 它前面的兄弟被挪走/删过 → 记 Placement（移动）；
+      逐项: d 复用（3 ≥ 0 原地，基准抬到 3）→ f 未命中（新建 Placement）→ b 复用（1 < 3 移动）；
+      Map 里没人认领的 c 进 deletions（commit 先删阶段执行）
+断点: if (old.index < lastPlacedIndex) 行 + 条件 element.key === 6 || element.key === 2——
+      只停 f/b 两次判定；Watch 盯 lastPlacedIndex，看它从 0 抬到 3 的瞬间 b 被判移动
+```
+
+**块② `getHostSibling(fiber)`** —— index.js L115（机制见 4.5）
+
+```js
+function getHostSibling(fiber) {
+    let node = fiber
+    siblings: while (true) {
+        while (node.sibling === null) {              // 没有弟弟 → 看父节点
+            const parent = node.return
+            if (parent === null || parent.tag === FiberTag.HostRoot
+                || parent.tag === FiberTag.HostComponent) {
+                return null                          // 锚点必须同一个宿主父节点 → 放弃
+            }
+            node = parent                            // 函数组件没有 stateNode，穿过它继续找
+        }
+        node = node.sibling
+        while (node.tag !== FiberTag.HostComponent && node.tag !== FiberTag.HostText) {
+            if (node.flags & FiberFlags.Placement) continue siblings // 整棵都是新的，下钻没意义
+            if (node.child === null) continue siblings
+            node = node.child                        // 弟弟是函数组件 → 下钻它的孩子
+        }
+        if (node.flags & FiberFlags.Placement) continue siblings // 新挂载/待移动都位置未定
+        return node.stateNode                        // 只有"原地不动"的节点才是稳定锚点
+    }
+}
+```
+
+```
+目的: 找"插在谁前面"——新树里本 fiber 之后第一个位置已定的宿主节点
+输入: 待插 fiber（先 f 后 b，mutation 先序遍历到它们时调用）
+输出（实测）: f 的锚点 = b 的 DOM（已落位且清了 Placement 标记）；b 的锚点 = e 的 DOM（从未带 Placement）
+要点: 带 Placement 的候选一律跳过（新挂载未进文档 / 待移动位置未定，两种情形的统一过滤）；
+      弟弟是函数组件 → 下钻它的孩子（带标签 continue siblings）；锚点必须同一个宿主父节点；
+      一路找不到 → null → commitPlacement 里 appendChild 兜底
+断点: return node.stateNode 行——对照挂载链路（5.1.4）里"大多 appendChild"的常态
+```
+
+以下对照表汇总 diff 结论与 commit 宿主动作：
 
 ```
 diff 结论（fiber 记账）          commit 宿主动作（mutation 先删后插）
@@ -1788,68 +2628,147 @@ diff 结论（fiber 记账）          commit 宿主动作（mutation 先删后�
 
 锚点正确性依赖 mutation 的两个设计（4.5）：先删后插（c 先离场，不会干扰 f/b 的锚点判定）；先序遍历落位后清 Placement（右侧 fiber 找锚点时左侧已稳定）。
 
-断点建议：`reconcileChildren` 的乱序区（看 `existingFibers` Map 与 `lastPlacedIndex` 的变化）；`getHostSibling`（看 f 的锚点怎么找到 b、b 的锚点为什么是 e）。
+#### 断点建议
+
+块①的 `if (old.index < lastPlacedIndex)`（移动判定的瞬间）；块②的 `return node.stateNode`（锚点落定的瞬间）。调试注意同 5.1.5：本轮循环圈数 = 本次 diff 涉及的 fiber 数，条件断点 `!hasMoreWork` 可直达 commit。
 
 ### 5.5 更新 · 新列表更长 / 旧列表更长：快速通道
 
-这两条链路是 4.3.2 两条快速通道的实测：
+这两条链路是 4.3.2 两条快速通道的实测。两条的更新入口与 5.2 完全同构（`dispatchSetState` → `scheduleRootUpdate` → 宏任务 → `performRootWork`），差异全部集中在 `reconcileChildren` 的分支判定上：
 
 ```
-「新列表更长（追加一项）」
-  [a,b,c,d,e] → [a,b,c,d,e,新6]
-  头同步 a b c d e 全部命中 → oldFiber === null
-  → 快速通道①：剩余新 elements 批量记 Placement
-  → commit：只有 新6 一次 appendChild，前 5 项零 DOM 操作
+「新列表更长（追加一项）」[a,b,c,d,e] → [a,b,c,d,e,新6]
+  输入: 新 children 长度 6，旧 fiber 链长度 5
+  头同步 a b c d e 全部命中（key/type 逐位相同）→ 循环走完 oldFiber === null
+  → 快速通道①（4.3.2）: 剩余新 elements 批量 createFiberFromElement + Placement
+  输出: child 链 [a,b,c,d,e,新6]，只有 新6 带 Placement
+  → commit: 只有 新6 一次 appendChild，前 5 项零 DOM 操作
 
-「旧列表更长（移除末项）」
-  [a,b,c,d,e] → [a,b,c,d]
-  头同步 a b c d 全部命中 → newIdx 越过 children.length
-  → 快速通道②：剩余旧 fiber（e）进 deletions
-  → commit：先删阶段 removeChild(e)，前 4 项零 DOM 操作
+「旧列表更长（移除末项）」[a,b,c,d,e] → [a,b,c,d]
+  输入: 新 children 长度 4，旧 fiber 链长度 5
+  头同步 a b c d 全部命中 → newIdx=4 越过 children.length=4
+  → 快速通道②（4.3.2）: 剩余旧 fiber（e）直接进 deletions
+  输出: child 链 [a,b,c,d]；deletions = [e fiber]
+  → commit: 先删阶段 removeChild(e)，前 4 项零 DOM 操作
 ```
+
+#### 阶段差异讲解
+
+`reconcileChildren` 的完整块见 5.4 块①——两条快速通道就是它头同步 for 循环之后的两个"耗尽判定"（本节触发时乱序区完全不参与）：
+
+```
+判定（紧跟头同步 for 循环）:
+  if (oldFiber === null)          → 快速通道①：剩余新 children 批量 createFiberFromElement + Placement
+                                    （旧链耗尽 = 纯追加；"本来就是挂载"也走这里）
+  if (newIdx >= children.length)  → 快速通道②：剩余旧 fibers 批量 deletions.push
+                                    （新链耗尽 = 纯删除）
+  两者都不满足                     → 落入尾同步 + 乱序区（5.4 的主战场）
+```
+
+两条通道的共同价值：**跳过 Map 构建、尾同步、lastPlacedIndex 判定**，diff 退化为 O(增加/删除的数量)——前 5 项零 DOM 操作。
 
 实测留痕（demo 渲染区）：追加后末尾多出 `#6 新6`；移除后最后一项消失，其余项原样（DOM 节点复用，不重建）。
 
-断点建议：`reconcileChildren` 的两条快速通道分支（看 `oldFiber === null` 与 `newIdx >= children.length` 的判定）。
+#### 断点建议
+
+断 reconciler.js 两个快速通道的 `if` 判定行（`oldFiber === null` 约 L285、`newIdx >= children.length` 约 L296）——本节触发时各自只命中一次，且不进乱序区。调试注意同 5.1.5。
 
 ### 5.6 卸载：useEffect destroy → 摘 DOM
 
-触发方式：demo「卸载」按钮——`root.unmount()`：
+触发方式：demo「卸载」按钮——`root.unmount()`（demo 同时把页面层的 `appApi` 置 null，之后按钮不再持有 setState 引用）。
+
+#### 调用流程图
 
 ```
-unmount()
-  └► commitDeletion(currentRootFiber.child)     复用删除链路（4.5）
-       ├► 递归 walk：App（函数组件）hooks 链逐个跑 effect.destroy
-       │    → lifeMark：「↳ 上一次 effect 的清理执行」（有 destroy 就清）
-       ├► 命中第一个宿主节点（App 的 div）→ removeChild 摘整棵
-       └► clearContainer 清空容器
-  之后 render 全部无效（isUnmounted 拦截，console 警告）
+unmount()                                    index.js
+  │ 副作用: isUnmounted = true（此后 root.render 一律拦截 + console 警告）
+  │          pendingRootElement = null；hasPendingRootWork = false
+  ▼
+commitDeletion(currentRootFiber.child)       index.js（4.5，复用删除链路）
+  │ 输入: App fiber（current 树根的第一个孩子）
+  │ 过程: 递归 walk 子树——
+  │    ├► 命中函数组件（App）→ 沿 hooks 链逐个执行 effect.destroy：
+  │    │     effect④ destroy = null → 跳过
+  │    │     effect⑤ destroy() 执行 → lifeMark 追加「↳ 上一次 effect 的清理执行」
+  │    │       （并置 destroy = null，防重复执行）
+  │    └► 命中子树第一个宿主节点（App 的 div）→ hostNode = <div>，停止下钻
+  │ 输出（副作用）: getHostParentFiber 找到宿主父节点（容器）
+  │                → removeChild(容器, <div>) —— 摘一个节点 = 摘整棵 DOM 子树
+  ▼
+clearContainer(container)                    dom.js（清空容器兜底）
+  ▼
+wipRoot / nextUnitOfWork 置 null（工作栈作废）
+```
+
+#### 阶段差异函数块
+
+**块① `commitDeletion(fiber)`** —— index.js L148（机制见 4.5）
+
+```js
+function commitDeletion(fiber) {
+    let hostNode = null
+    const walk = f => {
+        if (f.tag === FiberTag.FunctionComponent) {
+            let hook = f.memoizedState        // hooks 链表：逐个执行 effect.destroy
+            while (hook !== null) {
+                const effect = hook.memoizedState
+                if (effect !== null && effect !== undefined && isFunction(effect.destroy)) {
+                    effect.destroy()          // 同步清理
+                    effect.destroy = null     // 置 null 防重复执行
+                }
+                hook = hook.next
+            }
+        }
+        if (hostNode === null && (f.tag === FiberTag.HostComponent || f.tag === FiberTag.HostText)) {
+            hostNode = f.stateNode            // 子树的第一个宿主节点：摘它 = 摘整棵
+            return                            // 早停：不再下钻，深层 DOM 随它一起离场
+        }
+        for (let child = f.child; child !== null; child = child.sibling) walk(child)
+    }
+    walk(fiber)
+    if (hostNode === null) return
+    const parentFiber = getHostParentFiber(fiber) // L94：向上找最近宿主父节点
+    removeChild(parentFiber.stateNode, hostNode)
+}
+```
+
+```
+目的: 删子树——先递归执行函数组件的 effect.destroy（同步），再摘第一个宿主节点（= 摘整棵 DOM）
+输入: App fiber（current 树根的第一个孩子）
+输出（实测）: effect④ destroy 为 null 跳过；effect⑤ destroy 执行（留痕追加「↳ 上一次 effect 的清理执行」）；
+      walk 命中 App 的 div → removeChild(容器, <div>)——一次调用摘掉整棵 DOM 子树
+要点: walk 找到第一个宿主节点就停止下钻（hostNode 是早停信号，深层 DOM 随它一起离场）；
+      destroy 执行后置 null 防重复清理；getHostParentFiber（L94）向上找最近宿主父节点
+断点: effect.destroy() 行（同步执行、留痕立即出现）→ removeChild 行（整棵摘除）；
+      本链路不走 workLoop、没有时间片，5.1.5 的调试注意不适用，普通断点即可
 ```
 
 实测留痕（demo）：`#app` 清空；`useEffect 留痕`面板追加「↳ unmount：全部 effect 清理执行完毕，DOM 已摘除」；再点任何页面按钮无反应。重新加载页面可重看完整挂载链路。
 
 卸载与 keyed diff 的删除共用同一条 `commitDeletion` 链路（4.5）——"从 React 树上摘掉"这件事只有一套语义：先清理副作用，再摘宿主节点。
 
-断点建议：`commitDeletion`（看 destroy 的同步执行与"摘一个 = 摘整棵"）。
+#### 断点建议
+
+块① `commitDeletion`（看 destroy 的同步执行与"摘一个 = 摘整棵"）。这条链路不走 workLoop 循环，5.1.5 的调试注意不适用，普通断点即可。
 
 ## 配套代码
 
 | 主题 | 代码位置 | 建议断点 |
 | --- | --- | --- |
-| Element 工厂（JSX 编译产物层） | `./code/react/mini-react/lib/reconciler.js` · createElement / normalizeChild | `createElement`：看 Element 长什么样 |
-| FiberNode 与双缓冲 | `./code/react/mini-react/lib/reconciler.js` · createFiber / createWorkInProgress | `createWorkInProgress`：看 DOM 实例与 hooks 如何继承 |
-| 时间分片调度器 | `./code/react/mini-react/lib/scheduler.js` | `performWorkUntilDeadline`：看 5ms 切片与续排 |
-| 工作循环（递归改循环） | `./code/react/mini-react/lib/reconciler.js` · performUnitOfWork / workLoop | `performUnitOfWork`：单步看 fiber 如何被逐个推进 |
-| Hooks：上下文与链表 | `./code/react/mini-react/lib/hooks.js` · renderWithHooks / mount / update | `updateWorkInProgressHook`：看新旧链表如何配对 |
-| Hooks：useState / useEffect | `./code/react/mini-react/lib/hooks.js` · useState / dispatchSetState / useEffect | `dispatchSetState`：看 action 入队 + 排调度 |
-| diff：beginWork / completeWork | `./code/react/mini-react/lib/reconciler.js` · beginWork / completeWork | `completeWork`：看实例创建与 flags 记账 |
-| diff：keyed diff 全算法 | `./code/react/mini-react/lib/reconciler.js` · reconcileChildren | 乱序区：看 key Map 与 lastPlacedIndex 判移动 |
-| 调度衔接与批处理 | `./code/react/mini-react/lib/reconciler.js` · scheduleRootUpdate / performRootWork | `scheduleRootUpdate`：看重复调度被合并 |
-| commit 三阶段 | `./code/react/mini-react/lib/index.js` · commitRoot / commitMutationEffects / commitPlacement | `commitRoot`：看先删后插与三段式顺序 |
-| 锚点定位 | `./code/react/mini-react/lib/index.js` · getHostSibling | `getHostSibling`：看"插在谁前面"的三条规则 |
-| effect 执行与卸载清理 | `./code/react/mini-react/lib/index.js` · flushPassiveEffects / commitDeletion | `flushPassiveEffects`：看先 destroy 后 create |
-| 宿主操作（DOM 增删改 + 属性 diff） | `./code/react/mini-react/lib/dom.js` | `commitUpdate`：看三步属性 diff |
-| 装配入口与 API 聚合 | `./code/react/mini-react/lib/index.js` · createRoot / window.MiniReact | `createRoot`：看 HostRoot fiber 与 render/unmount |
-| 一页跑完全部链路 | `./code/react/mini-react/demo/demo-app.html` | 六个按钮依次对应 5.1~5.6 的链路 |
+| Element 工厂（JSX 编译产物层） | `./code/mini-react/lib/reconciler.js` · createElement / normalizeChild | `createElement`：看 Element 长什么样 |
+| FiberNode 与双缓冲 | `./code/mini-react/lib/reconciler.js` · createFiber / createWorkInProgress | `createWorkInProgress`：看 DOM 实例与 hooks 如何继承 |
+| 时间分片调度器 | `./code/mini-react/lib/scheduler.js` | `performWorkUntilDeadline`：看 5ms 切片与续排 |
+| 工作循环（递归改循环） | `./code/mini-react/lib/reconciler.js` · performUnitOfWork / workLoop | `performUnitOfWork`：单步看 fiber 如何被逐个推进 |
+| Hooks：上下文与链表 | `./code/mini-react/lib/hooks.js` · renderWithHooks / mount / update | `updateWorkInProgressHook`：看新旧链表如何配对 |
+| Hooks：useState / useEffect | `./code/mini-react/lib/hooks.js` · useState / dispatchSetState / useEffect | `dispatchSetState`：看 action 入队 + 排调度 |
+| diff：beginWork / completeWork | `./code/mini-react/lib/reconciler.js` · beginWork / completeWork | `completeWork`：看实例创建与 flags 记账 |
+| diff：keyed diff 全算法 | `./code/mini-react/lib/reconciler.js` · reconcileChildren | 乱序区：看 key Map 与 lastPlacedIndex 判移动 |
+| 调度衔接与批处理 | `./code/mini-react/lib/reconciler.js` · scheduleRootUpdate / performRootWork | `scheduleRootUpdate`：看重复调度被合并 |
+| commit 三阶段 | `./code/mini-react/lib/index.js` · commitRoot / commitMutationEffects / commitPlacement | `commitRoot`：看先删后插与三段式顺序 |
+| 锚点定位 | `./code/mini-react/lib/index.js` · getHostSibling | `getHostSibling`：看"插在谁前面"的三条规则 |
+| effect 执行与卸载清理 | `./code/mini-react/lib/index.js` · flushPassiveEffects / commitDeletion | `flushPassiveEffects`：看先 destroy 后 create |
+| 宿主操作（DOM 增删改 + 属性 diff） | `./code/mini-react/lib/dom.js` | `commitUpdate`：看三步属性 diff |
+| 装配入口与 API 聚合 | `./code/mini-react/lib/index.js` · createRoot / window.MiniReact | `createRoot`：看 HostRoot fiber 与 render/unmount |
+| 一页跑完全部链路 | `./code/mini-react/demo/demo-app.html` | 六个按钮依次对应 5.1~5.6 的链路 |
 
 加载顺序即依赖顺序：`shared.js → scheduler.js → hooks.js → reconciler.js → dom.js → index.js`，全部经 `window.MiniReact` 统一使用。demo 的「断点标注」面板给出了与五章一一对应的断点清单，照着五章边点边跟即可。

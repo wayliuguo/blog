@@ -199,11 +199,11 @@ setUserInfo(
 > 示意片段（无配套脚本）
 
 ```tsx
-useEffect(callBack, [])
+useEffect(callBack, deps?)
 ```
 
 - `callBack`：回调函数。
-- `[]`：依赖数组，只有数组中值发生变化时才会重新执行回调。
+- `deps`：可选的依赖数组，只有数组中值发生变化时才会重新执行回调。传空数组 `[]` 与不传是**两种不同行为**，见下面三小节。
 - 组件销毁时会执行回调中 `return` 返回的方法，常用于清理操作、防止内存泄漏。
 
 > 迁移对照：`useEffect` 一个 API 覆盖了过去 `componentDidMount`、`componentDidUpdate`、`componentWillUnmount` 三个生命周期的职责，区别是它按**依赖**而不是按**阶段**组织。其回调会在组件**挂载、更新、卸载**时执行。
@@ -242,7 +242,7 @@ useEffect(() => {
 
 ### 没有依赖项：每次渲染后都执行
 
-`useEffect` 不传第二个参数（或传 `undefined`），每次 render 之后都会执行一次：
+`useEffect` 不传第二个参数（或传 `undefined`），每次 render 之后都会执行一次。注意区分：**空数组 `[]` 不等于"没有依赖项"**——空数组是显式声明"没有任何依赖"，效果是仅在挂载后执行一次（见上上节）；只有不传第二个参数，才是"不设门槛、每次渲染后都执行"。
 
 > 示意片段（无配套脚本）
 
@@ -300,6 +300,20 @@ const changeName = () => {
     <button onClick={changeName}>change name</button>
 </div>
 ```
+
+那为什么不用函数体内的 `let` 变量代替？
+
+> 示意片段（无配套脚本）
+
+```tsx
+let name = 'well'  // ❌ 不能用普通变量代替
+const changeName = () => {
+    name = 'wayliuguo'
+    console.log(name)
+}
+```
+
+函数组件的本质是"执行函数返回 JSX"，**每次渲染函数体都会重新执行一遍**，`let` 声明在函数体内，重执行时会被重置回初始值 `'well'`。实际场景：点击按钮把 `name` 改成 `'wayliuguo'`（这次赋值本身不触发渲染），随后组件因为**别的原因**（比如别的 state 变化）重新渲染，`let name` 回到 `'well'`，改动丢失；而 `useRef` 返回的 ref 对象由 React 存在 Fiber 节点上，**多次渲染之间是同一个引用**，`current` 上的修改得以保留。
 
 ## useMemo：缓存结果
 
@@ -522,13 +536,3 @@ const alertFn = () => {
 ```
 
 > 注意：**ref 变化不会触发 rerender**，所以需要结合 state 一起使用——用 `useState` 保存驱动 UI 的值，用 `useRef` 保存给异步闭包读取的最新值。
-
-## 配套代码
-
-本篇的可运行示例在仓库 `frontend/基础/前端框架-React/code/site/`。
-
-| 文件 | 演示什么 | 对应小节 |
-| --- | --- | --- |
-| `./code/site/hooks-demo.html` | 用普通数组实现极简 useState / useEffect，演示 hooks 每次渲染按固定顺序调用的原理 | 使用 Hooks 的三条规则 |
-
-启动方式：在 `code` 目录执行 `node server.js`（即 `npm start`），打开 `http://localhost:5180/`。

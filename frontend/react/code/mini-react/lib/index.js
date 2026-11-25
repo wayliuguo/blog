@@ -269,6 +269,8 @@ function createRoot(container) {
 // ============================================================
 window.MiniReact = {
     createElement,
+    // createElement 的短别名：定义于 reconciler.js（紧挨 createElement，对应真实
+    // React 的 jsx-runtime）。demo 与文档统一用它，读起来接近 JSX
     h,
     createRoot,
     useState,

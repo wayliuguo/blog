@@ -57,7 +57,11 @@ function createElement(type, config, ...children) {
     return { $$typeof: REACT_ELEMENT_TYPE, type, key, props }
 }
 
-/** createElement 的短别名：demo 与文档统一用它，读起来接近 JSX。 */
+/**
+ * createElement 的短别名：demo 与文档统一用它，读起来接近 JSX。
+ * 对应真实 React 的 jsx-runtime（react/jsx-runtime），与 createElement 同属 Element
+ * 工厂层，故定义于此而非 index.js 的装配层（index.js 挂载 MiniReact.h 处有指回本处的注释）。
+ */
 const h = createElement
 
 /**
@@ -414,7 +418,9 @@ function performUnitOfWork(fiber) {
  */
 function scheduleRootUpdate() {
     hasPendingRootWork = true
-    if (isWorkScheduled) return
+    if (isWorkScheduled) {
+        return // 管道里已有一次 render：只置上面的标记就返回（同一宏任务里的多次 setState 在此合并）
+    }
     isWorkScheduled = true
     scheduleCallback(performRootWorkAndRelease)
 }
@@ -451,7 +457,10 @@ function performRootWork() {
     }
 
     const hasMoreWork = workLoop()
-    if (!hasMoreWork) commitRoot() // 树跑完 → 进入 commit（index.js）
+    if (!hasMoreWork) {
+        // 树跑完 → 进入 commit（index.js）
+        commitRoot()
+    }
     return hasMoreWork
 }
 
